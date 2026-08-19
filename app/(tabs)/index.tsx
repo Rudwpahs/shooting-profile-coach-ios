@@ -6,6 +6,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { haptic } from "@/lib/haptics";
 import { useProfile } from "@/lib/profile-store";
 import { recommendShotForms } from "@/lib/recommendation";
+import { PoseMotionViewer } from "@/components/pose-motion-viewer";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function HomeScreen() {
   return <ScreenContainer><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     <ScreenTitle eyebrow="FORMPATH / TODAY" title="내 몸에 맞는 한 가지 흐름." detail="선수 이름 없이 16개 익명 슛폼의 움직임 특성과 비교합니다." />
     <SectionCard tone="navy"><StatusPill tone="warning">16 YOUTUBE POSE MODELS · NOT METRIC 3D</StatusPill><Text style={styles.navyHeading}>{recommendation.reference.shortLabel}</Text><Text style={styles.navyBody}>{recommendation.reference.styleTitle}</Text><View style={styles.scoreRow}><View><Text style={styles.score}>{recommendation.fitScore}</Text><Text style={styles.scoreLabel}>내 조건 적합도</Text></View><View style={styles.scoreRule} /><View style={styles.scoreTextWrap}><Text style={styles.scoreText}>{recommendation.focus.title}</Text><Text style={styles.scoreDetail}>{recommendation.reasons[0]}</Text></View></View></SectionCard>
+    <PoseMotionViewer reference={recommendation.reference} />
     <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>왜 이 모션인가요</Text><Text style={styles.sectionMeta}>LOCAL ONLY</Text></View>
     <SectionCard tone="sand"><Text style={styles.cardEyebrow}>조건 적합도 {recommendation.bodyFitScore}/100</Text><Text style={styles.cardTitle}>{recommendation.reasons[1]}</Text><Text style={styles.cardBody}>{recommendation.focus.detail}</Text><PrimaryButton label="내 조건 다시 조정하기" onPress={() => { haptic.light(); router.push("/assessment"); }} icon={<IconSymbol name="chevron.right" size={19} color="#FFFFFF" />} /></SectionCard>
     <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>추천의 기준</Text><Text style={styles.sectionMeta}>{ready ? "준비됨" : "불러오는 중"}</Text></View>
