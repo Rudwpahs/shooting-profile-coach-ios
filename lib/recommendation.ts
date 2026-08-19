@@ -23,7 +23,7 @@ export type UserShotProfile = {
 export type PoseRecommendation = {
   reference: AnonymousPoseReference;
   fitScore: number;
-  confidence: "youtube_pose_candidate";
+  confidence: "summary_derived_reference_animation";
   alignment: Array<{ trait: keyof PoseTraits; label: string; delta: number }>;
   bodyFitScore: number;
   reasons: string[];
@@ -156,7 +156,7 @@ export function recommendShotForms(profile: UserShotProfile): PoseRecommendation
       const alignment = (Object.keys(GOAL_TARGETS[profile.goal]) as Array<keyof PoseTraits>)
         .map((trait) => ({ trait, label: TRAIT_LABELS[trait], delta: GOAL_TARGETS[profile.goal][trait] - reference.traits[trait] }))
         .sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
-      return { reference, fitScore, confidence: "youtube_pose_candidate" as const, alignment, bodyFitScore, reasons: strongestReason(profile, reference, bodyFitScore), focus: FOCUS_BY_GOAL[profile.goal] };
+      return { reference, fitScore, confidence: "summary_derived_reference_animation" as const, alignment, bodyFitScore, reasons: strongestReason(profile, reference, bodyFitScore), focus: FOCUS_BY_GOAL[profile.goal] };
     })
     .sort((left, right) => right.fitScore - left.fitScore);
 }

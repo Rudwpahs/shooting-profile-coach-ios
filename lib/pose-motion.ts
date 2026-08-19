@@ -3,7 +3,8 @@ import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
 export type JointName = "head" | "neck" | "spine" | "pelvis" | "leftShoulder" | "leftElbow" | "leftWrist" | "rightShoulder" | "rightElbow" | "rightWrist" | "leftHip" | "leftKnee" | "leftAnkle" | "rightHip" | "rightKnee" | "rightAnkle";
 export type Vector3 = { x: number; y: number; z: number };
 export type PoseFrame = { label: string; progress: number; joints: Record<JointName, Vector3> };
-export type PoseMotion = { id: string; frames: PoseFrame[]; boundary: "relative_trait_derived_pose" };
+export type PoseMotion = { id: string; frames: PoseFrame[]; boundary: "biomechanical_reference_animation_not_metric_3d" };
+export type MotionQualityGate = { passed: boolean; failures: string[]; maxJointStep: number };
 
 export const BONE_LINKS: Array<[JointName, JointName]> = [
   ["head", "neck"], ["neck", "spine"], ["spine", "pelvis"],
@@ -18,38 +19,82 @@ export const POSE_ZOOM_MIN = 0.78;
 export const POSE_ZOOM_MAX = 1.65;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+const lerp = (from: number, to: number, amount: number) => from + (to - from) * amount;
 
 export function clampPoseZoom(value: number) {
   return clamp(value, POSE_ZOOM_MIN, POSE_ZOOM_MAX);
 }
 
+/**
+ * Builds a biomechanically ordered reference animation. It is intentionally not
+ * a reconstructed athlete or a calibrated 3D pose sequence: the source inputs
+ * only modulate a conservative visual range around the same validated phase order.
+ */
 export function buildPoseMotion(reference: AnonymousPoseReference): PoseMotion {
-  const { releaseElevation, armExtension, lowerBodyDrive, rhythm } = reference.traits;
-  const releaseLift = 0.65 + releaseElevation / 180;
-  const extension = 0.38 + armExtension / 230;
-  const drive = 0.25 + lowerBodyDrive / 250;
-  const pace = 0.8 + rhythm / 250;
-  const phaseProgress = [0, 0.23, 0.52, 0.76, 1];
-  const frames = phaseProgress.map((progress, index) => {
-    const lift = Math.sin(progress * Math.PI) * drive;
-    const release = clamp((progress - 0.35) / 0.55, 0, 1);
-    const follow = clamp((progress - 0.72) / 0.28, 0, 1);
-    const kneeBend = Math.sin(progress * Math.PI) * (0.24 + drive * 0.45);
-    const shoulderY = 1.9 + lift;
-    const elbowY = 1.7 + lift + release * releaseLift * 0.35;
-    const wristY = 1.48 + lift + release * releaseLift;
-    const armForward = 0.18 + release * extension + follow * 0.12;
-    const rightArmX = 0.3 + release * 0.08;
+  const releaseBias = (reference.traits.releaseElevation - 50) / 100;
+  const extensionBias = (reference.traits.armExtension - 50) / 100;
+  const driveBias = (reference.traits.lowerBodyDrive - 50) / 100;
+  const rhythmBias = (reference.traits.rhythm - 50) / 100;
+  const dipDepth = 0.16 + driveBias * 0.045;
+  const riseHeight = 0.22 + driveBias * 0.045;
+  const releaseLift = 0.61 + releaseBias * 0.09;
+  const armExtension = 0.5 + extensionBias * 0.08;
+  const phaseProgress = [0, 0.23, 0.5, 0.74, 1].map((value, index) => Number((value + (index > 1 ? rhythmBias * 0.012 : 0)).toFixed(2)));
+
+  const frames = SHOT_PHASES.map((label, index) => {
+    const phase = index / (SHOT_PHASES.length - 1);
+    const dip = index === 1 ? 1 : index === 2 ? 0.45 : 0;
+    const rise = index === 2 ? 0.56 : index === 3 ? 1 : index === 4 ? 0.72 : 0;
+    const follow = index === 4 ? 1 : 0;
+    const pelvisY = 0.92 - dip * dipDepth + rise * riseHeight;
+    const shoulderY = 1.9 - dip * dipDepth * 0.75 + rise * riseHeight * 0.85;
+    const spineTilt = dip * 0.12 - rise * 0.025;
+    const kneeY = 0.43 - dip * (0.13 + driveBias * 0.03) + rise * 0.08;
+    const shootingElbowY = shoulderY - 0.27 + rise * (0.32 + releaseBias * 0.05) + follow * 0.07;
+    const shootingWristY = shoulderY - 0.38 + rise * releaseLift + follow * 0.15;
+    const shootingForward = 0.1 + rise * armExtension + follow * 0.17;
+    const supportArmY = shoulderY - 0.26 + rise * 0.12;
+
     const joints: Record<JointName, Vector3> = {
-      head: { x: 0, y: 2.55 + lift * 0.72, z: 0 }, neck: { x: 0, y: 2.2 + lift * 0.78, z: 0 }, spine: { x: 0, y: 1.55 + lift * 0.45, z: 0 }, pelvis: { x: 0, y: 0.92 + lift * 0.14, z: 0 },
-      leftShoulder: { x: -0.3, y: shoulderY, z: 0.03 }, leftElbow: { x: -0.46, y: elbowY - 0.24, z: 0.08 + release * 0.1 }, leftWrist: { x: -0.36, y: wristY - 0.34, z: 0.12 + release * 0.18 },
-      rightShoulder: { x: rightArmX, y: shoulderY, z: -0.03 }, rightElbow: { x: 0.42 + release * 0.08, y: elbowY, z: armForward * 0.66 }, rightWrist: { x: 0.23 + release * 0.12, y: wristY, z: armForward },
-      leftHip: { x: -0.18, y: 0.88 + lift * 0.12, z: 0 }, leftKnee: { x: -0.22, y: 0.43 + lift * 0.15 - kneeBend, z: 0.09 + kneeBend * 0.44 }, leftAnkle: { x: -0.22, y: 0, z: 0.02 },
-      rightHip: { x: 0.18, y: 0.88 + lift * 0.12, z: 0 }, rightKnee: { x: 0.24, y: 0.43 + lift * 0.15 - kneeBend, z: -0.09 + kneeBend * 0.44 }, rightAnkle: { x: 0.24, y: 0, z: 0.02 },
+      head: { x: 0, y: shoulderY + 0.66, z: -spineTilt * 0.15 },
+      neck: { x: 0, y: shoulderY + 0.32, z: -spineTilt * 0.12 },
+      spine: { x: 0, y: pelvisY + 0.64, z: spineTilt },
+      pelvis: { x: 0, y: pelvisY, z: 0 },
+      leftShoulder: { x: -0.3, y: shoulderY, z: 0.03 },
+      leftElbow: { x: -0.48, y: supportArmY, z: 0.08 + rise * 0.08 },
+      leftWrist: { x: -0.34, y: supportArmY - 0.15 + rise * 0.12, z: 0.17 + rise * 0.13 },
+      rightShoulder: { x: 0.3, y: shoulderY, z: -0.03 },
+      rightElbow: { x: 0.44 + rise * 0.11, y: shootingElbowY, z: 0.12 + shootingForward * 0.52 },
+      rightWrist: { x: 0.25 + rise * 0.12 - follow * 0.05, y: shootingWristY, z: shootingForward },
+      leftHip: { x: -0.19, y: pelvisY - 0.04, z: 0.02 },
+      leftKnee: { x: -0.24, y: kneeY, z: 0.08 + dip * 0.16 - rise * 0.04 },
+      leftAnkle: { x: -0.23, y: 0, z: 0.03 },
+      rightHip: { x: 0.19, y: pelvisY - 0.04, z: -0.02 },
+      rightKnee: { x: 0.25, y: kneeY, z: -0.08 + dip * 0.16 - rise * 0.04 },
+      rightAnkle: { x: 0.24, y: 0, z: 0.03 },
     };
-    return { label: SHOT_PHASES[index], progress: Number((progress * pace).toFixed(2)), joints };
+    return { label, progress: phaseProgress[index], joints };
   });
-  return { id: reference.id, frames, boundary: "relative_trait_derived_pose" };
+  return { id: reference.id, frames, boundary: "biomechanical_reference_animation_not_metric_3d" };
+}
+
+export function validatePoseMotion(motion: PoseMotion): MotionQualityGate {
+  const failures: string[] = [];
+  const [ready, dip, rise, release, follow] = motion.frames;
+  if (motion.frames.map((frame) => frame.label).join("|") !== SHOT_PHASES.join("|")) failures.push("shot_phase_order");
+  if (!(dip.joints.pelvis.y < ready.joints.pelvis.y && rise.joints.pelvis.y > dip.joints.pelvis.y)) failures.push("lower_body_sequence");
+  if (!(release.joints.rightWrist.y > release.joints.rightShoulder.y && release.joints.rightElbow.y > ready.joints.rightElbow.y)) failures.push("release_sequence");
+  if (!(follow.joints.rightWrist.z > release.joints.rightWrist.z && follow.joints.rightWrist.y >= release.joints.rightWrist.y - 0.12)) failures.push("follow_through_sequence");
+  let maxJointStep = 0;
+  for (let index = 1; index < motion.frames.length; index += 1) {
+    for (const joint of Object.keys(motion.frames[index].joints) as JointName[]) {
+      const previous = motion.frames[index - 1].joints[joint];
+      const current = motion.frames[index].joints[joint];
+      maxJointStep = Math.max(maxJointStep, Math.hypot(current.x - previous.x, current.y - previous.y, current.z - previous.z));
+    }
+  }
+  if (maxJointStep > 1.1) failures.push("frame_discontinuity");
+  return { passed: failures.length === 0, failures, maxJointStep };
 }
 
 export function projectPosePoint(point: Vector3, yawDegrees: number, pitchDegrees: number, width = 330, height = 270, cameraZoom = 1) {

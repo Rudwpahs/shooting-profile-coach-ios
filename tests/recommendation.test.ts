@@ -30,8 +30,8 @@ describe("anonymous sixteen-form recommendation", () => {
     results.forEach((result) => {
       expect(result.fitScore).toBeGreaterThanOrEqual(35);
       expect(result.fitScore).toBeLessThanOrEqual(96);
-      expect(result.confidence).toBe("youtube_pose_candidate");
-      expect(result.reference.modelBoundary).toBe("single_view_camera_relative_pose");
+      expect(result.confidence).toBe("summary_derived_reference_animation");
+      expect(result.reference.modelBoundary).toBe("non_metric_reference_animation");
     });
   });
 });

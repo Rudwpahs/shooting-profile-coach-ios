@@ -52,7 +52,7 @@ export default function HomeScreen() {
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>SHOOTING FORM ANALYSIS</Text>
           <Text style={[styles.heroTitle, narrow && styles.heroTitleNarrow]}>각도만으로{`\n`}폼을 비교한다.</Text>
-          <Text style={styles.sub}>선수 이름 없이 16개 익명 슈팅 모션의 상대적 관절 특성을 비교합니다. 목표 하나를 고르면 그 기준이 즉시 순위와 점수에 반영됩니다.</Text>
+          <Text style={styles.sub}>선수 이름 없이 16개 익명 슈팅 참조 애니메이션의 영상 요약 특성을 비교합니다. 목표 하나를 고르면 그 기준이 즉시 순위와 점수에 반영됩니다.</Text>
           <View style={styles.metaRow}>
             <View style={[styles.pill, styles.okPill]}><Text style={styles.okPillText}>{ready ? "LOCAL PROFILE READY" : "CONNECTING…"}</Text></View>
             <View style={styles.pill}><Text style={styles.pillText}>ANGLE-ONLY · ANONYMOUS</Text></View>
@@ -109,7 +109,7 @@ export default function HomeScreen() {
 
           <Text style={styles.sectionTitle}>유사 모션 순위</Text>
           <View style={styles.matchList}>{results.map((result, index) => <Pressable key={result.reference.id} onPress={() => setSelectedId(result.reference.id)} style={({ pressed }) => [styles.match, selected.reference.id === result.reference.id && styles.matchSelected, pressed && styles.pressed]}><View style={styles.matchIdentity}><Text style={styles.matchName}>{String(index + 1).padStart(2, "0")} · {result.reference.shortLabel}</Text><Text style={styles.matchStyle}>{result.reference.styleTitle}</Text></View><Text style={styles.matchScore}>{result.fitScore}%</Text><Text style={styles.matchStatus}>POSE</Text></Pressable>)}</View>
-          <Text style={styles.disclaimer}>모든 참조는 단일 시점 YouTube pose에서 파생된 카메라 상대 특성입니다. 이 화면은 실명, 공식 3D 계측값 또는 임상적 신체 적합도를 주장하지 않습니다.</Text>
+          <Text style={styles.disclaimer}>모든 참조는 영상 요약 지표로 표현 폭을 조절한 생체역학 참조 애니메이션입니다. 이 화면은 실명, 선수 3D 복제, 공식 3D 계측값 또는 임상적 신체 적합도를 주장하지 않습니다.</Text>
         </View>
 
         <View style={styles.block}>
