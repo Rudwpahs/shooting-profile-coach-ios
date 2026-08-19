@@ -14,8 +14,14 @@ export const BONE_LINKS: Array<[JointName, JointName]> = [
 ];
 
 export const SHOT_PHASES = ["준비", "딥", "상승", "릴리스", "팔로우스루"] as const;
+export const POSE_ZOOM_MIN = 0.78;
+export const POSE_ZOOM_MAX = 1.65;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+export function clampPoseZoom(value: number) {
+  return clamp(value, POSE_ZOOM_MIN, POSE_ZOOM_MAX);
+}
 
 export function buildPoseMotion(reference: AnonymousPoseReference): PoseMotion {
   const { releaseElevation, armExtension, lowerBodyDrive, rhythm } = reference.traits;
@@ -46,12 +52,12 @@ export function buildPoseMotion(reference: AnonymousPoseReference): PoseMotion {
   return { id: reference.id, frames, boundary: "relative_trait_derived_pose" };
 }
 
-export function projectPosePoint(point: Vector3, yawDegrees: number, pitchDegrees: number, width = 330, height = 270) {
+export function projectPosePoint(point: Vector3, yawDegrees: number, pitchDegrees: number, width = 330, height = 270, cameraZoom = 1) {
   const yaw = (yawDegrees * Math.PI) / 180;
   const pitch = (pitchDegrees * Math.PI) / 180;
   const rotatedX = point.x * Math.cos(yaw) - point.z * Math.sin(yaw);
   const depth = point.x * Math.sin(yaw) + point.z * Math.cos(yaw);
   const rotatedY = point.y * Math.cos(pitch) - depth * Math.sin(pitch);
-  const zoom = 1 + depth * 0.16;
+  const zoom = Math.max(0.62, 1 + depth * 0.16) / clampPoseZoom(cameraZoom);
   return { x: width / 2 + (rotatedX * 76) / zoom, y: height - 28 - (rotatedY * 82) / zoom, depth };
 }
