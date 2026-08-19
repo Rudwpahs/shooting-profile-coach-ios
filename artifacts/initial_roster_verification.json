@@ -1,0 +1,362 @@
+{
+  "sourceCommit": "27eada5",
+  "rosterCount": 16,
+  "eligibleForReconstruction": 0,
+  "blockedUnverified": 16,
+  "roster": [
+    {
+      "player": "Stephen Curry",
+      "playerKey": "stephen_curry",
+      "clipCount": 10,
+      "uniqueSourceCount": 5,
+      "titleNameMatchCount": 10,
+      "validPoseQualityCount": 10,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [
+        "curry_canonical3d_validation.json"
+      ],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Devin Booker",
+      "playerKey": "devin_booker",
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "titleNameMatchCount": 6,
+      "validPoseQualityCount": 6,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Kevin Durant",
+      "playerKey": "kevin_durant",
+      "clipCount": 5,
+      "uniqueSourceCount": 3,
+      "titleNameMatchCount": 5,
+      "validPoseQualityCount": 5,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Donovan Mitchell",
+      "playerKey": "donovan_mitchell",
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "titleNameMatchCount": 6,
+      "validPoseQualityCount": 6,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Anthony Edwards",
+      "playerKey": "anthony_edwards",
+      "clipCount": 10,
+      "uniqueSourceCount": 5,
+      "titleNameMatchCount": 6,
+      "validPoseQualityCount": 10,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Tyrese Maxey",
+      "playerKey": "tyrese_maxey",
+      "clipCount": 5,
+      "uniqueSourceCount": 3,
+      "titleNameMatchCount": 5,
+      "validPoseQualityCount": 5,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Luka Dončić",
+      "playerKey": "luka_don_i",
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "titleNameMatchCount": 6,
+      "validPoseQualityCount": 6,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Jamal Murray",
+      "playerKey": "jamal_murray",
+      "clipCount": 7,
+      "uniqueSourceCount": 4,
+      "titleNameMatchCount": 7,
+      "validPoseQualityCount": 7,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Jalen Brunson",
+      "playerKey": "jalen_brunson",
+      "clipCount": 8,
+      "uniqueSourceCount": 4,
+      "titleNameMatchCount": 6,
+      "validPoseQualityCount": 8,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Jaylen Brown",
+      "playerKey": "jaylen_brown",
+      "clipCount": 10,
+      "uniqueSourceCount": 5,
+      "titleNameMatchCount": 10,
+      "validPoseQualityCount": 10,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Kawhi Leonard",
+      "playerKey": "kawhi_leonard",
+      "clipCount": 9,
+      "uniqueSourceCount": 5,
+      "titleNameMatchCount": 9,
+      "validPoseQualityCount": 9,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Norman Powell",
+      "playerKey": "norman_powell",
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "titleNameMatchCount": 4,
+      "validPoseQualityCount": 6,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "De'Aaron Fox",
+      "playerKey": "deaaron_fox",
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "titleNameMatchCount": 6,
+      "validPoseQualityCount": 6,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Shai Gilgeous-Alexander",
+      "playerKey": "shai_gilgeous_alexander",
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "titleNameMatchCount": 6,
+      "validPoseQualityCount": 6,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "LeBron James",
+      "playerKey": "lebron_james",
+      "clipCount": 10,
+      "uniqueSourceCount": 5,
+      "titleNameMatchCount": 10,
+      "validPoseQualityCount": 10,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    },
+    {
+      "player": "Victor Wembanyama",
+      "playerKey": "victor_wembanyama",
+      "clipCount": 5,
+      "uniqueSourceCount": 3,
+      "titleNameMatchCount": 5,
+      "validPoseQualityCount": 5,
+      "ballEvidenceCount": 0,
+      "manualReviewCount": 0,
+      "licensingCount": 0,
+      "calibratedViewCount": 0,
+      "canonicalValidationFiles": [],
+      "canonicalPassed": false,
+      "decision": "blocked_unverified",
+      "reasons": [
+        "human identity and real-shot review is absent",
+        "source license/use status is absent",
+        "ball-hand separation / shot-event evidence is absent",
+        "at least two calibrated camera views are absent",
+        "no passing canonical 3D validation is present"
+      ]
+    }
+  ]
+}

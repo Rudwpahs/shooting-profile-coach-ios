@@ -1,0 +1,526 @@
+{
+  "sourceCommit": "27eada5",
+  "playerProfiles": [
+    {
+      "displayName": "Stephen Curry",
+      "playerKey": "stephen_curry",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 10,
+      "uniqueSourceCount": 5,
+      "metrics": {
+        "elbow": 146.97536490570542,
+        "shoulder": 106.06591386266314,
+        "hip": 161.4813196700067,
+        "knee": 147.41778558248572
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Devin Booker",
+      "playerKey": "devin_booker",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "metrics": {
+        "elbow": 159.110093518911,
+        "shoulder": 134.69751549596006,
+        "hip": 164.92214715911604,
+        "knee": 154.75329663853393
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Kevin Durant",
+      "playerKey": "kevin_durant",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "oblique",
+        "side",
+        "merged"
+      ],
+      "clipCount": 5,
+      "uniqueSourceCount": 3,
+      "metrics": {
+        "elbow": 139.1720705261426,
+        "shoulder": 139.41519562898753,
+        "hip": 169.14390526957698,
+        "knee": 168.82427697013046
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Donovan Mitchell",
+      "playerKey": "donovan_mitchell",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "metrics": {
+        "elbow": 146.64,
+        "shoulder": 111.36,
+        "hip": 167.29,
+        "knee": 155.95
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Anthony Edwards",
+      "playerKey": "anthony_edwards",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 10,
+      "uniqueSourceCount": 5,
+      "metrics": {
+        "elbow": 119.88,
+        "shoulder": 122.62,
+        "hip": 164.92,
+        "knee": 148.19
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Tyrese Maxey",
+      "playerKey": "tyrese_maxey",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "oblique",
+        "side",
+        "merged"
+      ],
+      "clipCount": 5,
+      "uniqueSourceCount": 3,
+      "metrics": {
+        "elbow": 155.985,
+        "shoulder": 129.74,
+        "hip": 159.18,
+        "knee": 142.105
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Luka Dončić",
+      "playerKey": "luka_don_i",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "metrics": {
+        "elbow": 139.8,
+        "shoulder": 121.18,
+        "hip": 150.67,
+        "knee": 124.67
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Jamal Murray",
+      "playerKey": "jamal_murray",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "oblique",
+        "side",
+        "merged"
+      ],
+      "clipCount": 7,
+      "uniqueSourceCount": 4,
+      "metrics": {
+        "elbow": 151.51,
+        "shoulder": 133.37,
+        "hip": 160.99,
+        "knee": 153.96
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Jalen Brunson",
+      "playerKey": "jalen_brunson",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 8,
+      "uniqueSourceCount": 4,
+      "metrics": {
+        "elbow": 151.825,
+        "shoulder": 151.155,
+        "hip": 163.785,
+        "knee": 162
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Jaylen Brown",
+      "playerKey": "jaylen_brown",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 10,
+      "uniqueSourceCount": 5,
+      "metrics": {
+        "elbow": 159.43,
+        "shoulder": 151.5,
+        "hip": 166.54,
+        "knee": 162.71
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Kawhi Leonard",
+      "playerKey": "kawhi_leonard",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "oblique",
+        "side",
+        "merged"
+      ],
+      "clipCount": 9,
+      "uniqueSourceCount": 5,
+      "metrics": {
+        "elbow": 151.815,
+        "shoulder": 132.36,
+        "hip": 168.1,
+        "knee": 160.18
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Norman Powell",
+      "playerKey": "norman_powell",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "metrics": {
+        "elbow": 137.69,
+        "shoulder": 136.09,
+        "hip": 158.42,
+        "knee": 165.78
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "De'Aaron Fox",
+      "playerKey": "deaaron_fox",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "metrics": {
+        "elbow": 139.23,
+        "shoulder": 117.4,
+        "hip": 172.15,
+        "knee": 156.9
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Shai Gilgeous-Alexander",
+      "playerKey": "shai_gilgeous_alexander",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 6,
+      "uniqueSourceCount": 3,
+      "metrics": {
+        "elbow": 145.82,
+        "shoulder": 119.9,
+        "hip": 153.42,
+        "knee": 165.9
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "LeBron James",
+      "playerKey": "lebron_james",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "side",
+        "merged"
+      ],
+      "clipCount": 10,
+      "uniqueSourceCount": 5,
+      "metrics": {
+        "elbow": 135.38,
+        "shoulder": 124.96,
+        "hip": 160.6,
+        "knee": 145.51
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    },
+    {
+      "displayName": "Victor Wembanyama",
+      "playerKey": "victor_wembanyama",
+      "source": "youtube_self_measured",
+      "space": "3d",
+      "views": [
+        "oblique",
+        "side",
+        "merged"
+      ],
+      "clipCount": 5,
+      "uniqueSourceCount": 3,
+      "metrics": {
+        "elbow": 137.315,
+        "shoulder": 115.16999999999999,
+        "hip": 145.335,
+        "knee": 146.67000000000002
+      },
+      "hasAngles": true,
+      "hasManualProvenance": false,
+      "status": "unverified_legacy",
+      "reasons": [
+        "player identity and shot-event review records are absent",
+        "source clips do not use approved provenance manifest",
+        "legacy angle profile cannot be published as a verified reference"
+      ]
+    }
+  ],
+  "playerProfileCount": 16,
+  "candidateCount": 221,
+  "candidateByPlayer": {
+    "unknown": 221
+  },
+  "featureDistribution": {
+    "elbow": {
+      "min": 119.88,
+      "p25": 138.8,
+      "median": 146.23,
+      "p75": 151.82,
+      "max": 159.43
+    },
+    "shoulder": {
+      "min": 106.07,
+      "p25": 119.28,
+      "median": 127.35,
+      "p75": 135.05,
+      "max": 151.5
+    },
+    "hip": {
+      "min": 145.34,
+      "p25": 158.99,
+      "median": 162.63,
+      "p75": 166.73,
+      "max": 172.15
+    },
+    "knee": {
+      "min": 124.67,
+      "p25": 147.23,
+      "median": 155.35,
+      "p75": 162.18,
+      "max": 168.82
+    }
+  },
+  "canonicalValidations": [
+    {
+      "file": "anthony_edwards_canonical3d_validation.json",
+      "playerKey": "unknown",
+      "status": "unknown",
+      "valid": false,
+      "reasons": []
+    },
+    {
+      "file": "curry_canonical3d_validation.json",
+      "playerKey": "stephen_curry",
+      "status": "unknown",
+      "valid": false,
+      "reasons": [
+        "The build environment returned a 195-byte Site Unavailable HTML document in place of each tested YouTube MP4.",
+        "No repository revision contains the required raw 33-landmark front-view observations.",
+        "Activation requires at least 3 accepted front and 3 accepted side clips; the legacy Curry skeleton remains active."
+      ]
+    },
+    {
+      "file": "devin_booker_canonical3d_validation.json",
+      "playerKey": "unknown",
+      "status": "unknown",
+      "valid": false,
+      "reasons": []
+    },
+    {
+      "file": "kevin_durant_canonical3d_validation.json",
+      "playerKey": "unknown",
+      "status": "unknown",
+      "valid": false,
+      "reasons": []
+    },
+    {
+      "file": "lebron_james_canonical3d_validation.json",
+      "playerKey": "unknown",
+      "status": "unknown",
+      "valid": false,
+      "reasons": []
+    },
+    {
+      "file": "stephen_curry_canonical3d_validation.json",
+      "playerKey": "unknown",
+      "status": "unknown",
+      "valid": false,
+      "reasons": []
+    },
+    {
+      "file": "usa_olympic_canonical3d_validation.json",
+      "playerKey": "unknown",
+      "status": "unknown",
+      "valid": false,
+      "reasons": []
+    }
+  ],
+  "dataQualityTopLevel": [
+    "schema_version",
+    "passed",
+    "criteria",
+    "summary",
+    "players",
+    "closest_pairwise_profiles",
+    "warnings",
+    "failures"
+  ]
+}
