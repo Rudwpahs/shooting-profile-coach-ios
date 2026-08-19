@@ -2,6 +2,7 @@ import "@/global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useFonts } from "expo-font";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
@@ -27,6 +28,12 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Barlow: require("@/assets/fonts/Barlow-Regular.ttf"),
+    "Barlow-SemiBold": require("@/assets/fonts/Barlow-SemiBold.ttf"),
+    "BarlowCondensed-SemiBold": require("@/assets/fonts/BarlowCondensed-SemiBold.ttf"),
+    "BarlowCondensed-Bold": require("@/assets/fonts/BarlowCondensed-Bold.ttf"),
+  });
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
 
@@ -77,6 +84,8 @@ export default function RootLayout() {
       },
     };
   }, [initialInsets, initialFrame]);
+
+  if (!fontsLoaded && !fontError) return null;
 
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>

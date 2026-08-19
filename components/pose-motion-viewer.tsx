@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
 
-import { palette } from "@/components/formpath-ui";
 import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
 import { BONE_LINKS, buildPoseMotion, projectPosePoint, type JointName } from "@/lib/pose-motion";
 
@@ -12,14 +11,15 @@ const ANGLES = [
   { label: "측면", yaw: 82 },
 ];
 
-export function PoseMotionViewer({ reference }: { reference: AnonymousPoseReference }) {
+export function PoseMotionViewer({ reference, hand = "right" }: { reference: AnonymousPoseReference; hand?: "auto" | "right" | "left" }) {
   const motion = useMemo(() => buildPoseMotion(reference), [reference]);
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [yaw, setYaw] = useState(38);
   const startYaw = useRef(38);
   const frame = motion.frames[frameIndex];
-  const points = useMemo(() => Object.fromEntries(Object.entries(frame.joints).map(([key, point]) => [key, projectPosePoint(point, yaw, 8)])) as Record<JointName, ReturnType<typeof projectPosePoint>>, [frame, yaw]);
+  const activeSide = hand === "left" ? "left" : "right";
+  const points = useMemo(() => Object.fromEntries(Object.entries(frame.joints).map(([key, point]) => [key, projectPosePoint(hand === "left" ? { ...point, x: -point.x } : point, yaw, 8)])) as Record<JointName, ReturnType<typeof projectPosePoint>>, [frame, hand, yaw]);
   useEffect(() => { setFrameIndex(0); setPlaying(false); }, [reference.id]);
   useEffect(() => {
     if (!playing) return;
@@ -36,8 +36,8 @@ export function PoseMotionViewer({ reference }: { reference: AnonymousPoseRefere
     <View style={styles.stage} {...panResponder.panHandlers}>
       <Svg width="100%" height={270} viewBox="0 0 330 270">
         <Line x1="22" y1="243" x2="308" y2="243" stroke="#21445B" strokeWidth="1" strokeDasharray="4 5" />
-        {BONE_LINKS.map(([from, to]) => <Line key={`${from}-${to}`} x1={points[from].x} y1={points[from].y} x2={points[to].x} y2={points[to].y} stroke={from.includes("right") || to.includes("right") ? "#FF8A5B" : "#D4E5F0"} strokeWidth={from.includes("right") || to.includes("right") ? 4.5 : 3.5} strokeLinecap="round" />)}
-        {(Object.keys(points) as JointName[]).map((joint) => <Circle key={joint} cx={points[joint].x} cy={points[joint].y} r={joint === "rightWrist" ? 5.5 : 4} fill={joint === "rightWrist" ? "#FFB18D" : "#F5FBFF"} />)}
+        {BONE_LINKS.map(([from, to]) => <Line key={`${from}-${to}`} x1={points[from].x} y1={points[from].y} x2={points[to].x} y2={points[to].y} stroke={from.includes(activeSide) || to.includes(activeSide) ? "#F97316" : "#B8CEE4"} strokeWidth={from.includes(activeSide) || to.includes(activeSide) ? 4.5 : 3.5} strokeLinecap="round" />)}
+        {(Object.keys(points) as JointName[]).map((joint) => <Circle key={joint} cx={points[joint].x} cy={points[joint].y} r={joint === `${activeSide}Wrist` ? 5.5 : 4} fill={joint === `${activeSide}Wrist` ? "#EA580C" : "#FFFFFF"} />)}
       </Svg>
       <Text style={styles.dragHint}>좌우로 드래그해 시점 회전</Text>
     </View>
@@ -49,9 +49,9 @@ export function PoseMotionViewer({ reference }: { reference: AnonymousPoseRefere
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: palette.navy, borderRadius: 24, gap: 14, overflow: "hidden", padding: 18 }, header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" }, eyebrow: { color: "#FFAB89", fontSize: 11, fontWeight: "800", letterSpacing: 1 }, title: { color: palette.white, fontSize: 18, fontWeight: "800", marginTop: 2 }, phase: { color: "#C9D8E4", fontSize: 12, fontWeight: "800" },
-  stage: { alignItems: "center", backgroundColor: "#0A2538", borderColor: "#35526A", borderRadius: 18, borderWidth: 1, minHeight: 270, overflow: "hidden" }, dragHint: { color: "#9FB5C6", fontSize: 11, fontWeight: "700", marginBottom: 10, marginTop: -12 },
-  angleRow: { flexDirection: "row", gap: 8 }, angleButton: { alignItems: "center", borderColor: "#35526A", borderRadius: 12, borderWidth: 1, flex: 1, minHeight: 36, justifyContent: "center" }, angleActive: { backgroundColor: "#FF8A5B", borderColor: "#FF8A5B" }, angleText: { color: "#C9D8E4", fontSize: 12, fontWeight: "800" }, angleTextActive: { color: "#3A180C" },
-  scrubRow: { flexDirection: "row", justifyContent: "space-between" }, scrubItem: { alignItems: "center", gap: 6, paddingHorizontal: 1 }, scrubItemActive: { opacity: 1 }, scrubDot: { backgroundColor: "#4B6576", borderRadius: 99, height: 9, width: 9 }, scrubDotActive: { backgroundColor: "#FF8A5B", height: 11, width: 11 }, scrubLabel: { color: "#9FB5C6", fontSize: 9, fontWeight: "700" }, scrubLabelActive: { color: palette.white },
-  playButton: { alignItems: "center", backgroundColor: "#F4F0E9", borderRadius: 14, flexDirection: "row", justifyContent: "center", minHeight: 46 }, playText: { color: "#133047", fontSize: 14, fontWeight: "900" }, playIcon: { color: "#E35B2B", fontSize: 15, fontWeight: "900", marginLeft: 8 }, boundary: { color: "#9FB5C6", fontSize: 11, lineHeight: 16 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
+  card: { backgroundColor: "#F8FAFC", borderColor: "#DBE3EE", borderRadius: 0, borderWidth: 2, gap: 12, overflow: "hidden", padding: 14 }, header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" }, eyebrow: { color: "#EA580C", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.2 }, title: { color: "#1E3A5F", fontFamily: "BarlowCondensed-Bold", fontSize: 20, letterSpacing: 0.4, marginTop: 2, textTransform: "uppercase" }, phase: { color: "#64748B", fontFamily: "Barlow-SemiBold", fontSize: 12 },
+  stage: { alignItems: "center", backgroundColor: "#EFF6FF", borderColor: "#1E3A5F", borderRadius: 0, borderWidth: 2, minHeight: 270, overflow: "hidden" }, dragHint: { color: "#64748B", fontFamily: "Barlow-SemiBold", fontSize: 11, marginBottom: 10, marginTop: -12 },
+  angleRow: { flexDirection: "row", gap: 8 }, angleButton: { alignItems: "center", borderColor: "#DBE3EE", borderRadius: 0, borderWidth: 2, flex: 1, minHeight: 36, justifyContent: "center" }, angleActive: { backgroundColor: "#FFF7ED", borderColor: "#F97316" }, angleText: { color: "#1E3A5F", fontFamily: "BarlowCondensed-Bold", fontSize: 13, letterSpacing: 0.4 }, angleTextActive: { color: "#EA580C" },
+  scrubRow: { flexDirection: "row", justifyContent: "space-between" }, scrubItem: { alignItems: "center", gap: 6, paddingHorizontal: 1 }, scrubItemActive: { opacity: 1 }, scrubDot: { backgroundColor: "#DBE3EE", borderRadius: 99, height: 9, width: 9 }, scrubDotActive: { backgroundColor: "#F97316", height: 11, width: 11 }, scrubLabel: { color: "#64748B", fontFamily: "Barlow-SemiBold", fontSize: 9 }, scrubLabelActive: { color: "#1E3A5F" },
+  playButton: { alignItems: "center", backgroundColor: "transparent", borderColor: "#1E3A5F", borderRadius: 0, borderWidth: 2, flexDirection: "row", justifyContent: "center", minHeight: 42 }, playText: { color: "#1E3A5F", fontFamily: "BarlowCondensed-Bold", fontSize: 15, letterSpacing: 0.5, textTransform: "uppercase" }, playIcon: { color: "#EA580C", fontSize: 15, fontWeight: "900", marginLeft: 8 }, boundary: { color: "#64748B", fontSize: 11, lineHeight: 16 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });

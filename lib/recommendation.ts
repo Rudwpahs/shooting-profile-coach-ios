@@ -27,11 +27,7 @@ export type PoseRecommendation = {
   alignment: Array<{ trait: keyof PoseTraits; label: string; delta: number }>;
   bodyFitScore: number;
   reasons: string[];
-  focus: {
-    title: string;
-    detail: string;
-    drill: string;
-  };
+  focus: { title: string; detail: string; drill: string };
 };
 
 const TRAIT_LABELS: Record<keyof PoseTraits, string> = {
@@ -48,11 +44,39 @@ const GOAL_WEIGHTS: Record<TrainingGoal, Record<keyof PoseTraits, number>> = {
   rhythm: { releaseElevation: 0.1, armExtension: 0.15, lowerBodyDrive: 0.3, rhythm: 0.45 },
 };
 
+const GOAL_TARGETS: Record<TrainingGoal, PoseTraits> = {
+  consistency: { releaseElevation: 58, armExtension: 58, lowerBodyDrive: 62, rhythm: 78 },
+  range: { releaseElevation: 54, armExtension: 66, lowerBodyDrive: 92, rhythm: 62 },
+  release: { releaseElevation: 92, armExtension: 86, lowerBodyDrive: 64, rhythm: 62 },
+  rhythm: { releaseElevation: 56, armExtension: 58, lowerBodyDrive: 60, rhythm: 92 },
+};
+
 const STYLE_TARGETS: Record<PreferredStyle, PoseTraits> = {
   quick: { releaseElevation: 58, armExtension: 50, lowerBodyDrive: 55, rhythm: 86 },
   power: { releaseElevation: 54, armExtension: 62, lowerBodyDrive: 88, rhythm: 64 },
   "high-release": { releaseElevation: 88, armExtension: 82, lowerBodyDrive: 58, rhythm: 58 },
   balanced: { releaseElevation: 60, armExtension: 60, lowerBodyDrive: 60, rhythm: 60 },
+};
+
+const QUICK_STYLE_BY_GOAL: Record<TrainingGoal, PreferredStyle> = {
+  consistency: "balanced",
+  range: "power",
+  release: "high-release",
+  rhythm: "quick",
+};
+
+const GOAL_LABELS: Record<TrainingGoal, string> = {
+  consistency: "일관성",
+  range: "거리",
+  release: "릴리스",
+  rhythm: "리듬",
+};
+
+const GOAL_APPLIED_FEATURE: Record<TrainingGoal, string> = {
+  consistency: "같은 준비 리듬과 반복 가능한 팔 경로",
+  range: "하체 드라이브와 팔 확장",
+  release: "높은 공의 출발점과 완전한 팔 확장",
+  rhythm: "캐치부터 릴리스까지의 빠른 연결",
 };
 
 const FOCUS_BY_GOAL: Record<TrainingGoal, PoseRecommendation["focus"]> = {
@@ -81,14 +105,19 @@ function bodySimilarity(left: BodyProfile, right: AnonymousPoseReference["bodyFi
 }
 
 function strongestReason(profile: UserShotProfile, reference: AnonymousPoseReference, bodyScore: number) {
-  const closestTrait = (Object.keys(profile.traits) as Array<keyof PoseTraits>)
-    .map((trait) => ({ trait, delta: Math.abs(profile.traits[trait] - reference.traits[trait]) }))
+  const goalTarget = GOAL_TARGETS[profile.goal];
+  const closestTrait = (Object.keys(goalTarget) as Array<keyof PoseTraits>)
+    .map((trait) => ({ trait, delta: Math.abs(goalTarget[trait] - reference.traits[trait]) }))
     .sort((a, b) => a.delta - b.delta)[0];
   const bestBodyMatch = (Object.keys(profile.body) as Array<keyof BodyProfile>)
     .map((key) => ({ key, score: bandSimilarity(profile.body[key], reference.bodyFit[key]) }))
     .sort((a, b) => b.score - a.score)[0];
-  const bodyReason = bestBodyMatch.score >= 64 ? `${bodyLabel[bestBodyMatch.key]} 조건이 이 모션의 움직임 범위와 가깝습니다.` : "신체 조건은 참고값이며 편안함과 통증 여부를 우선합니다.";
-  return [`${TRAIT_LABELS[closestTrait.trait]} 특성이 현재 목표와 가장 가깝습니다.`, bodyReason, `신체 조건 적합도 ${bodyScore}/100`];
+  const bodyReason = bestBodyMatch.score >= 64 ? `${bodyLabel[bestBodyMatch.key]} 참고값은 이 모션의 움직임 범위와 가깝습니다.` : "개인 신체 조건은 점수에 넣지 않으며, 편안함과 통증 여부를 우선합니다.";
+  return [
+    `${GOAL_LABELS[profile.goal]} 선택이 ${GOAL_APPLIED_FEATURE[profile.goal]}에 직접 반영되었습니다.`,
+    `${TRAIT_LABELS[closestTrait.trait]} 특성이 선택한 목표와 가장 가깝습니다.`,
+    `${bodyReason} 참고 적합도 ${bodyScore}/100`,
+  ];
 }
 
 export function createDefaultProfile(): UserShotProfile {
@@ -97,20 +126,35 @@ export function createDefaultProfile(): UserShotProfile {
     goal: "consistency",
     preferredStyle: "balanced",
     body: { stature: "balanced", reach: "balanced", lowerBodyPower: "balanced", shoulderMobility: "balanced" },
-    traits: { releaseElevation: 50, armExtension: 50, lowerBodyDrive: 50, rhythm: 50 },
+    traits: GOAL_TARGETS.consistency,
     updatedAt: new Date().toISOString(),
   };
+}
+
+/** 홈 화면의 하나뿐인 추천 입력: 선택 즉시 특성·스타일을 바꾸고 재정렬한다. */
+export function applyGoalSelection(profile: UserShotProfile, goal: TrainingGoal): UserShotProfile {
+  return {
+    ...profile,
+    goal,
+    preferredStyle: QUICK_STYLE_BY_GOAL[goal],
+    traits: GOAL_TARGETS[goal],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function getGoalApplicationSummary(goal: TrainingGoal) {
+  return `${GOAL_LABELS[goal]} 선택 → ${GOAL_APPLIED_FEATURE[goal]}`;
 }
 
 export function recommendShotForms(profile: UserShotProfile): PoseRecommendation[] {
   return ANONYMOUS_POSE_REFERENCES
     .map((reference) => {
-      const traitScore = weightedSimilarity(profile.traits, reference.traits, GOAL_WEIGHTS[profile.goal]);
-      const styleScore = weightedSimilarity(STYLE_TARGETS[profile.preferredStyle], reference.traits, { releaseElevation: 0.25, armExtension: 0.25, lowerBodyDrive: 0.25, rhythm: 0.25 });
+      const goalScore = weightedSimilarity(GOAL_TARGETS[profile.goal], reference.traits, GOAL_WEIGHTS[profile.goal]);
+      const styleScore = weightedSimilarity(STYLE_TARGETS[QUICK_STYLE_BY_GOAL[profile.goal]], reference.traits, { releaseElevation: 0.25, armExtension: 0.25, lowerBodyDrive: 0.25, rhythm: 0.25 });
       const bodyFitScore = bodySimilarity(profile.body, reference.bodyFit);
-      const fitScore = Math.round(Math.max(35, Math.min(96, traitScore * 0.55 + bodyFitScore * 0.25 + styleScore * 0.2)));
-      const alignment = (Object.keys(profile.traits) as Array<keyof PoseTraits>)
-        .map((trait) => ({ trait, label: TRAIT_LABELS[trait], delta: profile.traits[trait] - reference.traits[trait] }))
+      const fitScore = Math.round(Math.max(35, Math.min(96, goalScore * 0.82 + styleScore * 0.18)));
+      const alignment = (Object.keys(GOAL_TARGETS[profile.goal]) as Array<keyof PoseTraits>)
+        .map((trait) => ({ trait, label: TRAIT_LABELS[trait], delta: GOAL_TARGETS[profile.goal][trait] - reference.traits[trait] }))
         .sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
       return { reference, fitScore, confidence: "youtube_pose_candidate" as const, alignment, bodyFitScore, reasons: strongestReason(profile, reference, bodyFitScore), focus: FOCUS_BY_GOAL[profile.goal] };
     })
