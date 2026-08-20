@@ -69,3 +69,5 @@
 - [ ] iPhone·웹 반응형 UI와 독립 인증·저장 흐름 회귀 검증
 - [x] Firebase Authentication·Cloud Firestore 기반의 독립 로그인과 개인 스켈레톤 저장 연결
 - [ ] 실제 iPhone custom development build에서 Firebase 회원가입·영상 pose detection·개인 Firestore 저장 종단 검증
+- [x] 프로토타입용 선수명 reference 레이블을 도입하고 상용 익명화 전환 경계를 유지
+- [x] 3D 뷰어 정면·사선·측면 시점의 실제 카메라 투영을 보정하고 회귀 검증

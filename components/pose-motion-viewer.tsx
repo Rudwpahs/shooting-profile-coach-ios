@@ -2,13 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
 
-import { BONE_LINKS, clampPoseZoom, projectPosePoint, type JointName, type PoseMotion } from "@/lib/pose-motion";
-
-const ANGLES = [
-  { label: "정면", yaw: 0 },
-  { label: "사선", yaw: 38 },
-  { label: "측면", yaw: 82 },
-];
+import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, normalizePoseYaw, projectPosePoint, type JointName, type PoseMotion } from "@/lib/pose-motion";
 
 type Camera = { yaw: number; zoom: number };
 
@@ -39,7 +33,8 @@ type PoseMotionViewerProps = {
 export function PoseMotionViewer({ motion, title, boundary, hand = "right", activeFrameIndex, onPhaseSelect }: PoseMotionViewerProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [camera, setCamera] = useState<Camera>({ yaw: 38, zoom: 1 });
+  const presets = useMemo(() => getPoseCameraPresets(motion, hand), [motion, hand]);
+  const [camera, setCamera] = useState<Camera>(() => ({ yaw: presets[1].yaw, zoom: 1 }));
   const [isInteracting, setIsInteracting] = useState(false);
   const cameraRef = useRef<Camera>(camera);
   const startCamera = useRef<Camera>(camera);
@@ -66,7 +61,7 @@ export function PoseMotionViewer({ motion, title, boundary, hand = "right", acti
     });
   }, []);
   useEffect(() => () => { if (pendingFrame.current !== null) cancelAnimationFrame(pendingFrame.current); }, []);
-  useEffect(() => { setFrameIndex(0); setPlaying(false); scheduleCamera({ yaw: 38, zoom: 1 }); }, [motion.id, scheduleCamera]);
+  useEffect(() => { setFrameIndex(0); setPlaying(false); scheduleCamera({ yaw: presets[1].yaw, zoom: 1 }); }, [motion.id, presets, scheduleCamera]);
   useEffect(() => {
     if (!playing) return;
     const timer = setInterval(() => setFrameIndex((current) => current >= motion.frames.length - 1 ? 0 : current + 1), 560);
@@ -93,14 +88,14 @@ export function PoseMotionViewer({ motion, title, boundary, hand = "right", acti
         scheduleCamera({ ...cameraRef.current, zoom: clampPoseZoom(startCamera.current.zoom * (distance / pinchStartDistance.current)) });
         return;
       }
-      if (!isPinching.current) scheduleCamera({ ...cameraRef.current, yaw: Math.max(-90, Math.min(90, startCamera.current.yaw + gesture.dx * 0.32)) });
+      if (!isPinching.current) scheduleCamera({ ...cameraRef.current, yaw: normalizePoseYaw(startCamera.current.yaw + gesture.dx * 0.32) });
     },
     onPanResponderRelease: () => { isPinching.current = false; startCamera.current = cameraRef.current; setIsInteracting(false); },
     onPanResponderTerminate: () => { isPinching.current = false; setIsInteracting(false); },
     onPanResponderTerminationRequest: () => true,
   }), [scheduleCamera]);
   const changeZoom = (amount: number) => scheduleCamera({ ...cameraRef.current, zoom: clampPoseZoom(cameraRef.current.zoom + amount) });
-  const resetView = () => scheduleCamera({ yaw: 38, zoom: 1 });
+  const resetView = () => scheduleCamera({ yaw: presets[1].yaw, zoom: 1 });
   const displayTitle = title ?? "ACTUAL MOTION";
   const boundaryCopy = boundary ?? "실제 source motion에서 변환된 관절 데이터입니다. source 승인·관절 품질 상태는 모션별 기록을 따릅니다.";
   return <View style={styles.card}>
@@ -113,7 +108,7 @@ export function PoseMotionViewer({ motion, title, boundary, hand = "right", acti
       </Svg>
       <Text style={styles.dragHint}>좌우 드래그 회전 · 두 손가락 핀치 확대/축소</Text>
     </View>
-    <View style={styles.angleRow}>{ANGLES.map((angle) => <Pressable key={angle.label} onPress={() => scheduleCamera({ ...cameraRef.current, yaw: angle.yaw })} style={({ pressed }) => [styles.angleButton, Math.abs(camera.yaw - angle.yaw) < 10 && styles.angleActive, pressed && styles.pressed]}><Text style={[styles.angleText, Math.abs(camera.yaw - angle.yaw) < 10 && styles.angleTextActive]}>{angle.label}</Text></Pressable>)}</View>
+    <View style={styles.angleRow}>{presets.map((angle) => <Pressable key={angle.id} onPress={() => scheduleCamera({ ...cameraRef.current, yaw: angle.yaw })} style={({ pressed }) => [styles.angleButton, Math.abs(normalizePoseYaw(camera.yaw - angle.yaw)) < 10 && styles.angleActive, pressed && styles.pressed]}><Text style={[styles.angleText, Math.abs(normalizePoseYaw(camera.yaw - angle.yaw)) < 10 && styles.angleTextActive]}>{angle.label}</Text></Pressable>)}</View>
     <View style={styles.zoomRow}><Pressable onPress={() => changeZoom(-0.12)} style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]} accessibilityLabel="축소"><Text style={styles.zoomButtonText}>−</Text></Pressable><View style={styles.zoomReadout}><Text style={styles.zoomLabel}>ZOOM</Text><Text style={styles.zoomValue}>{Math.round(camera.zoom * 100)}%</Text></View><Pressable onPress={() => changeZoom(0.12)} style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]} accessibilityLabel="확대"><Text style={styles.zoomButtonText}>＋</Text></Pressable><Pressable onPress={resetView} style={({ pressed }) => [styles.resetButton, pressed && styles.pressed]} accessibilityLabel="시점 초기화"><Text style={styles.resetText}>RESET</Text></Pressable></View>
     <View style={styles.scrubRow}>{motion.frames.map((item, index) => <Pressable key={item.label} onPress={() => { setFrameIndex(index); setPlaying(false); onPhaseSelect?.(index); }} style={({ pressed }) => [styles.scrubItem, index === visibleFrameIndex && styles.scrubItemActive, pressed && styles.pressed]}><View style={[styles.scrubDot, index === visibleFrameIndex && styles.scrubDotActive]} /><Text style={[styles.scrubLabel, index === visibleFrameIndex && styles.scrubLabelActive]}>{item.label}</Text></Pressable>)}</View>
     <Pressable onPress={() => setPlaying((value) => !value)} style={({ pressed }) => [styles.playButton, pressed && styles.pressed]}><Text style={styles.playText}>{playing ? "일시 정지" : "모션 재생"}</Text><Text style={styles.playIcon}>{playing ? "Ⅱ" : "▶"}</Text></Pressable>

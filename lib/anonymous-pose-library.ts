@@ -16,6 +16,8 @@ export type AnonymousPoseReference = {
   sourceSequenceStatus: SourceSequenceStatus;
   motion: PoseMotion;
   sourceAttribution: string;
+  /** Temporary UI-only label. It never changes measured motion provenance. */
+  prototypeDisplayName?: string;
 };
 
 const cmuShoot01 = cmuShoot01Raw.motion as PoseMotion;
@@ -32,12 +34,14 @@ export const ANONYMOUS_POSE_REFERENCES: AnonymousPoseReference[] = [
     sourceSequenceStatus: "approved_actual_optical_mocap",
     motion: cmuShoot01,
     sourceAttribution: "CMU Graphics Lab Motion Capture Database · licensed optical marker data · anonymous source",
+    prototypeDisplayName: "Stephen Curry",
   },
 ];
 
 export const ANONYMOUS_POSE_LIBRARY_STATUS = {
   profileCount: ANONYMOUS_POSE_REFERENCES.length,
-  visiblePlayerIdentity: false,
+  visiblePlayerIdentity: true,
+  namingMode: "prototype_comparison_label_only",
   sourceType: "licensed_optical_mocap_or_calibrated_multiview",
   calibrationStatus: "one_approved_optical_marker_sequence",
   motionKind: "actual_optical_mocap_3d",

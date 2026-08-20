@@ -7,6 +7,7 @@ export type PoseMotion = {
   boundary: "actual_optical_mocap_3d" | "monocular_relative_pose_not_metric_3d" | "calibrated_multi_view_3d";
 };
 export type MotionQualityGate = { passed: boolean; failures: string[]; maxJointStep: number };
+export type PoseCameraPreset = { id: "front" | "oblique" | "side"; label: "정면" | "사선" | "측면"; yaw: number };
 
 export const BONE_LINKS: Array<[JointName, JointName]> = [
   ["head", "neck"], ["neck", "spine"], ["spine", "pelvis"],
@@ -25,6 +26,32 @@ const lerp = (from: number, to: number, amount: number) => from + (to - from) * 
 
 export function clampPoseZoom(value: number) {
   return clamp(value, POSE_ZOOM_MIN, POSE_ZOOM_MAX);
+}
+
+export function normalizePoseYaw(value: number) {
+  const normalized = ((value + 180) % 360 + 360) % 360 - 180;
+  return normalized === -180 ? 180 : normalized;
+}
+
+/**
+ * Builds named camera views from the measured release-to-follow direction.
+ * Front faces the shooter, and side is the shooting-arm side — not an
+ * arbitrary world-axis value. This works for optical-mocap and mirrors for
+ * a left-handed viewer without changing the source joints.
+ */
+export function getPoseCameraPresets(motion: PoseMotion, hand: "auto" | "right" | "left" = "right"): PoseCameraPreset[] {
+  const release = motion.frames.find((frame) => frame.label === "릴리스")?.joints.rightWrist ?? motion.frames[0]?.joints.rightWrist;
+  const follow = motion.frames.find((frame) => frame.label === "팔로우스루")?.joints.rightWrist ?? motion.frames.at(-1)?.joints.rightWrist;
+  const deltaX = (follow?.x ?? 0) - (release?.x ?? 0);
+  const deltaZ = (follow?.z ?? 0) - (release?.z ?? 1);
+  const shotYaw = Math.hypot(deltaX, deltaZ) < 0.05 ? 0 : (Math.atan2(deltaX, deltaZ) * 180) / Math.PI;
+  const frontYaw = normalizePoseYaw(shotYaw + 180);
+  const shootingArmOffset = hand === "left" ? 90 : -90;
+  return [
+    { id: "front", label: "정면", yaw: frontYaw },
+    { id: "oblique", label: "사선", yaw: normalizePoseYaw(frontYaw + shootingArmOffset / 2) },
+    { id: "side", label: "측면", yaw: normalizePoseYaw(frontYaw + shootingArmOffset) },
+  ];
 }
 
 export function validatePoseMotion(motion: PoseMotion): MotionQualityGate {
@@ -53,6 +80,7 @@ export function projectPosePoint(point: Vector3, yawDegrees: number, pitchDegree
   const rotatedX = point.x * Math.cos(yaw) - point.z * Math.sin(yaw);
   const depth = point.x * Math.sin(yaw) + point.z * Math.cos(yaw);
   const rotatedY = point.y * Math.cos(pitch) - depth * Math.sin(pitch);
-  const zoom = Math.max(0.62, 1 + depth * 0.16) / clampPoseZoom(cameraZoom);
-  return { x: width / 2 + (rotatedX * 76) / zoom, y: height - 28 - (rotatedY * 82) / zoom, depth };
+  const perspective = Math.max(0.62, 1 + depth * 0.16);
+  const zoom = clampPoseZoom(cameraZoom) / perspective;
+  return { x: width / 2 + (rotatedX * 76) * zoom, y: height - 28 - (rotatedY * 82) * zoom, depth };
 }

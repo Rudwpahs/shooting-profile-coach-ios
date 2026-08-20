@@ -3,8 +3,8 @@ import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ScreenTitle, SectionCard, SecondaryButton, StatusPill, palette } from "@/components/formpath-ui";
 import { ScreenContainer } from "@/components/screen-container";
 import { haptic } from "@/lib/haptics";
+import { ANONYMOUS_POSE_LIBRARY_STATUS } from "@/lib/anonymous-pose-library";
 import { useProfile } from "@/lib/profile-store";
-import { REFERENCE_LIBRARY_STATUS } from "@/lib/reference-library";
 
 export default function SettingsScreen() {
   const { clearProfile } = useProfile();
@@ -16,16 +16,16 @@ export default function SettingsScreen() {
   return (
     <ScreenContainer>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ScreenTitle eyebrow="SETTINGS" title="내 데이터, 내 기기." detail="현재 버전은 프로필과 평가 값을 이 기기에만 보관합니다." />
+        <ScreenTitle eyebrow="SETTINGS" title="내 데이터, 내 공간." detail="목표 값은 기기에 보관하고, 로그인 후 개인 스켈레톤은 Firebase 개인 경로에 저장합니다." />
         <SectionCard>
           <Text style={styles.sectionTitle}>Reference data status</Text>
-          <StatusPill tone="warning">PROVISIONAL · COMMERCIALIZATION GATE OPEN</StatusPill>
-          <View style={styles.statRow}><Stat label="익명 legacy profile" value={`${REFERENCE_LIBRARY_STATUS.anonymizedLegacyProfiles}`} /><Stat label="후보 source clip" value={`${REFERENCE_LIBRARY_STATUS.legacyCandidateClips}`} /><Stat label="검증된 reference" value={`${REFERENCE_LIBRARY_STATUS.verifiedReferenceCount}`} /></View>
-          <Text style={styles.body}>{REFERENCE_LIBRARY_STATUS.message}</Text>
+          <StatusPill tone="warning">PROTOTYPE · NAMED COMPARISON LABEL</StatusPill>
+          <View style={styles.statRow}><Stat label="승인 실제 모션" value={`${ANONYMOUS_POSE_LIBRARY_STATUS.profileCount}`} /><Stat label="프로토타입 이름" value={ANONYMOUS_POSE_LIBRARY_STATUS.visiblePlayerIdentity ? "1" : "0"} /><Stat label="직접 source" value={`${ANONYMOUS_POSE_LIBRARY_STATUS.directSourceSequenceCount}`} /></View>
+          <Text style={styles.body}>현재 Stephen Curry 표시는 prototype comparison label입니다. 실제 관절 모션 출처는 익명 CMU optical-mocap이며, 선수의 실측 3D 모델이라고 주장하지 않습니다.</Text>
         </SectionCard>
         <SectionCard tone="sand">
           <Text style={styles.sectionTitle}>개인정보 보호</Text>
-          <Text style={styles.body}>선수 이름, 신체 치수, 얼굴 인식, 원본 영상 링크는 추천에 사용하지 않습니다. 현재 개인 목표와 입력한 특성은 로컬 저장소에만 보관됩니다.</Text>
+          <Text style={styles.body}>프로토타입 이름은 화면 비교에만 사용하며 추천 점수에 반영하지 않습니다. 신체 치수·얼굴 인식·원본 영상은 저장하지 않으며, 개인 pose JSON은 로그인한 Firebase UID 경로에만 저장됩니다.</Text>
         </SectionCard>
         <SectionCard>
           <Text style={styles.sectionTitle}>로컬 데이터</Text>
