@@ -11,7 +11,7 @@
 | 1. 소스 선별 | 연속 전신 슛 동영상, 로컬 파일만 입력 | 12개 이상 표본 프레임 | 분석 중단 |
 | 2. 2D landmark | `extract-relative-pose-candidate.py` + MediaPipe 33 landmark | 전신 landmark frame ratio ≥ 0.72 | `rejected` |
 | 3. 상대 pose | 어깨 폭 기준 정규화·5단계 압축 | mean visibility ≥ 0.55 | 개인 후보로 저장 금지 |
-| 4. 실제 3D 승격 | 두 대 이상 동기화된 카메라, 내부·외부 보정, 삼각측량 | 재투영 오차·관절 연속성·릴리스 이벤트 검증 | `candidate_multi_view_pose` 유지 |
+| 4. 실제 3D 승격 | 두 대 이상 동기화된 물리 카메라, 내부·외부 보정, source provenance, 삼각측량 | 재투영 오차·관절 연속성·릴리스 이벤트·media hash 검증 | `candidate_multi_view_pose` 유지 |
 | 5. 익명 참조화 | 승인된 다중 시점 시퀀스의 특성만 추출 | 법적 소스 범위·익명화·품질 문서화 | 제품 라이브러리 미포함 |
 
 ## 로컬 실행
@@ -25,13 +25,14 @@ python3 scripts/extract-relative-pose-candidate.py \
 
 이 명령은 원본 동영상이나 이름을 출력 JSON에 넣지 않는다. JSON은 33개 landmark 후보와 품질 보고서만 포함한다. 실제 선수 모델 승격은 동기화·보정·삼각측량이 검증되기 전에는 수행하지 않는다.
 
-다중 시점 데이터가 준비되면 다음 검증기로만 `calibrated_multi_view_3d`를 생성할 수 있다. `projectionMatrices`는 각 카메라의 **동일한 normalized-image 좌표계**를 월드 좌표로 연결하는 3×4 행렬이어야 하며, 도구는 동기화 프레임 비율·프레임 수·모든 33개 관절의 재투영 오차를 함께 검사한다.
+다중 시점 데이터가 준비되면 다음 검증기로만 `calibrated_multi_view_3d`를 생성할 수 있다. `projectionMatrices`는 각 카메라의 **동일한 normalized-image 좌표계**를 월드 좌표로 연결하는 3×4 행렬이어야 하며, 도구는 동기화 프레임 비율·프레임 수·모든 33개 관절의 재투영 오차를 함께 검사한다. 추가로 `provenance.json`은 source media 사용 승인, 물리적으로 분리된 동기화 카메라, 각 view의 정확한 label과 32자 이상 media hash를 증명해야 한다. 단일 360 camera의 virtual crop은 하나의 광학 중심을 공유하므로 명시적으로 거부한다.
 
 ```bash
 python3 scripts/validate-multiview-pose-candidate.py \
   --view side=/absolute/path/side-relative.json \
   --view front=/absolute/path/front-relative.json \
   --calibration /absolute/path/calibrated-projection-matrices.json \
+  --provenance /absolute/path/provenance.json \
   --output artifacts/calibrated-multiview-pose.json
 ```
 

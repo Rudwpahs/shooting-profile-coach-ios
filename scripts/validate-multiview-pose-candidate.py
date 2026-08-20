@@ -29,6 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--view", type=parse_view, action="append", required=True, help="Repeat for each synchronized camera candidate.")
     parser.add_argument("--calibration", type=Path, required=True, help="Projection matrices in the normalized-image coordinate convention.")
+    parser.add_argument("--provenance", type=Path, required=True, help="Non-product audit record proving authorized source media and physical camera baseline.")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sync-tolerance-ms", type=int, default=34)
     parser.add_argument("--max-reprojection-error", type=float, default=0.035)
@@ -44,6 +45,21 @@ def load_candidate(path: Path) -> dict[str, Any]:
     frames = payload.get("frames") or []
     if len(frames) < 5:
         raise ValueError(f"{path} has too few pose frames")
+    return payload
+
+
+def load_provenance(path: Path, expected_views: set[str]) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("captureKind") != "physically_separated_synchronized_cameras":
+        raise ValueError("provenance must prove physically separated synchronized cameras; 360 virtual crops are not accepted")
+    if payload.get("sourceMediaAuthorized") is not True:
+        raise ValueError("provenance must confirm source media authorization")
+    if set(payload.get("views", [])) != expected_views:
+        raise ValueError("provenance views must exactly match submitted candidates")
+    if not isinstance(payload.get("assetHashes"), dict) or set(payload["assetHashes"]) != expected_views:
+        raise ValueError("provenance must include a media hash for every submitted view")
+    if not all(isinstance(value, str) and len(value) >= 32 for value in payload["assetHashes"].values()):
+        raise ValueError("provenance asset hashes are incomplete")
     return payload
 
 
@@ -74,6 +90,7 @@ def main() -> int:
         raise SystemExit("sync tolerance must be 0-100 ms")
 
     candidates = {label: load_candidate(path) for label, path in args.view}
+    provenance = load_provenance(args.provenance, set(candidates))
     calibration = json.loads(args.calibration.read_text(encoding="utf-8"))
     matrices: dict[str, np.ndarray] = {}
     for label in candidates:
@@ -139,7 +156,7 @@ def main() -> int:
         "version": 1,
         "boundary": "calibrated_multi_view_3d",
         "state": "approved_private" if quality["passed"] else "rejected",
-        "source": {"kind": "synchronized_local_multiview", "identity": "not_collected", "videoStored": False, "views": list(candidates)},
+        "source": {"kind": provenance["captureKind"], "identity": "not_product_exposed", "videoStored": False, "views": list(candidates), "provenanceHashCount": len(provenance["assetHashes"])},
         "frames": output_frames,
         "quality": quality,
     }
