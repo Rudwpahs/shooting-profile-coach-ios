@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "boundary": "candidate_segments_require_visual_and_ball_event_review",
+  "captureRate": 120.0,
+  "candidateCount": 2,
+  "candidates": [
+    {
+      "side": "right",
+      "peakFrame": 3364,
+      "peakTimestampMs": 13725.0,
+      "windowStartFrame": 3280,
+      "windowEndFrame": 3460,
+      "wristLiftMm": 95.93,
+      "elbowAngleDegrees": 135.24,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "right",
+      "peakFrame": 3754,
+      "peakTimestampMs": 16975.0,
+      "windowStartFrame": 3670,
+      "windowEndFrame": 3850,
+      "wristLiftMm": 87.42,
+      "elbowAngleDegrees": 135.77,
+      "evidence": "measured_optical_markers_only"
+    }
+  ]
+}

@@ -18,7 +18,7 @@ export default function AssessmentScreen() {
   return <ScreenContainer><ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
     <Text style={styles.eyebrow}>SHOOTING FORM ANALYSIS</Text>
     <Text style={styles.title}>추천 기준</Text>
-    <Text style={styles.detail}>레벨·신체 밴드·스타일·스테퍼는 사용하지 않습니다. 목표 하나가 점수와 순위에 바로 반영됩니다.</Text>
+    <Text style={styles.detail}>레벨·신체 밴드·스타일·스테퍼는 사용하지 않습니다. 목표 하나가 승인된 익명 실제 모션의 점수와 순위에 바로 반영됩니다.</Text>
     <View style={styles.block}>
       <Text style={styles.blockTitle}>PERSON</Text>
       <Text style={styles.blockDetail}>핸드는 3D 표시 방향에만 반영됩니다. 익명 모션의 적합도 점수에는 추정 신체조건을 넣지 않습니다.</Text>
@@ -26,7 +26,7 @@ export default function AssessmentScreen() {
     </View>
     <View style={styles.block}>
       <Text style={styles.blockTitle}>MATCH</Text>
-      <Text style={styles.blockDetail}>원하는 변화 하나를 선택하세요. 선택 즉시 기존 프로필에 저장되고, 홈의 16개 모션 순위가 다시 계산됩니다.</Text>
+      <Text style={styles.blockDetail}>원하는 변화 하나를 선택하세요. 선택 즉시 기존 프로필에 저장되고, 승인된 익명 실제 모션의 적합도와 순위가 다시 계산됩니다.</Text>
       <View style={styles.goalStack}>{TRAINING_GOALS.map((goal) => <Pressable key={goal.id} onPress={() => chooseGoal(goal.id)} style={({ pressed }) => [styles.goal, profile.goal === goal.id && styles.goalActive, pressed && styles.pressed]}><View><Text style={styles.goalTitle}>{goal.title}</Text><Text style={styles.goalDetail}>{goal.description}</Text></View><Text style={styles.goalIndicator}>{profile.goal === goal.id ? "APPLIED" : ""}</Text></Pressable>)}</View>
       <View style={styles.applied}><Text style={styles.appliedText}>{getGoalApplicationSummary(profile.goal)}</Text></View>
       <Pressable onPress={() => router.replace("/")} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}><Text style={styles.backText}>MATCH RESULTS 보기</Text></Pressable>

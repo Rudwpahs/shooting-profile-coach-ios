@@ -1,0 +1,2577 @@
+{
+  "version": 1,
+  "state": "inspection_passed",
+  "boundary": "actual_optical_mocap_marker_data_not_yet_product_joint_schema",
+  "source": {
+    "provider": "CMU Graphics Lab Motion Capture Database",
+    "url": "http://mocap.cs.cmu.edu/subjects/06/06_15.c3d",
+    "sha256": "ebcec61b0a72a4828f6926a879a6478730531158009281d5706d308cf842e5d5",
+    "identity": "anonymous_optical_mocap_shoot_02",
+    "videoStored": false
+  },
+  "capture": {
+    "format": "c3d",
+    "pointFrameRate": 120.0,
+    "firstFrame": 14,
+    "lastFrame": 558,
+    "frameCount": 545,
+    "durationSeconds": 4.542,
+    "markerCount": 255
+  },
+  "markers": [
+    {
+      "label": "LFHD",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -74.613,
+        -139.241,
+        1654.551
+      ]
+    },
+    {
+      "label": "RFHD",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -65.26,
+        13.268,
+        1643.94
+      ]
+    },
+    {
+      "label": "LBHD",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        39.729,
+        -131.451,
+        1623.874
+      ]
+    },
+    {
+      "label": "RBHD",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        56.371,
+        -6.482,
+        1617.97
+      ]
+    },
+    {
+      "label": "C7",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        84.748,
+        -53.663,
+        1482.913
+      ]
+    },
+    {
+      "label": "T10",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        143.312,
+        -55.536,
+        1299.07
+      ]
+    },
+    {
+      "label": "CLAV",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -11.758,
+        -98.525,
+        1413.449
+      ]
+    },
+    {
+      "label": "STRN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -3.002,
+        -139.468,
+        1213.411
+      ]
+    },
+    {
+      "label": "RBAC",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        80.285,
+        33.493,
+        1436.419
+      ]
+    },
+    {
+      "label": "LSHO",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        78.145,
+        -200.465,
+        1473.699
+      ]
+    },
+    {
+      "label": "LUPA",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        97.611,
+        -271.747,
+        1357.678
+      ]
+    },
+    {
+      "label": "LELB",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        64.876,
+        -298.941,
+        1224.553
+      ]
+    },
+    {
+      "label": "LFRM",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        14.923,
+        -299.426,
+        1187.589
+      ]
+    },
+    {
+      "label": "LWRA",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -83.427,
+        -269.525,
+        1201.216
+      ]
+    },
+    {
+      "label": "LWRB",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -65.261,
+        -282.837,
+        1133.475
+      ]
+    },
+    {
+      "label": "LFIN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -82.719,
+        -277.114,
+        1132.955
+      ]
+    },
+    {
+      "label": "RSHO",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -6.803,
+        52.092,
+        1445.773
+      ]
+    },
+    {
+      "label": "RUPA",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -51.001,
+        111.5,
+        1285.916
+      ]
+    },
+    {
+      "label": "RELB",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -88.644,
+        119.87,
+        1199.708
+      ]
+    },
+    {
+      "label": "RFRM",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -157.39,
+        111.287,
+        1164.429
+      ]
+    },
+    {
+      "label": "RWRA",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -195.766,
+        43.583,
+        1199.374
+      ]
+    },
+    {
+      "label": "RWRB",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -192.94,
+        138.29,
+        1155.838
+      ]
+    },
+    {
+      "label": "RFIN",
+      "validFrameRatio": 0.9633,
+      "longestContinuousFrames": 263,
+      "centroidMm": [
+        -226.224,
+        88.794,
+        1148.217
+      ]
+    },
+    {
+      "label": "LFWT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        119.392,
+        -223.356,
+        1031.858
+      ]
+    },
+    {
+      "label": "RFWT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        8.151,
+        -20.677,
+        1034.954
+      ]
+    },
+    {
+      "label": "LBWT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        215.088,
+        -81.303,
+        1018.72
+      ]
+    },
+    {
+      "label": "RBWT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        173.678,
+        -9.895,
+        1022.98
+      ]
+    },
+    {
+      "label": "LTHI",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        160.486,
+        -242.502,
+        765.811
+      ]
+    },
+    {
+      "label": "LKNE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        97.794,
+        -258.178,
+        538.112
+      ]
+    },
+    {
+      "label": "LSHN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        137.572,
+        -248.725,
+        396.982
+      ]
+    },
+    {
+      "label": "LANK",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        189.099,
+        -172.663,
+        105.424
+      ]
+    },
+    {
+      "label": "LHEE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        209.717,
+        -112.47,
+        82.919
+      ]
+    },
+    {
+      "label": "LTOE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        37.386,
+        -204.488,
+        45.395
+      ]
+    },
+    {
+      "label": "LMT5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        116.782,
+        -236.806,
+        40.543
+      ]
+    },
+    {
+      "label": "RTHI",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -18.19,
+        5.73,
+        676.964
+      ]
+    },
+    {
+      "label": "RKNE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -34.943,
+        -14.431,
+        529.904
+      ]
+    },
+    {
+      "label": "RSHN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        27.308,
+        45.496,
+        334.371
+      ]
+    },
+    {
+      "label": "RANK",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        102.752,
+        58.365,
+        107.143
+      ]
+    },
+    {
+      "label": "RHEE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        162.964,
+        42.51,
+        79.138
+      ]
+    },
+    {
+      "label": "RTOE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -3.808,
+        -34.207,
+        41.95
+      ]
+    },
+    {
+      "label": "RMT5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        10.033,
+        41.953,
+        38.993
+      ]
+    },
+    {
+      "label": "*42",
+      "validFrameRatio": 0.0606,
+      "longestContinuousFrames": 33,
+      "centroidMm": [
+        510.378,
+        487.505,
+        1373.029
+      ]
+    },
+    {
+      "label": "*43",
+      "validFrameRatio": 0.0422,
+      "longestContinuousFrames": 23,
+      "centroidMm": [
+        335.71,
+        571.221,
+        1263.182
+      ]
+    },
+    {
+      "label": "*44",
+      "validFrameRatio": 0.0275,
+      "longestContinuousFrames": 15,
+      "centroidMm": [
+        453.591,
+        -280.612,
+        81.44
+      ]
+    },
+    {
+      "label": "*45",
+      "validFrameRatio": 0.0367,
+      "longestContinuousFrames": 20,
+      "centroidMm": [
+        95.911,
+        360.386,
+        1234.455
+      ]
+    },
+    {
+      "label": "*46",
+      "validFrameRatio": 0.0477,
+      "longestContinuousFrames": 26,
+      "centroidMm": [
+        449.928,
+        -278.785,
+        83.095
+      ]
+    },
+    {
+      "label": "*47",
+      "validFrameRatio": 0.0275,
+      "longestContinuousFrames": 15,
+      "centroidMm": [
+        38.905,
+        325.116,
+        1215.246
+      ]
+    },
+    {
+      "label": "*48",
+      "validFrameRatio": 0.055,
+      "longestContinuousFrames": 30,
+      "centroidMm": [
+        61.809,
+        311.805,
+        668.559
+      ]
+    },
+    {
+      "label": "*49",
+      "validFrameRatio": 0.0495,
+      "longestContinuousFrames": 27,
+      "centroidMm": [
+        -133.595,
+        172.464,
+        605.449
+      ]
+    },
+    {
+      "label": "*50",
+      "validFrameRatio": 0.0294,
+      "longestContinuousFrames": 16,
+      "centroidMm": [
+        57.388,
+        43.001,
+        395.389
+      ]
+    },
+    {
+      "label": "*51",
+      "validFrameRatio": 0.1083,
+      "longestContinuousFrames": 59,
+      "centroidMm": [
+        -191.915,
+        -41.915,
+        534.23
+      ]
+    },
+    {
+      "label": "*52",
+      "validFrameRatio": 0.0862,
+      "longestContinuousFrames": 47,
+      "centroidMm": [
+        -164.339,
+        -10.016,
+        637.022
+      ]
+    },
+    {
+      "label": "*53",
+      "validFrameRatio": 0.0239,
+      "longestContinuousFrames": 13,
+      "centroidMm": [
+        -0.537,
+        -71.148,
+        693.757
+      ]
+    },
+    {
+      "label": "*54",
+      "validFrameRatio": 0.0734,
+      "longestContinuousFrames": 40,
+      "centroidMm": [
+        -216.394,
+        125.66,
+        662.851
+      ]
+    },
+    {
+      "label": "*55",
+      "validFrameRatio": 0.0128,
+      "longestContinuousFrames": 7,
+      "centroidMm": [
+        -378.749,
+        64.688,
+        1358.643
+      ]
+    },
+    {
+      "label": "*56",
+      "validFrameRatio": 0.0202,
+      "longestContinuousFrames": 11,
+      "centroidMm": [
+        -526.815,
+        -110.451,
+        1313.676
+      ]
+    },
+    {
+      "label": "*57",
+      "validFrameRatio": 0.1321,
+      "longestContinuousFrames": 72,
+      "centroidMm": [
+        -507.876,
+        -11.139,
+        1779.392
+      ]
+    },
+    {
+      "label": "*58",
+      "validFrameRatio": 0.0092,
+      "longestContinuousFrames": 5,
+      "centroidMm": [
+        78.308,
+        -547.647,
+        903.265
+      ]
+    },
+    {
+      "label": "PEL0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        130.303,
+        -82.903,
+        1011.67
+      ]
+    },
+    {
+      "label": "LHJ0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        140.733,
+        -174.776,
+        906.699
+      ]
+    },
+    {
+      "label": "RHJ0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        65.717,
+        -36.282,
+        908.837
+      ]
+    },
+    {
+      "label": "LFE0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        53.901,
+        -215.563,
+        529.356
+      ]
+    },
+    {
+      "label": "RFE0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -16.031,
+        -72.923,
+        516.757
+      ]
+    },
+    {
+      "label": "LTI0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        171.112,
+        -137.669,
+        107.112
+      ]
+    },
+    {
+      "label": "RTI0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        124.797,
+        23.803,
+        108.002
+      ]
+    },
+    {
+      "label": "LFO0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        87.335,
+        -179.984,
+        60.803
+      ]
+    },
+    {
+      "label": "RFO0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        43.848,
+        -13.102,
+        50.94
+      ]
+    },
+    {
+      "label": "LTO0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        42.784,
+        -204.445,
+        58.431
+      ]
+    },
+    {
+      "label": "RTO0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        0.961,
+        -32.774,
+        32.732
+      ]
+    },
+    {
+      "label": "LBK0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        114.807,
+        -82.526,
+        1122.395
+      ]
+    },
+    {
+      "label": "UBK0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        81.17,
+        -88.069,
+        1225.439
+      ]
+    },
+    {
+      "label": "TRX0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        53.236,
+        -82.659,
+        1336.006
+      ]
+    },
+    {
+      "label": "LNK0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        42.601,
+        -82.672,
+        1431.034
+      ]
+    },
+    {
+      "label": "UNK0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        35.765,
+        -72.697,
+        1524.366
+      ]
+    },
+    {
+      "label": "HED0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        14.858,
+        -60.581,
+        1613.702
+      ]
+    },
+    {
+      "label": "LCL0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        111.783,
+        -214.266,
+        1413.227
+      ]
+    },
+    {
+      "label": "RCL0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        2.654,
+        66.389,
+        1401.74
+      ]
+    },
+    {
+      "label": "LHU0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        79.425,
+        -245.419,
+        1217.209
+      ]
+    },
+    {
+      "label": "RHU0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -73.161,
+        78.633,
+        1202.733
+      ]
+    },
+    {
+      "label": "LRA0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -11.511,
+        -233.025,
+        1178.057
+      ]
+    },
+    {
+      "label": "RRA0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -149.25,
+        70.716,
+        1185.902
+      ]
+    },
+    {
+      "label": "LWR0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -56.982,
+        -226.825,
+        1158.482
+      ]
+    },
+    {
+      "label": "RWR0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -187.294,
+        66.767,
+        1177.486
+      ]
+    },
+    {
+      "label": "LHN0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -60.913,
+        -233.734,
+        1144.542
+      ]
+    },
+    {
+      "label": "RHN0",
+      "validFrameRatio": 0.9633,
+      "longestContinuousFrames": 263,
+      "centroidMm": [
+        -199.718,
+        71.535,
+        1159.241
+      ]
+    },
+    {
+      "label": "LFI0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -63.957,
+        -236.645,
+        1131.911
+      ]
+    },
+    {
+      "label": "RFI0",
+      "validFrameRatio": 0.9633,
+      "longestContinuousFrames": 263,
+      "centroidMm": [
+        -214.996,
+        69.875,
+        1154.295
+      ]
+    },
+    {
+      "label": "LTB0",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -64.938,
+        -219.608,
+        1137.55
+      ]
+    },
+    {
+      "label": "RTB0",
+      "validFrameRatio": 0.9633,
+      "longestContinuousFrames": 263,
+      "centroidMm": [
+        -200.167,
+        51.616,
+        1156.357
+      ]
+    },
+    {
+      "label": "COX",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        176.182,
+        -61.727,
+        894.219
+      ]
+    },
+    {
+      "label": "LSI",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        216.233,
+        -70.913,
+        1004.451
+      ]
+    },
+    {
+      "label": "RSI",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        187.208,
+        -17.327,
+        1005.277
+      ]
+    },
+    {
+      "label": "LIC",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        161.192,
+        -165.488,
+        1072.238
+      ]
+    },
+    {
+      "label": "RIC",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        76.355,
+        -8.857,
+        1074.652
+      ]
+    },
+    {
+      "label": "LIS",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        107.846,
+        -236.493,
+        1017.762
+      ]
+    },
+    {
+      "label": "RIS",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -10.481,
+        -18.031,
+        1021.133
+      ]
+    },
+    {
+      "label": "LIT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        96.697,
+        -171.047,
+        920.207
+      ]
+    },
+    {
+      "label": "RIT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        40.88,
+        -67.996,
+        921.795
+      ]
+    },
+    {
+      "label": "SPU",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        47.22,
+        -130.598,
+        942.362
+      ]
+    },
+    {
+      "label": "LIP",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        103.282,
+        -165.644,
+        974.737
+      ]
+    },
+    {
+      "label": "RIP",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        47.465,
+        -62.596,
+        976.331
+      ]
+    },
+    {
+      "label": "LFEM1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        130.423,
+        -180.021,
+        902.501
+      ]
+    },
+    {
+      "label": "LFEM2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        133.988,
+        -174.186,
+        884.064
+      ]
+    },
+    {
+      "label": "LFEM3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        147.569,
+        -171.163,
+        895.805
+      ]
+    },
+    {
+      "label": "LFEM4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        144.005,
+        -176.999,
+        914.242
+      ]
+    },
+    {
+      "label": "LFEM5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        129.621,
+        -195.435,
+        872.297
+      ]
+    },
+    {
+      "label": "LFEM6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        133.587,
+        -181.895,
+        868.962
+      ]
+    },
+    {
+      "label": "LFEM7",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        146.764,
+        -186.577,
+        865.601
+      ]
+    },
+    {
+      "label": "LFEM8",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        150.877,
+        -207.599,
+        884.018
+      ]
+    },
+    {
+      "label": "LFEM9",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        55.749,
+        -215.098,
+        577.989
+      ]
+    },
+    {
+      "label": "LFEM10",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        59.712,
+        -201.558,
+        574.651
+      ]
+    },
+    {
+      "label": "LFEM11",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        72.891,
+        -206.24,
+        571.291
+      ]
+    },
+    {
+      "label": "LFEM12",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        68.926,
+        -219.781,
+        574.625
+      ]
+    },
+    {
+      "label": "LFEM13",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        39.613,
+        -222.946,
+        534.936
+      ]
+    },
+    {
+      "label": "LFEM14",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        41.613,
+        -191.265,
+        529.39
+      ]
+    },
+    {
+      "label": "LFEM15",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        89.419,
+        -197.54,
+        548.387
+      ]
+    },
+    {
+      "label": "LFEM16",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        64.65,
+        -236.826,
+        529.327
+      ]
+    },
+    {
+      "label": "RFEM1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        55.825,
+        -42.567,
+        904.272
+      ]
+    },
+    {
+      "label": "RFEM2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        62.713,
+        -41.381,
+        885.283
+      ]
+    },
+    {
+      "label": "RFEM3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        72.34,
+        -31.461,
+        897.719
+      ]
+    },
+    {
+      "label": "RFEM4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        69.25,
+        -38.45,
+        916.65
+      ]
+    },
+    {
+      "label": "RFEM5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        41.688,
+        -33.895,
+        873.02
+      ]
+    },
+    {
+      "label": "RFEM6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        55.644,
+        -37.044,
+        869.656
+      ]
+    },
+    {
+      "label": "RFEM7",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        58.204,
+        -22.789,
+        866.467
+      ]
+    },
+    {
+      "label": "RFEM8",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        41.819,
+        -9.472,
+        885.599
+      ]
+    },
+    {
+      "label": "RFEM9",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -14.479,
+        -74.078,
+        567.083
+      ]
+    },
+    {
+      "label": "RFEM10",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -0.525,
+        -77.228,
+        563.722
+      ]
+    },
+    {
+      "label": "RFEM11",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        2.038,
+        -62.973,
+        560.53
+      ]
+    },
+    {
+      "label": "RFEM12",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -11.919,
+        -59.827,
+        563.894
+      ]
+    },
+    {
+      "label": "RFEM13",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -29.796,
+        -82.181,
+        522.218
+      ]
+    },
+    {
+      "label": "RFEM14",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -0.837,
+        -96.125,
+        516.529
+      ]
+    },
+    {
+      "label": "RFEM15",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        18.035,
+        -51.482,
+        537.202
+      ]
+    },
+    {
+      "label": "RFEM16",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -29.328,
+        -52.619,
+        516.959
+      ]
+    },
+    {
+      "label": "LTIB1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        30.464,
+        -226.712,
+        507.945
+      ]
+    },
+    {
+      "label": "LTIB2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        49.173,
+        -174.372,
+        535.89
+      ]
+    },
+    {
+      "label": "LTIB3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        66.79,
+        -209.212,
+        535.841
+      ]
+    },
+    {
+      "label": "LTIB4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        84.404,
+        -244.052,
+        535.794
+      ]
+    },
+    {
+      "label": "LTIB5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        67.677,
+        -204.748,
+        440.045
+      ]
+    },
+    {
+      "label": "LTIB6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        72.059,
+        -189.53,
+        444.923
+      ]
+    },
+    {
+      "label": "LTIB7",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        87.01,
+        -195.218,
+        449.771
+      ]
+    },
+    {
+      "label": "LTIB8",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        86.152,
+        -217.404,
+        444.885
+      ]
+    },
+    {
+      "label": "LTIB9",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        138.006,
+        -158.004,
+        186.699
+      ]
+    },
+    {
+      "label": "LTIB10",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        142.387,
+        -142.786,
+        191.577
+      ]
+    },
+    {
+      "label": "LTIB11",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        157.34,
+        -148.476,
+        196.424
+      ]
+    },
+    {
+      "label": "LTIB12",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        158.236,
+        -174.142,
+        191.533
+      ]
+    },
+    {
+      "label": "LTIB13",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        127.176,
+        -161.331,
+        133.125
+      ]
+    },
+    {
+      "label": "LTIB14",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        148.811,
+        -105.947,
+        124.051
+      ]
+    },
+    {
+      "label": "LTIB15",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        175.506,
+        -137.52,
+        157.442
+      ]
+    },
+    {
+      "label": "LTIB16",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        188.712,
+        -172.498,
+        107.065
+      ]
+    },
+    {
+      "label": "RTIB1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -35.98,
+        -85.988,
+        493.295
+      ]
+    },
+    {
+      "label": "RTIB2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        16.406,
+        -97.575,
+        524.084
+      ]
+    },
+    {
+      "label": "RTIB3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -4.65,
+        -65.424,
+        524.401
+      ]
+    },
+    {
+      "label": "RTIB4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -25.703,
+        -33.276,
+        524.719
+      ]
+    },
+    {
+      "label": "RTIB5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        3.596,
+        -59.195,
+        429.275
+      ]
+    },
+    {
+      "label": "RTIB6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        18.451,
+        -63.215,
+        434.909
+      ]
+    },
+    {
+      "label": "RTIB7",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        20.672,
+        -47.948,
+        440.74
+      ]
+    },
+    {
+      "label": "RTIB8",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        1.606,
+        -37.498,
+        435.167
+      ]
+    },
+    {
+      "label": "RTIB9",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        88.093,
+        -1.165,
+        184.02
+      ]
+    },
+    {
+      "label": "RTIB10",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        102.948,
+        -5.18,
+        189.657
+      ]
+    },
+    {
+      "label": "RTIB11",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        105.166,
+        10.076,
+        195.486
+      ]
+    },
+    {
+      "label": "RTIB12",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        84.0,
+        23.748,
+        189.942
+      ]
+    },
+    {
+      "label": "RTIB13",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        82.259,
+        -4.609,
+        129.767
+      ]
+    },
+    {
+      "label": "RTIB14",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        140.219,
+        -12.195,
+        124.033
+      ]
+    },
+    {
+      "label": "RTIB15",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        124.942,
+        23.501,
+        158.432
+      ]
+    },
+    {
+      "label": "RTIB16",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        103.743,
+        55.953,
+        108.32
+      ]
+    },
+    {
+      "label": "LFOO1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        84.858,
+        -166.428,
+        27.689
+      ]
+    },
+    {
+      "label": "LFOO2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        105.263,
+        -202.078,
+        25.685
+      ]
+    },
+    {
+      "label": "LFOO3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        192.504,
+        -131.968,
+        48.188
+      ]
+    },
+    {
+      "label": "LFOO4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        182.312,
+        -114.144,
+        49.192
+      ]
+    },
+    {
+      "label": "LFOO5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        172.43,
+        -138.642,
+        125.165
+      ]
+    },
+    {
+      "label": "LFOO6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        150.282,
+        -150.516,
+        120.277
+      ]
+    },
+    {
+      "label": "RFOO1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        54.455,
+        -19.079,
+        14.915
+      ]
+    },
+    {
+      "label": "RFOO2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        36.704,
+        19.062,
+        14.928
+      ]
+    },
+    {
+      "label": "RFOO3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        146.595,
+        46.931,
+        37.876
+      ]
+    },
+    {
+      "label": "RFOO4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        155.472,
+        27.869,
+        37.875
+      ]
+    },
+    {
+      "label": "RFOO5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        127.458,
+        24.832,
+        119.869
+      ]
+    },
+    {
+      "label": "RFOO6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        104.498,
+        14.158,
+        114.648
+      ]
+    },
+    {
+      "label": "LTOE1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        41.937,
+        -201.561,
+        24.419
+      ]
+    },
+    {
+      "label": "LTOE2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        101.591,
+        -203.951,
+        25.27
+      ]
+    },
+    {
+      "label": "LTOE3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        81.186,
+        -168.3,
+        27.276
+      ]
+    },
+    {
+      "label": "RTOE1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        9.469,
+        -25.996,
+        -1.413
+      ]
+    },
+    {
+      "label": "RTOE2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        39.192,
+        22.351,
+        16.817
+      ]
+    },
+    {
+      "label": "RTOE3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        56.944,
+        -15.792,
+        16.813
+      ]
+    },
+    {
+      "label": "SCJ",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        9.277,
+        -93.917,
+        1373.96
+      ]
+    },
+    {
+      "label": "CIJ",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        102.245,
+        -45.146,
+        1427.455
+      ]
+    },
+    {
+      "label": "LR1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        79.803,
+        -122.114,
+        1424.447
+      ]
+    },
+    {
+      "label": "RR1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        34.73,
+        -9.042,
+        1412.586
+      ]
+    },
+    {
+      "label": "XIF",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -2.773,
+        -125.541,
+        1231.496
+      ]
+    },
+    {
+      "label": "TV8",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        159.15,
+        -51.983,
+        1263.672
+      ]
+    },
+    {
+      "label": "LR6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        114.265,
+        -205.933,
+        1257.656
+      ]
+    },
+    {
+      "label": "RR6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        24.118,
+        20.215,
+        1233.935
+      ]
+    },
+    {
+      "label": "LRT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        81.208,
+        -196.043,
+        1145.066
+      ]
+    },
+    {
+      "label": "RRT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        21.11,
+        -45.26,
+        1129.251
+      ]
+    },
+    {
+      "label": "LCL",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        100.333,
+        -177.39,
+        1441.653
+      ]
+    },
+    {
+      "label": "RCL",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        10.2,
+        48.744,
+        1417.931
+      ]
+    },
+    {
+      "label": "TH1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -30.159,
+        -53.47,
+        1638.051
+      ]
+    },
+    {
+      "label": "TH2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        0.981,
+        -94.425,
+        1650.966
+      ]
+    },
+    {
+      "label": "TH3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        39.368,
+        -58.038,
+        1659.307
+      ]
+    },
+    {
+      "label": "TH4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        8.228,
+        -17.089,
+        1646.394
+      ]
+    },
+    {
+      "label": "MH1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -21.294,
+        -63.744,
+        1551.832
+      ]
+    },
+    {
+      "label": "MH2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        6.946,
+        -135.638,
+        1566.574
+      ]
+    },
+    {
+      "label": "MH3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        91.123,
+        -71.132,
+        1586.195
+      ]
+    },
+    {
+      "label": "MH4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        35.063,
+        2.582,
+        1562.953
+      ]
+    },
+    {
+      "label": "NOZ",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -49.11,
+        -61.914,
+        1543.33
+      ]
+    },
+    {
+      "label": "CHN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -7.618,
+        -70.178,
+        1505.195
+      ]
+    },
+    {
+      "label": "LE1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -21.619,
+        -74.578,
+        1596.286
+      ]
+    },
+    {
+      "label": "LE2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -16.249,
+        -103.086,
+        1579.862
+      ]
+    },
+    {
+      "label": "LE3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -14.516,
+        -76.982,
+        1580.671
+      ]
+    },
+    {
+      "label": "RE1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -18.721,
+        -43.64,
+        1594.456
+      ]
+    },
+    {
+      "label": "RE2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -8.52,
+        -20.59,
+        1574.987
+      ]
+    },
+    {
+      "label": "RE3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -11.619,
+        -46.045,
+        1578.842
+      ]
+    },
+    {
+      "label": "LBK1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        142.24,
+        -86.728,
+        1095.416
+      ]
+    },
+    {
+      "label": "LBK2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        129.035,
+        -60.554,
+        1096.385
+      ]
+    },
+    {
+      "label": "LBK3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        140.879,
+        -57.459,
+        1053.933
+      ]
+    },
+    {
+      "label": "LBK4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        154.082,
+        -83.631,
+        1052.966
+      ]
+    },
+    {
+      "label": "LBK5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        183.439,
+        -47.392,
+        1117.285
+      ]
+    },
+    {
+      "label": "LBK6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        195.28,
+        -44.297,
+        1074.831
+      ]
+    },
+    {
+      "label": "UBK1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        109.078,
+        -94.606,
+        1200.122
+      ]
+    },
+    {
+      "label": "UBK2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        97.175,
+        -67.68,
+        1199.648
+      ]
+    },
+    {
+      "label": "UBK3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        110.404,
+        -66.816,
+        1158.108
+      ]
+    },
+    {
+      "label": "UBK4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        122.305,
+        -93.745,
+        1158.58
+      ]
+    },
+    {
+      "label": "UBK5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        151.264,
+        -56.038,
+        1222.29
+      ]
+    },
+    {
+      "label": "UBK6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        164.493,
+        -55.174,
+        1180.75
+      ]
+    },
+    {
+      "label": "LNK1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        43.193,
+        -95.493,
+        1488.313
+      ]
+    },
+    {
+      "label": "LNK2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        37.299,
+        -69.245,
+        1488.826
+      ]
+    },
+    {
+      "label": "LNK3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        38.084,
+        -69.347,
+        1469.648
+      ]
+    },
+    {
+      "label": "LNK4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        43.977,
+        -95.594,
+        1469.136
+      ]
+    },
+    {
+      "label": "LNK5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        91.975,
+        -69.952,
+        1493.44
+      ]
+    },
+    {
+      "label": "LNK6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        92.76,
+        -70.054,
+        1474.258
+      ]
+    },
+    {
+      "label": "UNK1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        23.097,
+        -85.823,
+        1541.095
+      ]
+    },
+    {
+      "label": "UNK2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        22.785,
+        -57.02,
+        1540.216
+      ]
+    },
+    {
+      "label": "UNK3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        26.667,
+        -58.668,
+        1521.92
+      ]
+    },
+    {
+      "label": "UNK4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        26.979,
+        -87.474,
+        1522.799
+      ]
+    },
+    {
+      "label": "UNK5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        76.593,
+        -69.183,
+        1552.697
+      ]
+    },
+    {
+      "label": "UNK6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        80.475,
+        -70.831,
+        1534.401
+      ]
+    },
+    {
+      "label": "LHUM1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        117.209,
+        -210.451,
+        1410.332
+      ]
+    },
+    {
+      "label": "LHUM2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        109.465,
+        -206.607,
+        1406.245
+      ]
+    },
+    {
+      "label": "LHUM3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        104.685,
+        -209.799,
+        1413.061
+      ]
+    },
+    {
+      "label": "LHUM4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        112.428,
+        -213.644,
+        1417.147
+      ]
+    },
+    {
+      "label": "LHUM5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        113.941,
+        -226.843,
+        1389.783
+      ]
+    },
+    {
+      "label": "LHUM6",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        107.996,
+        -220.386,
+        1388.512
+      ]
+    },
+    {
+      "label": "LHUM7",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        104.546,
+        -226.354,
+        1391.83
+      ]
+    },
+    {
+      "label": "LHUM8",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        112.34,
+        -228.559,
+        1406.058
+      ]
+    },
+    {
+      "label": "LHUM9",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        87.359,
+        -242.548,
+        1235.784
+      ]
+    },
+    {
+      "label": "LHUM10",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        81.409,
+        -236.092,
+        1234.512
+      ]
+    },
+    {
+      "label": "LHUM11",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        77.968,
+        -242.059,
+        1237.833
+      ]
+    },
+    {
+      "label": "LHUM12",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        83.914,
+        -248.515,
+        1239.106
+      ]
+    },
+    {
+      "label": "LHUM13",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        86.336,
+        -245.123,
+        1219.763
+      ]
+    },
+    {
+      "label": "LHUM14",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        76.315,
+        -226.16,
+        1214.238
+      ]
+    },
+    {
+      "label": "LHUM15",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        74.782,
+        -243.534,
+        1228.372
+      ]
+    },
+    {
+      "label": "LHUM16",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        82.161,
+        -255.149,
+        1224.954
+      ]
+    },
+    {
+      "label": "RHUM1",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        8.914,
+        62.645,
+        1397.042
+      ]
+    },
+    {
+      "label": "RHUM2",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        1.207,
+        56.946,
+        1395.619
+      ]
+    },
+    {
+      "label": "RHUM3",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        -3.536,
+        60.451,
+        1404.298
+      ]
+    },
+    {
+      "label": "RHUM4",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 545,
+      "centroidMm": [
+        4.168,
+        66.146,
+        1405.72
+      ]
+    }
+  ],
+  "quality": {
+    "passed": true,
+    "reasons": []
+  }
+}

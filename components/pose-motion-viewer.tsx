@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
 
-import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
-import { BONE_LINKS, buildPoseMotion, clampPoseZoom, projectPosePoint, type JointName, type PoseMotion } from "@/lib/pose-motion";
+import { BONE_LINKS, clampPoseZoom, projectPosePoint, type JointName, type PoseMotion } from "@/lib/pose-motion";
 
 const ANGLES = [
   { label: "정면", yaw: 0 },
@@ -13,14 +12,23 @@ const ANGLES = [
 
 type Camera = { yaw: number; zoom: number };
 
+export type PoseDisplayTransform = { groundY: number; scale: number };
+
+/** Fits heterogeneous measured and relative pose coordinate spaces into the same viewer without altering source motion data. */
+export function getPoseDisplayTransform(motion: PoseMotion): PoseDisplayTransform {
+  const ankleYs = motion.frames.flatMap((frame) => [frame.joints.leftAnkle.y, frame.joints.rightAnkle.y]);
+  const groundY = Math.min(...ankleYs);
+  const highestY = Math.max(...motion.frames.flatMap((frame) => Object.values(frame.joints).map((point) => point.y)));
+  return { groundY, scale: Math.min(1, 2.72 / Math.max(2.72, highestY - groundY)) };
+}
+
 function touchDistance(touches: ReadonlyArray<{ pageX: number; pageY: number }>) {
   if (touches.length < 2) return 0;
   return Math.hypot(touches[0].pageX - touches[1].pageX, touches[0].pageY - touches[1].pageY);
 }
 
 type PoseMotionViewerProps = {
-  reference?: AnonymousPoseReference;
-  motion?: PoseMotion;
+  motion: PoseMotion;
   title?: string;
   boundary?: string;
   hand?: "auto" | "right" | "left";
@@ -28,9 +36,7 @@ type PoseMotionViewerProps = {
   onPhaseSelect?: (index: number) => void;
 };
 
-export function PoseMotionViewer({ reference, motion: suppliedMotion, title, boundary, hand = "right", activeFrameIndex, onPhaseSelect }: PoseMotionViewerProps) {
-  const motion = useMemo(() => suppliedMotion ?? (reference ? buildPoseMotion(reference) : null), [reference, suppliedMotion]);
-  if (!motion) throw new Error("PoseMotionViewer requires a reference or a pose motion.");
+export function PoseMotionViewer({ motion, title, boundary, hand = "right", activeFrameIndex, onPhaseSelect }: PoseMotionViewerProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [camera, setCamera] = useState<Camera>({ yaw: 38, zoom: 1 });
@@ -44,7 +50,11 @@ export function PoseMotionViewer({ reference, motion: suppliedMotion, title, bou
   const visibleFrameIndex = activeFrameIndex ?? frameIndex;
   const frame = motion.frames[visibleFrameIndex];
   const activeSide = hand === "left" ? "left" : "right";
-  const points = useMemo(() => Object.fromEntries(Object.entries(frame.joints).map(([key, point]) => [key, projectPosePoint(hand === "left" ? { ...point, x: -point.x } : point, camera.yaw, 8, 330, 270, camera.zoom)])) as Record<JointName, ReturnType<typeof projectPosePoint>>, [camera.yaw, camera.zoom, frame, hand]);
+  const displayTransform = useMemo(() => getPoseDisplayTransform(motion), [motion]);
+  const points = useMemo(() => Object.fromEntries(Object.entries(frame.joints).map(([key, point]) => {
+    const normalized = { x: point.x * displayTransform.scale, y: (point.y - displayTransform.groundY) * displayTransform.scale, z: point.z * displayTransform.scale };
+    return [key, projectPosePoint(hand === "left" ? { ...normalized, x: -normalized.x } : normalized, camera.yaw, 8, 330, 270, camera.zoom)];
+  })) as Record<JointName, ReturnType<typeof projectPosePoint>>, [camera.yaw, camera.zoom, displayTransform, frame, hand]);
   const scheduleCamera = useCallback((next: Camera) => {
     cameraRef.current = next;
     pendingCamera.current = next;
@@ -91,8 +101,8 @@ export function PoseMotionViewer({ reference, motion: suppliedMotion, title, bou
   }), [scheduleCamera]);
   const changeZoom = (amount: number) => scheduleCamera({ ...cameraRef.current, zoom: clampPoseZoom(cameraRef.current.zoom + amount) });
   const resetView = () => scheduleCamera({ yaw: 38, zoom: 1 });
-  const displayTitle = title ?? reference?.shortLabel ?? "MY POSE";
-  const boundaryCopy = boundary ?? "생체역학적 참조 애니메이션입니다. 영상 요약 특성의 표현 폭만 반영하며, 특정 선수의 3D 복제·보정된 실제 측정값이 아닙니다.";
+  const displayTitle = title ?? "ACTUAL MOTION";
+  const boundaryCopy = boundary ?? "실제 source motion에서 변환된 관절 데이터입니다. source 승인·관절 품질 상태는 모션별 기록을 따릅니다.";
   return <View style={styles.card}>
     <View style={styles.header}><View><Text style={styles.eyebrow}>MOTION VIEW</Text><Text style={styles.title}>{displayTitle} · {frame.label}</Text></View><Text style={styles.phase}>{visibleFrameIndex + 1}/{motion.frames.length}</Text></View>
     <View style={[styles.stage, isInteracting && styles.stageInteracting]} {...panResponder.panHandlers}>

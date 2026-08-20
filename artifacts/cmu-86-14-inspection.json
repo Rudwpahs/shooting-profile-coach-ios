@@ -1,0 +1,457 @@
+{
+  "version": 1,
+  "state": "inspection_passed",
+  "boundary": "actual_optical_mocap_marker_data_not_yet_product_joint_schema",
+  "source": {
+    "provider": "CMU Graphics Lab Motion Capture Database",
+    "url": "http://mocap.cs.cmu.edu/subjects/86/86_14.c3d",
+    "sha256": "dc4fb91626501e2b945fe4116d736ceef4e98ea47be8180f469f7fe0f22c80a0",
+    "identity": "anonymous_optical_mocap_mixed_01",
+    "videoStored": false
+  },
+  "capture": {
+    "format": "c3d",
+    "pointFrameRate": 120.0,
+    "firstFrame": 1717,
+    "lastFrame": 8255,
+    "frameCount": 6539,
+    "durationSeconds": 54.492,
+    "markerCount": 43
+  },
+  "markers": [
+    {
+      "label": "RWRB",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -105.736,
+        392.304,
+        1038.25
+      ]
+    },
+    {
+      "label": "LWRB",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -8.473,
+        368.001,
+        997.248
+      ]
+    },
+    {
+      "label": "RTHI",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -108.359,
+        407.778,
+        724.011
+      ]
+    },
+    {
+      "label": "LFIN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -12.021,
+        362.541,
+        979.659
+      ]
+    },
+    {
+      "label": "RBWT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -82.168,
+        438.359,
+        1075.816
+      ]
+    },
+    {
+      "label": "LFRM",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -12.024,
+        380.532,
+        1074.623
+      ]
+    },
+    {
+      "label": "RFIN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -96.553,
+        386.136,
+        1058.575
+      ]
+    },
+    {
+      "label": "RFRM",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -107.16,
+        398.289,
+        1113.265
+      ]
+    },
+    {
+      "label": "RWRA",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -91.916,
+        385.965,
+        1100.142
+      ]
+    },
+    {
+      "label": "RELB",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -108.557,
+        404.659,
+        1145.074
+      ]
+    },
+    {
+      "label": "LWRA",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -20.815,
+        367.801,
+        1065.276
+      ]
+    },
+    {
+      "label": "LTHI",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -33.485,
+        411.892,
+        592.921
+      ]
+    },
+    {
+      "label": "STRN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -64.45,
+        389.418,
+        1276.774
+      ]
+    },
+    {
+      "label": "LELB",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -10.948,
+        397.316,
+        1168.617
+      ]
+    },
+    {
+      "label": "LKNE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -36.15,
+        408.885,
+        497.649
+      ]
+    },
+    {
+      "label": "RKNE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -102.26,
+        398.516,
+        468.785
+      ]
+    },
+    {
+      "label": "LUPA",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -13.812,
+        401.618,
+        1280.851
+      ]
+    },
+    {
+      "label": "T10",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -65.907,
+        443.696,
+        1321.052
+      ]
+    },
+    {
+      "label": "CLAV",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -65.32,
+        395.535,
+        1427.145
+      ]
+    },
+    {
+      "label": "RSHN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -107.076,
+        408.009,
+        368.523
+      ]
+    },
+    {
+      "label": "RBAC",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -97.322,
+        428.126,
+        1454.285
+      ]
+    },
+    {
+      "label": "RSHO",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -96.293,
+        410.05,
+        1473.483
+      ]
+    },
+    {
+      "label": "LSHO",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -34.944,
+        411.081,
+        1492.839
+      ]
+    },
+    {
+      "label": "C7",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -66.12,
+        422.483,
+        1534.943
+      ]
+    },
+    {
+      "label": "LSHN",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -36.31,
+        428.765,
+        263.505
+      ]
+    },
+    {
+      "label": "RBHD",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -81.597,
+        422.71,
+        1638.614
+      ]
+    },
+    {
+      "label": "LBHD",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -53.67,
+        417.811,
+        1640.457
+      ]
+    },
+    {
+      "label": "RFHD",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -87.94,
+        396.966,
+        1642.917
+      ]
+    },
+    {
+      "label": "LFHD",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -52.819,
+        393.219,
+        1645.88
+      ]
+    },
+    {
+      "label": "RHEE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -90.402,
+        429.431,
+        98.94
+      ]
+    },
+    {
+      "label": "RANK",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -100.602,
+        417.877,
+        87.259
+      ]
+    },
+    {
+      "label": "RTOE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -88.517,
+        387.16,
+        45.283
+      ]
+    },
+    {
+      "label": "LANK",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -43.711,
+        435.237,
+        85.603
+      ]
+    },
+    {
+      "label": "LHEE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -58.456,
+        441.925,
+        76.413
+      ]
+    },
+    {
+      "label": "LTOE",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -44.212,
+        399.372,
+        41.386
+      ]
+    },
+    {
+      "label": "LMT5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -33.625,
+        411.155,
+        32.08
+      ]
+    },
+    {
+      "label": "LBWT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -48.699,
+        439.525,
+        1065.151
+      ]
+    },
+    {
+      "label": "RUPA",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -110.559,
+        408.839,
+        1336.612
+      ]
+    },
+    {
+      "label": "RMT5",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -104.315,
+        394.673,
+        37.053
+      ]
+    },
+    {
+      "label": "RFWT",
+      "validFrameRatio": 0.9757,
+      "longestContinuousFrames": 6377,
+      "centroidMm": [
+        -87.799,
+        424.003,
+        1043.385
+      ]
+    },
+    {
+      "label": "LFWT",
+      "validFrameRatio": 1.0,
+      "longestContinuousFrames": 6539,
+      "centroidMm": [
+        -41.026,
+        402.104,
+        1036.671
+      ]
+    },
+    {
+      "label": "LFWT-1",
+      "validFrameRatio": 0.0057,
+      "longestContinuousFrames": 37,
+      "centroidMm": [
+        -188.271,
+        -370.092,
+        1033.238
+      ]
+    },
+    {
+      "label": "LFWT-2",
+      "validFrameRatio": 0.0014,
+      "longestContinuousFrames": 9,
+      "centroidMm": [
+        541.512,
+        -462.753,
+        1053.028
+      ]
+    }
+  ],
+  "quality": {
+    "passed": true,
+    "reasons": []
+  }
+}

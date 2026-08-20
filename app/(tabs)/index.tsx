@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { detectPoseFromSelectedVideo, type PoseDetectionProgress } from "@/lib/pose-detection";
 import { useProfile } from "@/lib/profile-store";
 import { trpc } from "@/lib/trpc";
+import { ANONYMOUS_POSE_LIBRARY_STATUS } from "@/lib/anonymous-pose-library";
 
 type VideoSlot = "side" | "front" | "oblique";
 type SelectedVideo = { uri: string; name: string; mimeType?: string | null };
@@ -68,7 +69,7 @@ export default function HomeScreen() {
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>SHOOTING FORM ANALYSIS</Text>
           <Text style={[styles.heroTitle, narrow && styles.heroTitleNarrow]}>실제 영상으로{`\n`}다시 구축한다.</Text>
-          <Text style={styles.sub}>이전 생성형 3D 참조 모션은 제품에서 폐기했습니다. 실제 선수의 전신 슬로모션과 진정한 다중 시점 영상만 검증을 통과하면 익명 모델로 추가됩니다.</Text>
+          <Text style={styles.sub}>이전 생성형 3D 참조 모션은 제품에서 폐기했습니다. 현재 첫 번째 라이선스 optical-mocap 익명 모션만 승인되어 있으며, 이후에도 검증된 실제 source만 추가합니다.</Text>
           <View style={styles.metaRow}><Pressable onPress={() => router.push("/profile" as never)} style={({ pressed }) => [[styles.pill, styles.okPill], pressed && styles.pressed]}><Text style={styles.okPillText}>{ready ? "MY PROFILE" : "CONNECTING…"}</Text></Pressable><View style={styles.pill}><Text style={styles.pillText}>REAL VIDEO · REBUILD</Text></View></View>
         </View>
 
@@ -84,7 +85,7 @@ export default function HomeScreen() {
 
         <View style={styles.block}>
           <BlockHead title="실제 3D 모델 재구축" detail="검증되지 않은 관절 경로를 보여주거나 추천하지 않습니다." />
-          <View style={[styles.scoreboard, narrow && styles.oneColumn]}><ScoreTile label="APPROVED MODELS" value="0" accent /><ScoreTile label="SOURCE STANDARD" value="1080P SLOW / 360" /><ScoreTile label="CURRENT STATE" value="REBUILDING" /></View>
+          <View style={[styles.scoreboard, narrow && styles.oneColumn]}><ScoreTile label="APPROVED MODELS" value={String(ANONYMOUS_POSE_LIBRARY_STATUS.profileCount)} accent /><ScoreTile label="SOURCE STANDARD" value="OPTICAL MOCAP / CALIBRATED MULTIVIEW" /><ScoreTile label="CURRENT STATE" value="EXPANDING" /></View>
           <View style={styles.requirements}>
             <Requirement number="01" title="실제 연속 슛 클립" detail="준비부터 팔로우스루까지 전신이 가려지지 않은 동작" />
             <Requirement number="02" title="동기화된 두 시점" detail="Side·Front 또는 진정한 360도 영상에서 같은 슛의 프레임을 정렬" />

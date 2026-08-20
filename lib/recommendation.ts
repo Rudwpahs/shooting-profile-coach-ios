@@ -1,4 +1,4 @@
-import { type BodyBand, type PoseTraits } from "@/lib/anonymous-pose-library";
+import { ANONYMOUS_POSE_REFERENCES, type AnonymousPoseReference, type BodyBand, type PoseTraits } from "@/lib/anonymous-pose-library";
 
 export type SkillLevel = "beginner" | "developing" | "advanced";
 export type TrainingGoal = "consistency" | "range" | "release" | "rhythm";
@@ -21,6 +21,7 @@ export type UserShotProfile = {
 };
 
 export type PracticeFocus = { title: string; detail: string; drill: string };
+export type RecommendedShotForm = AnonymousPoseReference & { matchScore: number; appliedFeature: string };
 
 const GOAL_TARGETS: Record<TrainingGoal, PoseTraits> = {
   consistency: { releaseElevation: 58, armExtension: 58, lowerBodyDrive: 62, rhythm: 78 },
@@ -49,7 +50,6 @@ export function createDefaultProfile(): UserShotProfile {
   return { skillLevel: "developing", goal: "consistency", preferredStyle: "balanced", body: { stature: "balanced", reach: "balanced", lowerBodyPower: "balanced", shoulderMobility: "balanced" }, traits: GOAL_TARGETS.consistency, updatedAt: new Date().toISOString() };
 }
 
-/** 실제 영상 모델이 승인되기 전에는 목표를 개인 연습 선호로만 보관한다. */
 export function applyGoalSelection(profile: UserShotProfile, goal: TrainingGoal): UserShotProfile {
   return { ...profile, goal, preferredStyle: QUICK_STYLE_BY_GOAL[goal], traits: GOAL_TARGETS[goal], updatedAt: new Date().toISOString() };
 }
@@ -57,11 +57,22 @@ export function applyGoalSelection(profile: UserShotProfile, goal: TrainingGoal)
 export function getGoalApplicationSummary(goal: TrainingGoal) { return `${GOAL_LABELS[goal]} 선택 → ${GOAL_APPLIED_FEATURE[goal]}`; }
 export function getPracticeFocus(goal: TrainingGoal) { return FOCUS_BY_GOAL[goal]; }
 
-/**
- * No candidate is returned until a real-video sequence passes the calibrated
- * multiview provenance gate. This intentionally prevents invented rankings.
- */
-export function recommendShotForms(_profile: UserShotProfile): never[] { return []; }
+const GOAL_WEIGHTS: Record<TrainingGoal, PoseTraits> = {
+  consistency: { releaseElevation: 0.15, armExtension: 0.15, lowerBodyDrive: 0.2, rhythm: 0.5 },
+  range: { releaseElevation: 0.1, armExtension: 0.28, lowerBodyDrive: 0.5, rhythm: 0.12 },
+  release: { releaseElevation: 0.55, armExtension: 0.3, lowerBodyDrive: 0.1, rhythm: 0.05 },
+  rhythm: { releaseElevation: 0.12, armExtension: 0.12, lowerBodyDrive: 0.2, rhythm: 0.56 },
+};
+
+/** Ranks only approved anonymous real-motion references; goal selection changes the displayed match immediately. */
+export function recommendShotForms(profile: UserShotProfile): RecommendedShotForm[] {
+  const target = GOAL_TARGETS[profile.goal];
+  const weights = GOAL_WEIGHTS[profile.goal];
+  return ANONYMOUS_POSE_REFERENCES.map((reference) => {
+    const weightedDistance = (Object.keys(weights) as Array<keyof PoseTraits>).reduce((total, trait) => total + Math.abs(reference.traits[trait] - target[trait]) * weights[trait], 0);
+    return { ...reference, matchScore: Math.max(1, Math.round(100 - weightedDistance)), appliedFeature: GOAL_APPLIED_FEATURE[profile.goal] };
+  }).sort((left, right) => right.matchScore - left.matchScore);
+}
 
 export const TRAINING_GOALS: Array<{ id: TrainingGoal; title: string; description: string }> = [
   { id: "consistency", title: "일관성", description: "매 슛의 준비와 릴리스 리듬을 고정" },

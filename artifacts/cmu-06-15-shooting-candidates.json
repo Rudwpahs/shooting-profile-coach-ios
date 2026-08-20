@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "boundary": "candidate_segments_require_visual_and_ball_event_review",
+  "captureRate": 120.0,
+  "candidateCount": 1,
+  "candidates": [
+    {
+      "side": "right",
+      "peakFrame": 353,
+      "peakTimestampMs": 2825.0,
+      "windowStartFrame": 269,
+      "windowEndFrame": 449,
+      "wristLiftMm": 249.97,
+      "elbowAngleDegrees": 139.63,
+      "evidence": "measured_optical_markers_only"
+    }
+  ]
+}

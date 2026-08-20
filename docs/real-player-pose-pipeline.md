@@ -2,7 +2,7 @@
 
 ## 제품의 현재 경계
 
-실제 선수의 실명·초상·퍼포먼스 수치를 앱에서 노출하지 않는다. 단일 카메라 동영상의 MediaPipe 결과는 **`monocular_relative_pose_not_metric_3d`** 후보일 뿐이고, 특정 선수의 3D 복제나 보정된 계측값이 아니다.
+실제 선수의 실명·초상·퍼포먼스 수치를 앱에서 노출하지 않는다. 단일 카메라 동영상의 MediaPipe 결과는 **`monocular_relative_pose_not_metric_3d`** 후보일 뿐이고, 특정 선수의 3D 복제나 보정된 계측값이 아니다. 반면, 라이선스·파일 hash·marker 연속성·릴리스·팔로우스루 품질이 문서화된 **직접 optical-marker C3D**는 `actual_optical_mocap_3d`로 별도 승인할 수 있다.
 
 ## 재현 가능한 처리 단계
 
@@ -11,7 +11,7 @@
 | 1. 소스 선별 | 연속 전신 슛 동영상, 로컬 파일만 입력 | 12개 이상 표본 프레임 | 분석 중단 |
 | 2. 2D landmark | `extract-relative-pose-candidate.py` + MediaPipe 33 landmark | 전신 landmark frame ratio ≥ 0.72 | `rejected` |
 | 3. 상대 pose | 어깨 폭 기준 정규화·5단계 압축 | mean visibility ≥ 0.55 | 개인 후보로 저장 금지 |
-| 4. 실제 3D 승격 | 두 대 이상 동기화된 물리 카메라, 내부·외부 보정, source provenance, 삼각측량 | 재투영 오차·관절 연속성·릴리스 이벤트·media hash 검증 | `candidate_multi_view_pose` 유지 |
+| 4. 실제 3D 승격 | 두 대 이상 동기화된 물리 카메라·보정·삼각측량 **또는** 라이선스된 direct optical-marker C3D | 재투영 오차 또는 marker 연속성, 릴리스 이벤트, source hash, 관절 연속성 검증 | `candidate_multi_view_pose` 또는 `candidate_optical_mocap` 유지 |
 | 5. 익명 참조화 | 승인된 다중 시점 시퀀스의 특성만 추출 | 법적 소스 범위·익명화·품질 문서화 | 제품 라이브러리 미포함 |
 
 ## 로컬 실행
