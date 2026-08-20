@@ -62,3 +62,10 @@
 - [x] 실제 CMU 모션의 높은 팔로우스루와 웹 3D 캔버스 프레이밍 회귀 검증
 - [x] CMU Subject 86 Trial 14 후보를 audit sheet·release 기준으로 재검토하고 승인 대상에서 제외
 - [ ] 추가 실제 CMU 슈팅 구간 2–4개를 동일 provenance·릴리스·팔로우스루 기준으로 승인
+- [x] 인스타그램형 3탭 리퀴드 글래스 하단 메뉴와 홈·3D 모델·개인 프로필 정보구조 재설계
+- [x] 홈·중앙 3D 스켈레톤·개인 프로필 화면을 새로운 탭 구조로 구현
+- [x] Manus 계정 시스템과 분리된 독립 인증·스켈레톤 데이터베이스를 선정하고 연결
+- [x] 개인 스켈레톤·프로필·분석 기록을 독립 DB에 저장하는 Firebase schema·UID 권한 규칙 구현
+- [ ] iPhone·웹 반응형 UI와 독립 인증·저장 흐름 회귀 검증
+- [x] Firebase Authentication·Cloud Firestore 기반의 독립 로그인과 개인 스켈레톤 저장 연결
+- [ ] 실제 iPhone custom development build에서 Firebase 회원가입·영상 pose detection·개인 Firestore 저장 종단 검증

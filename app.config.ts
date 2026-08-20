@@ -101,6 +101,12 @@ const config: ExpoConfig = {
       },
     ],
     [
+      "expo-image-picker",
+      {
+        photosPermission: "$(PRODUCT_NAME)이 개인 슈팅 영상을 선택해 비공개 pose 분석을 수행하도록 허용합니다.",
+      },
+    ],
+    [
       "expo-splash-screen",
       {
         image: "./assets/images/splash-icon.png",

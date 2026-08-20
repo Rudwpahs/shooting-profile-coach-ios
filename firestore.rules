@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if signedInOwner(userId);
+      allow create, update: if signedInOwner(userId)
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 320;
+      allow delete: if signedInOwner(userId);
+
+      match /poses/{poseId} {
+        allow read, delete: if signedInOwner(userId);
+        allow create: if signedInOwner(userId)
+          && request.resource.data.sourceLabel is string
+          && request.resource.data.sourceLabel.size() <= 255
+          && request.resource.data.poseJson is string
+          && request.resource.data.poseJson.size() <= 900000
+          && request.resource.data.qualityJson is string
+          && request.resource.data.qualityJson.size() <= 20000
+          && request.resource.data.boundary == 'monocular_relative_pose_not_metric_3d';
+        allow update: if false;
+      }
+
+      match /analyses/{analysisId} {
+        allow read, delete: if signedInOwner(userId);
+        allow create: if signedInOwner(userId)
+          && request.resource.data.goal is string
+          && request.resource.data.status is string;
+        allow update: if false;
+      }
+    }
+  }
+}
