@@ -60,4 +60,5 @@
 - [x] CMU Trial 15 실제 marker 슈팅 구간을 16관절·5단계 actual_optical_mocap_3d 모션으로 변환하고 품질 승인
 - [x] 첫 승인 optical-mocap 익명 모션을 라이브러리·목표 기반 추천·iPhone·웹 3D 뷰어에 반영
 - [x] 실제 CMU 모션의 높은 팔로우스루와 웹 3D 캔버스 프레이밍 회귀 검증
+- [x] CMU Subject 86 Trial 14 후보를 audit sheet·release 기준으로 재검토하고 승인 대상에서 제외
 - [ ] 추가 실제 CMU 슈팅 구간 2–4개를 동일 provenance·릴리스·팔로우스루 기준으로 승인

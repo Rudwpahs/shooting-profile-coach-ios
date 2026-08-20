@@ -39,17 +39,23 @@ Kansas 연구팀의 공개 논문은 실제 농구 경험자를 대상으로 한
 
 이 결과는 OCW·대학 자료가 캡처 **방법론**에는 유용하지만, 논문만으로 실제 모션 파일을 생성하면 안 된다는 경계를 확인한다.
 
-## CMU Trial 14 실제 marker 감사
+## CMU Trial 실제 marker 감사
+
+### Subject 86 Trial 14 — 유지 보류
 
 공식 C3D 원본을 내려받아 SHA-256 `dc4fb916…f22c80a0`으로 기록하고, 43개 marker·6,539 frame·120 fps·54.492초의 실제 optical marker time-series임을 확인했다. 연속 marker 조건을 통과한 C3D이므로 M1 후보 상태를 유지한다.
 
-손목이 어깨보다 45 mm 이상 높고 팔꿈치가 135° 이상 연장된 두 구간(frame 3364, 3754)을 **측정 marker만**으로 선별해 3D audit sheet로 검토했다. 두 구간 모두 한쪽 손이 머리 위로 상승하는 실제 전신 동작을 보여 주지만, C3D의 marker 목록에는 공 marker·명시적인 release event가 없다. 따라서 현재 상태는 `actual_optical_basketball_motion_candidate`이며, 아직 `approved_shooting_form`이 아니다. 다음 단계는 원 데이터베이스의 rendered animation 및 프레임 시퀀스에서 준비→공 release→팔로우스루를 수동 확인하는 것이다.
+frame 3364와 3754 주변의 measured-marker audit sheet를 재검토했다. 두 구간은 실제 전신에서 한쪽 팔이 머리 위로 움직이는 장면을 보이지만, marker 목록에는 공 marker가 없고, 수정된 prefix-agnostic wrist/shoulder event 검출에서는 손목이 어깨보다 높고 135° 이상 연장된 release 조건을 재현하지 못했다. 따라서 이 두 frame은 **슛폼으로 승인하지 않는다**. 상태는 `actual_optical_basketball_motion_candidate`이며, 라이브러리·추천에서 제외한다.
 
-공식 subject 목록의 rendered animation 링크는 현재 브라우저 세션에서 직접 재생 페이지로 전환되지 않았다. 따라서 외부 rendered movie에 의존하지 않고, C3D marker 원본에서 만들어진 audit sheet·관절 궤적·명시적 source description을 함께 사용해 다음 품질 단계를 진행한다.
+### Subject 6 Trial 14·15 — trial-level 설명 분리
 
-CMU Subject 6은 상위 subject 설명에 `dribble, shoot basketball`가 포함되지만, 확인된 Trial 5의 명시적 motion description은 `basketball - forward dribble`이다. 따라서 Subject 6 Trial 5는 슈팅 모델 source에서 제외하고, 드리블·전신 marker 검증용으로만 별도 보관한다. subject-level 키워드로 trial-level 슈팅을 가정하지 않는다.
+Subject 6 Trial **14**는 `basketball - crossover dribble, shoot`, Trial **15**는 `basketball - dribble, shoot`로 명시되고 120 fps C3D를 제공한다.[1] Trial 14는 marker 연속성 검사를 통과했으나 손목 상승·팔 연장 release event가 0개이므로 `unapproved_no_measured_release_event`로 유지한다.
 
-CMU 전체 농구 목록을 다시 확인한 결과, Subject 6 Trial **14**는 `basketball - crossover dribble, shoot`, Trial **15**는 `basketball - dribble, shoot`로 명시된다. 두 trial은 실제 shoot 동작이 포함된 더 명확한 C3D 후보이며, 공식 목록상 120 fps다.[1] 다음 실제 데이터 검증은 Trial 14·15의 C3D 원본을 확보해 trial 14/15 각각의 marker 연속성·실제 release·팔로우스루를 분리 감사하는 방식으로 진행한다.
+2026-08-20 공식 Subject 6 trial table 재검토에서 1–13은 walk 또는 forward/backward/sideways/crossover/free-style dribble로만 명시되었고, shooting을 명시한 행은 14와 15뿐이었다. 따라서 Subject 6의 나머지 13개 trial은 슈팅 source 탐색·다운로드 대상에서 제외한다.
+
+같은 날짜의 CMU 공식 `basketball` motion category 전체 목록도 Subject 6의 2–15번 trial만 반환했다. 즉 현재 CMU category에서 trial-level shooting을 명시한 추가 source는 Trial 14·15 외에는 확인되지 않았다. Trial 15의 단일 승인 모션을 복제해 여러 모델로 수를 채우지 않으며, 후속 제품 모델은 별도 source에서 provenance를 다시 확보해야 한다.
+
+Trial 15는 SHA-256 `ebcec61b…cf842e5d5`, 255 marker, 545 frame의 원본을 통과했고, right wrist가 어깨보다 **249.97 mm** 높고 팔꿈치가 **139.63°** 연장된 frame 353 후보를 확인했다. 준비→딥→상승→릴리스→팔로우스루의 측정 marker keyframe(269, 317, 335, 353, 385)을 16관절 제품 schema로 정규화했다. source hash·marker 연속성·anonymous identity·release/follow-through gate를 모두 통과해 `approved_actual_optical_mocap_3d`로 최초 승인했다. 이 source는 특정 선수 모사나 이름 표시에 사용하지 않는다.
 
 ## 3차 확인: NPU RGB+D 및 공개 action datasets
 
@@ -62,6 +68,17 @@ SpaceJam 기반 공개 GitHub 프로젝트는 `Shoot` action label과 joints `.n
 | NPU RGB+D | 논문상 실제 선수 | 논문상 25 joint | 연결 저장소 404 | `lead_only_unavailable` |
 | SpaceJam / action recognition | 실제 영상 | metric 3D 불명 | action dataset 조건 미확인 | `not_3d_motion_source` |
 
+## 4차 확인: SportsPose
+
+SportsPose는 24명의 subject·5종 sport activity에서 176,000개 이상 3D pose를 제공하며 marker-based system과 비교한 평균 오차 34.5 mm를 보고하는 공개 연구 데이터셋이다.[5] 따라서 동적 실제 인체 3D pose source로서는 유력한 연구 후보이다. 그러나 공식 프로젝트 페이지와 repository README에는 basketball shooting activity의 포함 여부, sequence별 움직임 설명, product redistribution·commercial-use license가 명시되지 않았다. repository 자체에도 `LICENSE` 파일이 확인되지 않았다.
+
+| 검증 항목 | 판정 |
+| --- | --- |
+| 실제 인체 3D pose·다중 view 연구 데이터 | 확인 |
+| basketball shooting 연속 구간 | 미확인 |
+| raw sequence 이용 조건·상업 제품 조건 | 미확인 |
+| 제품용 3D source 승인 | `unapproved_license_and_activity_gap` |
+
 ## References
 
 [1] [CMU Graphics Lab Motion Capture Database — Subject 86](http://mocap.cs.cmu.edu/search.php?subjectnumber=86)
@@ -71,3 +88,5 @@ SpaceJam 기반 공개 GitHub 프로젝트는 `Shoot` action label과 joints `.n
 [3] [NPU RGBD Dataset and a Feature-Enhanced LSTM-DGCN Method](https://www.mdpi.com/2076-3417/11/10/4426)
 
 [4] [Basketball Action Recognition / SpaceJam usage](https://github.com/hkair/Basketball-Action-Recognition)
+
+[5] [SportsPose project page](https://christianingwersen.github.io/SportsPose/) and [repository](https://github.com/ChristianIngwersen/SportsPose)

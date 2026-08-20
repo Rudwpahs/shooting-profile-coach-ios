@@ -46,7 +46,7 @@ def main() -> int:
     offsets = [-72, -36, 0, 36, 72]
     resolved: dict[str, list[int]] = {}
     for joint, suffixes in JOINT_MARKERS.items():
-        resolved[joint] = [next(index for index, label in enumerate(labels) if label.strip().endswith(suffix)) for suffix in suffixes]
+        resolved[joint] = [next(index for index, label in enumerate(labels) if label.strip().split(":")[-1] == suffix.removeprefix(":")) for suffix in suffixes]
 
     figure = plt.figure(figsize=(15, 3.4))
     for panel, offset in enumerate(offsets, start=1):

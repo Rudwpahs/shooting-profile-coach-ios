@@ -53,7 +53,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def point_index(labels: list[str], suffix: str) -> int:
-    return next(index for index, label in enumerate(labels) if label.strip().endswith(suffix))
+    target = suffix.removeprefix(":")
+    return next(index for index, label in enumerate(labels) if label.strip().split(":")[-1] == target)
 
 
 def measured_joints(points: np.ndarray, indexes: dict[str, list[int]], frame: int) -> dict[str, np.ndarray]:

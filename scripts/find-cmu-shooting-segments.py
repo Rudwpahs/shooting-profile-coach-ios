@@ -24,8 +24,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def marker_index(labels: list[str], suffix: str) -> int:
+    target = suffix.removeprefix(":")
     for index, label in enumerate(labels):
-        if label.strip().endswith(suffix):
+        if label.strip().split(":")[-1] == target:
             return index
     raise ValueError(f"Missing marker ending with {suffix}")
 

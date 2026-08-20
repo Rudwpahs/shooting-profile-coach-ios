@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "boundary": "candidate_segments_require_visual_and_ball_event_review",
+  "captureRate": 120.0,
+  "candidateCount": 16,
+  "candidates": [
+    {
+      "side": "right",
+      "peakFrame": 3880,
+      "peakTimestampMs": 18025.0,
+      "windowStartFrame": 3796,
+      "windowEndFrame": 3976,
+      "wristLiftMm": -318.3,
+      "elbowAngleDegrees": 144.01,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "right",
+      "peakFrame": 3056,
+      "peakTimestampMs": 11158.3,
+      "windowStartFrame": 2972,
+      "windowEndFrame": 3152,
+      "wristLiftMm": -410.86,
+      "elbowAngleDegrees": 147.56,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "right",
+      "peakFrame": 3485,
+      "peakTimestampMs": 14733.3,
+      "windowStartFrame": 3401,
+      "windowEndFrame": 3581,
+      "wristLiftMm": -418.95,
+      "elbowAngleDegrees": 144.09,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 3051,
+      "peakTimestampMs": 11116.7,
+      "windowStartFrame": 2967,
+      "windowEndFrame": 3147,
+      "wristLiftMm": -444.8,
+      "elbowAngleDegrees": 147.75,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 3478,
+      "peakTimestampMs": 14675.0,
+      "windowStartFrame": 3394,
+      "windowEndFrame": 3574,
+      "wristLiftMm": -457.04,
+      "elbowAngleDegrees": 146.75,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 3869,
+      "peakTimestampMs": 17933.3,
+      "windowStartFrame": 3785,
+      "windowEndFrame": 3965,
+      "wristLiftMm": -466.72,
+      "elbowAngleDegrees": 147.6,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 5009,
+      "peakTimestampMs": 27433.3,
+      "windowStartFrame": 4925,
+      "windowEndFrame": 5105,
+      "wristLiftMm": -554.62,
+      "elbowAngleDegrees": 136.02,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 7544,
+      "peakTimestampMs": 48558.3,
+      "windowStartFrame": 7460,
+      "windowEndFrame": 7640,
+      "wristLiftMm": -564.77,
+      "elbowAngleDegrees": 138.1,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 2703,
+      "peakTimestampMs": 8216.7,
+      "windowStartFrame": 2619,
+      "windowEndFrame": 2799,
+      "wristLiftMm": -565.98,
+      "elbowAngleDegrees": 135.05,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 7869,
+      "peakTimestampMs": 51266.7,
+      "windowStartFrame": 7785,
+      "windowEndFrame": 7965,
+      "wristLiftMm": -567.74,
+      "elbowAngleDegrees": 135.08,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 7670,
+      "peakTimestampMs": 49608.3,
+      "windowStartFrame": 7586,
+      "windowEndFrame": 7766,
+      "wristLiftMm": -570.75,
+      "elbowAngleDegrees": 135.48,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 8071,
+      "peakTimestampMs": 52950.0,
+      "windowStartFrame": 7987,
+      "windowEndFrame": 8167,
+      "wristLiftMm": -571.02,
+      "elbowAngleDegrees": 135.13,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "left",
+      "peakFrame": 8255,
+      "peakTimestampMs": 54483.3,
+      "windowStartFrame": 8171,
+      "windowEndFrame": 8255,
+      "wristLiftMm": -574.69,
+      "elbowAngleDegrees": 140.81,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "right",
+      "peakFrame": 2748,
+      "peakTimestampMs": 8591.7,
+      "windowStartFrame": 2664,
+      "windowEndFrame": 2844,
+      "wristLiftMm": -579.43,
+      "elbowAngleDegrees": 135.53,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "right",
+      "peakFrame": 7971,
+      "peakTimestampMs": 52116.7,
+      "windowStartFrame": 7887,
+      "windowEndFrame": 8067,
+      "wristLiftMm": -587.94,
+      "elbowAngleDegrees": 135.16,
+      "evidence": "measured_optical_markers_only"
+    },
+    {
+      "side": "right",
+      "peakFrame": 8169,
+      "peakTimestampMs": 53766.7,
+      "windowStartFrame": 8085,
+      "windowEndFrame": 8255,
+      "wristLiftMm": -597.08,
+      "elbowAngleDegrees": 135.2,
+      "evidence": "measured_optical_markers_only"
+    }
+  ]
+}
