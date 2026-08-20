@@ -3,7 +3,11 @@ import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
 export type JointName = "head" | "neck" | "spine" | "pelvis" | "leftShoulder" | "leftElbow" | "leftWrist" | "rightShoulder" | "rightElbow" | "rightWrist" | "leftHip" | "leftKnee" | "leftAnkle" | "rightHip" | "rightKnee" | "rightAnkle";
 export type Vector3 = { x: number; y: number; z: number };
 export type PoseFrame = { label: string; progress: number; joints: Record<JointName, Vector3> };
-export type PoseMotion = { id: string; frames: PoseFrame[]; boundary: "biomechanical_reference_animation_not_metric_3d" };
+export type PoseMotion = {
+  id: string;
+  frames: PoseFrame[];
+  boundary: "biomechanical_reference_animation_not_metric_3d" | "monocular_relative_pose_not_metric_3d" | "calibrated_multi_view_3d";
+};
 export type MotionQualityGate = { passed: boolean; failures: string[]; maxJointStep: number };
 
 export const BONE_LINKS: Array<[JointName, JointName]> = [

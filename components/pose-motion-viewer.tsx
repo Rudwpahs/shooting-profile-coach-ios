@@ -3,7 +3,7 @@ import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
 
 import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
-import { BONE_LINKS, buildPoseMotion, clampPoseZoom, projectPosePoint, type JointName } from "@/lib/pose-motion";
+import { BONE_LINKS, buildPoseMotion, clampPoseZoom, projectPosePoint, type JointName, type PoseMotion } from "@/lib/pose-motion";
 
 const ANGLES = [
   { label: "정면", yaw: 0 },
@@ -18,8 +18,19 @@ function touchDistance(touches: ReadonlyArray<{ pageX: number; pageY: number }>)
   return Math.hypot(touches[0].pageX - touches[1].pageX, touches[0].pageY - touches[1].pageY);
 }
 
-export function PoseMotionViewer({ reference, hand = "right" }: { reference: AnonymousPoseReference; hand?: "auto" | "right" | "left" }) {
-  const motion = useMemo(() => buildPoseMotion(reference), [reference]);
+type PoseMotionViewerProps = {
+  reference?: AnonymousPoseReference;
+  motion?: PoseMotion;
+  title?: string;
+  boundary?: string;
+  hand?: "auto" | "right" | "left";
+  activeFrameIndex?: number;
+  onPhaseSelect?: (index: number) => void;
+};
+
+export function PoseMotionViewer({ reference, motion: suppliedMotion, title, boundary, hand = "right", activeFrameIndex, onPhaseSelect }: PoseMotionViewerProps) {
+  const motion = useMemo(() => suppliedMotion ?? (reference ? buildPoseMotion(reference) : null), [reference, suppliedMotion]);
+  if (!motion) throw new Error("PoseMotionViewer requires a reference or a pose motion.");
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [camera, setCamera] = useState<Camera>({ yaw: 38, zoom: 1 });
@@ -30,7 +41,8 @@ export function PoseMotionViewer({ reference, hand = "right" }: { reference: Ano
   const isPinching = useRef(false);
   const pendingCamera = useRef<Camera | null>(null);
   const pendingFrame = useRef<number | null>(null);
-  const frame = motion.frames[frameIndex];
+  const visibleFrameIndex = activeFrameIndex ?? frameIndex;
+  const frame = motion.frames[visibleFrameIndex];
   const activeSide = hand === "left" ? "left" : "right";
   const points = useMemo(() => Object.fromEntries(Object.entries(frame.joints).map(([key, point]) => [key, projectPosePoint(hand === "left" ? { ...point, x: -point.x } : point, camera.yaw, 8, 330, 270, camera.zoom)])) as Record<JointName, ReturnType<typeof projectPosePoint>>, [camera.yaw, camera.zoom, frame, hand]);
   const scheduleCamera = useCallback((next: Camera) => {
@@ -44,7 +56,7 @@ export function PoseMotionViewer({ reference, hand = "right" }: { reference: Ano
     });
   }, []);
   useEffect(() => () => { if (pendingFrame.current !== null) cancelAnimationFrame(pendingFrame.current); }, []);
-  useEffect(() => { setFrameIndex(0); setPlaying(false); scheduleCamera({ yaw: 38, zoom: 1 }); }, [reference.id, scheduleCamera]);
+  useEffect(() => { setFrameIndex(0); setPlaying(false); scheduleCamera({ yaw: 38, zoom: 1 }); }, [motion.id, scheduleCamera]);
   useEffect(() => {
     if (!playing) return;
     const timer = setInterval(() => setFrameIndex((current) => current >= motion.frames.length - 1 ? 0 : current + 1), 560);
@@ -79,8 +91,10 @@ export function PoseMotionViewer({ reference, hand = "right" }: { reference: Ano
   }), [scheduleCamera]);
   const changeZoom = (amount: number) => scheduleCamera({ ...cameraRef.current, zoom: clampPoseZoom(cameraRef.current.zoom + amount) });
   const resetView = () => scheduleCamera({ yaw: 38, zoom: 1 });
+  const displayTitle = title ?? reference?.shortLabel ?? "MY POSE";
+  const boundaryCopy = boundary ?? "생체역학적 참조 애니메이션입니다. 영상 요약 특성의 표현 폭만 반영하며, 특정 선수의 3D 복제·보정된 실제 측정값이 아닙니다.";
   return <View style={styles.card}>
-    <View style={styles.header}><View><Text style={styles.eyebrow}>MOTION VIEW</Text><Text style={styles.title}>{reference.shortLabel} · {frame.label}</Text></View><Text style={styles.phase}>{frameIndex + 1}/{motion.frames.length}</Text></View>
+    <View style={styles.header}><View><Text style={styles.eyebrow}>MOTION VIEW</Text><Text style={styles.title}>{displayTitle} · {frame.label}</Text></View><Text style={styles.phase}>{visibleFrameIndex + 1}/{motion.frames.length}</Text></View>
     <View style={[styles.stage, isInteracting && styles.stageInteracting]} {...panResponder.panHandlers}>
       <Svg width="100%" height={270} viewBox="0 0 330 270">
         <Line x1="22" y1="243" x2="308" y2="243" stroke="#21445B" strokeWidth="1" strokeDasharray="4 5" />
@@ -91,9 +105,9 @@ export function PoseMotionViewer({ reference, hand = "right" }: { reference: Ano
     </View>
     <View style={styles.angleRow}>{ANGLES.map((angle) => <Pressable key={angle.label} onPress={() => scheduleCamera({ ...cameraRef.current, yaw: angle.yaw })} style={({ pressed }) => [styles.angleButton, Math.abs(camera.yaw - angle.yaw) < 10 && styles.angleActive, pressed && styles.pressed]}><Text style={[styles.angleText, Math.abs(camera.yaw - angle.yaw) < 10 && styles.angleTextActive]}>{angle.label}</Text></Pressable>)}</View>
     <View style={styles.zoomRow}><Pressable onPress={() => changeZoom(-0.12)} style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]} accessibilityLabel="축소"><Text style={styles.zoomButtonText}>−</Text></Pressable><View style={styles.zoomReadout}><Text style={styles.zoomLabel}>ZOOM</Text><Text style={styles.zoomValue}>{Math.round(camera.zoom * 100)}%</Text></View><Pressable onPress={() => changeZoom(0.12)} style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]} accessibilityLabel="확대"><Text style={styles.zoomButtonText}>＋</Text></Pressable><Pressable onPress={resetView} style={({ pressed }) => [styles.resetButton, pressed && styles.pressed]} accessibilityLabel="시점 초기화"><Text style={styles.resetText}>RESET</Text></Pressable></View>
-    <View style={styles.scrubRow}>{motion.frames.map((item, index) => <Pressable key={item.label} onPress={() => { setFrameIndex(index); setPlaying(false); }} style={({ pressed }) => [styles.scrubItem, index === frameIndex && styles.scrubItemActive, pressed && styles.pressed]}><View style={[styles.scrubDot, index === frameIndex && styles.scrubDotActive]} /><Text style={[styles.scrubLabel, index === frameIndex && styles.scrubLabelActive]}>{item.label}</Text></Pressable>)}</View>
+    <View style={styles.scrubRow}>{motion.frames.map((item, index) => <Pressable key={item.label} onPress={() => { setFrameIndex(index); setPlaying(false); onPhaseSelect?.(index); }} style={({ pressed }) => [styles.scrubItem, index === visibleFrameIndex && styles.scrubItemActive, pressed && styles.pressed]}><View style={[styles.scrubDot, index === visibleFrameIndex && styles.scrubDotActive]} /><Text style={[styles.scrubLabel, index === visibleFrameIndex && styles.scrubLabelActive]}>{item.label}</Text></Pressable>)}</View>
     <Pressable onPress={() => setPlaying((value) => !value)} style={({ pressed }) => [styles.playButton, pressed && styles.pressed]}><Text style={styles.playText}>{playing ? "일시 정지" : "모션 재생"}</Text><Text style={styles.playIcon}>{playing ? "Ⅱ" : "▶"}</Text></Pressable>
-    <Text style={styles.boundary}>생체역학적 참조 애니메이션입니다. 영상 요약 특성의 표현 폭만 반영하며, 특정 선수의 3D 복제·보정된 실제 측정값이 아닙니다.</Text>
+    <Text style={styles.boundary}>{boundaryCopy}</Text>
   </View>;
 }
 
