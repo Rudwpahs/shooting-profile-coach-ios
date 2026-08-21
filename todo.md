@@ -87,3 +87,7 @@
 - [x] Curry 정면 relative pose candidate를 Motion Studio·Library에 별도 표시하고 CMU 승인 모션·추천에서 분리
 - [x] Curry 원본 video를 product project에서 제외하고 media hash·pose·audit 산출물만 보관
 - [x] Curry video pose 후보와 CMU approved optical motion의 제품 표기·승인 상태를 명확히 분리
+- [x] 추가 업로드 실제 선수 영상의 hash·camera view·신원·슈팅 event·33-landmark 품질 독립 감사
+- [x] 추가 영상 relative pose candidate 추출·원본 media 제외·Curry와 source 경계 분리
+- [x] 검증된 추가 선수 video candidate를 Motion Studio·Library에 추천 제외 상태로 표시
+- [x] Motion Studio에서 정면·사선 Curry relative-pose candidate를 직접 전환

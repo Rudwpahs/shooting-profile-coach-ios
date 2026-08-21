@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--video", type=Path, required=True)
-    parser.add_argument("--view", choices=["front", "side"], required=True)
+    parser.add_argument("--view", choices=["front", "side", "oblique"], required=True)
     parser.add_argument("--id", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--audit", type=Path, required=True)
@@ -64,11 +64,15 @@ def phase_indexes(frames: list[dict[str, Any]]) -> tuple[str, list[int]]:
     hand, wrist_index, hip_index = ("right", 16, 24) if right_peak <= left_peak else ("left", 15, 23)
     release = min(range(len(frames)), key=lambda index: float(frames[index]["landmarks"][wrist_index]["y"]))
     release = max(2, min(release, len(frames) - 3))
-    dip = max(range(release), key=lambda index: float(frames[index]["landmarks"][hip_index]["y"]))
+    # Ignore approach or walking frames. The loading dip must occur in the latter
+    # half of the release approach, not anywhere from the beginning of a clip.
+    dip_window_start = max(1, round(release * 0.55))
+    dip = max(range(dip_window_start, release), key=lambda index: float(frames[index]["landmarks"][hip_index]["y"]))
     dip = min(max(1, dip), release - 2)
     rise = max(dip + 1, min(release - 1, round((dip + release) / 2)))
     follow = min(len(frames) - 1, max(release + 1, round(release + 0.28 * (len(frames) - 1 - release))))
-    return hand, [0, dip, rise, release, follow]
+    preparation = max(0, dip - max(1, release - dip) * 2)
+    return hand, [preparation, dip, rise, release, follow]
 
 
 def draw_pose(image: np.ndarray, landmarks: list[dict[str, float]], label: str, timestamp_ms: int) -> np.ndarray:

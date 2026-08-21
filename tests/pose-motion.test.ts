@@ -9,8 +9,10 @@ describe("approved actual optical-mocap pose motion", () => {
     const quality = validatePoseMotion(motion);
     expect(ANONYMOUS_POSE_LIBRARY_STATUS.visiblePlayerIdentity).toBe(false);
     expect(ANONYMOUS_POSE_REFERENCES[0].prototypeDisplayName).toBeUndefined();
+    expect(PLAYER_VIDEO_POSE_CANDIDATES).toHaveLength(2);
     expect(PLAYER_VIDEO_POSE_CANDIDATES[0]).toMatchObject({ playerDisplayName: "Stephen Curry", boundary: "monocular_relative_pose_not_metric_3d", state: "candidate_not_product_approved" });
     expect(PLAYER_VIDEO_POSE_CANDIDATES[0].sourcePhaseTimestampsMs).toEqual([0, 1002, 1503, 2088, 2422]);
+    expect(PLAYER_VIDEO_POSE_CANDIDATES[1].sourcePhaseTimestampsMs).toEqual([2000, 2667, 2833, 3000, 3250]);
     expect(motion.boundary).toBe("actual_optical_mocap_3d");
     expect(motion.frames.map((frame) => frame.label)).toEqual(["준비", "딥", "상승", "릴리스", "팔로우스루"]);
     expect(ANONYMOUS_POSE_REFERENCES[0].sourcePhaseFrames).toEqual([269, 317, 335, 353, 385]);

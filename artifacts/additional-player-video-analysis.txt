@@ -1,0 +1,30 @@
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-db9c17eb-0532-4f24-8aeb-7358d615ad42)
+[8s] Status: Analyzing video content with AI...
+[33s] Still processing, please wait...
+[35s] Status: Analysis completed
+[35s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/shooting-profile-coach-ios/video_additional-player-slowmo_analysis_20260821_065657.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+제시된 영상의 분석 결과는 다음과 같습니다.
+
+### 1. 선수 식별 근거
+*   **텍스트 증거**: 영상 시작 부분과 상단에 "Steph Curry"라는 자막이 명시되어 있으며, 하단 캡션에 "The Greatest Shooter In NBA History"라고 언급됩니다.
+*   **시각적 증거**: 골든스테이트 워리어스(Golden State Warriors)의 파란색 어웨이 유니폼을 착용하고 있으며, 선수의 외모와 특유의 슈팅 폼이 스테픈 커리와 일치합니다.
+
+### 2. 전신 슈팅 시퀀스 및 카메라 뷰
+*   **슈팅 시퀀스**: 00:02 ~ 00:05 구간에서 3점 라인 밖에서 슛을 쏘는 동작이 머리부터 발끝까지 전신으로 포착됩니다.
+*   **카메라 뷰**: 코트 지면 높이(Eye-level)에서 촬영자가 선수의 움직임을 따라가는 **모바일 팔로잉 샷(Mobile Following Shot)**입니다. 세로형(9:16) 화면비로 구성되어 있습니다.
+
+### 3. 분석 추천 구간
+*   **추천 구간**: **00:02 ~ 00:05 (약 3초)**
+*   **이유**: 방해 요소가 적고 선수의 슈팅 메커니즘(점프, 릴리즈, 팔로우스루)이 가장 정교하게 담긴 전신 샷 구간입니다.
+
+### 4. MediaPipe Pose 추출 방해 요소 요약
+*   **배경 노이즈**: 관중석의 수많은 사람과 복잡한 배경이 관절 포인트 추출 시 혼선을 줄 수 있습니다.
+*   **UI 오버레이**: 영상 상단의 "Steph Curry" 자막과 하단의 프로필/댓글창 UI가 선수의 신체 일부를 가리거나 특징점 추출을 방해합니다.
+*   **객체 가림(Occlusion)**: 00:06, 00:15, 00:44 초 부근에서 다른 스태프나 선수가 프레임을 가로질러 지나가며 커리의 전신을 일시적으로 가립니다.
+*   **모션 블러**: 핸드헬드 촬영 특성상 카메라의 급격한 움직임으로 인해 신체 윤곽이 흐려지는 구간이 존재합니다.

@@ -1,5 +1,6 @@
 import cmuShoot01Raw from "@/lib/motions/cmu-shoot-01.json";
 import curryFrontRelativeRaw from "@/lib/motions/curry-front-relative-01.json";
+import curryObliqueRelativeRaw from "@/lib/motions/curry-oblique-relative-02.json";
 import type { PoseMotion } from "@/lib/pose-motion";
 
 /** Active product library. Only reproducible real optical data may enter it. */
@@ -39,6 +40,7 @@ export type PlayerVideoPoseCandidate = {
 
 const cmuShoot01 = cmuShoot01Raw.motion as PoseMotion;
 const curryFrontRelative01 = curryFrontRelativeRaw as PoseMotion;
+const curryObliqueRelative02 = curryObliqueRelativeRaw as PoseMotion;
 
 export const ANONYMOUS_POSE_REFERENCES: AnonymousPoseReference[] = [
   {
@@ -69,6 +71,18 @@ export const PLAYER_VIDEO_POSE_CANDIDATES: PlayerVideoPoseCandidate[] = [
     sourceAttribution: "사용자 제공 Stephen Curry 정면 슬로모션 · MediaPipe 33-landmark relative pose · raw video는 제품에 저장하지 않음",
     sourcePhaseTimestampsMs: [0, 1002, 1503, 2088, 2422],
     quality: { landmarkFrameRatio: 1, meanVisibility: 0.902 },
+  },
+  {
+    id: "curry-mobile-relative-02",
+    playerDisplayName: "Stephen Curry",
+    shortLabel: "CURRY · OBLIQUE VIDEO",
+    styleTitle: "Stephen Curry · 사선 슬로모션 후보",
+    motion: curryObliqueRelative02,
+    boundary: "monocular_relative_pose_not_metric_3d",
+    state: "candidate_not_product_approved",
+    sourceAttribution: "사용자 제공 Stephen Curry 사선 mobile-following 슬로모션 · MediaPipe 33-landmark relative pose · raw video는 제품에 저장하지 않음",
+    sourcePhaseTimestampsMs: [2000, 2667, 2833, 3000, 3250],
+    quality: { landmarkFrameRatio: 1, meanVisibility: 0.822 },
   },
 ];
 
