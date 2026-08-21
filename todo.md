@@ -134,3 +134,6 @@
 - [x] 공개 source 후보에서 동일 슛·고정 camera·동기화·상업 사용 조건을 충족하는 Curry·Paul George pair 선별 — ‘every angle’·phantom-camera 공개 영상은 모두 raw camera·시간 정보·상업 사용 허가가 없어 통과 0개
 - [ ] 조건을 통과한 named-player pair만 calibrated 3D reconstruction·visual audit·앱 표시 대상으로 승격
 - [x] Curry·Paul George reconstruction 실행 여부 기록 — 조건 통과 pair 0개로 3D 생성·앱 추가를 하지 않고 2D review만 유지
+- [x] 수정된 multi-signal sync·fixed-F geometry pipeline으로 기존 Curry pair 전체 재실행 — front/side 21.591%, front/oblique 63.636%·1 frame, side/oblique 20.202%로 모두 72% gate 미달
+- [x] Curry source에서 계산 가능한 영상 기반 추정 3D analysis asset의 좌표·관절·팔로우스루 품질 재검증 — 기존 source-faithful x/y·오른손 5단계는 유지하고 legacy depth만 scale·clamp
+- [x] Curry 추정 3D와 실제 source 2D를 Motion Studio에 나란히 표시하고 actual-3D·추천에서 분리

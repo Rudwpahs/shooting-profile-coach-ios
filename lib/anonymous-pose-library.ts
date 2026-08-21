@@ -1,4 +1,5 @@
 import cmuShoot01Raw from "@/lib/motions/cmu-shoot-01.json";
+import curryConstrainedAnalysisRaw from "@/lib/motions/curry-front-constrained-analysis-01.json";
 import currySourceSkeletonRaw from "@/lib/skeleton-reviews/curry-source-skeleton-01.json";
 import paulGeorgeSourceSkeletonRaw from "@/lib/skeleton-reviews/paul-george-source-skeleton-01.json";
 import type { PoseMotion } from "@/lib/pose-motion";
@@ -54,6 +55,21 @@ export type PlayerSourceSkeletonReview = {
   quality: { landmarkFrameRatio: number; meanVisibility: number };
 };
 
+/** A stable display analysis from one player video; explicitly not actual 3D. */
+export type PlayerMonocular3DAnalysis = {
+  id: string;
+  displayName: string;
+  shortLabel: string;
+  sourceView: "정면" | "측면" | "사선";
+  boundary: "monocular_relative_pose_not_metric_3d";
+  state: "video_based_depth_limited_estimate_not_actual_3d";
+  sourceAttribution: string;
+  sourcePhaseTimestampsMs: number[];
+  inputQuality: { landmarkFrameRatio: number; meanVisibility: number };
+  depthTreatment: string;
+  motion: PoseMotion;
+};
+
 const cmuShoot01 = cmuShoot01Raw.motion as PoseMotion;
 
 export const ANONYMOUS_POSE_REFERENCES: AnonymousPoseReference[] = [
@@ -104,6 +120,7 @@ export const PLAYER_VIDEO_REVIEW_RECORDS: PlayerVideoReviewRecord[] = [
 
 const currySourceSkeleton = currySourceSkeletonRaw as { id: string; label: string; boundary: "single_view_2d_skeleton_review"; state: "review_only_not_3d"; sourceView: "front" | "side" | "oblique"; phases: PlayerSourceSkeletonPhase[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number } };
 const paulGeorgeSourceSkeleton = paulGeorgeSourceSkeletonRaw as typeof currySourceSkeleton;
+const curryConstrainedAnalysis = curryConstrainedAnalysisRaw as { state: "video_based_depth_limited_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "front"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; depthTreatment: { meaning: string }; motion: PoseMotion };
 
 const sourceViewLabel = (view: "front" | "side" | "oblique"): PlayerSourceSkeletonReview["sourceView"] => {
   if (view === "front") return "정면";
@@ -115,6 +132,23 @@ const sourceViewLabel = (view: "front" | "side" | "oblique"): PlayerSourceSkelet
 export const PLAYER_SOURCE_SKELETON_REVIEWS: PlayerSourceSkeletonReview[] = [
   { id: currySourceSkeleton.id, displayName: "Stephen Curry", sourceView: sourceViewLabel(currySourceSkeleton.sourceView), sourceAttribution: "사용자 제공 실제 Curry 슬로모션 source에서 추출한 5단계 2D landmark", boundary: currySourceSkeleton.boundary, state: currySourceSkeleton.state, phases: currySourceSkeleton.phases, quality: currySourceSkeleton.inputQuality },
   { id: paulGeorgeSourceSkeleton.id, displayName: "Paul George", sourceView: sourceViewLabel(paulGeorgeSourceSkeleton.sourceView), sourceAttribution: "사용자 제공 실제 Paul George All-Star source에서 추출한 31-frame landmark", boundary: paulGeorgeSourceSkeleton.boundary, state: paulGeorgeSourceSkeleton.state, phases: paulGeorgeSourceSkeleton.phases, quality: paulGeorgeSourceSkeleton.inputQuality },
+];
+
+/** Separate from approved library and recommendation: depth-limited source-video analysis only. */
+export const PLAYER_MONOCULAR_3D_ANALYSES: PlayerMonocular3DAnalysis[] = [
+  {
+    id: "curry-front-constrained-analysis-01",
+    displayName: "Stephen Curry",
+    shortLabel: "CURRY · VIDEO ANALYSIS",
+    sourceView: "정면",
+    boundary: curryConstrainedAnalysis.boundary,
+    state: curryConstrainedAnalysis.state,
+    sourceAttribution: "사용자 제공 Curry 정면 슬로모션에서 추출한 2D landmark 기반 display analysis",
+    sourcePhaseTimestampsMs: curryConstrainedAnalysis.sourcePhaseTimestampsMs,
+    inputQuality: curryConstrainedAnalysis.inputQuality,
+    depthTreatment: curryConstrainedAnalysis.depthTreatment.meaning,
+    motion: curryConstrainedAnalysis.motion,
+  },
 ];
 
 export const ANONYMOUS_POSE_LIBRARY_STATUS = {

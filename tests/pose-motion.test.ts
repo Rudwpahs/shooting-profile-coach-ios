@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES, PLAYER_SOURCE_SKELETON_REVIEWS, PLAYER_VIDEO_REVIEW_RECORDS } from "@/lib/anonymous-pose-library";
+import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES, PLAYER_MONOCULAR_3D_ANALYSES, PLAYER_SOURCE_SKELETON_REVIEWS, PLAYER_VIDEO_REVIEW_RECORDS } from "@/lib/anonymous-pose-library";
 import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, POSE_ZOOM_MAX, POSE_ZOOM_MIN, projectPosePoint, validatePoseMotion } from "@/lib/pose-motion";
 
 describe("approved actual optical-mocap pose motion", () => {
@@ -19,6 +19,15 @@ describe("approved actual optical-mocap pose motion", () => {
     expect(PLAYER_VIDEO_REVIEW_RECORDS[1].sourcePhaseTimestampsMs).toEqual([2000, 2667, 2833, 3000, 3250]);
     expect(PLAYER_SOURCE_SKELETON_REVIEWS.map((review) => review.displayName)).toEqual(["Stephen Curry", "Paul George"]);
     expect(PLAYER_SOURCE_SKELETON_REVIEWS).toHaveLength(2);
+    expect(PLAYER_MONOCULAR_3D_ANALYSES).toHaveLength(1);
+    expect(PLAYER_MONOCULAR_3D_ANALYSES[0]).toMatchObject({
+      id: "curry-front-constrained-analysis-01",
+      displayName: "Stephen Curry",
+      boundary: "monocular_relative_pose_not_metric_3d",
+      state: "video_based_depth_limited_estimate_not_actual_3d",
+      sourcePhaseTimestampsMs: [0, 1002, 1503, 2088, 2422],
+    });
+    expect(PLAYER_MONOCULAR_3D_ANALYSES[0].motion.frames[4].joints.rightWrist.y).toBeGreaterThan(PLAYER_MONOCULAR_3D_ANALYSES[0].motion.frames[4].joints.rightShoulder.y);
     for (const review of PLAYER_SOURCE_SKELETON_REVIEWS) {
       expect(review).toMatchObject({ boundary: "single_view_2d_skeleton_review", state: "review_only_not_3d" });
       expect(review.phases.map((phase) => phase.label)).toEqual(["준비", "딥", "상승", "릴리스", "팔로우스루"]);

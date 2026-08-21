@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "kind": "release_pinned_multisignal_epipolar_frame_sync",
+  "boundary": "correspondence_hypothesis_not_metric_3d",
+  "inputs": {
+    "viewA": "artifacts/curry-front-relative-pose.json",
+    "viewB": "artifacts/additional-curry-relative-pose.json",
+    "aFrames": 59,
+    "bFrames": 48
+  },
+  "releaseAnchor": {
+    "aFrame": 30,
+    "bFrame": 36,
+    "hand": "right"
+  },
+  "signals": [
+    "visibility_weighted_joint_motion_signature",
+    "release_anchor",
+    "iterative_fixed_f_sampson_residual"
+  ],
+  "iterations": [
+    {
+      "iteration": 1,
+      "matchedFrames": 1,
+      "fixedFInlierRatio": 0.636364,
+      "fixedFInliers": 21,
+      "fixedFCorrespondences": 33
+    },
+    {
+      "iteration": 2,
+      "matchedFrames": 1,
+      "fixedFInlierRatio": 0.636364,
+      "fixedFInliers": 21,
+      "fixedFCorrespondences": 33
+    },
+    {
+      "iteration": 3,
+      "matchedFrames": 1,
+      "fixedFInlierRatio": 0.636364,
+      "fixedFInliers": 21,
+      "fixedFCorrespondences": 33
+    }
+  ],
+  "matchedFrames": [
+    {
+      "aIndex": 30,
+      "bIndex": 36,
+      "aTimestampMs": 2162,
+      "bTimestampMs": 3000,
+      "motionSignatureCost": 3.340559
+    }
+  ],
+  "quality": {
+    "matchedFrameCount": 1,
+    "meanMotionSignatureCost": 3.340559,
+    "fixedFInlierRatio": 0.636364
+  },
+  "admission": "must_pass_independent_fixed_f_and_reprojection_gates"
+}
