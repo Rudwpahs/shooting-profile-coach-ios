@@ -1,0 +1,108 @@
+=== CURRY ANALYSIS 01 ===
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-9c7986d3-4190-41e1-8989-bc5e7044fc65)
+[8s] Status: Analyzing video content with AI...
+[20s] Status: Analysis completed
+[20s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/shooting-profile-coach-ios/video_zz6LkiQ_pcc_analysis_20260821_072948.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+Based on the visual and narrated analysis of the video, Stephen Curry’s shooting mechanism can be summarized as follows:
+
+### **Qualitative Shooting Profile**
+
+*   **Stance/Base:** Curry utilizes a **"Turn Stance"** rather than a traditional parallel "11" stance. His feet are angled toward the 10 or 11 o’clock position (for a right-handed shooter), which helps align his shooting shoulder and elbow with the rim more naturally.
+*   **Dip:** The shooting process begins with a "dip," where the ball is brought down to waist level. During this phase, Curry aligns the ball, his right knee, and his right eye in a vertical line to ensure the ball travels in a straight path toward the basket.
+*   **Ball Path:** Curry employs a **"Two-Handed Delivery."** While he is a one-handed shooter at the point of release, he uses both hands to lift the ball from the waist to the head level. This technique, developed during his youth to compensate for a lack of strength, provides significant power and distance.
+*   **Elbow and Wrist Action:** The Turn Stance reduces the gap between his eye and his elbow. This allows him to keep his elbow tucked without creating unnecessary tension in his shoulders or biceps, facilitating a more fluid motion.
+*   **Release Height/Timing:** He is noted for an exceptionally quick release. The transition from the two-handed delivery to the one-handed release occurs near the head level.
+*   **Lower-Body Drive:** His shooting motion is highly integrated with his lower body, using the momentum from his legs to drive the ball, especially on long-distance shots.
+*   **Follow-Through:** The release is performed with the right hand, maintaining a consistent follow-through while the left hand acts as a guide during the delivery phase.
+
+### **Footage Type**
+This video contains **edited, single-camera reference footage** compiled from various NBA games, practice sessions, and instructional clips. It does not contain synchronized, calibrated multi-camera footage.
+=== CURRY ANALYSIS 02 ===
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-073eec86-383f-46c6-b133-b15c8509efab)
+[8s] Status: Analyzing video content with AI...
+[25s] Status: Analysis completed
+[25s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/shooting-profile-coach-ios/video_zO3-0rGYjuk_analysis_20260821_073014.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+Based on the visual and narrated analysis of the provided video, here is a qualitative profile of Stephen Curry’s shooting mechanism:
+
+### **Stephen Curry Shooting Mechanism Profile**
+
+*   **Stance/Base:** Curry is identified as a **"Turn" shooter**, meaning his feet and body are slightly angled toward the basket rather than being squared in a parallel "11-stance."
+*   **Dip:** He utilizes a **low dip**, bringing the ball to a position below the belly button. This is noted as a characteristic of a two-hand delivery that helps generate power.
+*   **Ball Path:** His delivery is described as highly efficient, moving the ball through the **shortest possible distance** with minimal redundant motion.
+*   **Elbow and Wrist Action:** 
+    *   **Synchronization:** Unlike many shooters whose elbows move upward before the ball "loads" into position, Curry’s **elbow and the ball move in perfect synchronization**. 
+    *   **Simplicity:** He maintains a simple, direct elbow path. 
+    *   **Stability:** His shoulders remain level during the delivery, and his wrists stay consistently attached to the ball to minimize variability.
+*   **Release Height/Timing:** 
+    *   **One-Motion Shot:** Curry is classified as an **extreme "One-Motion" shooter**. He has almost no "pause" between the delivery and the release.
+    *   **Speed:** The video highlights an exceptionally quick release time, cited as approximately **0.4 seconds**.
+*   **Lower-Body Drive:** Because he lacks a significant pause at the top of his jump, Curry effectively transfers the **propulsion and momentum** from his lower body directly into the shot. This contrasts with "Two-Motion" shooters who lose upward momentum by pausing at the apex of their jump.
+*   **Follow-Through:** The mechanism focuses on a continuous flow of force, ensuring that the upward energy from the jump is not hindered by directional adjustments during the delivery phase.
+
+### **Footage Type**
+This video does **not** contain synchronized calibrated multi-camera footage. It consists of **edited reference clips** from various sources (broadcast games, practice sessions, and interviews) used to illustrate specific biomechanical points through slow-motion and graphic overlays.
+=== CURRY ANALYSIS 03 ===
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-d6d47f0e-5d19-4d72-9717-074fbe31fd0e)
+[8s] Status: Analyzing video content with AI...
+[25s] Status: Analysis completed
+[25s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/shooting-profile-coach-ios/video_ZRmS5R73vps_analysis_20260821_073041.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+Based on the provided video analysis, here is a qualitative profile of Stephen Curry’s shooting mechanism:
+
+### **Stephen Curry Shooting Mechanism Profile**
+
+*   **Stance/Base:** Curry utilizes a "turn" where his body is not squared to the rim. His torso faces slightly away, but his head and eyes remain locked on the target. The mechanism relies on aligning the right side of the body (knee, elbow, and eye) with the rim.
+*   **Dip & Delivery:** He employs a "two-hand delivery" to lift the ball. During the initial lift, the ball and both elbows form an equilateral triangle when viewed from the front of his body. This allows for a stable, balanced, and energy-efficient lift to head height.
+*   **Ball Path:** The ball is lifted symmetrically relative to his torso (two-handed delivery) but transitions into a linear path aligned with his right eye and the rim for the release. The video highlights that while the path may look "curved" or "circular" from a side-body angle, it is a straight vertical line when viewed from the perspective of his head/rim alignment.
+*   **Elbow Action:** During the delivery phase, the elbows are roughly parallel to the shoulder line. As he transitions to the release, the right elbow tucks in to point directly toward the rim, aligning vertically with his right knee and right eye.
+*   **Wrist & Hand Action:** Although the delivery uses both hands for power and stability, the release is a "one-hand" motion. The left hand (guide hand) stays involved longer than in traditional forms to maintain the stability of the quick delivery but does not interfere with the final flick.
+*   **Release Height & Timing:** Curry utilizes a "one-motion" shot where the ball is released quickly as it reaches head height. The transition from the two-handed delivery to the one-handed release is described as exceptionally smooth and brief, minimizing any "pause" in the shooting motion.
+*   **Lower-Body Drive:** The shot is powered by a coordinated lift starting from the right knee, which serves as the base for the vertical alignment of the shot.
+*   **Follow-Through:** The motion concludes with a high, one-handed follow-through directed straight at the rim.
+
+### **Footage Type**
+This video consists of **edited, single-camera reference footage** compiled from various broadcast angles and practice sessions. It does not contain synchronized, calibrated multi-camera data (such as 3D motion capture or simultaneous multi-angle lab footage). The analysis relies on 2D visual interpretation of different shots to explain 3D mechanics.
+=== CURRY ANALYSIS 04 ===
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-35a7bb53-51ad-4267-8280-8eb9b9df04ed)
+[8s] Status: Analyzing video content with AI...
+[25s] Status: Analysis completed
+[25s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/shooting-profile-coach-ios/video_kU1p-sPl6ck_analysis_20260821_073108.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+Based on the visual and narrated analysis of the video, here is a summary of Stephen Curry’s shooting mechanism for a qualitative profile:
+
+### **Stephen Curry Shooting Mechanism Profile**
+
+*   **Stance/Base:** Curry utilizes an athletic base where the shooting-side knee is aligned vertically with the shooting elbow and the right eye, creating a stacked "shooting line" to minimize lateral deviation.
+*   **Ball Path:** The ball follows a consistent, linear path described as being "on a track." This path is driven by the elbow pushing the ball toward the rim in the shortest possible distance rather than a high, looping arc initiated solely by the wrist.
+*   **Elbow Action:** Curry employs an "elbow-pushing" technique. Unlike a "hitch shot" where the elbow remains relatively stationary while the forearm snaps, Curry’s elbow moves forward and upward during the release. The elbow remains "fixed" in terms of its lateral angle, meaning it does not flare out or tuck in during the shooting motion.
+*   **Wrist and Palm Action:** 
+    *   **Wrist Fixing:** The wrist remains firm and stable throughout the delivery to maintain the ball's center of gravity and ensure consistent finger contact (index and middle fingers).
+    *   **Palm Rotation:** A unique characteristic of Curry’s form is "Palm Rotation." At the start of the delivery, his palm faces inward toward his body/head; as he releases, the palm rotates to face the rim.
+*   **Release Height and Timing:** He utilizes a high release point, with the ball leaving his fingertips just as the arm reaches near-full extension. The release is powered by the extension of the elbow rather than a forced manual snap of the wrist.
+*   **Lower-Body Drive:** The power is transferred through the "shooting line," starting from the knee and moving through the elbow to the fingertips.
+*   **Follow-Through:** The arm finishes straight and directed toward the target, following the momentum of the elbow push.
+
+### **Footage Type**
+This video contains **edited/single-camera reference footage** and 2D animations. It does not contain synchronized, calibrated multi-camera biomechanical data.

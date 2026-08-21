@@ -99,3 +99,7 @@
 - [x] 제공된 YouTube 2개 영상의 Curry source·view·동일 슛 correspondence·사용 범위를 독립 감사
 - [x] YouTube 2개 영상의 sync·camera calibration·triangulation 입력 적합성 검증
 - [ ] 동일 슛의 동기화된 정면·측면 capture와 calibration manifest로 Curry/Paul George calibrated 3D 재구성
+- [x] 현재 landmark 추출·동기화·camera calibration·triangulation 코드가 사용자 제안 알고리즘을 실제 수행하는지 전수 감사
+- [x] Shooting Analysis Center Curry 분석 영상의 source evidence·기술적 재구성 단서·사용 범위 감사
+- [x] 코드 결함과 입력 데이터 한계를 분리한 Curry 3D 재구성 개선안 결정
+- [x] synchronized dual-camera frame alignment·calibration matrix 산출·calibrated pose admission converter 구현

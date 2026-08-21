@@ -30,6 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--view", type=parse_view, action="append", required=True, help="Repeat for each synchronized camera candidate.")
     parser.add_argument("--calibration", type=Path, required=True, help="Projection matrices in the normalized-image coordinate convention.")
     parser.add_argument("--provenance", type=Path, required=True, help="Non-product audit record proving authorized source media and physical camera baseline.")
+    parser.add_argument("--sync", type=Path, required=True, help="Shared-flash synchronization record mapping every view timestamp onto the front timeline.")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sync-tolerance-ms", type=int, default=34)
     parser.add_argument("--max-reprojection-error", type=float, default=0.035)
@@ -73,6 +74,33 @@ def project(matrix: np.ndarray, point: np.ndarray) -> np.ndarray:
     return homogeneous[:2] / homogeneous[2]
 
 
+def load_sync(path: Path, expected_views: set[str]) -> dict[str, float]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    offsets = payload.get("offsetsToFrontMs")
+    if payload.get("kind") != "shared_flash_dual_camera_sync" or not payload.get("quality", {}).get("passed"):
+        raise ValueError("sync must be a passing shared-flash dual-camera record")
+    if not isinstance(offsets, dict) or set(offsets) != expected_views:
+        raise ValueError("sync offsets must exactly cover submitted views")
+    if not all(isinstance(value, (int, float)) and np.isfinite(value) for value in offsets.values()):
+        raise ValueError("sync offsets are invalid")
+    return {label: float(offsets[label]) for label in expected_views}
+
+
+def normalized_observation(landmark: dict[str, Any], calibration: dict[str, Any], label: str) -> np.ndarray:
+    sizes = calibration.get("imageSizes", {})
+    intrinsics = calibration.get("intrinsics", {})
+    distortion = calibration.get("distortion", {})
+    size = sizes.get(label)
+    if not isinstance(size, list) or len(size) != 2:
+        raise ValueError(f"Missing image size for '{label}'")
+    camera = np.asarray(intrinsics.get(label), dtype=float)
+    coeffs = np.asarray(distortion.get(label), dtype=float)
+    if camera.shape != (3, 3) or coeffs.size < 4:
+        raise ValueError(f"Missing camera intrinsics or distortion for '{label}'")
+    pixel = np.asarray([[[float(landmark["x"]) * float(size[0]), float(landmark["y"]) * float(size[1])]]], dtype=np.float64)
+    return cv2.undistortPoints(pixel, camera, coeffs).reshape(2)
+
+
 def triangulate(points: list[np.ndarray], matrices: list[np.ndarray]) -> np.ndarray:
     rows: list[np.ndarray] = []
     for point, matrix in zip(points, matrices):
@@ -92,9 +120,12 @@ def main() -> int:
     candidates = {label: load_candidate(path) for label, path in args.view}
     provenance = load_provenance(args.provenance, set(candidates))
     calibration = json.loads(args.calibration.read_text(encoding="utf-8"))
+    sync_offsets = load_sync(args.sync, set(candidates))
+    if not calibration.get("quality", {}).get("passed"):
+        raise SystemExit("Calibration quality did not pass")
     matrices: dict[str, np.ndarray] = {}
     for label in candidates:
-        raw = calibration.get("projectionMatrices", {}).get(label)
+        raw = calibration.get("normalizedProjectionMatrices", {}).get(label)
         matrix = np.asarray(raw, dtype=float) if raw is not None else np.empty((0, 0))
         if matrix.shape != (3, 4) or not np.isfinite(matrix).all():
             raise SystemExit(f"Missing valid 3x4 projection matrix for '{label}'")
@@ -111,7 +142,7 @@ def main() -> int:
         for label, candidate in candidates.items():
             if label == anchor_label:
                 continue
-            frame = closest_frame(candidate["frames"], timestamp, args.sync_tolerance_ms)
+            frame = closest_frame(candidate["frames"], round(timestamp - sync_offsets[label]), args.sync_tolerance_ms)
             if frame is None:
                 break
             synchronized[label] = frame
@@ -122,7 +153,7 @@ def main() -> int:
         landmarks: list[dict[str, float]] = []
         valid_frame = True
         for joint in range(33):
-            observations = [np.asarray([synchronized[label]["landmarks"][joint]["x"], synchronized[label]["landmarks"][joint]["y"]], dtype=float) for label in synchronized]
+            observations = [normalized_observation(synchronized[label]["landmarks"][joint], calibration, label) for label in synchronized]
             view_matrices = [matrices[label] for label in synchronized]
             point = triangulate(observations, view_matrices)
             reprojection = [float(np.linalg.norm(project(matrix, point) - observed)) for matrix, observed in zip(view_matrices, observations)]
