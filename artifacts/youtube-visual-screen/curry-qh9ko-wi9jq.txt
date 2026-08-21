@@ -1,0 +1,48 @@
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-b0f197c4-e30b-41be-81f2-8b2533a0ad16)
+[8s] Status: Analyzing video content with AI...
+[33s] Still processing, please wait...
+[1m3s] Still processing, please wait...
+[1m5s] Status: Analysis completed
+[1m5s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/video_qh9Ko-Wi9JQ_analysis_20260821_090141.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+This video provides a detailed breakdown of Stephen Curry's shooting mechanics, utilizing various game clips and instructional segments. For 3D reconstruction purposes, several physical shots are presented from multiple camera angles.
+
+### **Multi-View Physical Shots (Same Shot, Different Cameras)**
+
+*   **Shot 1: vs. Sacramento Kings (Step-back jumper)**
+    *   **View 1 (Behind):** [01:17–01:27] Full-body, slow-motion, ball and release visible.
+    *   **View 2 (Side):** [01:28–01:36], [04:09–04:12], [04:39–04:46], [05:03–05:06], [11:02–11:11], [17:06–17:30]. Full-body, various speeds (normal and slow-mo), ball and release visible.
+    *   **View 3 (Behind - different angle):** [17:31–17:39]. Full-body, normal speed.
+*   **Shot 2: vs. New York Knicks (Catch-and-shoot)**
+    *   **View 1 (Behind):** [01:37–01:41], [01:42–01:51] (Slow-mo), [01:51–02:01] (Slow-mo), [05:43–05:53], [18:28–18:34]. Full-body, ball and release visible.
+    *   **View 2 (Front):** [07:53–08:00], [10:01–10:14], [10:15–10:22], [11:36–11:46], [12:10–12:14]. Waist-up only, focused on upper body mechanics.
+*   **Shot 3: vs. Cleveland Cavaliers (Finals - Dellavedova defending)**
+    *   **View 1 (Side):** [09:47–10:00]. Waist-up, focused on high-release adjustment.
+    *   **View 2 (Behind):** [15:59–16:04]. Waist-up, focused on guide hand.
+*   **Shot 4: Free Throw vs. Denver Nuggets**
+    *   **View 1 (Top-Down/High Oblique):** [04:56–05:02], [12:46–12:56]. Full-body visibility from a high angle.
+
+---
+
+### **Single-View Usable Shots**
+
+*   **vs. Phoenix Suns (1-2 Step):** [01:02–01:08]. Side view, full-body, game speed.
+*   **vs. Memphis Grizzlies (Off-dribble):** [02:01–02:09] (Side, full-body, slow-mo), [12:33–12:45] (Behind, waist-up), [17:40–18:14] (Behind, full-body, slow-mo).
+*   **vs. Milwaukee Bucks (Step-back):** [04:47–04:55]. Side view, full-body, normal speed.
+*   **vs. Los Angeles Lakers (AD defending - High arc):** [05:54–06:06] (Behind, full-body), [09:01–09:31] (Behind, waist-up, slow-mo), [13:24–13:51] (Behind, waist-up, slow-mo).
+*   **vs. Los Angeles Lakers (LeBron defending - Right-side lift):** [09:32–09:46] (Side, full-body), [14:12–14:22] (Behind, waist-up), [19:09–19:14] (Behind, full-body).
+*   **vs. Cleveland Cavaliers (Finals - Frontal mechanics):** [01:12–01:16], [06:40–06:43], [07:45–07:52], [18:15–18:27]. Front view, full-body or waist-up.
+
+---
+
+### **Technical Analysis for 3D Reconstruction**
+
+*   **Visibility:** Most "Behind" and "Side" views provide full-body visibility from preparation (feet set) through the follow-through. "Front" views are frequently cropped to the waist or chest up to highlight hand placement and elbow alignment.
+*   **Release/Ball Tracking:** The ball and release point are clearly visible in almost all identified segments, though broadcast graphics (arrows, circles) occasionally obscure parts of the body or ball path.
+*   **Edits & Speed:** The video heavily uses slow-motion replays and freeze-frames to explain specific mechanics. Segment timestamps above denote the most continuous portions of these takes.
+*   **Camera Motion:** Most game clips use static broadcast cameras (Side/Wide) or baseline cameras (Behind/Front). The top-down view at [04:56] is a fixed arena camera. There are no significant "moving" or tracking cameras that circle the player.

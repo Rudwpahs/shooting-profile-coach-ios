@@ -1,0 +1,71 @@
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-e06ce4a2-573e-4a59-a596-4618f17dc2a8)
+[8s] Status: Analyzing video content with AI...
+[26s] Status: Analysis completed
+[26s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/video_Z7afVQ7C8e8_analysis_20260821_090013.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+This video consists of 11 distinct slow-motion replays of Stephen Curry shooting basketballs. Each clip represents a unique physical shot; no two clips show the same shot from different camera angles (multi-view). All segments provide full-body visibility and clear views of the ball release, making them potentially useful for 3D reconstruction, though they are all in slow motion.
+
+### Shot Analysis
+
+1.  **Shot 1 (00:05 – 00:23)**
+    *   **Viewpoint:** Behind-right oblique.
+    *   **Visibility:** Full body visible from preparation through follow-through. The ball and release are clearly visible.
+    *   **Speed/Edits:** Consistent slow motion.
+
+2.  **Shot 2 (00:24 – 00:38)**
+    *   **Viewpoint:** Front-left oblique.
+    *   **Visibility:** Full body visible. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+3.  **Shot 3 (00:39 – 00:54)**
+    *   **Viewpoint:** Front-right oblique.
+    *   **Visibility:** Full body visible. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+4.  **Shot 4 (00:55 – 01:10)**
+    *   **Viewpoint:** Front-left oblique.
+    *   **Visibility:** Full body visible. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+5.  **Shot 5 (01:11 – 01:25)**
+    *   **Viewpoint:** Front-left oblique.
+    *   **Visibility:** Full body visible. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+6.  **Shot 6 (01:26 – 01:43)**
+    *   **Viewpoint:** Front-left oblique.
+    *   **Visibility:** Full body visible. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+7.  **Shot 7 (01:44 – 02:03)**
+    *   **Viewpoint:** Front-left oblique.
+    *   **Visibility:** Full body visible. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+8.  **Shot 8 (02:04 – 02:19)**
+    *   **Viewpoint:** Front-left oblique.
+    *   **Visibility:** Full body visible. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+9.  **Shot 9 (02:20 – 02:32)**
+    *   **Viewpoint:** Top-down (overhead).
+    *   **Visibility:** Full body visible from above. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+10. **Shot 10 (02:33 – 02:55)**
+    *   **Viewpoint:** Side-right.
+    *   **Visibility:** Full body visible. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+11. **Shot 11 (02:56 – 03:14)**
+    *   **Viewpoint:** Front-left oblique.
+    *   **Visibility:** Full body visible. Ball and release are clear.
+    *   **Speed/Edits:** Consistent slow motion.
+
+### Multi-View Assessment
+There is no visual evidence that any two segments capture the same physical event from different perspectives. Each clip appears to be a separate shot from various games or different time points within the same game. All clips are broadcast-style replays rendered in slow motion.
