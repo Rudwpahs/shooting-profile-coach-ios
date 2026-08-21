@@ -130,3 +130,7 @@
 - [ ] known-camera multi-view regression과 통과 actual 3D motion의 UI library admission 실행
 - [x] commercial known-geometry fixture manifest·license gate 구현 및 실행 — eligible source 0개, unlicensed external data download·product admission 차단 확인
 - [x] product library admission guard 회귀 검증 — approved actual motion은 cmu-shoot-01 1개로 고정, unapproved CMU·external source UI 미유입 확인
+- [x] Curry·Paul George 각각의 동일 슛 다중 시점 source 확보 조건을 3D reconstruction intake 기준으로 재정의 — 동일 슛·두 고정 camera·시간 일치·재사용 허가 필수
+- [x] 공개 source 후보에서 동일 슛·고정 camera·동기화·상업 사용 조건을 충족하는 Curry·Paul George pair 선별 — ‘every angle’·phantom-camera 공개 영상은 모두 raw camera·시간 정보·상업 사용 허가가 없어 통과 0개
+- [ ] 조건을 통과한 named-player pair만 calibrated 3D reconstruction·visual audit·앱 표시 대상으로 승격
+- [x] Curry·Paul George reconstruction 실행 여부 기록 — 조건 통과 pair 0개로 3D 생성·앱 추가를 하지 않고 2D review만 유지

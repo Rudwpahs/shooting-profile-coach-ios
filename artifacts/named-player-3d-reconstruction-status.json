@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "kind": "named_player_calibrated_3d_reconstruction_status",
+  "state": "blocked_no_qualified_source_pair",
+  "players": [
+    {
+      "name": "Stephen Curry",
+      "qualifiedPairs": 0,
+      "reconstructionExecuted": false,
+      "reason": "No source with the same shot, two fixed cameras, synchronization/camera information, and reuse permission."
+    },
+    {
+      "name": "Paul George",
+      "qualifiedPairs": 0,
+      "reconstructionExecuted": false,
+      "reason": "No source with the same shot, two fixed cameras, synchronization/camera information, and reuse permission."
+    }
+  ],
+  "productAction": "No named-player 3D motion is generated or displayed. Existing 2D review skeletons remain review-only.",
+  "nextAllowedInput": "A documented, authorized pair of synchronized fixed-camera recordings of the same shot."
+}
