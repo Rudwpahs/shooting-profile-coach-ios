@@ -105,3 +105,7 @@
 - [x] synchronized dual-camera frame alignment·calibration matrix 산출·calibrated pose admission converter 구현
 - [x] GitHub Superpowers 저장소·라이선스·설치 방식을 검토하고 프로젝트 적용 여부 결정
 - [x] 3D 재구성 pipeline·source audit·제품 asset을 단계별 디렉터리와 운영 문서로 정리
+- [x] Curry·Paul George 정면·측면 landmark artifact의 frame correspondence·좌표 체계·triangulation failure를 직접 디버깅
+- [x] 두 선수에 대한 최소 가정 3D reconstruction 가능 범위와 product admission 결정을 수치로 기록
+- [x] Curry pair debugger의 release-anchor drift를 제거하고 anchor-preserving correspondence로 epipolar 결과 재검증
+- [x] Curry 정면·측면 landmark sequence의 temporal dynamic time warping alignment를 적용해 fixed-F fit 재검증

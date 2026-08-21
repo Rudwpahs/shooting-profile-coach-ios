@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "kind": "video_pair_feature_correspondence_debug",
+  "matchedFrames": [
+    {
+      "aTimestampMs": 1801,
+      "bTimestampMs": 1837,
+      "state": "compared",
+      "rawMatches": 280,
+      "homographyInliers": 7,
+      "inlierRatio": 0.025
+    },
+    {
+      "aTimestampMs": 1873,
+      "bTimestampMs": 1921,
+      "state": "compared",
+      "rawMatches": 294,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0306
+    },
+    {
+      "aTimestampMs": 1945,
+      "bTimestampMs": 2004,
+      "state": "compared",
+      "rawMatches": 292,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0274
+    },
+    {
+      "aTimestampMs": 2017,
+      "bTimestampMs": 2088,
+      "state": "compared",
+      "rawMatches": 279,
+      "homographyInliers": 6,
+      "inlierRatio": 0.0215
+    },
+    {
+      "aTimestampMs": 2089,
+      "bTimestampMs": 2171,
+      "state": "compared",
+      "rawMatches": 275,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0291
+    },
+    {
+      "aTimestampMs": 2162,
+      "bTimestampMs": 2255,
+      "state": "compared",
+      "rawMatches": 280,
+      "homographyInliers": 7,
+      "inlierRatio": 0.025
+    },
+    {
+      "aTimestampMs": 2234,
+      "bTimestampMs": 2338,
+      "state": "compared",
+      "rawMatches": 312,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0256
+    },
+    {
+      "aTimestampMs": 2306,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 293,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0273
+    },
+    {
+      "aTimestampMs": 2378,
+      "bTimestampMs": 2505,
+      "state": "compared",
+      "rawMatches": 286,
+      "homographyInliers": 7,
+      "inlierRatio": 0.0245
+    },
+    {
+      "aTimestampMs": 2450,
+      "bTimestampMs": 2589,
+      "state": "compared",
+      "rawMatches": 281,
+      "homographyInliers": 6,
+      "inlierRatio": 0.0214
+    },
+    {
+      "aTimestampMs": 2522,
+      "bTimestampMs": 2672,
+      "state": "compared",
+      "rawMatches": 276,
+      "homographyInliers": 5,
+      "inlierRatio": 0.0181
+    }
+  ],
+  "medianHomographyInlierRatio": 0.025,
+  "diagnostic": "not_same_image_plane_or_insufficient_features",
+  "note": "A high homography score signals same/near-identical image geometry, which provides little or no stereo baseline; a low score alone does not calibrate a different camera pair."
+}

@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "kind": "uncalibrated_epipolar_debug",
+  "assumptions": [
+    "unit focal-length proxy",
+    "principal point at normalized image center",
+    "each 33-landmark body frame supplies correspondences"
+  ],
+  "results": [
+    {
+      "aIndex": 25,
+      "bIndex": 22,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 32,
+      "medianProxyReprojectionError": 0.056356,
+      "translationDirection": [
+        0.99456,
+        0.00943,
+        0.10377
+      ],
+      "rotationAngleDeg": 14.363
+    },
+    {
+      "aIndex": 26,
+      "bIndex": 23,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.042317,
+      "translationDirection": [
+        -0.83949,
+        0.08597,
+        -0.53654
+      ],
+      "rotationAngleDeg": 23.154
+    },
+    {
+      "aIndex": 27,
+      "bIndex": 24,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 27,
+      "medianProxyReprojectionError": 0.022533,
+      "translationDirection": [
+        0.99584,
+        0.00635,
+        0.09091
+      ],
+      "rotationAngleDeg": 8.138
+    },
+    {
+      "aIndex": 28,
+      "bIndex": 25,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.01878,
+      "translationDirection": [
+        -0.52209,
+        0.28251,
+        -0.80474
+      ],
+      "rotationAngleDeg": 15.607
+    },
+    {
+      "aIndex": 29,
+      "bIndex": 26,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 22,
+      "medianProxyReprojectionError": 0.099487,
+      "translationDirection": [
+        0.94632,
+        -0.03391,
+        0.32144
+      ],
+      "rotationAngleDeg": 5.672
+    },
+    {
+      "aIndex": 30,
+      "bIndex": 27,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 13,
+      "medianProxyReprojectionError": 0.047777,
+      "translationDirection": [
+        -0.95813,
+        0.02443,
+        -0.28527
+      ],
+      "rotationAngleDeg": 5.187
+    },
+    {
+      "aIndex": 31,
+      "bIndex": 28,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 28,
+      "medianProxyReprojectionError": 0.029728,
+      "translationDirection": [
+        -0.9929,
+        -0.0074,
+        -0.11871
+      ],
+      "rotationAngleDeg": 13.777
+    },
+    {
+      "aIndex": 32,
+      "bIndex": 29,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.004769,
+      "translationDirection": [
+        -0.84498,
+        -0.18059,
+        0.50338
+      ],
+      "rotationAngleDeg": 70.864
+    },
+    {
+      "aIndex": 33,
+      "bIndex": 30,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.006345,
+      "translationDirection": [
+        -0.73633,
+        -0.20099,
+        0.64608
+      ],
+      "rotationAngleDeg": 89.62
+    },
+    {
+      "aIndex": 34,
+      "bIndex": 31,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 23,
+      "medianProxyReprojectionError": 0.039481,
+      "translationDirection": [
+        -0.99846,
+        -0.02977,
+        0.04675
+      ],
+      "rotationAngleDeg": 13.29
+    },
+    {
+      "aIndex": 35,
+      "bIndex": 32,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.026798,
+      "translationDirection": [
+        -0.62734,
+        -0.15651,
+        0.76286
+      ],
+      "rotationAngleDeg": 104.344
+    }
+  ],
+  "fixedCameraConsistency": {
+    "translationDirectionSpreadDeg": 163.0501,
+    "rotationSpreadDeg": 118.5894,
+    "stableUnderProxy": false
+  },
+  "globalEpipolarFit": {
+    "state": "fixed_fundamental_matrix_fitted",
+    "correspondences": 363,
+    "inliers": 91,
+    "inlierRatio": 0.2507,
+    "supportsOneFixedCameraPairUnderProxy": false
+  },
+  "productDecision": "not_metric_3d_without_real_K_distortion_R_t_sync"
+}

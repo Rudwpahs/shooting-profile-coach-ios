@@ -13,4 +13,13 @@
 | 7. Product candidate | `convert-calibrated-pose-to-product-motion.py` | passing calibrated record | 16-joint five-phase candidate |
 | 8. Product admission | code review plus `validatePoseMotion` and visual audit | candidate + evidence | approved library asset or rejection |
 
+## Pair debugging before calibration
+
+| Tool | Checks | Use |
+| --- | --- | --- |
+| `debug-pose-pair-geometry.py` | release correspondence, coordinate convention, per-frame affine residual | player video pair intake |
+| `debug-uncalibrated-pose-pair.py` | global fixed-F fit and camera-pose proxy stability | determine whether a pair plausibly comes from one fixed rig before calibration admission |
+| `debug-video-pair-correspondence.py` | raw image feature/homography overlap | determine whether clips are same/near-identical footage or distinct image planes |
+| `align-pose-pair-dtw.py` | release-pinned dynamic time warping | remove different clip starts and slow-motion rate variation before fixed-F diagnostic |
+
 The capture command sequence and thresholds are documented in [`../docs/authorized-multiview-capture-kit.md`](../docs/authorized-multiview-capture-kit.md).

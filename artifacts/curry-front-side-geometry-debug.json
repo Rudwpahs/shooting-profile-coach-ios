@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "kind": "single_view_pair_geometry_debug",
+  "inputs": {
+    "a": "artifacts/curry-front-relative-pose.json",
+    "b": "artifacts/curry-side-relative-pose.json",
+    "aFrames": 59,
+    "bFrames": 40
+  },
+  "coordinateConvention": {
+    "x": "MediaPipe normalized image x (left to right)",
+    "y": "MediaPipe normalized image y (top to bottom)",
+    "z": "MediaPipe relative image landmark depth; not triangulated metric world z"
+  },
+  "releaseAnchor": {
+    "aFrame": 30,
+    "bFrame": 25,
+    "hand": "right"
+  },
+  "matchedFrames": [
+    {
+      "aIndex": 25,
+      "bIndex": 22,
+      "aTimestampMs": 1801,
+      "bTimestampMs": 1837,
+      "affineResidualBodyUnits": 0.29498
+    },
+    {
+      "aIndex": 26,
+      "bIndex": 23,
+      "aTimestampMs": 1873,
+      "bTimestampMs": 1921,
+      "affineResidualBodyUnits": 0.32915
+    },
+    {
+      "aIndex": 27,
+      "bIndex": 24,
+      "aTimestampMs": 1945,
+      "bTimestampMs": 2004,
+      "affineResidualBodyUnits": 0.29849
+    },
+    {
+      "aIndex": 28,
+      "bIndex": 25,
+      "aTimestampMs": 2017,
+      "bTimestampMs": 2088,
+      "affineResidualBodyUnits": 0.29165
+    },
+    {
+      "aIndex": 29,
+      "bIndex": 26,
+      "aTimestampMs": 2089,
+      "bTimestampMs": 2171,
+      "affineResidualBodyUnits": 0.36055
+    },
+    {
+      "aIndex": 30,
+      "bIndex": 27,
+      "aTimestampMs": 2162,
+      "bTimestampMs": 2255,
+      "affineResidualBodyUnits": 0.20007
+    },
+    {
+      "aIndex": 31,
+      "bIndex": 28,
+      "aTimestampMs": 2234,
+      "bTimestampMs": 2338,
+      "affineResidualBodyUnits": 0.15909
+    },
+    {
+      "aIndex": 32,
+      "bIndex": 29,
+      "aTimestampMs": 2306,
+      "bTimestampMs": 2422,
+      "affineResidualBodyUnits": 0.14158
+    },
+    {
+      "aIndex": 33,
+      "bIndex": 30,
+      "aTimestampMs": 2378,
+      "bTimestampMs": 2505,
+      "affineResidualBodyUnits": 0.14173
+    },
+    {
+      "aIndex": 34,
+      "bIndex": 31,
+      "aTimestampMs": 2450,
+      "bTimestampMs": 2589,
+      "affineResidualBodyUnits": 0.14577
+    },
+    {
+      "aIndex": 35,
+      "bIndex": 32,
+      "aTimestampMs": 2522,
+      "bTimestampMs": 2672,
+      "affineResidualBodyUnits": 0.15741
+    }
+  ],
+  "diagnostic": {
+    "medianAffineResidualBodyUnits": 0.20007,
+    "viewDiversity": "indeterminate_without_calibration",
+    "triangulationReady": false,
+    "blockingRequirements": [
+      "known intrinsic and distortion parameters",
+      "known relative camera R/t or calibrated projection matrices",
+      "proven synchronized timestamps"
+    ]
+  }
+}

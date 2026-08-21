@@ -1,0 +1,481 @@
+{
+  "version": 1,
+  "kind": "video_pair_feature_correspondence_debug",
+  "matchedFrames": [
+    {
+      "aTimestampMs": 0,
+      "bTimestampMs": 0,
+      "state": "compared",
+      "rawMatches": 237,
+      "homographyInliers": 9,
+      "inlierRatio": 0.038
+    },
+    {
+      "aTimestampMs": 72,
+      "bTimestampMs": 84,
+      "state": "compared",
+      "rawMatches": 235,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0383
+    },
+    {
+      "aTimestampMs": 144,
+      "bTimestampMs": 167,
+      "state": "compared",
+      "rawMatches": 268,
+      "homographyInliers": 2,
+      "inlierRatio": 0.0075
+    },
+    {
+      "aTimestampMs": 216,
+      "bTimestampMs": 251,
+      "state": "compared",
+      "rawMatches": 241,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0332
+    },
+    {
+      "aTimestampMs": 288,
+      "bTimestampMs": 334,
+      "state": "compared",
+      "rawMatches": 261,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0307
+    },
+    {
+      "aTimestampMs": 360,
+      "bTimestampMs": 418,
+      "state": "compared",
+      "rawMatches": 246,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0366
+    },
+    {
+      "aTimestampMs": 432,
+      "bTimestampMs": 501,
+      "state": "compared",
+      "rawMatches": 237,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0338
+    },
+    {
+      "aTimestampMs": 504,
+      "bTimestampMs": 585,
+      "state": "compared",
+      "rawMatches": 257,
+      "homographyInliers": 9,
+      "inlierRatio": 0.035
+    },
+    {
+      "aTimestampMs": 576,
+      "bTimestampMs": 668,
+      "state": "compared",
+      "rawMatches": 273,
+      "homographyInliers": 5,
+      "inlierRatio": 0.0183
+    },
+    {
+      "aTimestampMs": 648,
+      "bTimestampMs": 752,
+      "state": "compared",
+      "rawMatches": 270,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0333
+    },
+    {
+      "aTimestampMs": 721,
+      "bTimestampMs": 835,
+      "state": "compared",
+      "rawMatches": 277,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0289
+    },
+    {
+      "aTimestampMs": 793,
+      "bTimestampMs": 919,
+      "state": "compared",
+      "rawMatches": 298,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0268
+    },
+    {
+      "aTimestampMs": 865,
+      "bTimestampMs": 1002,
+      "state": "compared",
+      "rawMatches": 281,
+      "homographyInliers": 6,
+      "inlierRatio": 0.0214
+    },
+    {
+      "aTimestampMs": 937,
+      "bTimestampMs": 1086,
+      "state": "compared",
+      "rawMatches": 271,
+      "homographyInliers": 6,
+      "inlierRatio": 0.0221
+    },
+    {
+      "aTimestampMs": 1009,
+      "bTimestampMs": 1169,
+      "state": "compared",
+      "rawMatches": 265,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0302
+    },
+    {
+      "aTimestampMs": 1081,
+      "bTimestampMs": 1253,
+      "state": "compared",
+      "rawMatches": 279,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0323
+    },
+    {
+      "aTimestampMs": 1153,
+      "bTimestampMs": 1336,
+      "state": "compared",
+      "rawMatches": 279,
+      "homographyInliers": 7,
+      "inlierRatio": 0.0251
+    },
+    {
+      "aTimestampMs": 1225,
+      "bTimestampMs": 1420,
+      "state": "compared",
+      "rawMatches": 260,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0308
+    },
+    {
+      "aTimestampMs": 1297,
+      "bTimestampMs": 1503,
+      "state": "compared",
+      "rawMatches": 239,
+      "homographyInliers": 10,
+      "inlierRatio": 0.0418
+    },
+    {
+      "aTimestampMs": 1369,
+      "bTimestampMs": 1587,
+      "state": "compared",
+      "rawMatches": 282,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0284
+    },
+    {
+      "aTimestampMs": 1441,
+      "bTimestampMs": 1670,
+      "state": "compared",
+      "rawMatches": 256,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0352
+    },
+    {
+      "aTimestampMs": 1513,
+      "bTimestampMs": 1754,
+      "state": "compared",
+      "rawMatches": 275,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0291
+    },
+    {
+      "aTimestampMs": 1585,
+      "bTimestampMs": 1837,
+      "state": "compared",
+      "rawMatches": 277,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0289
+    },
+    {
+      "aTimestampMs": 1657,
+      "bTimestampMs": 1921,
+      "state": "compared",
+      "rawMatches": 289,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0311
+    },
+    {
+      "aTimestampMs": 1729,
+      "bTimestampMs": 2004,
+      "state": "compared",
+      "rawMatches": 281,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0285
+    },
+    {
+      "aTimestampMs": 1801,
+      "bTimestampMs": 2004,
+      "state": "compared",
+      "rawMatches": 288,
+      "homographyInliers": 5,
+      "inlierRatio": 0.0174
+    },
+    {
+      "aTimestampMs": 1873,
+      "bTimestampMs": 2004,
+      "state": "compared",
+      "rawMatches": 283,
+      "homographyInliers": 5,
+      "inlierRatio": 0.0177
+    },
+    {
+      "aTimestampMs": 1945,
+      "bTimestampMs": 2004,
+      "state": "compared",
+      "rawMatches": 292,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0274
+    },
+    {
+      "aTimestampMs": 2017,
+      "bTimestampMs": 2004,
+      "state": "compared",
+      "rawMatches": 281,
+      "homographyInliers": 9,
+      "inlierRatio": 0.032
+    },
+    {
+      "aTimestampMs": 2089,
+      "bTimestampMs": 2004,
+      "state": "compared",
+      "rawMatches": 280,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0321
+    },
+    {
+      "aTimestampMs": 2162,
+      "bTimestampMs": 2088,
+      "state": "compared",
+      "rawMatches": 299,
+      "homographyInliers": 5,
+      "inlierRatio": 0.0167
+    },
+    {
+      "aTimestampMs": 2234,
+      "bTimestampMs": 2171,
+      "state": "compared",
+      "rawMatches": 286,
+      "homographyInliers": 8,
+      "inlierRatio": 0.028
+    },
+    {
+      "aTimestampMs": 2306,
+      "bTimestampMs": 2255,
+      "state": "compared",
+      "rawMatches": 266,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0338
+    },
+    {
+      "aTimestampMs": 2378,
+      "bTimestampMs": 2338,
+      "state": "compared",
+      "rawMatches": 291,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0275
+    },
+    {
+      "aTimestampMs": 2450,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 299,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0301
+    },
+    {
+      "aTimestampMs": 2522,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 290,
+      "homographyInliers": 2,
+      "inlierRatio": 0.0069
+    },
+    {
+      "aTimestampMs": 2594,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 285,
+      "homographyInliers": 0,
+      "inlierRatio": 0.0
+    },
+    {
+      "aTimestampMs": 2666,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 282,
+      "homographyInliers": 10,
+      "inlierRatio": 0.0355
+    },
+    {
+      "aTimestampMs": 2738,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 299,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0268
+    },
+    {
+      "aTimestampMs": 2810,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 272,
+      "homographyInliers": 5,
+      "inlierRatio": 0.0184
+    },
+    {
+      "aTimestampMs": 2882,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 283,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0283
+    },
+    {
+      "aTimestampMs": 2954,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 287,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0314
+    },
+    {
+      "aTimestampMs": 3026,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 299,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0268
+    },
+    {
+      "aTimestampMs": 3098,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 288,
+      "homographyInliers": 3,
+      "inlierRatio": 0.0104
+    },
+    {
+      "aTimestampMs": 3170,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 302,
+      "homographyInliers": 6,
+      "inlierRatio": 0.0199
+    },
+    {
+      "aTimestampMs": 3242,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 309,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0259
+    },
+    {
+      "aTimestampMs": 3314,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 284,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0282
+    },
+    {
+      "aTimestampMs": 3386,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 291,
+      "homographyInliers": 5,
+      "inlierRatio": 0.0172
+    },
+    {
+      "aTimestampMs": 3458,
+      "bTimestampMs": 2422,
+      "state": "compared",
+      "rawMatches": 300,
+      "homographyInliers": 5,
+      "inlierRatio": 0.0167
+    },
+    {
+      "aTimestampMs": 3530,
+      "bTimestampMs": 2505,
+      "state": "compared",
+      "rawMatches": 310,
+      "homographyInliers": 6,
+      "inlierRatio": 0.0194
+    },
+    {
+      "aTimestampMs": 3603,
+      "bTimestampMs": 2589,
+      "state": "compared",
+      "rawMatches": 282,
+      "homographyInliers": 6,
+      "inlierRatio": 0.0213
+    },
+    {
+      "aTimestampMs": 3675,
+      "bTimestampMs": 2672,
+      "state": "compared",
+      "rawMatches": 300,
+      "homographyInliers": 5,
+      "inlierRatio": 0.0167
+    },
+    {
+      "aTimestampMs": 3747,
+      "bTimestampMs": 2756,
+      "state": "compared",
+      "rawMatches": 286,
+      "homographyInliers": 6,
+      "inlierRatio": 0.021
+    },
+    {
+      "aTimestampMs": 3819,
+      "bTimestampMs": 2839,
+      "state": "compared",
+      "rawMatches": 304,
+      "homographyInliers": 8,
+      "inlierRatio": 0.0263
+    },
+    {
+      "aTimestampMs": 3891,
+      "bTimestampMs": 2923,
+      "state": "compared",
+      "rawMatches": 280,
+      "homographyInliers": 6,
+      "inlierRatio": 0.0214
+    },
+    {
+      "aTimestampMs": 3963,
+      "bTimestampMs": 3006,
+      "state": "compared",
+      "rawMatches": 313,
+      "homographyInliers": 5,
+      "inlierRatio": 0.016
+    },
+    {
+      "aTimestampMs": 4035,
+      "bTimestampMs": 3090,
+      "state": "compared",
+      "rawMatches": 297,
+      "homographyInliers": 9,
+      "inlierRatio": 0.0303
+    },
+    {
+      "aTimestampMs": 4107,
+      "bTimestampMs": 3173,
+      "state": "compared",
+      "rawMatches": 291,
+      "homographyInliers": 4,
+      "inlierRatio": 0.0137
+    },
+    {
+      "aTimestampMs": 4179,
+      "bTimestampMs": 3257,
+      "state": "compared",
+      "rawMatches": 308,
+      "homographyInliers": 0,
+      "inlierRatio": 0.0
+    }
+  ],
+  "medianHomographyInlierRatio": 0.0275,
+  "diagnostic": "not_same_image_plane_or_insufficient_features",
+  "note": "A high homography score signals same/near-identical image geometry, which provides little or no stereo baseline; a low score alone does not calibrate a different camera pair."
+}
