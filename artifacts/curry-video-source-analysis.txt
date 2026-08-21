@@ -1,0 +1,27 @@
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-b37e2d0a-8fed-4668-83b2-4843d8d96251)
+[8s] Status: Analyzing video content with AI...
+[16s] Status: Analysis completed
+[16s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/shooting-profile-coach-ios/video_Z7afVQ7C8e8_analysis_20260821_061241.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+이 영상은 스테판 커리(Stephen Curry)의 실제 NBA 경기 슈팅 장면들을 담고 있으며, 포즈 추출(pose extraction) 및 동작 분석에 매우 적합한 구성을 가지고 있습니다. 상세 분석 내용은 다음과 같습니다.
+
+### 1. 실제 슈팅 영상 여부
+* 본 영상은 스테판 커리가 골든스테이트 워리어스 유니폼을 입고 실제 경기(레이커스, 킹스, 셀틱스 등 상대)에서 3점슛과 자유투를 던지는 하이라이트 모음집입니다.
+
+### 2. 전신이 보이는 연속 Shot Sequence
+* 영상의 거의 모든 클립(0:05~3:13)에서 커리의 머리부터 발끝까지 **전신이 화면에 담긴 상태로 슈팅 동작의 시작부터 끝까지** 연속적으로 보여줍니다.
+* 슬로우 모션이 포함된 클립이 많아 관절의 움직임을 세밀하게 관찰하기 좋습니다.
+
+### 3. 측면 및 사선 View 구간
+포즈 추출에 유리한 다양한 각도가 포함되어 있습니다:
+* **측면/대각선 뷰:** 0:05 (후방 사선), 0:24 (전방 사선), 0:55 (완전 측면에 가까운 사선), 2:04 (전방 사선), 2:33 (측면) 등에서 확인됩니다.
+* **정면 뷰:** 0:39, 1:26, 1:44 등에서 슛 릴리즈 시의 몸의 정렬을 확인할 수 있습니다.
+
+### 4. Pose Extraction 적합성 요약
+* **적합성:** **매우 높음**
+* **이유:** 카메라 워킹이 비교적 안정적이고, 수비수와의 접촉이 적은 클린한 슈팅 폼 위주로 편집되어 있어 AI 기반의 관절 포인트 추출에 방해 요소가 적습니다. 특히 2:33~2:55 구간은 측면에서 전신 동작이 명확하게 드러나 슈팅 메커니즘 분석에 최적입니다.

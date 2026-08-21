@@ -28,10 +28,11 @@ type PoseMotionViewerProps = {
   hand?: "auto" | "right" | "left";
   activeFrameIndex?: number;
   sourcePhaseFrames?: number[];
+  sourcePhaseTimestampsMs?: number[];
   onPhaseSelect?: (index: number) => void;
 };
 
-export function PoseMotionViewer({ motion, title, boundary, hand = "right", activeFrameIndex, sourcePhaseFrames, onPhaseSelect }: PoseMotionViewerProps) {
+export function PoseMotionViewer({ motion, title, boundary, hand = "right", activeFrameIndex, sourcePhaseFrames, sourcePhaseTimestampsMs, onPhaseSelect }: PoseMotionViewerProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const presets = useMemo(() => getPoseCameraPresets(motion, hand), [motion, hand]);
@@ -100,7 +101,7 @@ export function PoseMotionViewer({ motion, title, boundary, hand = "right", acti
   const displayTitle = title ?? "ACTUAL MOTION";
   const boundaryCopy = boundary ?? "실제 source motion에서 변환된 관절 데이터입니다. source 승인·관절 품질 상태는 모션별 기록을 따릅니다.";
   return <View style={styles.card}>
-    <View style={styles.header}><View style={styles.titleWrap}><Text style={styles.eyebrow}>MOTION VIEW</Text><Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{displayTitle} · {frame.label}</Text></View><View style={styles.phaseStack}><Text style={styles.phase}>{visibleFrameIndex + 1}/{motion.frames.length}</Text>{sourcePhaseFrames?.[visibleFrameIndex] ? <Text style={styles.sourceFrame}>SRC {sourcePhaseFrames[visibleFrameIndex]}</Text> : null}</View></View>
+    <View style={styles.header}><View style={styles.titleWrap}><Text style={styles.eyebrow}>MOTION VIEW</Text><Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{displayTitle} · {frame.label}</Text></View><View style={styles.phaseStack}><Text style={styles.phase}>{visibleFrameIndex + 1}/{motion.frames.length}</Text>{sourcePhaseFrames?.[visibleFrameIndex] ? <Text style={styles.sourceFrame}>SRC {sourcePhaseFrames[visibleFrameIndex]}</Text> : sourcePhaseTimestampsMs?.[visibleFrameIndex] !== undefined ? <Text style={styles.sourceFrame}>{sourcePhaseTimestampsMs[visibleFrameIndex]}ms</Text> : null}</View></View>
     <View style={[styles.stage, isInteracting && styles.stageInteracting]} {...panResponder.panHandlers}>
       <Svg width="100%" height={270} viewBox="0 0 330 270">
         <Line x1="22" y1="243" x2="308" y2="243" stroke="#21445B" strokeWidth="1" strokeDasharray="4 5" />

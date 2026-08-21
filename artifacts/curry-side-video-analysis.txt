@@ -1,0 +1,30 @@
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-a8a4a6b6-5aa0-457c-b008-b40d1653107a)
+[8s] Status: Analyzing video content with AI...
+[15s] Status: Analysis completed
+[15s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/shooting-profile-coach-ios/video_curry-side-slowmo_analysis_20260821_063636.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+이 영상은 골든스테이트 워리어스의 **스테픈 커리(Stephen Curry)** 선수가 실제 연습 상황에서 슛을 쏘는 전신 동작을 담고 있습니다. 분석 결과는 다음과 같습니다.
+
+### 1. 슈팅 단계별 분석 (시간 구간)
+
+*   **준비 (Preparation) [00:00:00 - 00:00:06]:** 커리가 림을 응시하며 공을 잡고 스탠스를 정렬하는 단계입니다. 무릎을 약간 굽히고 무게 중심을 잡고 있습니다.
+*   **딥 (Dip) [00:00:06 - 00:00:09]:** 슛의 리듬을 만들기 위해 공을 복부 높이로 살짝 내리며 에너지를 모으는 단계입니다.
+*   **상승 (Rise) [00:00:09 - 00:00:15]:** 하체의 힘을 상체로 전달하며 공을 머리 위 셋 포인트(Set Point)로 들어 올리는 과정입니다.
+*   **릴리스 (Release) [00:00:15 - 00:00:18]:** 점프의 정점에서 손목의 스냅을 이용해 공을 던지는 순간입니다. 커리 특유의 빠른 릴리스가 관찰됩니다.
+*   **팔로우스루 (Follow-through) [00:00:18 - 00:00:27]:** 슛을 쏜 후 팔을 뻗은 상태를 유지하며 착지하는 단계입니다. 손목이 꺾인 채로 유지되는 것이 특징입니다.
+
+### 2. 포즈 추출 방해 요소 (Pose Extraction Obstacles)
+
+AI 기반 포즈 추출(Pose Estimation) 시 정확도를 떨어뜨릴 수 있는 요인들은 다음과 같습니다.
+
+*   **UI 오버레이 (UI Elements):** 화면 우측의 '좋아요', '댓글', '공유' 등의 아이콘과 하단의 텍스트/진행 바가 커리의 신체 일부(특히 오른팔과 다리 쪽)와 겹쳐 있어 관절 포인트 추출에 간섭을 줄 수 있습니다.
+*   **배경의 인물 및 사물 (Background Clutter):** 커리의 뒤편 왼쪽에 서 있는 사람과 바닥에 놓인 가방, 의자 등이 신체 윤곽과 겹쳐 배경 분리(Segmentation) 시 오류를 유발할 수 있습니다.
+*   **수직 화면 비율 (Vertical Aspect Ratio):** 모바일 최적화된 세로 영상으로 인해 좌우 공간이 협소하며, 움직임이 클 경우 신체 일부가 화면 밖으로 나갈 위험이 있습니다 (본 영상에서는 전신이 잘 유지되고 있음).
+*   **조명 및 그림자 (Lighting/Shadows):** 실내 체육관 특유의 강한 상단 조명으로 인해 바닥에 짙은 그림자가 생겨 발의 정확한 위치 파악에 혼동을 줄 수 있습니다.
+
+이 분석은 영상의 원본 데이터를 변경하지 않는 비파괴 방식으로 수행되었습니다.

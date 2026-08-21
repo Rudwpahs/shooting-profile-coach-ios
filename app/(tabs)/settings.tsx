@@ -19,9 +19,9 @@ export default function SettingsScreen() {
         <ScreenTitle eyebrow="SETTINGS" title="내 데이터, 내 공간." detail="목표 값은 기기에 보관하고, 로그인 후 개인 스켈레톤은 Firebase 개인 경로에 저장합니다." />
         <SectionCard>
           <Text style={styles.sectionTitle}>Reference data status</Text>
-          <StatusPill tone="warning">PROTOTYPE · NAMED COMPARISON LABEL</StatusPill>
-          <View style={styles.statRow}><Stat label="승인 실제 모션" value={`${ANONYMOUS_POSE_LIBRARY_STATUS.profileCount}`} /><Stat label="프로토타입 이름" value={ANONYMOUS_POSE_LIBRARY_STATUS.visiblePlayerIdentity ? "1" : "0"} /><Stat label="직접 source" value={`${ANONYMOUS_POSE_LIBRARY_STATUS.directSourceSequenceCount}`} /></View>
-          <Text style={styles.body}>현재 Stephen Curry 표시는 prototype comparison label입니다. 실제 관절 모션 출처는 익명 CMU optical-mocap이며, 선수의 실측 3D 모델이라고 주장하지 않습니다.</Text>
+          <StatusPill tone="success">ACTUAL OPTICAL SOURCE · ANONYMOUS</StatusPill>
+          <View style={styles.statRow}><Stat label="승인 실제 모션" value={`${ANONYMOUS_POSE_LIBRARY_STATUS.profileCount}`} /><Stat label="선수명 연결" value={ANONYMOUS_POSE_LIBRARY_STATUS.visiblePlayerIdentity ? "있음" : "없음"} /><Stat label="직접 source" value={`${ANONYMOUS_POSE_LIBRARY_STATUS.directSourceSequenceCount}`} /></View>
+          <Text style={styles.body}>현재 실제 관절 모션 출처는 익명 CMU optical-mocap입니다. 특정 선수 이름은 실제 영상과 검증된 pose source가 연결되기 전에는 표시하지 않습니다.</Text>
         </SectionCard>
         <SectionCard tone="sand">
           <Text style={styles.sectionTitle}>개인정보 보호</Text>

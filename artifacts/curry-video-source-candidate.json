@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "candidateId": "stephen-curry-youtube-z7afVQ7C8e8",
+  "athleteIdentity": "Stephen Curry",
+  "sourceUrl": "https://www.youtube.com/watch?v=Z7afVQ7C8e8",
+  "sourceType": "public_video_candidate",
+  "review": {
+    "reviewMethod": "non_destructive_video_analysis",
+    "identityAppearsConsistent": true,
+    "fullBodyContinuousShot": true,
+    "preferredSegment": { "startSeconds": 153, "endSeconds": 175, "view": "side" },
+    "otherCandidateViews": [
+      { "startSeconds": 5, "view": "rear_oblique" },
+      { "startSeconds": 24, "view": "front_oblique" },
+      { "startSeconds": 55, "view": "near_side" }
+    ]
+  },
+  "media": {
+    "localAuthorizedMediaAvailable": false,
+    "sourceFileHash": null,
+    "rawVideoStoredInProduct": false
+  },
+  "pose": {
+    "singleViewCandidateExtracted": false,
+    "boundary": "not_yet_extracted",
+    "calibratedMultiView3d": false
+  },
+  "product": {
+    "displayNameAllowed": false,
+    "approvedReferenceMotion": false,
+    "reason": "No authorized local source media or reproducible 33-landmark candidate exists yet."
+  }
+}

@@ -80,3 +80,10 @@
 - [x] 현재 승인 CMU 실제 모션의 raw marker·16관절 keyframe·5단계 타이밍·릴리스·팔로우스루 집중 감사
 - [x] 승인 CMU 모션의 정면·사선·측면 프레이밍과 프로토타입 이름 표기·추천·라이브러리 연결 제품 검토·보완
 - [x] 승인 CMU 모션 집중 재검증의 데이터·UI·회귀 테스트 실행 및 결과 기록
+- [x] CMU 익명 optical-mocap 모션에서 Stephen Curry 프로토타입 선수명 오표기 철회
+- [x] Stephen Curry 실제 슈팅 영상 source의 사용 범위·전신 연속성·pose 추출 적합성 조사
+- [x] Stephen Curry 실제 영상의 단일 시점 relative pose 후보 추출·품질 검증·source 경계 기록
+- [x] 슬로우모션 Curry 정면·측면 영상을 릴리스 event 기준으로 정렬하고 동기화·landmark 품질 검증
+- [x] Curry 정면 relative pose candidate를 Motion Studio·Library에 별도 표시하고 CMU 승인 모션·추천에서 분리
+- [x] Curry 원본 video를 product project에서 제외하고 media hash·pose·audit 산출물만 보관
+- [x] Curry video pose 후보와 CMU approved optical motion의 제품 표기·승인 상태를 명확히 분리

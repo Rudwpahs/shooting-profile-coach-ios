@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "captureKind": "two_slow_motion_reference_views_not_calibrated_multiview",
+  "sourceRecord": "user-provided-curry-slowmotion-20260821",
+  "sourceMediaProvidedForAnalysis": true,
+  "views": [
+    "front",
+    "side"
+  ],
+  "assetHashes": {
+    "front": "6620fc8af58b94ce5aa21d8c11c20dea6b206b7fb94370473867edcdd5e2795b",
+    "side": "03cdbcee2d5e80ab4e25da190cb6fef44b12b882e6a8cee553322e1886bb20ba"
+  },
+  "alignment": {
+    "method": "release_event_normalization",
+    "timestampSynchronized": false,
+    "triangulationEligible": false
+  },
+  "rawMediaStoredInProduct": false,
+  "outputBoundary": "monocular_relative_pose_not_metric_3d_per_view"
+}
