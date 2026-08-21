@@ -149,3 +149,6 @@
 - [ ] 통과한 Paul George view를 phase-align·auto-correct한 analysis asset으로 생성하고 Motion Studio에 분리 표시
 - [x] Paul George 공개 multi-angle candidate와 local All-Star source를 감사 — 공개 compilation은 같은 슛 pair·raw landmark input 없음, local side source는 identity·31/31 tracking·right hand 확인
 - [x] Paul George local side source를 five-phase constrained·auto-corrected display analysis와 source-based form-match로 Motion Studio에 추가 — actual 3D·추천에서 분리
+- [x] Paul George 원본 영상에서 얼굴이 보이는 준비·낮은 손의 딥·릴리스·팔로우스루 phase를 재선정 — 0·65·355·645·742ms source audit override
+- [x] Pose viewer에서 검증된 주손·팔 라인을 주황색으로 강조하고 비주손은 중립색으로 표시
+- [x] Paul George 최종 보정 motion만 UI에 반영하고 intermediate source·candidate 산출물은 product 화면에서 숨김

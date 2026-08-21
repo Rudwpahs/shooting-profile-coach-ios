@@ -33,6 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--video", type=Path, required=True)
     parser.add_argument("--view", choices=["front", "side", "oblique"], required=True)
     parser.add_argument("--shooting-hand", choices=["auto", "left", "right"], default="auto", help="Use a video-audited shooting hand instead of the wrist-height heuristic when available.")
+    parser.add_argument("--phase-indexes", help="Optional comma-separated audited indexes for 준비,딥,상승,릴리스,팔로우스루. Overrides automatic phase selection.")
     parser.add_argument("--id", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--audit", type=Path, required=True)
@@ -79,6 +80,15 @@ def phase_indexes(frames: list[dict[str, Any]], shooting_hand: str = "auto") -> 
     follow = min(len(frames) - 1, max(release + 1, round(release + 0.28 * (len(frames) - 1 - release))))
     preparation = max(0, dip - max(1, release - dip) * 2)
     return hand, [preparation, dip, rise, release, follow]
+
+
+def audited_phase_indexes(raw: str | None, frame_count: int) -> list[int] | None:
+    if not raw:
+        return None
+    indexes = [int(value.strip()) for value in raw.split(",")]
+    if len(indexes) != len(PHASES) or indexes != sorted(indexes) or len(set(indexes)) != len(indexes) or indexes[0] < 0 or indexes[-1] >= frame_count:
+        raise SystemExit("--phase-indexes must contain five strictly increasing in-range indexes")
+    return indexes
 
 
 def draw_pose(image: np.ndarray, landmarks: list[dict[str, float]], label: str, timestamp_ms: int) -> np.ndarray:
@@ -130,6 +140,9 @@ def main() -> int:
     if len(frames) < 12:
         raise SystemExit("At least 12 full landmark frames are required.")
     hand, indexes = phase_indexes(frames, args.shooting_hand)
+    audited_indexes = audited_phase_indexes(args.phase_indexes, len(frames))
+    if audited_indexes is not None:
+        indexes = audited_indexes
     motion = {
         "id": args.id,
         "boundary": "monocular_relative_pose_not_metric_3d",
@@ -144,6 +157,7 @@ def main() -> int:
         "view": args.view,
         "shootingHandEstimate": hand,
         "shootingHandResolution": "video_audit_override" if args.shooting_hand != "auto" else "wrist_height_heuristic",
+        "phaseSelectionResolution": "source_video_audit_override" if audited_indexes is not None else "landmark_motion_heuristic",
         "boundary": "monocular_relative_pose_not_metric_3d",
         "phaseIndexes": indexes,
         "phaseTimestampsMs": [int(frames[index]["timestampMs"]) for index in indexes],

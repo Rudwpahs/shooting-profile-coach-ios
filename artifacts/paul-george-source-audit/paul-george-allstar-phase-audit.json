@@ -1,0 +1,350 @@
+{
+  "version": 1,
+  "shootingHand": "right",
+  "selectionRule": {
+    "preparation": "earliest pre-dip frame with head visibility >= 0.75",
+    "dip": "largest shooting-wrist y relative to shooting shoulder before release",
+    "release": "lowest shooting-wrist image y",
+    "followThrough": "lowest shooting-wrist image y after release"
+  },
+  "phaseIndexes": [
+    0,
+    2,
+    11,
+    20,
+    21
+  ],
+  "phases": [
+    {
+      "label": "준비",
+      "index": 0,
+      "timestampMs": 0,
+      "headVisibility": 0.995817,
+      "wristY": 0.524164,
+      "shoulderY": 0.468316,
+      "hipY": 0.61211,
+      "wristBelowShoulder": 0.055847
+    },
+    {
+      "label": "딥",
+      "index": 2,
+      "timestampMs": 65,
+      "headVisibility": 0.995659,
+      "wristY": 0.604881,
+      "shoulderY": 0.474941,
+      "hipY": 0.607785,
+      "wristBelowShoulder": 0.12994
+    },
+    {
+      "label": "상승",
+      "index": 11,
+      "timestampMs": 355,
+      "headVisibility": 0.996864,
+      "wristY": 0.3438,
+      "shoulderY": 0.438774,
+      "hipY": 0.611749,
+      "wristBelowShoulder": -0.094974
+    },
+    {
+      "label": "릴리스",
+      "index": 20,
+      "timestampMs": 645,
+      "headVisibility": 0.993428,
+      "wristY": 0.216819,
+      "shoulderY": 0.36135,
+      "hipY": 0.563679,
+      "wristBelowShoulder": -0.144531
+    },
+    {
+      "label": "팔로우스루",
+      "index": 21,
+      "timestampMs": 677,
+      "headVisibility": 0.993011,
+      "wristY": 0.228567,
+      "shoulderY": 0.368178,
+      "hipY": 0.576977,
+      "wristBelowShoulder": -0.139611
+    }
+  ],
+  "measurements": [
+    {
+      "index": 0,
+      "timestampMs": 0,
+      "headVisibility": 0.995817,
+      "wristY": 0.524164,
+      "shoulderY": 0.468316,
+      "hipY": 0.61211,
+      "wristBelowShoulder": 0.055847
+    },
+    {
+      "index": 1,
+      "timestampMs": 32,
+      "headVisibility": 0.995488,
+      "wristY": 0.592903,
+      "shoulderY": 0.468914,
+      "hipY": 0.607546,
+      "wristBelowShoulder": 0.123989
+    },
+    {
+      "index": 2,
+      "timestampMs": 65,
+      "headVisibility": 0.995659,
+      "wristY": 0.604881,
+      "shoulderY": 0.474941,
+      "hipY": 0.607785,
+      "wristBelowShoulder": 0.12994
+    },
+    {
+      "index": 3,
+      "timestampMs": 97,
+      "headVisibility": 0.99558,
+      "wristY": 0.605324,
+      "shoulderY": 0.477795,
+      "hipY": 0.608223,
+      "wristBelowShoulder": 0.127529
+    },
+    {
+      "index": 4,
+      "timestampMs": 129,
+      "headVisibility": 0.995874,
+      "wristY": 0.60378,
+      "shoulderY": 0.484194,
+      "hipY": 0.611628,
+      "wristBelowShoulder": 0.119586
+    },
+    {
+      "index": 5,
+      "timestampMs": 161,
+      "headVisibility": 0.996053,
+      "wristY": 0.595876,
+      "shoulderY": 0.489021,
+      "hipY": 0.614209,
+      "wristBelowShoulder": 0.106856
+    },
+    {
+      "index": 6,
+      "timestampMs": 194,
+      "headVisibility": 0.996377,
+      "wristY": 0.548488,
+      "shoulderY": 0.490418,
+      "hipY": 0.621064,
+      "wristBelowShoulder": 0.05807
+    },
+    {
+      "index": 7,
+      "timestampMs": 226,
+      "headVisibility": 0.996629,
+      "wristY": 0.529137,
+      "shoulderY": 0.488669,
+      "hipY": 0.623002,
+      "wristBelowShoulder": 0.040468
+    },
+    {
+      "index": 8,
+      "timestampMs": 258,
+      "headVisibility": 0.996743,
+      "wristY": 0.509687,
+      "shoulderY": 0.48667,
+      "hipY": 0.626592,
+      "wristBelowShoulder": 0.023017
+    },
+    {
+      "index": 9,
+      "timestampMs": 290,
+      "headVisibility": 0.996696,
+      "wristY": 0.466478,
+      "shoulderY": 0.473119,
+      "hipY": 0.624982,
+      "wristBelowShoulder": -0.00664
+    },
+    {
+      "index": 10,
+      "timestampMs": 323,
+      "headVisibility": 0.996986,
+      "wristY": 0.382259,
+      "shoulderY": 0.442371,
+      "hipY": 0.619987,
+      "wristBelowShoulder": -0.060112
+    },
+    {
+      "index": 11,
+      "timestampMs": 355,
+      "headVisibility": 0.996864,
+      "wristY": 0.3438,
+      "shoulderY": 0.438774,
+      "hipY": 0.611749,
+      "wristBelowShoulder": -0.094974
+    },
+    {
+      "index": 12,
+      "timestampMs": 387,
+      "headVisibility": 0.99697,
+      "wristY": 0.312081,
+      "shoulderY": 0.402873,
+      "hipY": 0.596848,
+      "wristBelowShoulder": -0.090792
+    },
+    {
+      "index": 13,
+      "timestampMs": 419,
+      "headVisibility": 0.996598,
+      "wristY": 0.267099,
+      "shoulderY": 0.376688,
+      "hipY": 0.575781,
+      "wristBelowShoulder": -0.109589
+    },
+    {
+      "index": 14,
+      "timestampMs": 452,
+      "headVisibility": 0.996787,
+      "wristY": 0.307341,
+      "shoulderY": 0.375664,
+      "hipY": 0.573103,
+      "wristBelowShoulder": -0.068323
+    },
+    {
+      "index": 15,
+      "timestampMs": 484,
+      "headVisibility": 0.996778,
+      "wristY": 0.246765,
+      "shoulderY": 0.359286,
+      "hipY": 0.560852,
+      "wristBelowShoulder": -0.112521
+    },
+    {
+      "index": 16,
+      "timestampMs": 516,
+      "headVisibility": 0.993488,
+      "wristY": 0.257613,
+      "shoulderY": 0.355099,
+      "hipY": 0.555988,
+      "wristBelowShoulder": -0.097485
+    },
+    {
+      "index": 17,
+      "timestampMs": 548,
+      "headVisibility": 0.993245,
+      "wristY": 0.240475,
+      "shoulderY": 0.354082,
+      "hipY": 0.557968,
+      "wristBelowShoulder": -0.113607
+    },
+    {
+      "index": 18,
+      "timestampMs": 581,
+      "headVisibility": 0.993749,
+      "wristY": 0.223984,
+      "shoulderY": 0.364985,
+      "hipY": 0.555582,
+      "wristBelowShoulder": -0.141001
+    },
+    {
+      "index": 19,
+      "timestampMs": 613,
+      "headVisibility": 0.993437,
+      "wristY": 0.22176,
+      "shoulderY": 0.35032,
+      "hipY": 0.561798,
+      "wristBelowShoulder": -0.128561
+    },
+    {
+      "index": 20,
+      "timestampMs": 645,
+      "headVisibility": 0.993428,
+      "wristY": 0.216819,
+      "shoulderY": 0.36135,
+      "hipY": 0.563679,
+      "wristBelowShoulder": -0.144531
+    },
+    {
+      "index": 21,
+      "timestampMs": 677,
+      "headVisibility": 0.993011,
+      "wristY": 0.228567,
+      "shoulderY": 0.368178,
+      "hipY": 0.576977,
+      "wristBelowShoulder": -0.139611
+    },
+    {
+      "index": 22,
+      "timestampMs": 710,
+      "headVisibility": 0.993346,
+      "wristY": 0.230003,
+      "shoulderY": 0.370318,
+      "hipY": 0.578332,
+      "wristBelowShoulder": -0.140315
+    },
+    {
+      "index": 23,
+      "timestampMs": 742,
+      "headVisibility": 0.993447,
+      "wristY": 0.238476,
+      "shoulderY": 0.397179,
+      "hipY": 0.612192,
+      "wristBelowShoulder": -0.158703
+    },
+    {
+      "index": 24,
+      "timestampMs": 774,
+      "headVisibility": 0.992937,
+      "wristY": 0.234062,
+      "shoulderY": 0.39875,
+      "hipY": 0.61187,
+      "wristBelowShoulder": -0.164688
+    },
+    {
+      "index": 25,
+      "timestampMs": 806,
+      "headVisibility": 0.993247,
+      "wristY": 0.239659,
+      "shoulderY": 0.4382,
+      "hipY": 0.641361,
+      "wristBelowShoulder": -0.198542
+    },
+    {
+      "index": 26,
+      "timestampMs": 839,
+      "headVisibility": 0.993615,
+      "wristY": 0.247969,
+      "shoulderY": 0.438363,
+      "hipY": 0.646767,
+      "wristBelowShoulder": -0.190393
+    },
+    {
+      "index": 27,
+      "timestampMs": 871,
+      "headVisibility": 0.993958,
+      "wristY": 0.314021,
+      "shoulderY": 0.483902,
+      "hipY": 0.684289,
+      "wristBelowShoulder": -0.169881
+    },
+    {
+      "index": 28,
+      "timestampMs": 903,
+      "headVisibility": 0.994498,
+      "wristY": 0.328536,
+      "shoulderY": 0.476656,
+      "hipY": 0.685312,
+      "wristBelowShoulder": -0.14812
+    },
+    {
+      "index": 29,
+      "timestampMs": 935,
+      "headVisibility": 0.994376,
+      "wristY": 0.361024,
+      "shoulderY": 0.515831,
+      "hipY": 0.723561,
+      "wristBelowShoulder": -0.154806
+    },
+    {
+      "index": 30,
+      "timestampMs": 968,
+      "headVisibility": 0.9946,
+      "wristY": 0.368518,
+      "shoulderY": 0.513857,
+      "hipY": 0.721764,
+      "wristBelowShoulder": -0.145339
+    }
+  ]
+}

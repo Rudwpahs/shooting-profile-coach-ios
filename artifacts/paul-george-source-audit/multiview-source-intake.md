@@ -21,3 +21,7 @@ The local All-Star source passes the extracted landmark quality gate at 31/31 de
 ## Viewer verification
 
 Motion Studio renders `PAUL GEORGE · AUTO-CORRECTED ANALYSIS` with the five source timestamps, conservative correction statement, five-phase source check, right shooting-arm chain, wrist-above-shoulder follow-through proxy, and unavailable ball/rim/finger/exact-angle items. The card explicitly remains `not actual 3D` and `not used for recommendation`; the approved optical section remains separate.
+
+## Final phase and viewer correction
+
+The initial automatic phase picker selected the guide-hand peak for the dip. A source measurement audit instead selected the video-audited right shooting hand and explicit source indexes `0, 2, 11, 20, 23`: `0`, `65`, `355`, `645`, and `742 ms`. The preparation and dip frames retain head visibility of `0.995817` and `0.995659`; the dip keeps the right wrist `0.129940` image units below the right shoulder before the rise. Motion Studio now displays final analysis viewers only, draws a visible head cue, and emphasizes the verified shooting shoulder–elbow–wrist chain in orange while neutralizing the non-shooting side.

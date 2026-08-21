@@ -47,7 +47,7 @@ describe("approved actual optical-mocap pose motion", () => {
       displayName: "Paul George",
       state: "single_view_auto_corrected_estimate_not_actual_3d",
       boundary: "monocular_relative_pose_not_metric_3d",
-      sourcePhaseTimestampsMs: [0, 355, 516, 645, 742],
+      sourcePhaseTimestampsMs: [0, 65, 355, 645, 742],
     });
     expect(PLAYER_MONOCULAR_3D_ANALYSES[3].formMatch?.find((check) => check.id === "release_wrist_height")?.status).toBe("match");
     expect(PLAYER_MONOCULAR_3D_ANALYSES.map((analysis) => analysis.motion.boundary)).toEqual(["monocular_relative_pose_not_metric_3d", "monocular_relative_pose_not_metric_3d", "monocular_relative_pose_not_metric_3d", "monocular_relative_pose_not_metric_3d"]);
