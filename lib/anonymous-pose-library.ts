@@ -1,4 +1,6 @@
 import cmuShoot01Raw from "@/lib/motions/cmu-shoot-01.json";
+import currySourceSkeletonRaw from "@/lib/skeleton-reviews/curry-source-skeleton-01.json";
+import paulGeorgeSourceSkeletonRaw from "@/lib/skeleton-reviews/paul-george-source-skeleton-01.json";
 import type { PoseMotion } from "@/lib/pose-motion";
 
 /** Active product library. Only reproducible real optical data may enter it. */
@@ -38,6 +40,18 @@ export type PlayerVideoReviewRecord = {
   sourcePhaseTimestampsMs: number[];
   quality: { landmarkFrameRatio: number; meanVisibility: number };
   withdrawalReason: string;
+};
+
+export type PlayerSourceSkeletonPhase = { label: string; progress: number; sourceFrameIndex: number; sourceTimestampMs: number; landmarks: Array<{ x: number; y: number; visibility: number }> };
+export type PlayerSourceSkeletonReview = {
+  id: string;
+  displayName: string;
+  sourceView: "정면" | "측면" | "사선";
+  sourceAttribution: string;
+  boundary: "single_view_2d_skeleton_review";
+  state: "review_only_not_3d";
+  phases: PlayerSourceSkeletonPhase[];
+  quality: { landmarkFrameRatio: number; meanVisibility: number };
 };
 
 const cmuShoot01 = cmuShoot01Raw.motion as PoseMotion;
@@ -86,6 +100,21 @@ export const PLAYER_VIDEO_REVIEW_RECORDS: PlayerVideoReviewRecord[] = [
     quality: { landmarkFrameRatio: 1, meanVisibility: 0.822 },
     withdrawalReason: "정면 영상과 다른 shot·다른 timestamp·unknown camera geometry이므로 3D triangulation에 결합할 수 없습니다.",
   },
+];
+
+const currySourceSkeleton = currySourceSkeletonRaw as { id: string; label: string; boundary: "single_view_2d_skeleton_review"; state: "review_only_not_3d"; sourceView: "front" | "side" | "oblique"; phases: PlayerSourceSkeletonPhase[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number } };
+const paulGeorgeSourceSkeleton = paulGeorgeSourceSkeletonRaw as typeof currySourceSkeleton;
+
+const sourceViewLabel = (view: "front" | "side" | "oblique"): PlayerSourceSkeletonReview["sourceView"] => {
+  if (view === "front") return "정면";
+  if (view === "side") return "측면";
+  return "사선";
+};
+
+/** Actual video-derived 2D evidence; intentionally distinct from product 3D motion. */
+export const PLAYER_SOURCE_SKELETON_REVIEWS: PlayerSourceSkeletonReview[] = [
+  { id: currySourceSkeleton.id, displayName: "Stephen Curry", sourceView: sourceViewLabel(currySourceSkeleton.sourceView), sourceAttribution: "사용자 제공 실제 Curry 슬로모션 source에서 추출한 5단계 2D landmark", boundary: currySourceSkeleton.boundary, state: currySourceSkeleton.state, phases: currySourceSkeleton.phases, quality: currySourceSkeleton.inputQuality },
+  { id: paulGeorgeSourceSkeleton.id, displayName: "Paul George", sourceView: sourceViewLabel(paulGeorgeSourceSkeleton.sourceView), sourceAttribution: "사용자 제공 실제 Paul George All-Star source에서 추출한 31-frame landmark", boundary: paulGeorgeSourceSkeleton.boundary, state: paulGeorgeSourceSkeleton.state, phases: paulGeorgeSourceSkeleton.phases, quality: paulGeorgeSourceSkeleton.inputQuality },
 ];
 
 export const ANONYMOUS_POSE_LIBRARY_STATUS = {

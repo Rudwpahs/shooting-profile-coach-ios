@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--video", type=Path, required=True, help="Local full-body shooting clip. Never pass a remote URL.")
     parser.add_argument("--output", type=Path, required=True, help="JSON output path.")
     parser.add_argument("--model", type=Path, required=True, help="Official pose_landmarker_full.task path.")
-    parser.add_argument("--sample-fps", type=float, default=8.0, help="Frame sampling frequency, 2-12 FPS.")
+    parser.add_argument("--sample-fps", type=float, default=8.0, help="Frame sampling frequency, 2-60 FPS.")
     parser.add_argument("--max-frames", type=int, default=96, help="Maximum inference frames.")
     return parser.parse_args()
 
@@ -66,8 +66,8 @@ def main() -> int:
         raise SystemExit(f"Video file not found: {args.video}")
     if not args.model.is_file():
         raise SystemExit(f"Pose model not found: {args.model}")
-    if not 2 <= args.sample_fps <= 12:
-        raise SystemExit("--sample-fps must be between 2 and 12")
+    if not 2 <= args.sample_fps <= 60:
+        raise SystemExit("--sample-fps must be between 2 and 60")
 
     capture = cv2.VideoCapture(str(args.video))
     native_fps = capture.get(cv2.CAP_PROP_FPS) or 30.0

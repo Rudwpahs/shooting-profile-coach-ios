@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES, PLAYER_VIDEO_REVIEW_RECORDS } from "@/lib/anonymous-pose-library";
+import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES, PLAYER_SOURCE_SKELETON_REVIEWS, PLAYER_VIDEO_REVIEW_RECORDS } from "@/lib/anonymous-pose-library";
 import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, POSE_ZOOM_MAX, POSE_ZOOM_MIN, projectPosePoint, validatePoseMotion } from "@/lib/pose-motion";
 
 describe("approved actual optical-mocap pose motion", () => {
@@ -15,6 +15,14 @@ describe("approved actual optical-mocap pose motion", () => {
     expect(PLAYER_VIDEO_REVIEW_RECORDS[0]).not.toHaveProperty("motion");
     expect(PLAYER_VIDEO_REVIEW_RECORDS[0].sourcePhaseTimestampsMs).toEqual([0, 1002, 1503, 2088, 2422]);
     expect(PLAYER_VIDEO_REVIEW_RECORDS[1].sourcePhaseTimestampsMs).toEqual([2000, 2667, 2833, 3000, 3250]);
+    expect(PLAYER_SOURCE_SKELETON_REVIEWS.map((review) => review.displayName)).toEqual(["Stephen Curry", "Paul George"]);
+    expect(PLAYER_SOURCE_SKELETON_REVIEWS).toHaveLength(2);
+    for (const review of PLAYER_SOURCE_SKELETON_REVIEWS) {
+      expect(review).toMatchObject({ boundary: "single_view_2d_skeleton_review", state: "review_only_not_3d" });
+      expect(review.phases.map((phase) => phase.label)).toEqual(["준비", "딥", "상승", "릴리스", "팔로우스루"]);
+      expect(review.phases).toHaveLength(5);
+      expect(review.phases.every((phase) => phase.landmarks.length === 33 && phase.landmarks.every((landmark) => !Object.hasOwn(landmark, "z")))).toBe(true);
+    }
     expect(motion.boundary).toBe("actual_optical_mocap_3d");
     expect(motion.frames.map((frame) => frame.label)).toEqual(["준비", "딥", "상승", "릴리스", "팔로우스루"]);
     expect(ANONYMOUS_POSE_REFERENCES[0].sourcePhaseFrames).toEqual([269, 317, 335, 353, 385]);

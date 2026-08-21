@@ -113,3 +113,9 @@
 - [x] uncalibrated candidate의 reprojection·temporal bone consistency·source boundary 검증 기록 — 통과 source가 없어 downstream 검증을 실행하지 않음
 - [x] Curry·Paul George multi-view reconstruction의 correspondence·fixed-F·triangulation·admission을 단일 pipeline으로 통합
 - [x] 통합 pipeline으로 모든 기존 Curry·Paul George source pair를 재실행하고 결과를 재검증
+- [x] Curry 실제 source 기반 skeleton candidate를 생성하고 UI viewer에서 직접 확인
+- [x] Paul George 실제 source 기반 skeleton candidate를 생성하고 UI viewer에서 직접 확인
+- [x] 두 선수 skeleton의 source boundary·quality·viewer 표시를 종단 검증
+- [x] Paul George의 짧은 고품질 source를 frame-rate 보존 extraction으로 재처리해 실제 skeleton temporal density 확보
+- [x] Motion Studio·Library에서 Curry·Paul George 2D skeleton을 optical 3D viewer보다 먼저 표시
+- [x] 실제 source 2D skeleton을 canvas 내 fit-to-frame으로 확대해 두 선수 관절 형상을 즉시 읽을 수 있게 보정
