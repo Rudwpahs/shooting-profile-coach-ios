@@ -51,6 +51,8 @@ frame 3364와 3754 주변의 measured-marker audit sheet를 재검토했다. 두
 
 Subject 6 Trial **14**는 `basketball - crossover dribble, shoot`, Trial **15**는 `basketball - dribble, shoot`로 명시되고 120 fps C3D를 제공한다.[1] Trial 14는 marker 연속성 검사를 통과했으나 손목 상승·팔 연장 release event가 0개이므로 `unapproved_no_measured_release_event`로 유지한다.
 
+2026-08-21에는 Trial 14 전체에 대해 wrist-lift 기준을 10 mm까지 낮춰 재실행했지만 후보는 여전히 0개였다. frame 72–192 audit sheet는 드리블·이동 자세만 보이고, frame 228–372 sheet는 marker 가시성이 중간 이후 급격히 떨어져 준비→상승→릴리스→팔로우스루가 연속적으로 확인되지 않았다. 이 결과는 trial 설명의 `shoot` 단어만으로 motion을 승인할 수 없음을 재확인한다. Trial 14는 `unapproved_no_measured_release_event_and_incomplete_tracking`으로 유지한다.
+
 2026-08-20 공식 Subject 6 trial table 재검토에서 1–13은 walk 또는 forward/backward/sideways/crossover/free-style dribble로만 명시되었고, shooting을 명시한 행은 14와 15뿐이었다. 따라서 Subject 6의 나머지 13개 trial은 슈팅 source 탐색·다운로드 대상에서 제외한다.
 
 같은 날짜의 CMU 공식 `basketball` motion category 전체 목록도 Subject 6의 2–15번 trial만 반환했다. 즉 현재 CMU category에서 trial-level shooting을 명시한 추가 source는 Trial 14·15 외에는 확인되지 않았다. Trial 15의 단일 승인 모션을 복제해 여러 모델로 수를 채우지 않으며, 후속 제품 모델은 별도 source에서 provenance를 다시 확보해야 한다.
@@ -79,6 +81,22 @@ SportsPose는 24명의 subject·5종 sport activity에서 176,000개 이상 3D p
 | raw sequence 이용 조건·상업 제품 조건 | 미확인 |
 | 제품용 3D source 승인 | `unapproved_license_and_activity_gap` |
 
+## 5차 확인: MLSE SPL Open Data Basketball Free Throw
+
+MLSE Sport Performance Lab의 공개 repository는 비전 기반 markerless motion-capture로 수집한 농구 자유투 raw JSON을 제공한다. 2026년 3월 기준 농구 자유투 데이터는 5명의 익명 participant, 583 trial이며, session에 따라 30 fps 또는 60 fps다. 각 trial은 69개 pose keypoint와 ball의 court-coordinate xyz를 포함하므로 실제 연속 슈팅·3D 관절 time-series·명시적인 shooting event라는 점에서는 강한 후보이다.[6]
+
+그러나 repository license는 **CC BY-NC-SA 4.0**으로 명시되어 있고, 이는 상업 제품 사용을 허용하지 않는다.[6] 따라서 raw JSON을 내려받거나 제품 PoseMotion으로 변환하지 않으며, 이 source는 `noncommercial_license_excluded`로 보류한다. 데이터 품질은 승인 조건을 상당 부분 충족하더라도 라이선스가 상업화 목적과 맞지 않으면 제품 라이브러리에 추가하지 않는다.
+
+## 6차 확인: 상업 라이선스 Basketball FBX mocap pack
+
+Animo의 `Mocap Basic Basketball` pack은 167개의 humanoid-based 실제 mocap animation을 FBX로 제공하며, free throw, jump shot, pull-up jump shot, catch-and-shot, fade-away 등 좌·우 슈팅 clip을 명시한다. 판매 페이지에는 extended use license로 상업·비상업 application 사용을 허용한다고 표시되어 있다.[7] 따라서 해당 clip은 실존 선수명과 연결하지 않는 `licensed_humanoid_mocap_3d` source로는 후보가 될 수 있다.
+
+다만 이 pack은 유료 디지털 asset이며 현 시점에는 구매·다운로드하지 않았다. 구매 또는 사용 허가 없이 preview·clip name·판매 페이지로 관절 데이터를 재생성하지 않으며, 상태는 `commercial_candidate_pending_license_purchase`로 유지한다. 구매가 승인되면 원본 FBX의 skeleton mapping, frame rate, full release·follow-through, source license text를 audit한 뒤에만 product PoseMotion 후보로 변환한다.
+
+## 7차 확인: BASKET-Multiview
+
+BASKET-Multiview는 calibrated camera, depth, SMPL mesh와 animation annotation을 제공하지만 Unreal Engine 5와 EasySynth로 생성한 **synthetic basketball benchmark**다. 실제 촬영된 사람의 슈팅 motion이 아니므로, 다중 시점 검증 도구의 test fixture 또는 UI performance test에는 적합할 수 있어도 실제 선수 기반 3D 모델 라이브러리 source에는 사용할 수 없다.[8] 상태는 `synthetic_not_player_motion_source`다.
+
 ## References
 
 [1] [CMU Graphics Lab Motion Capture Database — Subject 86](http://mocap.cs.cmu.edu/search.php?subjectnumber=86)
@@ -90,3 +108,9 @@ SportsPose는 24명의 subject·5종 sport activity에서 176,000개 이상 3D p
 [4] [Basketball Action Recognition / SpaceJam usage](https://github.com/hkair/Basketball-Action-Recognition)
 
 [5] [SportsPose project page](https://christianingwersen.github.io/SportsPose/) and [repository](https://github.com/ChristianIngwersen/SportsPose)
+
+[6] [MLSE SPL Open Data repository](https://github.com/Sport-Performance-Lab/SPL-Open-Data) and [Basketball Free Throw dataset documentation](https://github.com/Sport-Performance-Lab/SPL-Open-Data/tree/main/basketball/freethrow)
+
+[7] [Animo Mocap Basic Basketball — RenderHub](https://www.renderhub.com/animo/animo-mocap-basic-basketball)
+
+[8] [BASKET-Multiview Dataset](https://humansensinglab.github.io/basket-multiview/data.html)

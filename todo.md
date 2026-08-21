@@ -71,3 +71,9 @@
 - [ ] 실제 iPhone custom development build에서 Firebase 회원가입·영상 pose detection·개인 Firestore 저장 종단 검증
 - [x] 프로토타입용 선수명 reference 레이블을 도입하고 상용 익명화 전환 경계를 유지
 - [x] 3D 뷰어 정면·사선·측면 시점의 실제 카메라 투영을 보정하고 회귀 검증
+- [x] 현재 승인 CMU optical-mocap 모션의 provenance·5단계 관절·릴리스·팔로우스루 재감사
+- [ ] 상업 사용 가능 라이선스와 재현 가능한 raw 3D를 갖춘 추가 농구 슈팅 source 후보 조사·승인
+- [ ] 추가 승인 source를 16관절 5단계 PoseMotion으로 변환하고 품질 gate·audit sheet 검증
+- [ ] 검증된 추가 실제 모션을 프로토타입 선수 레이블·라이브러리·추천 흐름에 연결
+- [ ] 유료 mocap asset 구매 없이 무료 상업 사용 가능 source 또는 동의 기반 자체 다중 시점 캡처로 실제 모델 확대
+- [x] 동의 기반 두 카메라 capture provenance manifest 도구와 무구매 실제 3D 캡처 절차 문서화
