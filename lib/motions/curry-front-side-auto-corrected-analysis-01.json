@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "state": "single_view_auto_corrected_estimate_not_actual_3d",
+  "version": 5,
+  "state": "image_lifted_pose_estimate_not_actual_3d",
   "boundary": "monocular_relative_pose_not_metric_3d",
   "player": "Stephen Curry",
   "shootingHandEstimate": "left",
@@ -12,7 +12,7 @@
     "meanVisibility": 0.915,
     "reasons": []
   },
-  "sourceState": "review_only_not_3d",
+  "sourceState": "candidate",
   "sourcePhaseTimestampsMs": [
     0,
     1153,
@@ -21,7 +21,7 @@
     2738
   ],
   "phaseAlignment": {
-    "method": "direct_retained_source_2d_phases",
+    "method": "retained_single_source_temporal_indices",
     "sourceFrameIndexes": [
       0,
       16,
@@ -30,46 +30,55 @@
       38
     ]
   },
+  "imageTo3DLift": {
+    "method": "motionbert_h36m_finetuned_temporal_2d_to_3d_lift_v1",
+    "inputContract": "retained_mediapipe_33_landmark_trajectory_to_h36m_17_joint_input",
+    "sourceXY": "retained_source_2d_xy_preserved_in_product_motion",
+    "learnedDepth": "MotionBERT_checkpoint_camera_relative_z_normalized_and_bounded",
+    "checkpointSha256": "597c708bd585646cc6961df057ef73634edb83a4d5c1155d98a4cc0c04e81b98",
+    "externalModelExecution": "executed_cpu",
+    "boundary": "learned_image_lifted_estimate_not_metric_or_calibrated_3d",
+    "meaning": "공식 MotionBERT checkpoint가 2D trajectory에서 camera-relative z를 학습 추정했습니다. calibration·metric scale·actual depth를 제공하지 않습니다."
+  },
   "autoCorrection": {
     "root": "pelvis_recentered_per_phase",
-    "boneLength": "median_source_2d_visible_bone_length",
-    "templateId": "curry_source_faithful_2d_silhouette_v1",
-    "scaleBasis": "median_observed_full_body_2d_height",
+    "boneLength": "median_motionbert_lifted_3d_bone_length",
+    "templateId": "curry_motionbert_h36m_temporal_lift_v1",
+    "scaleBasis": "retained_source_2d_full_body_height_with_learned_depth_scale",
     "targetBoneLengths": {
-      "pelvis->spine": 0.187578,
-      "spine->neck": 0.187578,
-      "neck->head": 0.112151,
-      "neck->leftShoulder": 0.165598,
-      "leftShoulder->leftElbow": 0.31337,
-      "leftElbow->leftWrist": 0.257152,
-      "neck->rightShoulder": 0.165598,
-      "rightShoulder->rightElbow": 0.254066,
-      "rightElbow->rightWrist": 0.219584,
-      "pelvis->leftHip": 0.107603,
-      "leftHip->leftKnee": 0.288903,
-      "leftKnee->leftAnkle": 0.284562,
-      "pelvis->rightHip": 0.107603,
-      "rightHip->rightKnee": 0.282347,
-      "rightKnee->rightAnkle": 0.275013
+      "pelvis->spine": 0.315963,
+      "spine->neck": 0.212857,
+      "neck->head": 0.124293,
+      "neck->leftShoulder": 0.177223,
+      "leftShoulder->leftElbow": 0.320224,
+      "leftElbow->leftWrist": 0.259013,
+      "neck->rightShoulder": 0.178913,
+      "rightShoulder->rightElbow": 0.308979,
+      "rightElbow->rightWrist": 0.220136,
+      "pelvis->leftHip": 0.12783,
+      "leftHip->leftKnee": 0.295183,
+      "leftKnee->leftAnkle": 0.298088,
+      "pelvis->rightHip": 0.108683,
+      "rightHip->rightKnee": 0.29189,
+      "rightKnee->rightAnkle": 0.29791
     },
-    "trajectory": "source_2d_parent_child_direction_and_phase_order_preserved",
-    "depthTreatment": "z_fixed_to_zero_no_depth_inference",
+    "trajectory": "retained_source_2d_xy_with_motionbert_temporal_depth_and_median_3d_bone_stabilization",
     "beforeBoneLengthSpread": {
-      "pelvis->spine": 0.037699,
-      "spine->neck": 0.037699,
-      "neck->head": 0.20142,
-      "neck->leftShoulder": 0.133349,
-      "leftShoulder->leftElbow": 0.056141,
-      "leftElbow->leftWrist": 0.217686,
-      "neck->rightShoulder": 0.133349,
-      "rightShoulder->rightElbow": 0.162722,
-      "rightElbow->rightWrist": 0.083883,
-      "pelvis->leftHip": 0.07069,
-      "leftHip->leftKnee": 0.099884,
-      "leftKnee->leftAnkle": 0.082406,
-      "pelvis->rightHip": 0.07069,
-      "rightHip->rightKnee": 0.023556,
-      "rightKnee->rightAnkle": 0.094012
+      "pelvis->spine": 0.098911,
+      "spine->neck": 0.056133,
+      "neck->head": 0.190161,
+      "neck->leftShoulder": 0.060281,
+      "leftShoulder->leftElbow": 0.062791,
+      "leftElbow->leftWrist": 0.219454,
+      "neck->rightShoulder": 0.038403,
+      "rightShoulder->rightElbow": 0.111866,
+      "rightElbow->rightWrist": 0.092456,
+      "pelvis->leftHip": 0.041346,
+      "leftHip->leftKnee": 0.099729,
+      "leftKnee->leftAnkle": 0.077799,
+      "pelvis->rightHip": 0.027875,
+      "rightHip->rightKnee": 0.011929,
+      "rightKnee->rightAnkle": 0.076704
     },
     "afterBoneLengthSpread": {
       "pelvis->spine": 0.0,
@@ -88,34 +97,34 @@
       "rightHip->rightKnee": 0.0,
       "rightKnee->rightAnkle": 0.0
     },
-    "meaning": "감사된 실제 2D source의 full-body silhouette과 왼손 shooting arm 방향을 유지합니다. 뼈 길이는 source 2D median으로만 안정화하며 z depth를 추정하지 않습니다."
+    "meaning": "학습된 camera-relative depth를 사용하되 source x/y·phase·left shooting hand를 보존한 display lift입니다. 실제·calibrated 3D 또는 측정값이 아닙니다."
   },
   "formMatch": {
-    "rubricVersion": "curry-source-video-form-match-v2",
+    "rubricVersion": "curry-source-video-form-match-v4-motionbert-lifted",
     "checks": [
       {
         "id": "phase_order",
         "label": "준비→딥→상승→릴리스→팔로우스루 순서",
         "status": "match",
-        "evidence": "retained source 2D review의 five phase timestamp를 직접 사용"
+        "evidence": "retained source trajectory의 original temporal index를 사용"
       },
       {
         "id": "shooting_arm_chain",
         "label": "왼쪽 shoulder–elbow–wrist chain 연속성",
         "status": "match",
-        "evidence": "source 2D parent→child 방향을 유지하고 depth inference를 제거"
+        "evidence": "source image-plane x/y와 MotionBERT temporal depth lift를 결합"
       },
       {
         "id": "release_wrist_height",
         "label": "팔로우스루에서 shooting wrist가 shooting shoulder보다 높음",
         "status": "match",
-        "evidence": "follow-through wrist y=0.628908, shoulder y=0.370186"
+        "evidence": "follow-through wrist y=0.618196, shoulder y=0.359445"
       },
       {
         "id": "form_details_unavailable",
         "label": "공·림·손가락·정확한 관절각·metric depth",
         "status": "unavailable",
-        "evidence": "single-view source에는 calibration과 measured depth가 없음"
+        "evidence": "single-view learned image lift에는 calibration과 measured depth가 없음"
       }
     ]
   },
@@ -133,79 +142,79 @@
             "z": 0.0
           },
           "spine": {
-            "x": -0.128115,
-            "y": 0.137011,
-            "z": 0.0
+            "x": -0.207159,
+            "y": 0.221543,
+            "z": -0.088524
           },
           "neck": {
-            "x": -0.256231,
-            "y": 0.274022,
-            "z": 0.0
+            "x": -0.333515,
+            "y": 0.356672,
+            "z": -0.193797
           },
           "head": {
-            "x": -0.358756,
-            "y": 0.31948,
-            "z": 0.0
+            "x": -0.446396,
+            "y": 0.406721,
+            "z": -0.179595
           },
           "leftShoulder": {
-            "x": -0.090633,
-            "y": 0.274028,
-            "z": 0.0
+            "x": -0.261742,
+            "y": 0.356675,
+            "z": -0.355836
           },
           "leftElbow": {
-            "x": 0.09891,
-            "y": 0.02448,
-            "z": 0.0
+            "x": -0.068295,
+            "y": 0.101988,
+            "z": -0.339813
           },
           "leftWrist": {
-            "x": -0.151588,
-            "y": -0.033642,
-            "z": 0.0
+            "x": -0.317583,
+            "y": 0.044149,
+            "z": -0.299839
           },
           "rightShoulder": {
-            "x": -0.421829,
-            "y": 0.274015,
-            "z": 0.0
+            "x": -0.389732,
+            "y": 0.356669,
+            "z": -0.023946
           },
           "rightElbow": {
-            "x": -0.351045,
-            "y": 0.030009,
-            "z": 0.0
+            "x": -0.322523,
+            "y": 0.124983,
+            "z": 0.169115
           },
           "rightWrist": {
-            "x": -0.565023,
-            "y": -0.019291,
-            "z": 0.0
+            "x": -0.510874,
+            "y": 0.081587,
+            "z": 0.063756
           },
           "leftHip": {
-            "x": 0.107254,
-            "y": -0.008665,
-            "z": 0.0
+            "x": 0.031914,
+            "y": -0.002578,
+            "z": -0.123755
           },
           "leftKnee": {
-            "x": -0.070743,
-            "y": -0.236222,
-            "z": 0.0
+            "x": -0.144645,
+            "y": -0.2283,
+            "z": -0.052981
           },
           "leftAnkle": {
-            "x": 0.025234,
-            "y": -0.50411,
-            "z": 0.0
+            "x": -0.047941,
+            "y": -0.498219,
+            "z": 0.028559
           },
           "rightHip": {
-            "x": -0.107254,
-            "y": 0.008665,
-            "z": 0.0
+            "x": -0.032974,
+            "y": 0.002664,
+            "z": 0.103526
           },
           "rightKnee": {
-            "x": -0.215641,
-            "y": -0.252049,
-            "z": 0.0
+            "x": -0.143715,
+            "y": -0.263711,
+            "z": 0.14803
           },
           "rightAnkle": {
-            "x": -0.030836,
-            "y": -0.455714,
-            "z": 0.0
+            "x": 0.056475,
+            "y": -0.484333,
+            "z": 0.148419
           }
         }
       },
@@ -219,79 +228,79 @@
             "z": 0.0
           },
           "spine": {
-            "x": 0.040786,
-            "y": 0.18309,
-            "z": 0.0
+            "x": 0.042735,
+            "y": 0.191841,
+            "z": -0.247393
           },
           "neck": {
-            "x": 0.081571,
-            "y": 0.36618,
-            "z": 0.0
+            "x": 0.08711,
+            "y": 0.391042,
+            "z": -0.186912
           },
           "head": {
-            "x": 0.021205,
-            "y": 0.460699,
-            "z": 0.0
+            "x": 0.026744,
+            "y": 0.48556,
+            "z": -0.240495
           },
           "leftShoulder": {
-            "x": 0.246964,
-            "y": 0.357939,
-            "z": 0.0
+            "x": 0.248799,
+            "y": 0.382985,
+            "z": -0.25902
           },
           "leftElbow": {
-            "x": -0.065589,
-            "y": 0.380551,
-            "z": 0.0
+            "x": -0.059855,
+            "y": 0.405315,
+            "z": -0.341346
           },
           "leftWrist": {
-            "x": -0.092437,
-            "y": 0.636298,
-            "z": 0.0
+            "x": -0.086438,
+            "y": 0.658513,
+            "z": -0.29368
           },
           "rightShoulder": {
-            "x": -0.083822,
-            "y": 0.374422,
-            "z": 0.0
+            "x": -0.085556,
+            "y": 0.399646,
+            "z": -0.140842
           },
           "rightElbow": {
-            "x": -0.337425,
-            "y": 0.359098,
-            "z": 0.0
+            "x": -0.391095,
+            "y": 0.381183,
+            "z": -0.182952
           },
           "rightWrist": {
-            "x": -0.15106,
-            "y": 0.475224,
-            "z": 0.0
+            "x": -0.214026,
+            "y": 0.491517,
+            "z": -0.253186
           },
           "leftHip": {
-            "x": 0.1076,
-            "y": -0.000775,
-            "z": 0.0
+            "x": 0.093244,
+            "y": -0.000671,
+            "z": -0.087439
           },
           "leftKnee": {
-            "x": 0.103394,
-            "y": -0.289647,
-            "z": 0.0
+            "x": 0.089037,
+            "y": -0.289544,
+            "z": -0.02688
           },
           "leftAnkle": {
-            "x": 0.317814,
-            "y": -0.476729,
-            "z": 0.0
+            "x": 0.309818,
+            "y": -0.482175,
+            "z": 0.027944
           },
           "rightHip": {
-            "x": -0.1076,
-            "y": 0.000775,
-            "z": 0.0
+            "x": -0.107244,
+            "y": 0.000771,
+            "z": 0.017609
           },
           "rightKnee": {
-            "x": -0.132629,
-            "y": -0.280461,
-            "z": 0.0
+            "x": -0.13274,
+            "y": -0.285724,
+            "z": 0.06731
           },
           "rightAnkle": {
-            "x": 0.026709,
-            "y": -0.504612,
-            "z": 0.0
+            "x": 0.025596,
+            "y": -0.508467,
+            "z": 0.185908
           }
         }
       },
@@ -305,79 +314,79 @@
             "z": 0.0
           },
           "spine": {
-            "x": 0.044236,
-            "y": 0.182287,
-            "z": 0.0
+            "x": 0.044271,
+            "y": 0.182434,
+            "z": -0.254147
           },
           "neck": {
-            "x": 0.088471,
-            "y": 0.364575,
-            "z": 0.0
+            "x": 0.091058,
+            "y": 0.375235,
+            "z": -0.177032
           },
           "head": {
-            "x": 0.028573,
-            "y": 0.459391,
-            "z": 0.0
+            "x": 0.031159,
+            "y": 0.470052,
+            "z": -0.230609
           },
           "leftShoulder": {
-            "x": 0.254068,
-            "y": 0.365142,
-            "z": 0.0
+            "x": 0.257179,
+            "y": 0.375804,
+            "z": -0.238769
           },
           "leftElbow": {
-            "x": -0.045158,
-            "y": 0.458225,
-            "z": 0.0
+            "x": -0.029413,
+            "y": 0.464958,
+            "z": -0.350394
           },
           "leftWrist": {
-            "x": -0.176258,
-            "y": 0.679449,
-            "z": 0.0
+            "x": -0.160252,
+            "y": 0.685739,
+            "z": -0.3154
           },
           "rightShoulder": {
-            "x": -0.077126,
-            "y": 0.364008,
-            "z": 0.0
+            "x": -0.085147,
+            "y": 0.374632,
+            "z": -0.146026
           },
           "rightElbow": {
-            "x": -0.328774,
-            "y": 0.398976,
-            "z": 0.0
+            "x": -0.381847,
+            "y": 0.41586,
+            "z": -0.221771
           },
           "rightWrist": {
-            "x": -0.204328,
-            "y": 0.57989,
-            "z": 0.0
+            "x": -0.264354,
+            "y": 0.586667,
+            "z": -0.2958
           },
           "leftHip": {
-            "x": 0.107586,
-            "y": 0.001912,
-            "z": 0.0
+            "x": 0.108628,
+            "y": 0.00193,
+            "z": -0.067355
           },
           "leftKnee": {
-            "x": 0.146403,
-            "y": -0.284371,
-            "z": 0.0
+            "x": 0.147583,
+            "y": -0.285364,
+            "z": -0.011877
           },
           "leftAnkle": {
-            "x": 0.315597,
-            "y": -0.51317,
-            "z": 0.0
+            "x": 0.31951,
+            "y": -0.517857,
+            "z": 0.060541
           },
           "rightHip": {
-            "x": -0.107586,
-            "y": -0.001912,
-            "z": 0.0
+            "x": -0.108629,
+            "y": -0.00193,
+            "z": -0.002845
           },
           "rightKnee": {
-            "x": -0.101737,
-            "y": -0.284198,
-            "z": 0.0
+            "x": -0.10278,
+            "y": -0.284217,
+            "z": 0.071179
           },
           "rightAnkle": {
-            "x": 0.027866,
-            "y": -0.526758,
-            "z": 0.0
+            "x": 0.026824,
+            "y": -0.526777,
+            "z": 0.185711
           }
         }
       },
@@ -391,79 +400,79 @@
             "z": 0.0
           },
           "spine": {
-            "x": 0.034363,
-            "y": 0.184404,
-            "z": 0.0
+            "x": 0.032724,
+            "y": 0.175608,
+            "z": -0.260622
           },
           "neck": {
-            "x": 0.068725,
-            "y": 0.368807,
-            "z": 0.0
+            "x": 0.067086,
+            "y": 0.360012,
+            "z": -0.160011
           },
           "head": {
-            "x": 0.027748,
-            "y": 0.473204,
-            "z": 0.0
+            "x": 0.026977,
+            "y": 0.462197,
+            "z": -0.218305
           },
           "leftShoulder": {
-            "x": 0.234322,
-            "y": 0.36809,
-            "z": 0.0
+            "x": 0.232682,
+            "y": 0.359295,
+            "z": -0.223142
           },
           "leftElbow": {
-            "x": -0.055266,
-            "y": 0.487838,
-            "z": 0.0
+            "x": -0.057183,
+            "y": 0.479156,
+            "z": -0.287601
           },
           "leftWrist": {
-            "x": -0.228791,
-            "y": 0.677618,
-            "z": 0.0
+            "x": -0.230708,
+            "y": 0.668937,
+            "z": -0.318581
           },
           "rightShoulder": {
-            "x": -0.096871,
-            "y": 0.369525,
-            "z": 0.0
+            "x": -0.111479,
+            "y": 0.360786,
+            "z": -0.148889
           },
           "rightElbow": {
-            "x": -0.313961,
-            "y": 0.501516,
-            "z": 0.0
+            "x": -0.32857,
+            "y": 0.492777,
+            "z": -0.324724
           },
           "rightWrist": {
-            "x": -0.436211,
-            "y": 0.683922,
-            "z": 0.0
+            "x": -0.451077,
+            "y": 0.675568,
+            "z": -0.318453
           },
           "leftHip": {
-            "x": 0.107529,
-            "y": 0.003984,
-            "z": 0.0
+            "x": 0.113125,
+            "y": 0.004191,
+            "z": -0.059378
           },
           "leftKnee": {
-            "x": 0.130973,
-            "y": -0.283966,
-            "z": 0.0
+            "x": 0.136438,
+            "y": -0.28215,
+            "z": 0.00843
           },
           "leftAnkle": {
-            "x": 0.252755,
-            "y": -0.541152,
-            "z": 0.0
+            "x": 0.258219,
+            "y": -0.539337,
+            "z": 0.097206
           },
           "rightHip": {
-            "x": -0.107529,
-            "y": -0.003984,
-            "z": 0.0
+            "x": -0.108136,
+            "y": -0.004007,
+            "z": -0.010128
           },
           "rightKnee": {
-            "x": -0.088275,
-            "y": -0.285674,
-            "z": 0.0
+            "x": -0.089084,
+            "y": -0.282755,
+            "z": 0.074349
           },
           "rightAnkle": {
-            "x": 0.012324,
-            "y": -0.541627,
-            "z": 0.0
+            "x": 0.012679,
+            "y": -0.541672,
+            "z": 0.180916
           }
         }
       },
@@ -477,79 +486,79 @@
             "z": 0.0
           },
           "spine": {
-            "x": 0.028921,
-            "y": 0.185335,
-            "z": 0.0
+            "x": 0.027537,
+            "y": 0.176465,
+            "z": -0.260642
           },
           "neck": {
-            "x": 0.057843,
-            "y": 0.37067,
-            "z": 0.0
+            "x": 0.056167,
+            "y": 0.359931,
+            "z": -0.156582
           },
           "head": {
-            "x": 0.023233,
-            "y": 0.477347,
-            "z": 0.0
+            "x": 0.022036,
+            "y": 0.46513,
+            "z": -0.213301
           },
           "leftShoulder": {
-            "x": 0.22344,
-            "y": 0.370186,
-            "z": 0.0
+            "x": 0.222317,
+            "y": 0.359445,
+            "z": -0.218242
           },
           "leftElbow": {
-            "x": -0.066896,
-            "y": 0.488109,
-            "z": 0.0
+            "x": -0.068019,
+            "y": 0.47737,
+            "z": -0.284136
           },
           "leftWrist": {
-            "x": -0.282077,
-            "y": 0.628908,
-            "z": 0.0
+            "x": -0.283245,
+            "y": 0.618196,
+            "z": -0.314694
           },
           "rightShoulder": {
-            "x": -0.107754,
-            "y": 0.371154,
-            "z": 0.0
+            "x": -0.122742,
+            "y": 0.360455,
+            "z": -0.155447
           },
           "rightElbow": {
-            "x": -0.297552,
-            "y": 0.540052,
-            "z": 0.0
+            "x": -0.301082,
+            "y": 0.519159,
+            "z": -0.3516
           },
           "rightWrist": {
-            "x": -0.466928,
-            "y": 0.679798,
-            "z": 0.0
+            "x": -0.470458,
+            "y": 0.658905,
+            "z": -0.336023
           },
           "leftHip": {
-            "x": 0.107542,
-            "y": 0.003618,
-            "z": 0.0
+            "x": 0.112849,
+            "y": 0.003796,
+            "z": -0.059928
           },
           "leftKnee": {
-            "x": 0.088252,
-            "y": -0.28464,
-            "z": 0.0
+            "x": 0.093926,
+            "y": -0.278954,
+            "z": 0.0227
           },
           "leftAnkle": {
-            "x": 0.15677,
-            "y": -0.56083,
-            "z": 0.0
+            "x": 0.161287,
+            "y": -0.550479,
+            "z": 0.125623
           },
           "rightHip": {
-            "x": -0.107542,
-            "y": -0.003618,
-            "z": 0.0
+            "x": -0.108089,
+            "y": -0.003636,
+            "z": -0.01075
           },
           "rightKnee": {
-            "x": -0.095051,
-            "y": -0.285688,
-            "z": 0.0
+            "x": -0.095863,
+            "y": -0.279733,
+            "z": 0.083168
           },
           "rightAnkle": {
-            "x": -0.021398,
-            "y": -0.550655,
-            "z": 0.0
+            "x": -0.02088,
+            "y": -0.549479,
+            "z": 0.184977
           }
         }
       }

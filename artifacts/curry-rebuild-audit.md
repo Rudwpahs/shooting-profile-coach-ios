@@ -17,3 +17,7 @@ The replacement must preserve the audited source x/y parent-to-child directions 
 ## Final accepted display rebuild
 
 The final asset remains a `z = 0` source-derived analysis rather than a fabricated 3D reconstruction. The viewer now begins at the source-facing camera and applies only a display-scale fit to make the retained full-body silhouette readable. The final five-phase diagnostic shows a visible preparation lean, lower dip, rise, left-arm release, and continuous left-arm follow-through with both legs retained. The audit asset is `artifacts/curry-rebuild-diagnostic.png`.
+
+## MotionBERT learned image-to-3D replacement
+
+The source-faithful z=0 display was subsequently replaced with a CPU execution of the official MotionBERT H36M fine-tuned checkpoint. The model receives the full retained 59-frame source trajectory through a MediaPipe-33 to H36M-17 adapter; source x/y and five audited timestamps remain fixed in the product asset, while only camera-relative z is learned and bounded. The oblique five-phase diagnostic at `artifacts/curry-motionbert-lift-diagnostic.png` shows separable torso, arm, and leg depth without changing the retained left-hand release path. It remains a `monocular_relative_pose_not_metric_3d` display estimate, not actual or calibrated 3D.

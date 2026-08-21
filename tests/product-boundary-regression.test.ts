@@ -16,7 +16,7 @@ describe("fixed product motion boundary", () => {
     ]);
     PLAYER_MONOCULAR_3D_ANALYSES.forEach((analysis) => {
       expect(analysis.boundary).toBe("monocular_relative_pose_not_metric_3d");
-      expect(analysis.state).toMatch(/auto_corrected_estimate_not_actual_3d$/);
+      expect(analysis.state).toMatch(/estimate_not_actual_3d$/);
       expect(analysis.sourcePhaseTimestampsMs).toHaveLength(5);
       expect(analysis.sourcePhaseTimestampsMs.every((timestamp, index, all) => index === 0 || timestamp > all[index - 1])).toBe(true);
       expect(analysis.formMatch?.find((check) => check.id === "form_details_unavailable")?.status).toBe("unavailable");
@@ -31,17 +31,23 @@ describe("fixed product motion boundary", () => {
     for (const filename of ["curry-front-side-auto-corrected-analysis-01.json", "paul-george-side-auto-corrected-analysis-01.json"]) {
       const asset = JSON.parse(readFileSync(resolve(process.cwd(), "lib/motions", filename), "utf8")) as {
         boundary: string;
+        state: string;
+        productAdmission?: string;
+        imageTo3DLift?: { method: string; externalModelExecution: string };
         autoCorrection: { boneLength: string; templateId: string; trajectory: string; targetBoneLengths: Record<string, number> };
         motion: { frames: { joints: Record<string, { x: number; y: number; z: number }> }[] };
       };
       expect(asset.boundary).toBe("monocular_relative_pose_not_metric_3d");
       if (filename.startsWith("curry")) {
         expect(asset.autoCorrection).toMatchObject({
-          boneLength: "median_source_2d_visible_bone_length",
-          templateId: "curry_source_faithful_2d_silhouette_v1",
-          trajectory: "source_2d_parent_child_direction_and_phase_order_preserved",
+          boneLength: "median_motionbert_lifted_3d_bone_length",
+          templateId: "curry_motionbert_h36m_temporal_lift_v1",
+          trajectory: "retained_source_2d_xy_with_motionbert_temporal_depth_and_median_3d_bone_stabilization",
         });
-        for (const frame of asset.motion.frames) Object.values(frame.joints).forEach((joint) => expect(joint.z).toBe(0));
+        expect(asset.state).toBe("image_lifted_pose_estimate_not_actual_3d");
+        expect(asset.productAdmission).toBe("forbidden_for_recommendation_and_actual_3d_library");
+        expect(asset.imageTo3DLift).toMatchObject({ method: "motionbert_h36m_finetuned_temporal_2d_to_3d_lift_v1", externalModelExecution: "executed_cpu" });
+        expect(asset.motion.frames.some((frame) => Object.values(frame.joints).some((joint) => Math.abs(joint.z) > 0.01))).toBe(true);
       } else {
         expect(asset.autoCorrection).toMatchObject({
           boneLength: "adult_joint_center_ratio_scaled_to_median_shoulder_breadth",
@@ -57,6 +63,20 @@ describe("fixed product motion boundary", () => {
         }
       }
     }
+  });
+
+  it("does not promote Curry to actual 3D when the independent fixed-F gate rejects the source pair", () => {
+    const admission = JSON.parse(readFileSync(resolve(process.cwd(), "artifacts/curry-actual-3d-reevaluation/front-side-admission.json"), "utf8")) as {
+      boundary: string; state: string; fixedF: { inlierRatio: number; minimumInlierRatio: number }; quality: { reasons: string[] }; productAdmission: string;
+    };
+    expect(admission).toMatchObject({
+      boundary: "uncalibrated_projective_3d_review_only",
+      state: "rejected",
+      productAdmission: "forbidden_without_calibrated_multi_view_3d",
+    });
+    expect(admission.fixedF.inlierRatio).toBeLessThan(admission.fixedF.minimumInlierRatio);
+    expect(admission.quality.reasons).toContain("fixed_f_inlier_ratio_below_threshold");
+    expect(ANONYMOUS_POSE_REFERENCES.map((reference) => reference.modelBoundary)).toEqual(["actual_optical_mocap_3d"]);
   });
 
   it("does not retain withdrawn player analysis assets or expose intermediate reviews in the product Library", () => {

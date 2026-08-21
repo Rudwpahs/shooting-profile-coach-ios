@@ -24,7 +24,7 @@ describe("approved actual optical-mocap pose motion", () => {
       id: "curry-front-side-auto-corrected-analysis-01",
       displayName: "Stephen Curry",
       boundary: "monocular_relative_pose_not_metric_3d",
-      state: "single_view_auto_corrected_estimate_not_actual_3d",
+      state: "image_lifted_pose_estimate_not_actual_3d",
       shootingHand: "left",
       sourcePhaseTimestampsMs: [0, 1153, 1657, 2162, 2738],
     });

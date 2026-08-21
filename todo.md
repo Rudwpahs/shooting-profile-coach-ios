@@ -174,3 +174,8 @@
 - [x] 실제 비율 target·angle preservation·analysis-only boundary를 correction audit metadata와 regression test로 검증
 - [x] Curry current skeleton의 upper-body·arm-chain·leg proportion silhouette을 source phase 기준으로 재감사하고 기존 비율 asset 폐기
 - [x] Curry source-derived display motion을 재생성하고 Motion Studio·visual regression에서 자연스러운 full-body silhouette을 검증
+- [x] Curry retained source를 동일 슛·다중 시점·camera calibration·reprojection actual 3D admission 기준으로 재감사 — fixed-F 16.783%로 72% gate 미달
+- [x] Curry source가 모든 gate를 통과한 경우에만 calibrated actual 3D candidate로 승격하고, 미통과 시 UI·추천 경계를 analysis-only로 유지 — source는 rejected, calibrated 3D 미생성
+- [x] Curry retained 2D source phase에 image-to-3D pose lifting을 적용해 depth-aware analysis-only display estimate 생성 — official MotionBERT H36M fine-tuned checkpoint CPU 실행
+- [x] image-lifted Curry motion의 source phase·left-hand chain·actual 3D/recommendation exclusion을 visual·regression으로 검증
+- [ ] 검증 checkpoint 생성 후 최종 변경 사항을 GitHub remote에 커밋·푸시

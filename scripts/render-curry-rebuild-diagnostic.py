@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 BONES = [
     ("head", "neck"), ("neck", "spine"), ("spine", "pelvis"),
@@ -24,6 +25,7 @@ def main() -> int:
     options = parser.parse_args()
     asset = json.loads(options.input.read_text(encoding="utf-8"))
     frames = asset["motion"]["frames"]
+    yaw = np.deg2rad(32.0)
     all_points = [point for frame in frames for point in frame["joints"].values()]
     ground_y = min(point["y"] for frame in frames for point in (frame["joints"]["leftAnkle"], frame["joints"]["rightAnkle"]))
     height = max(point["y"] for point in all_points) - ground_y
@@ -34,21 +36,21 @@ def main() -> int:
         for parent, child in BONES:
             active = parent.startswith("left") or child.startswith("left")
             axis.plot(
-                [-joints[parent]["x"] * display_scale, -joints[child]["x"] * display_scale],
+                [(-joints[parent]["x"] * np.cos(yaw) - joints[parent]["z"] * np.sin(yaw)) * display_scale, (-joints[child]["x"] * np.cos(yaw) - joints[child]["z"] * np.sin(yaw)) * display_scale],
                 [(joints[parent]["y"] - ground_y) * display_scale, (joints[child]["y"] - ground_y) * display_scale],
                 color="#F97316" if active else "#AABDCB",
                 linewidth=4.2 if active else 3.2,
                 solid_capstyle="round",
             )
         for joint, point in joints.items():
-            axis.scatter(-point["x"] * display_scale, (point["y"] - ground_y) * display_scale, s=38 if joint != "head" else 95, color="#F97316" if joint.startswith("left") else "#E7EDF1", zorder=3)
+            axis.scatter((-point["x"] * np.cos(yaw) - point["z"] * np.sin(yaw)) * display_scale, (point["y"] - ground_y) * display_scale, s=38 if joint != "head" else 95, color="#F97316" if joint.startswith("left") else "#E7EDF1", zorder=3)
         axis.set_title(frame["label"], color="#F5F1E8", fontsize=11, fontweight="bold", pad=10)
         axis.set_aspect("equal")
         axis.set_xlim(-2.05, 2.05)
         axis.set_ylim(-0.1, 2.55)
         axis.set_facecolor("#0B1623")
         axis.axis("off")
-    figure.suptitle("CURRY · SOURCE-FAITHFUL 2D DISPLAY (z = 0)", color="#F5F1E8", fontsize=14, fontweight="bold")
+    figure.suptitle("CURRY · MOTIONBERT IMAGE-LIFTED DISPLAY (camera-relative depth)", color="#F5F1E8", fontsize=14, fontweight="bold")
     figure.tight_layout()
     options.output.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(options.output, dpi=180, bbox_inches="tight", facecolor=figure.get_facecolor())
