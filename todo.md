@@ -103,3 +103,5 @@
 - [x] Shooting Analysis Center Curry 분석 영상의 source evidence·기술적 재구성 단서·사용 범위 감사
 - [x] 코드 결함과 입력 데이터 한계를 분리한 Curry 3D 재구성 개선안 결정
 - [x] synchronized dual-camera frame alignment·calibration matrix 산출·calibrated pose admission converter 구현
+- [x] GitHub Superpowers 저장소·라이선스·설치 방식을 검토하고 프로젝트 적용 여부 결정
+- [x] 3D 재구성 pipeline·source audit·제품 asset을 단계별 디렉터리와 운영 문서로 정리
