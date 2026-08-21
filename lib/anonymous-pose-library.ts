@@ -1,6 +1,4 @@
 import cmuShoot01Raw from "@/lib/motions/cmu-shoot-01.json";
-import curryConstrainedAnalysisRaw from "@/lib/motions/curry-front-constrained-analysis-01.json";
-import curryDualViewAnalysisRaw from "@/lib/motions/curry-front-side-dual-view-analysis-01.json";
 import curryAutoCorrectedAnalysisRaw from "@/lib/motions/curry-front-side-auto-corrected-analysis-01.json";
 import paulGeorgeAutoCorrectedAnalysisRaw from "@/lib/motions/paul-george-side-auto-corrected-analysis-01.json";
 import currySourceSkeletonRaw from "@/lib/skeleton-reviews/curry-source-skeleton-01.json";
@@ -125,8 +123,6 @@ export const PLAYER_VIDEO_REVIEW_RECORDS: PlayerVideoReviewRecord[] = [
 
 const currySourceSkeleton = currySourceSkeletonRaw as { id: string; label: string; boundary: "single_view_2d_skeleton_review"; state: "review_only_not_3d"; sourceView: "front" | "side" | "oblique"; phases: PlayerSourceSkeletonPhase[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number } };
 const paulGeorgeSourceSkeleton = paulGeorgeSourceSkeletonRaw as typeof currySourceSkeleton;
-const curryConstrainedAnalysis = curryConstrainedAnalysisRaw as { state: "video_based_depth_limited_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "front"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; depthTreatment: { meaning: string }; motion: PoseMotion };
-const curryDualViewAnalysis = curryDualViewAnalysisRaw as { state: "dual_view_phase_aligned_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; phaseAlignment: { frontPhaseTimestampsMs: number[]; sidePhaseTimestampsMs: number[]; meaning: string }; inputQuality: { front: { landmarkFrameRatio: number; meanVisibility: number }; side: { landmarkFrameRatio: number; meanVisibility: number } }; depthTreatment: { meaning: string }; motion: PoseMotion };
 const curryAutoCorrectedAnalysis = curryAutoCorrectedAnalysisRaw as { state: "dual_view_auto_corrected_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; phaseAlignment: { frontPhaseTimestampsMs: number[] }; autoCorrection: { meaning: string }; formMatch: { checks: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }> }; motion: PoseMotion };
 const paulGeorgeAutoCorrectedAnalysis = paulGeorgeAutoCorrectedAnalysisRaw as { state: "single_view_auto_corrected_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "side"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; autoCorrection: { meaning: string }; formMatch: { checks: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }> }; motion: PoseMotion };
 
@@ -145,32 +141,6 @@ export const PLAYER_SOURCE_SKELETON_REVIEWS: PlayerSourceSkeletonReview[] = [
 /** Separate from approved library and recommendation: depth-limited source-video analysis only. */
 export const PLAYER_MONOCULAR_3D_ANALYSES: PlayerMonocular3DAnalysis[] = [
   {
-    id: "curry-front-constrained-analysis-01",
-    displayName: "Stephen Curry",
-    shortLabel: "CURRY · VIDEO ANALYSIS",
-    sourceView: "정면",
-    boundary: curryConstrainedAnalysis.boundary,
-    state: curryConstrainedAnalysis.state,
-    sourceAttribution: "사용자 제공 Curry 정면 슬로모션에서 추출한 2D landmark 기반 display analysis",
-    sourcePhaseTimestampsMs: curryConstrainedAnalysis.sourcePhaseTimestampsMs,
-    inputQuality: curryConstrainedAnalysis.inputQuality,
-    depthTreatment: curryConstrainedAnalysis.depthTreatment.meaning,
-    motion: curryConstrainedAnalysis.motion,
-  },
-  {
-    id: "curry-front-side-dual-view-analysis-01",
-    displayName: "Stephen Curry",
-    shortLabel: "CURRY · FRONT + SIDE ANALYSIS",
-    sourceView: "사선",
-    boundary: curryDualViewAnalysis.boundary,
-    state: curryDualViewAnalysis.state,
-    sourceAttribution: "사용자 제공 Curry 정면·측면 source를 같은 다섯 슛 단계로 맞춰 결합한 display analysis",
-    sourcePhaseTimestampsMs: curryDualViewAnalysis.phaseAlignment.frontPhaseTimestampsMs,
-    inputQuality: curryDualViewAnalysis.inputQuality.front,
-    depthTreatment: curryDualViewAnalysis.depthTreatment.meaning,
-    motion: curryDualViewAnalysis.motion,
-  },
-  {
     id: "curry-front-side-auto-corrected-analysis-01",
     displayName: "Stephen Curry",
     shortLabel: "CURRY · AUTO-CORRECTED ANALYSIS",
@@ -179,7 +149,7 @@ export const PLAYER_MONOCULAR_3D_ANALYSES: PlayerMonocular3DAnalysis[] = [
     state: curryAutoCorrectedAnalysis.state,
     sourceAttribution: "Curry 정면·측면 semantic phase blend에 pelvis root·median bone-length auto-correction을 적용한 display analysis",
     sourcePhaseTimestampsMs: curryAutoCorrectedAnalysis.phaseAlignment.frontPhaseTimestampsMs,
-    inputQuality: curryDualViewAnalysis.inputQuality.front,
+    inputQuality: { landmarkFrameRatio: 1, meanVisibility: 0.915 },
     depthTreatment: "정면 shape와 측면 depth cue의 source phase 순서를 보존합니다. 실제 camera geometry·측정 depth는 아닙니다.",
     autoCorrection: curryAutoCorrectedAnalysis.autoCorrection.meaning,
     formMatch: curryAutoCorrectedAnalysis.formMatch.checks,

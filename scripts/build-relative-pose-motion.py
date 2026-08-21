@@ -12,7 +12,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import cv2
 import numpy as np
 
 
@@ -30,13 +29,13 @@ EDGES = [(11, 13), (13, 15), (12, 14), (14, 16), (11, 12), (11, 23), (12, 24), (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidate", type=Path, required=True)
-    parser.add_argument("--video", type=Path, required=True)
+    parser.add_argument("--video", type=Path, help="Optional local source video, used only to render an audit sheet.")
     parser.add_argument("--view", choices=["front", "side", "oblique"], required=True)
     parser.add_argument("--shooting-hand", choices=["auto", "left", "right"], default="auto", help="Use a video-audited shooting hand instead of the wrist-height heuristic when available.")
     parser.add_argument("--phase-indexes", help="Optional comma-separated audited indexes for 준비,딥,상승,릴리스,팔로우스루. Overrides automatic phase selection.")
     parser.add_argument("--id", required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--audit", type=Path, required=True)
+    parser.add_argument("--audit", type=Path, help="Optional audit-sheet output. Requires --video.")
     return parser.parse_args()
 
 
@@ -104,6 +103,8 @@ def draw_pose(image: np.ndarray, landmarks: list[dict[str, float]], label: str, 
 
 
 def audit_sheet(video_path: Path, frames: list[dict[str, Any]], indexes: list[int], output: Path) -> None:
+    import cv2
+
     capture = cv2.VideoCapture(str(video_path))
     panels: list[np.ndarray] = []
     try:
@@ -167,7 +168,10 @@ def main() -> int:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
-    audit_sheet(args.video, frames, indexes, args.audit)
+    if args.audit and not args.video:
+        raise SystemExit("--audit requires --video")
+    if args.video and args.audit:
+        audit_sheet(args.video, frames, indexes, args.audit)
     print(json.dumps({"state": output["state"], "view": args.view, "shootingHandEstimate": hand, "phaseTimestampsMs": output["phaseTimestampsMs"]}, ensure_ascii=False))
     return 0
 

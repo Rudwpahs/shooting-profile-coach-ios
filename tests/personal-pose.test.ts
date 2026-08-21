@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createPersonalPoseCandidate, personalPoseToMotion, type MediaPipeLandmark, type PersonalPoseFrame } from "../lib/personal-pose";
+import { createPersonalPoseCandidate, personalPoseToCorrectedMotion, personalPoseToMotion, type MediaPipeLandmark, type PersonalPoseFrame } from "../lib/personal-pose";
 
 function frame(timestampMs: number, wristY: number): PersonalPoseFrame {
   const landmarks: MediaPipeLandmark[] = Array.from({ length: 33 }, (_, index) => ({ x: 0.45 + (index % 3) * 0.04, y: 0.35 + (index % 5) * 0.05, z: 0.02 * (index % 4), visibility: 0.9 }));
@@ -37,5 +37,23 @@ describe("personal pose candidate", () => {
     expect(candidate.boundary).toBe("monocular_relative_pose_not_metric_3d");
     expect(motion?.frames.map((item) => item.label)).toEqual(["준비", "딥", "상승", "릴리스", "팔로우스루"]);
     expect(motion?.frames[3].joints.rightWrist.y).toBeGreaterThan(motion?.frames[0].joints.rightWrist.y ?? 0);
+  });
+
+  it("roots corrected user phases at the pelvis with timestamped, analysis-only fluid source anchors", () => {
+    const candidate = createPersonalPoseCandidate([
+      frame(0, 0.62), frame(120, 0.66), frame(240, 0.55), frame(360, 0.38), frame(480, 0.3), frame(600, 0.34),
+    ]);
+    const corrected = personalPoseToCorrectedMotion(candidate, "test-corrected-personal-pose");
+    expect(corrected?.motion.boundary).toBe("monocular_relative_pose_not_metric_3d");
+    expect(corrected?.correction.boundary).toBe("analysis_only_not_actual_3d");
+    expect(corrected?.correction.sourcePhaseTimestampsMs).toEqual([0, 120, 360, 480, 600]);
+    expect(corrected?.motion.frames).toHaveLength(5);
+    corrected?.motion.frames.forEach((phase) => expect(phase.joints.pelvis).toEqual({ x: 0, y: 0, z: 0 }));
+    const upperArmLengths = corrected?.motion.frames.map((phase) => Math.hypot(
+      phase.joints.rightElbow.x - phase.joints.rightShoulder.x,
+      phase.joints.rightElbow.y - phase.joints.rightShoulder.y,
+      phase.joints.rightElbow.z - phase.joints.rightShoulder.z,
+    )) ?? [];
+    expect(new Set(upperArmLengths.map((length) => length.toFixed(6)))).toHaveLength(1);
   });
 });

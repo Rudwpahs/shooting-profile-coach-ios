@@ -130,9 +130,9 @@ export function PoseMotionViewer({ motion, title, boundary, hand = "right", acti
     <View style={[styles.stage, isInteracting && styles.stageInteracting]} {...panResponder.panHandlers}>
       <Svg width="100%" height={300} viewBox="0 0 330 300">
         <Line x1="22" y1="272" x2="308" y2="272" stroke="#40586B" strokeWidth="1" strokeDasharray="4 5" />
-        {BONE_LINKS.map(([from, to]) => <Line key={`${from}-${to}`} x1={points[from].x} y1={points[from].y} x2={points[to].x} y2={points[to].y} stroke={from.includes(activeSide) || to.includes(activeSide) ? "#F97316" : "#AABDCB"} strokeWidth={from.includes(activeSide) || to.includes(activeSide) ? 4.5 : 3.25} strokeLinecap="round" />)}
-        {(Object.keys(points) as JointName[]).filter((joint) => joint !== "head").map((joint) => <Circle key={joint} cx={points[joint].x} cy={points[joint].y} r={activeArmJoints.includes(joint) ? 5.25 : 4} fill={activeArmJoints.includes(joint) ? "#F97316" : "#E7EDF1"} stroke={activeArmJoints.includes(joint) ? "#9A3412" : "#E7EDF1"} strokeWidth={activeArmJoints.includes(joint) ? 1.2 : 0} />)}
-        <Circle cx={points.head.x} cy={points.head.y} r={8} fill="#E7EDF1" stroke="#F5F1E8" strokeWidth={2} />
+        {BONE_LINKS.map(([from, to]) => <Line key={`${from}-${to}`} x1={points[from].x} y1={points[from].y} x2={points[to].x} y2={points[to].y} stroke={from.includes(activeSide) || to.includes(activeSide) ? "#F97316" : "#AABDCB"} strokeWidth={from.includes(activeSide) || to.includes(activeSide) ? 7 : 5} strokeLinecap="round" />)}
+        {(Object.keys(points) as JointName[]).filter((joint) => joint !== "head").map((joint) => <Circle key={joint} cx={points[joint].x} cy={points[joint].y} r={activeArmJoints.includes(joint) ? 7 : 5.5} fill={activeArmJoints.includes(joint) ? "#F97316" : "#E7EDF1"} stroke={activeArmJoints.includes(joint) ? "#9A3412" : "#E7EDF1"} strokeWidth={activeArmJoints.includes(joint) ? 1.6 : 0} />)}
+        <Circle cx={points.head.x} cy={points.head.y} r={10} fill="#E7EDF1" stroke="#F5F1E8" strokeWidth={2.5} />
         <Circle cx={points.head.x + 2.25} cy={points.head.y - 1} r={1.5} fill="#0B1623" />
       </Svg>
       <View style={styles.stageOverlay}><Text style={styles.stageHint}>DRAG TO ROTATE · PINCH TO ZOOM</Text><Pressable onPress={resetView} style={({ pressed }) => [styles.resetIcon, pressed && styles.pressed]} accessibilityLabel="시점 초기화"><Text style={styles.resetIconText}>↺</Text></Pressable></View>

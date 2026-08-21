@@ -149,7 +149,7 @@
 - [ ] 통과한 Paul George view를 phase-align·auto-correct한 analysis asset으로 생성하고 Motion Studio에 분리 표시
 - [x] Paul George 공개 multi-angle candidate와 local All-Star source를 감사 — 공개 compilation은 같은 슛 pair·raw landmark input 없음, local side source는 identity·31/31 tracking·right hand 확인
 - [x] Paul George local side source를 five-phase constrained·auto-corrected display analysis와 source-based form-match로 Motion Studio에 추가 — actual 3D·추천에서 분리
-- [x] Paul George 원본 영상에서 얼굴이 보이는 준비·낮은 손의 딥·릴리스·팔로우스루 phase를 재선정 — 0·65·355·645·742ms source audit override
+- [x] Paul George 원본 영상에서 얼굴이 보이는 준비·낮은 손의 딥·릴리스·팔로우스루 phase를 재선정 — 0·97·355·645·806ms retained-landmark audit override
 - [x] Pose viewer에서 검증된 주손·팔 라인을 주황색으로 강조하고 비주손은 중립색으로 표시
 - [x] Paul George 최종 보정 motion만 UI에 반영하고 intermediate source·candidate 산출물은 product 화면에서 숨김
 - [x] FormPath Basketball의 mobile-first UI design system·screen hierarchy·interaction plan을 전면 재설계 — Court·Film design system과 3탭 information architecture 문서화
@@ -158,3 +158,9 @@
 - [x] 5개 source phase를 기준점으로 유지하면서 PoseMotion viewer에 fluid interpolation·continuous playback 구현 — endpoint 보존 smooth interpolation, phase marker 유지
 - [x] Motion Studio에서 큰 card stack·중복 header·zoom controls를 줄이고 skeleton-first fluid player로 재구성
 - [x] Paul George·Curry analysis의 fluid playback과 phase-marker UI를 iPhone viewport에서 검증 — 390×844 hydrated capture, Vitest·TypeScript·Expo export 통과
+- [x] 사용자 업로드 pose를 source phase 보존·bone stabilization·fluid playback output으로 변환하는 correction pipeline 적용
+- [x] Paul George 슈팅폼 source evidence·form-match rubric을 확장하고 current analysis phase·hand·body alignment 재보정
+- [x] Curry 슈팅폼 source evidence·form-match rubric을 확장하고 current analysis phase·hand·body alignment 재보정
+- [x] 보정 Curry·보정 Paul George만 player analysis collection에 유지하고 그 외 player skeleton·review를 product UI에서 제거
+- [x] Pose viewer skeleton line·joint visual weight 강화
+- [x] 탭 전환에 따라 active glass capsule이 이동하는 interactive liquid-glass navigation 구현

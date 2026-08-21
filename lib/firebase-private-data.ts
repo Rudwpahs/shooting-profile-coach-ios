@@ -8,6 +8,8 @@ export type FirebasePrivatePose = {
   sourceLabel: string;
   poseJson: string;
   qualityJson: string;
+  correctedMotionJson?: string;
+  correctionJson?: string;
   createdAt?: Timestamp;
 };
 

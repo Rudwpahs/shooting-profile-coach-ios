@@ -4,10 +4,10 @@
 
 | 분석 축 | Paul George 관련 근거 | local source에서 확인할 proxy | 현재 결과 |
 | --- | --- | --- | --- |
-| 한 번의 상승 | George는 range가 다르더라도 ‘same shot’과 `one motion`을 강조했다. [1] | 준비→딥→상승→릴리스→팔로우스루의 연속 순서 | 확인됨; 0·355·516·645·742ms 5단계 |
-| 하체 기여 | George는 shot이 팔보다 다리에서 더 시작된다고 설명했다. [1] | dip에서 knee/hip loading 후 rise에서 extension | source phase 순서만 확인; force는 확인 불가 |
+| 한 번의 상승 | George는 range가 다르더라도 ‘same shot’과 `one motion`을 강조했다. [1] | 준비→딥→상승→릴리스→팔로우스루의 연속 순서 | 0·97·355·645·806ms로 재감사. 딥 이후 오른손이 연속 상승하는지 확인 |
+| 하체 기여 | George는 shot이 팔보다 다리에서 더 시작된다고 설명했다. [1] | dip에서 knee/hip loading 후 rise에서 extension | side source에서 hip·knee 상대 위치 변화만 확인; force는 확인 불가 |
 | 균형·착지 | Coach Nick 분석을 인용한 보도는 fluid sway, shoulder relaxation, balanced landing을 consistency 단서로 설명한다. [2] | pelvis·torso drift와 bilateral landing posture | source가 짧고 단일 side/front-side view라 제한적 검토 |
-| 오른손 release | local source independent visual audit은 East #13 Paul George의 right-hand release를 확인했다. | release·follow-through의 right shoulder–elbow–wrist chain | video audit override로 right hand 적용 |
+| 오른손 release | local source independent visual audit은 East #13 Paul George의 right-hand release를 확인했다. | release·follow-through의 right shoulder–elbow–wrist chain | video audit override로 right hand 적용. 자동 보정은 해당 chain의 길이 흔들림만 정리 |
 | 손목 높이 | 릴리스 후 wrist가 shoulder 위에 유지되는 것은 source에서 볼 수 있는 follow-through proxy다. | 742ms follow-through에서 right wrist versus shoulder y | 확인됨: wrist y=3.021002, shoulder y=1.754909 |
 
 ## 확인할 수 없는 항목
@@ -16,7 +16,7 @@
 
 ## Boundary
 
-이 output은 `monocular_relative_pose_not_metric_3d` 및 analysis-only state다. 공개 YouTube compilation들은 view 다양성의 qualitative evidence로만 기록됐고, raw frames·same-shot synchronized pair·camera calibration을 제공하지 않아 local source와 triangulate하지 않는다.
+이 output은 `monocular_relative_pose_not_metric_3d` 및 analysis-only state다. 공개 YouTube compilation들은 view 다양성의 qualitative evidence로만 기록됐고, raw frames·same-shot synchronized pair·camera calibration을 제공하지 않아 local source와 triangulate하지 않는다. 화면의 연속 motion은 재감사한 5개 source phase 사이의 display interpolation이며 intermediate frame의 실제 측정값이 아니다.
 
 ## References
 

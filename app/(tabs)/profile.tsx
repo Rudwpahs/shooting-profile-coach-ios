@@ -7,7 +7,8 @@ import { PoseMotionViewer } from "@/components/pose-motion-viewer";
 import { ScreenContainer } from "@/components/screen-container";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { listFirebasePrivatePoses, removeFirebasePrivatePose, type FirebasePrivatePose } from "@/lib/firebase-private-data";
-import { personalPoseToMotion, type PersonalPoseCandidate } from "@/lib/personal-pose";
+import { personalPoseToCorrectedMotion, type PersonalPoseCandidate, type PersonalPoseCorrection } from "@/lib/personal-pose";
+import type { PoseMotion } from "@/lib/pose-motion";
 import { useProfile } from "@/lib/profile-store";
 import { useRouter } from "expo-router";
 
@@ -37,7 +38,7 @@ export default function PersonalProfileTab() {
     try { if (mode === "signin") await signIn(email, password); else await signUp(email, password); } catch (error) { setStatus(firebaseMessage(error)); } finally { setSubmitting(false); }
   };
   const deletePose = async (poseId: string) => { if (!user) return; try { await removeFirebasePrivatePose(user, poseId); if (selectedPose?.id === poseId) setSelectedPose(null); await loadPoses(); } catch (error) { setStatus(error instanceof Error ? error.message : "스켈레톤을 삭제하지 못했습니다."); } };
-  const selectedMotion = selectedPose ? personalPoseToMotion(JSON.parse(selectedPose.poseJson) as PersonalPoseCandidate, `personal-${selectedPose.id}`) : null;
+  const selectedFluid = selectedPose ? privatePoseFluid(selectedPose) : null;
 
   return <ScreenContainer containerClassName="bg-background">
     <View style={styles.canvas}><View style={styles.topArc} /></View>
@@ -51,7 +52,7 @@ export default function PersonalProfileTab() {
 
       <View style={styles.sectionHead}><View><Text style={styles.sectionKicker}>MY MOTIONS</Text><Text style={styles.sectionTitle}>개인 분석</Text></View><Text style={styles.sectionCount}>{user ? `${poses.length}개` : "LOCKED"}</Text></View>
       <View style={styles.vaultCard}>
-        {loading ? <ActivityIndicator color="#F97316" style={styles.loader} /> : !user ? <LockedEmpty /> : posesLoading ? <ActivityIndicator color="#F97316" style={styles.loader} /> : poses.length ? <>{poses.map((pose) => <View key={pose.id} style={styles.poseRow}><Pressable onPress={() => setSelectedPose(pose)} style={({ pressed }) => [styles.poseSelect, pressed && styles.pressed]}><View style={styles.poseIcon}><MaterialIcons name="accessibility-new" size={20} color="#F97316" /></View><View style={styles.poseCopy}><Text style={styles.poseName}>{pose.sourceLabel}</Text><Text style={styles.poseMeta}>개인 단일 시점 analysis</Text></View><MaterialIcons name="chevron-right" size={22} color="#102235" /></Pressable><Pressable onPress={() => void deletePose(pose.id)} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]} accessibilityLabel={`${pose.sourceLabel} 삭제`}><MaterialIcons name="delete-outline" size={20} color="#C74B11" /></Pressable></View>)}{selectedMotion ? <View style={styles.viewerWrap}><PoseMotionViewer motion={selectedMotion} title={selectedPose?.sourceLabel ?? "개인 스켈레톤"} boundary="개인 영상 기반 analysis · 실제 측정 3D·추천 사용 아님 · 본인 계정만 접근" hand="right" /></View> : null}<PrivatePoseCapture onSaved={loadPoses} /></> : <View style={styles.empty}><View style={styles.emptyIcon}><MaterialIcons name="add" size={26} color="#F97316" /></View><Text style={styles.emptyTitle}>첫 분석을 저장하세요</Text><Text style={styles.emptyCopy}>전신 슈팅 영상을 분석하면 이 vault에 본인만 볼 수 있는 기록으로 저장됩니다.</Text><Pressable onPress={() => router.navigate("/motion" as never)} style={({ pressed }) => [styles.emptyAction, pressed && styles.pressed]}><Text style={styles.emptyActionText}>모션 랩 열기</Text><MaterialIcons name="arrow-forward" size={17} color="#0B1623" /></Pressable><PrivatePoseCapture onSaved={loadPoses} /></View>}</View>
+        {loading ? <ActivityIndicator color="#F97316" style={styles.loader} /> : !user ? <LockedEmpty /> : posesLoading ? <ActivityIndicator color="#F97316" style={styles.loader} /> : poses.length ? <>{poses.map((pose) => <View key={pose.id} style={styles.poseRow}><Pressable onPress={() => setSelectedPose(pose)} style={({ pressed }) => [styles.poseSelect, pressed && styles.pressed]}><View style={styles.poseIcon}><MaterialIcons name="accessibility-new" size={20} color="#F97316" /></View><View style={styles.poseCopy}><Text style={styles.poseName}>{pose.sourceLabel}</Text><Text style={styles.poseMeta}>보정된 개인 fluid analysis</Text></View><MaterialIcons name="chevron-right" size={22} color="#102235" /></Pressable><Pressable onPress={() => void deletePose(pose.id)} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]} accessibilityLabel={`${pose.sourceLabel} 삭제`}><MaterialIcons name="delete-outline" size={20} color="#C74B11" /></Pressable></View>)}{selectedFluid ? <View style={styles.viewerWrap}><PoseMotionViewer motion={selectedFluid.motion} title={selectedPose?.sourceLabel ?? "개인 스켈레톤"} boundary="개인 영상 기반 보정 fluid analysis · 실제 측정 3D·추천 사용 아님 · 본인 계정만 접근" hand="right" sourcePhaseTimestampsMs={selectedFluid.sourcePhaseTimestampsMs} /></View> : null}<PrivatePoseCapture onSaved={loadPoses} /></> : <View style={styles.empty}><View style={styles.emptyIcon}><MaterialIcons name="add" size={26} color="#F97316" /></View><Text style={styles.emptyTitle}>첫 분석을 저장하세요</Text><Text style={styles.emptyCopy}>전신 슈팅 영상을 분석하면 보정된 fluid motion을 본인만 볼 수 있는 vault에 저장합니다.</Text><Pressable onPress={() => router.navigate("/motion" as never)} style={({ pressed }) => [styles.emptyAction, pressed && styles.pressed]}><Text style={styles.emptyActionText}>모션 랩 열기</Text><MaterialIcons name="arrow-forward" size={17} color="#0B1623" /></Pressable><PrivatePoseCapture onSaved={loadPoses} /></View>}</View>
 
       <View style={styles.sectionHead}><View><Text style={styles.sectionKicker}>ACCOUNT ACCESS</Text><Text style={styles.sectionTitle}>계정 연결</Text></View><MaterialIcons name="security" size={20} color="#1D9B77" /></View>
       <View style={styles.accountCard}>
@@ -64,6 +65,18 @@ export default function PersonalProfileTab() {
 function VaultMetric({ value, label }: { value: string; label: string }) { return <View style={styles.vaultMetric}><Text style={styles.vaultMetricValue}>{value}</Text><Text style={styles.vaultMetricLabel}>{label}</Text></View>; }
 function LockedEmpty() { return <View style={styles.empty}><View style={styles.emptyIcon}><MaterialIcons name="lock-outline" size={25} color="#F97316" /></View><Text style={styles.emptyTitle}>vault가 잠겨 있습니다</Text><Text style={styles.emptyCopy}>계정을 연결하면 개인 motion과 분석 이력이 이곳에 보관됩니다.</Text></View>; }
 function firebaseMessage(error: unknown) { const code = typeof error === "object" && error && "code" in error ? String(error.code) : ""; if (code.includes("operation-not-allowed")) return "Firebase Console에서 이메일/비밀번호 로그인을 활성화하세요."; if (code.includes("email-already-in-use")) return "이미 사용 중인 이메일입니다. 로그인해 주세요."; if (code.includes("invalid-credential")) return "이메일 또는 비밀번호를 확인하세요."; if (code.includes("network")) return "네트워크 연결을 확인하세요."; return "계정 처리에 실패했습니다. 잠시 후 다시 시도하세요."; }
+function privatePoseFluid(pose: FirebasePrivatePose): { motion: PoseMotion; sourcePhaseTimestampsMs: number[] } | null {
+  try {
+    if (pose.correctedMotionJson) {
+      const correction = pose.correctionJson ? JSON.parse(pose.correctionJson) as PersonalPoseCorrection : null;
+      return { motion: JSON.parse(pose.correctedMotionJson) as PoseMotion, sourcePhaseTimestampsMs: correction?.sourcePhaseTimestampsMs ?? [] };
+    }
+    const corrected = personalPoseToCorrectedMotion(JSON.parse(pose.poseJson) as PersonalPoseCandidate, `personal-${pose.id}`);
+    return corrected ? { motion: corrected.motion, sourcePhaseTimestampsMs: corrected.correction.sourcePhaseTimestampsMs } : null;
+  } catch {
+    return null;
+  }
+}
 
 const styles = StyleSheet.create({
   canvas: { backgroundColor: "#F5F1E8", bottom: 0, left: 0, overflow: "hidden", position: "absolute", right: 0, top: 0 },

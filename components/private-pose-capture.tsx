@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { saveFirebasePrivatePose } from "@/lib/firebase-private-data";
 import { detectPoseFromSelectedVideo } from "@/lib/pose-detection";
+import { personalPoseToCorrectedMotion } from "@/lib/personal-pose";
 
 type CaptureState = "idle" | "picking" | "detecting" | "saving" | "complete" | "error";
 
@@ -36,16 +37,24 @@ export function PrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> |
         setDetail(output.reason ?? "포즈 품질 기준을 통과하지 못했습니다. 측면 전신·밝은 영상으로 다시 시도하세요.");
         return;
       }
+      const corrected = personalPoseToCorrectedMotion(output.candidate, `personal-${Date.now()}`);
+      if (!corrected) {
+        setState("error");
+        setDetail("통과한 landmark에서 안정적인 five-phase motion을 만들지 못했습니다. 전신이 보이는 영상으로 다시 시도하세요.");
+        return;
+      }
       setState("saving");
-      setDetail("개인 스켈레톤을 Firebase에 안전하게 저장하는 중입니다.");
+      setDetail("보정된 fluid motion을 개인 보관함에 안전하게 저장하는 중입니다.");
       await saveFirebasePrivatePose(user, {
         sourceLabel: asset.fileName?.replace(/\.[^/.]+$/, "") || `개인 슈팅 분석 ${new Date().toLocaleDateString("ko-KR")}`,
         poseJson: JSON.stringify(output.candidate),
         qualityJson: JSON.stringify(output.candidate.quality),
+        correctedMotionJson: JSON.stringify(corrected.motion),
+        correctionJson: JSON.stringify(corrected.correction),
       });
       await onSaved();
       setState("complete");
-      setDetail("개인 스켈레톤을 비공개 보관함에 저장했습니다. 원본 영상은 업로드하지 않습니다.");
+      setDetail("보정된 fluid motion을 비공개 보관함에 저장했습니다. 원본 영상은 업로드하지 않습니다.");
     } catch (error) {
       setState("error");
       setDetail(error instanceof Error ? error.message : "영상 분석을 완료하지 못했습니다. 잠시 후 다시 시도하세요.");
@@ -54,7 +63,7 @@ export function PrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> |
 
   const working = state === "picking" || state === "detecting" || state === "saving";
   return <View style={styles.card}>
-    <View style={styles.heading}><View><Text style={styles.title}>새 개인 스켈레톤</Text><Text style={styles.subtitle}>영상은 기기에만 남고, 통과한 pose JSON만 저장합니다.</Text></View><MaterialIcons name="video-library" size={22} color="#F97316" /></View>
+    <View style={styles.heading}><View><Text style={styles.title}>새 개인 스켈레톤</Text><Text style={styles.subtitle}>통과한 pose는 보수 보정 뒤 fluid motion으로 저장합니다.</Text></View><MaterialIcons name="video-library" size={22} color="#F97316" /></View>
     <View style={styles.tip}><MaterialIcons name="tips-and-updates" size={17} color="#102C46" /><Text style={styles.tipText}>측면·전신·밝은 조명에서 2–20초 슈팅 영상을 선택하세요.</Text></View>
     <Pressable disabled={working} onPress={() => void chooseAndAnalyze()} style={({ pressed }) => [styles.button, working && styles.disabled, pressed && styles.pressed]}>
       {working ? <ActivityIndicator color="#FFFFFF" /> : <MaterialIcons name="add-to-photos" size={18} color="#FFFFFF" />}<Text style={styles.buttonText}>{working ? "분석 중" : "영상 선택 후 분석"}</Text>
