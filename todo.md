@@ -125,3 +125,8 @@
 - [ ] 시각 분석으로 camera view·동일 슛 correspondence·전신 연속성·릴리스/팔로우스루를 선별
 - [ ] visual-screen 통과 YouTube pair에 landmark·multi-signal sync·fixed-F gate를 반복 적용
 - [x] YouTube 대체 공개 source·연구 데이터셋을 basketball shooting actual 3D·calibration·license 기준으로 조사·비교
+- [x] CMU 추가 basketball shooting trial을 marker·release·follow-through gate로 재감사해 actual 3D admission 후보 선별 — 06_14·86_14는 standard gate 후보 0개, 86_14 저임계 2개도 visual gate 미달로 미승격
+- [x] SportCenter·BASKET-Multiview known-geometry data access와 regression fixture 적합성 검증 — SportCenter research-only, BASKET-Multiview CC BY-NC 4.0으로 commercial fixture·asset에 미도입
+- [ ] known-camera multi-view regression과 통과 actual 3D motion의 UI library admission 실행
+- [x] commercial known-geometry fixture manifest·license gate 구현 및 실행 — eligible source 0개, unlicensed external data download·product admission 차단 확인
+- [x] product library admission guard 회귀 검증 — approved actual motion은 cmu-shoot-01 1개로 고정, unapproved CMU·external source UI 미유입 확인

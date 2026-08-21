@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "purpose": "Commercial-safe known-geometry multi-view regression source selection.",
+  "policy": {
+    "allowExternalFixtureDownload": false,
+    "requireCommercialUseAllowed": true,
+    "productMotionAdmission": "A regression fixture is never a product motion asset. Product admission additionally requires actual-human source, raw-source provenance, and visual motion approval."
+  },
+  "sources": [
+    {
+      "id": "sportcenter-multiview",
+      "sourceKind": "actual_amateur_basketball",
+      "knownGeometry": true,
+      "commercialUseAllowed": false,
+      "reason": "Official page states that the dataset is free for research purposes; commercial permission has not been recorded.",
+      "sourceUrl": "https://www.epfl.ch/labs/cvlab/data/sportcenter-dataset/"
+    },
+    {
+      "id": "basket-multiview",
+      "sourceKind": "synthetic_basketball",
+      "knownGeometry": true,
+      "commercialUseAllowed": false,
+      "reason": "Official license is CC BY-NC 4.0 and access requires license agreement; it is not an approved commercial fixture.",
+      "sourceUrl": "https://humansensinglab.github.io/basket-multiview/data.html"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "kind": "commercial_known_geometry_fixture_selection",
+  "state": "blocked_no_commercial_fixture",
+  "externalDataDownloaded": false,
+  "eligibleSources": [],
+  "blockedSources": [
+    {
+      "id": "sportcenter-multiview",
+      "sourceKind": "actual_amateur_basketball",
+      "knownGeometry": true,
+      "commercialUseAllowed": false,
+      "reason": "Official page states that the dataset is free for research purposes; commercial permission has not been recorded.",
+      "sourceUrl": "https://www.epfl.ch/labs/cvlab/data/sportcenter-dataset/"
+    },
+    {
+      "id": "basket-multiview",
+      "sourceKind": "synthetic_basketball",
+      "knownGeometry": true,
+      "commercialUseAllowed": false,
+      "reason": "Official license is CC BY-NC 4.0 and access requires license agreement; it is not an approved commercial fixture.",
+      "sourceUrl": "https://humansensinglab.github.io/basket-multiview/data.html"
+    }
+  ],
+  "productMotionAdmission": "blocked_without_actual_authorized_source_and_separate_visual_admission",
+  "nextAllowedInput": "A licensed fixture record or an authorized fixed-camera self-capture manifest."
+}

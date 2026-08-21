@@ -4,6 +4,7 @@
 
 | Stage | Tools | Input | Output boundary |
 | --- | --- | --- | --- |
+| 0. Fixture license gate | `select-commercial-known-geometry-fixture.py` | external dataset policy manifest | eligible fixture source or explicit commercial block |
 | 1. Source audit | `inspect-cmu-c3d.py`, `find-cmu-shooting-segments.py` | C3D / local video evidence | audit only |
 | 2. Single-view review | `extract-relative-pose-candidate.py`, `build-relative-pose-motion.py` | one camera video | `monocular_relative_pose_not_metric_3d` |
 | 3. Capture provenance | `init-authorized-multiview-capture.py` | authorized front/side raw videos | pending capture record |
@@ -28,3 +29,5 @@
 | `synchronize-pose-pair-multisignal.py` | release-pinned visibility-weighted motion signature plus iterative Sampson residual | produce a strict one-to-one correspondence hypothesis before fixed-F admission |
 
 The capture command sequence and thresholds are documented in [`../docs/authorized-multiview-capture-kit.md`](../docs/authorized-multiview-capture-kit.md).
+
+Known-geometry benchmarks cannot bypass commercial source policy. Before any external fixture is downloaded or used in a product-adjacent regression run, execute `select-commercial-known-geometry-fixture.py` against [`../data/known_geometry_fixture_manifest.json`](../data/known_geometry_fixture_manifest.json). A `blocked_no_commercial_fixture` result is the expected safe state until a rightsholder permission record or authorized self-capture input is available.

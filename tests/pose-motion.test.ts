@@ -7,6 +7,8 @@ describe("approved actual optical-mocap pose motion", () => {
   it("uses a validated five-phase measured motion with a high follow-through", () => {
     const motion = ANONYMOUS_POSE_REFERENCES[0].motion;
     const quality = validatePoseMotion(motion);
+    expect(ANONYMOUS_POSE_REFERENCES).toHaveLength(1);
+    expect(ANONYMOUS_POSE_REFERENCES.map((reference) => reference.id)).toEqual(["cmu-shoot-01"]);
     expect(ANONYMOUS_POSE_LIBRARY_STATUS.visiblePlayerIdentity).toBe(false);
     expect(ANONYMOUS_POSE_REFERENCES[0].prototypeDisplayName).toBeUndefined();
     expect(PLAYER_VIDEO_REVIEW_RECORDS).toHaveLength(2);
