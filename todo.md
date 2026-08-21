@@ -137,3 +137,6 @@
 - [x] 수정된 multi-signal sync·fixed-F geometry pipeline으로 기존 Curry pair 전체 재실행 — front/side 21.591%, front/oblique 63.636%·1 frame, side/oblique 20.202%로 모두 72% gate 미달
 - [x] Curry source에서 계산 가능한 영상 기반 추정 3D analysis asset의 좌표·관절·팔로우스루 품질 재검증 — 기존 source-faithful x/y·오른손 5단계는 유지하고 legacy depth만 scale·clamp
 - [x] Curry 추정 3D와 실제 source 2D를 Motion Studio에 나란히 표시하고 actual-3D·추천에서 분리
+- [x] Curry 정면·측면 source의 release·딥·상승·팔로우스루 phase correspondence를 camera-geometry score와 분리해 재감사 — 5개 semantic phase pairing 완료; fixed-F score는 실제 3D admission에만 유지
+- [x] 정면 2D shape와 측면 depth cue를 결합한 dual-view Curry 추정 3D analysis asset 생성 — mirrored side cue를 제한 depth로 사용, 실제 3D·측정값 아님
+- [x] Motion Studio에서 single-view·dual-view Curry analysis를 구분해 표시하고 실제 3D·추천에서 계속 제외

@@ -1,5 +1,6 @@
 import cmuShoot01Raw from "@/lib/motions/cmu-shoot-01.json";
 import curryConstrainedAnalysisRaw from "@/lib/motions/curry-front-constrained-analysis-01.json";
+import curryDualViewAnalysisRaw from "@/lib/motions/curry-front-side-dual-view-analysis-01.json";
 import currySourceSkeletonRaw from "@/lib/skeleton-reviews/curry-source-skeleton-01.json";
 import paulGeorgeSourceSkeletonRaw from "@/lib/skeleton-reviews/paul-george-source-skeleton-01.json";
 import type { PoseMotion } from "@/lib/pose-motion";
@@ -62,7 +63,7 @@ export type PlayerMonocular3DAnalysis = {
   shortLabel: string;
   sourceView: "정면" | "측면" | "사선";
   boundary: "monocular_relative_pose_not_metric_3d";
-  state: "video_based_depth_limited_estimate_not_actual_3d";
+  state: "video_based_depth_limited_estimate_not_actual_3d" | "dual_view_phase_aligned_estimate_not_actual_3d";
   sourceAttribution: string;
   sourcePhaseTimestampsMs: number[];
   inputQuality: { landmarkFrameRatio: number; meanVisibility: number };
@@ -121,6 +122,7 @@ export const PLAYER_VIDEO_REVIEW_RECORDS: PlayerVideoReviewRecord[] = [
 const currySourceSkeleton = currySourceSkeletonRaw as { id: string; label: string; boundary: "single_view_2d_skeleton_review"; state: "review_only_not_3d"; sourceView: "front" | "side" | "oblique"; phases: PlayerSourceSkeletonPhase[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number } };
 const paulGeorgeSourceSkeleton = paulGeorgeSourceSkeletonRaw as typeof currySourceSkeleton;
 const curryConstrainedAnalysis = curryConstrainedAnalysisRaw as { state: "video_based_depth_limited_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "front"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; depthTreatment: { meaning: string }; motion: PoseMotion };
+const curryDualViewAnalysis = curryDualViewAnalysisRaw as { state: "dual_view_phase_aligned_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; phaseAlignment: { frontPhaseTimestampsMs: number[]; sidePhaseTimestampsMs: number[]; meaning: string }; inputQuality: { front: { landmarkFrameRatio: number; meanVisibility: number }; side: { landmarkFrameRatio: number; meanVisibility: number } }; depthTreatment: { meaning: string }; motion: PoseMotion };
 
 const sourceViewLabel = (view: "front" | "side" | "oblique"): PlayerSourceSkeletonReview["sourceView"] => {
   if (view === "front") return "정면";
@@ -148,6 +150,19 @@ export const PLAYER_MONOCULAR_3D_ANALYSES: PlayerMonocular3DAnalysis[] = [
     inputQuality: curryConstrainedAnalysis.inputQuality,
     depthTreatment: curryConstrainedAnalysis.depthTreatment.meaning,
     motion: curryConstrainedAnalysis.motion,
+  },
+  {
+    id: "curry-front-side-dual-view-analysis-01",
+    displayName: "Stephen Curry",
+    shortLabel: "CURRY · FRONT + SIDE ANALYSIS",
+    sourceView: "사선",
+    boundary: curryDualViewAnalysis.boundary,
+    state: curryDualViewAnalysis.state,
+    sourceAttribution: "사용자 제공 Curry 정면·측면 source를 같은 다섯 슛 단계로 맞춰 결합한 display analysis",
+    sourcePhaseTimestampsMs: curryDualViewAnalysis.phaseAlignment.frontPhaseTimestampsMs,
+    inputQuality: curryDualViewAnalysis.inputQuality.front,
+    depthTreatment: curryDualViewAnalysis.depthTreatment.meaning,
+    motion: curryDualViewAnalysis.motion,
   },
 ];
 
