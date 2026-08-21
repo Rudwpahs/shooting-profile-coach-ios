@@ -23,6 +23,29 @@ describe("fixed product motion boundary", () => {
     });
   });
 
+  it("uses the adult-ratio display template without changing the analysis-only boundary", () => {
+    for (const filename of ["curry-front-side-auto-corrected-analysis-01.json", "paul-george-side-auto-corrected-analysis-01.json"]) {
+      const asset = JSON.parse(readFileSync(resolve(process.cwd(), "lib/motions", filename), "utf8")) as {
+        boundary: string;
+        autoCorrection: { boneLength: string; templateId: string; trajectory: string; targetBoneLengths: Record<string, number> };
+        motion: { frames: { joints: Record<string, { x: number; y: number; z: number }> }[] };
+      };
+      expect(asset.boundary).toBe("monocular_relative_pose_not_metric_3d");
+      expect(asset.autoCorrection).toMatchObject({
+        boneLength: "adult_joint_center_ratio_scaled_to_median_shoulder_breadth",
+        templateId: "adult_joint_center_shoulder_scaled_v1",
+        trajectory: "source_joint_directions_and_phase_order_preserved",
+      });
+      for (const frame of asset.motion.frames) {
+        for (const [bone, target] of Object.entries(asset.autoCorrection.targetBoneLengths)) {
+          const [parent, child] = bone.split("->");
+          const a = frame.joints[parent]; const b = frame.joints[child];
+          expect(Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z)).toBeCloseTo(target, 5);
+        }
+      }
+    }
+  });
+
   it("does not retain withdrawn player analysis assets or expose intermediate reviews in the product Library", () => {
     const root = resolve(process.cwd(), "lib/motions");
     expect(existsSync(resolve(root, "curry-front-constrained-analysis-01.json"))).toBe(false);

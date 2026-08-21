@@ -40,7 +40,7 @@ export default function MotionStudioScreen() {
       <View style={styles.filmHeader}><View><Text style={styles.filmEyebrow}>ACTIVE MOTION</Text><Text style={styles.filmTitle}>{selected.displayName}</Text></View><View style={styles.viewPill}><Text style={styles.viewPillText}>{selected.sourceView.toUpperCase()}</Text></View></View>
       <View style={styles.viewerShell}><PoseMotionViewer motion={selected.motion} title={selected.shortLabel} boundary={analysisBoundary(selected)} hand="right" sourcePhaseTimestampsMs={selected.sourcePhaseTimestampsMs} /></View>
 
-      <View style={styles.analysisNote}><MaterialIcons name="auto-fix-high" size={16} color="#C74B11" /><Text style={styles.analysisNoteText}>{selected.autoCorrection ? "자동 보정 적용 · " : "제한 depth · "}{selected.depthTreatment}</Text></View>
+      <View style={styles.analysisNote}><MaterialIcons name="auto-fix-high" size={16} color="#C74B11" /><Text style={styles.analysisNoteText}>{selected.autoCorrection ? "관절 방향·슛 단계 유지 · 성인 비율 길이 보정 · 분석용" : "제한 depth · "}{selected.autoCorrection ? "개인 신체 측정·실제 3D·추천에는 사용하지 않습니다." : selected.depthTreatment}</Text></View>
 
       <View style={styles.referenceHeader}><View><Text style={styles.referenceEyebrow}>VERIFIED REFERENCE</Text><Text style={styles.referenceTitle}>실제 3D 기준 모션</Text></View><View style={styles.verifiedBadge}><MaterialIcons name="verified" size={14} color="#1D9B77" /><Text style={styles.verifiedText}>승인됨</Text></View></View>
       <View style={styles.referenceShell}><PoseMotionViewer motion={reference.motion} title={reference.shortLabel} boundary="CMU optical-marker로 기록된 검증 실제 3D · 추천 사용 가능" hand="right" sourcePhaseFrames={reference.sourcePhaseFrames} /></View>

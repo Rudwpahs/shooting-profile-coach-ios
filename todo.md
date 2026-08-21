@@ -170,3 +170,5 @@
 - [x] 기존 Curry·Paul George·CMU asset에 대한 phase·boundary·recommendation exclusion·admission regression을 보강
 - [x] iPhone custom development build의 수동 QA 절차와 Firebase·video detection 사전조건을 앱 운영 문서로 완결
 - [x] iPhone·web build·accessibility·interactive navigation의 release readiness를 자동 검사로 보강
+- [x] Curry·Paul George·개인 fluid skeleton에서 source joint direction·phase를 보존하고 bone length만 실제 인체 비율로 정규화
+- [x] 실제 비율 target·angle preservation·analysis-only boundary를 correction audit metadata와 regression test로 검증

@@ -1,4 +1,5 @@
 import { SHOT_PHASES, type JointName, type PoseMotion, type Vector3 } from "@/lib/pose-motion";
+import { ADULT_BONE_RATIO_TO_SHOULDER_BREADTH, ADULT_PROPORTION_TEMPLATE, SKELETON_BONES, boneKey } from "@/lib/human-proportion-template";
 
 export type MediaPipeLandmark = { x: number; y: number; z: number; visibility?: number };
 export type PersonalPoseFrame = { timestampMs: number; landmarks: MediaPipeLandmark[] };
@@ -16,10 +17,14 @@ export type PersonalPoseCandidate = {
   quality: PersonalPoseQuality;
 };
 export type PersonalPoseCorrection = {
-  version: "pelvis_root_median_bone_length_v1";
+  version: "pelvis_root_anthropometric_ratio_angle_preserving_v2";
   sourcePhaseIndexes: number[];
   sourcePhaseTimestampsMs: number[];
   correctedBoneCount: number;
+  templateId: typeof ADULT_PROPORTION_TEMPLATE.id;
+  scaleBasis: typeof ADULT_PROPORTION_TEMPLATE.scaleBasis;
+  targetBoneLengths: Record<string, number>;
+  anglePreservation: "source_parent_child_direction_preserved_per_phase";
   boundary: "analysis_only_not_actual_3d";
 };
 export type CorrectedPersonalPoseMotion = {
@@ -37,13 +42,7 @@ const MAP: Record<JointName, number> = {
 
 const midpoint = (a: MediaPipeLandmark, b: MediaPipeLandmark): MediaPipeLandmark => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2, visibility: ((a.visibility ?? 1) + (b.visibility ?? 1)) / 2 });
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
-const BONES: [JointName, JointName][] = [
-  ["pelvis", "spine"], ["spine", "neck"], ["neck", "head"],
-  ["neck", "leftShoulder"], ["leftShoulder", "leftElbow"], ["leftElbow", "leftWrist"],
-  ["neck", "rightShoulder"], ["rightShoulder", "rightElbow"], ["rightElbow", "rightWrist"],
-  ["pelvis", "leftHip"], ["leftHip", "leftKnee"], ["leftKnee", "leftAnkle"],
-  ["pelvis", "rightHip"], ["rightHip", "rightKnee"], ["rightKnee", "rightAnkle"],
-];
+const BONES = SKELETON_BONES;
 
 export function assessPersonalPoseFrames(frames: PersonalPoseFrame[]): PersonalPoseQuality {
   const complete = frames.filter((frame) => frame.landmarks.length >= 33);
@@ -65,7 +64,7 @@ function normalizeJoint(landmark: MediaPipeLandmark, origin: MediaPipeLandmark, 
   return { x: (landmark.x - origin.x) / scale, y: -(landmark.y - origin.y) / scale, z: landmark.z / scale };
 }
 
-function frameToJoints(frame: PersonalPoseFrame): Record<JointName, Vector3> {
+export function frameToJoints(frame: PersonalPoseFrame): Record<JointName, Vector3> {
   const landmarks = frame.landmarks;
   const shoulderMid = midpoint(landmarks[11], landmarks[12]);
   const hipMid = midpoint(landmarks[23], landmarks[24]);
@@ -101,47 +100,55 @@ function selectShotPhaseIndexes(frames: PersonalPoseFrame[]) {
   return [0, dipIndex, riseIndex, releaseIndex, frames.length - 1];
 }
 
-function pelvisRootAndNormalizeBones(phaseJoints: Record<JointName, Vector3>[]): Record<JointName, Vector3>[] {
-  const medianLengths = new Map(BONES.map(([start, end]) => {
-    const lengths = phaseJoints.map((joints) => vectorLength(vectorBetween(joints[start], joints[end]))).filter((length) => length > 0.0001);
-    return [`${start}-${end}`, median(lengths)] as const;
-  }));
-  return phaseJoints.map((original) => {
+function pelvisRootAndNormalizeBones(phaseJoints: Record<JointName, Vector3>[]) {
+  const shoulderBreadths = phaseJoints
+    .map((joints) => vectorLength(vectorBetween(joints.leftShoulder, joints.rightShoulder)))
+    .filter((length) => length > 0.0001);
+  const shoulderBreadth = median(shoulderBreadths);
+  const targetBoneLengths = Object.fromEntries(BONES.map(([parent, child]) => [
+    boneKey(parent, child), Number(((ADULT_BONE_RATIO_TO_SHOULDER_BREADTH[boneKey(parent, child)] ?? 0) * shoulderBreadth).toFixed(6)),
+  ]));
+  const correctedFrames = phaseJoints.map((original) => {
     const root = original.pelvis;
     const rooted = Object.fromEntries((Object.keys(original) as JointName[]).map((joint) => [joint, vectorBetween(root, original[joint])])) as Record<JointName, Vector3>;
     const corrected: Partial<Record<JointName, Vector3>> = { pelvis: { x: 0, y: 0, z: 0 } };
     for (const [parent, child] of BONES) {
       const parentPosition = corrected[parent] ?? rooted[parent];
       const direction = unitVector(vectorBetween(rooted[parent], rooted[child]));
-      const length = medianLengths.get(`${parent}-${child}`) ?? vectorLength(vectorBetween(rooted[parent], rooted[child]));
+      const length = targetBoneLengths[boneKey(parent, child)] ?? vectorLength(vectorBetween(rooted[parent], rooted[child]));
       corrected[child] = { x: parentPosition.x + direction.x * length, y: parentPosition.y + direction.y * length, z: parentPosition.z + direction.z * length };
     }
     return corrected as Record<JointName, Vector3>;
   });
+  return { correctedFrames, targetBoneLengths };
 }
 
 /**
- * Applies the same conservative display correction used by player analysis: pelvis root
- * recentering plus per-bone median-length normalization. It preserves each source phase's
- * observed directions and does not turn a monocular upload into calibrated or metric 3D.
+ * Pelvis-roots each phase, then applies a generic adult bone-ratio template scaled by the
+ * median observed shoulder breadth. Parent→child directions and phase order are retained.
+ * This is a display silhouette correction, not a body measurement or calibrated 3D result.
  */
 export function personalPoseToCorrectedMotion(candidate: PersonalPoseCandidate, id = "my-pose"): CorrectedPersonalPoseMotion | null {
   if (!candidate.quality.passed) return null;
   const frames = candidate.frames.filter((frame) => frame.landmarks.length >= 33);
   if (frames.length < 5) return null;
   const indexes = selectShotPhaseIndexes(frames);
-  const correctedJoints = pelvisRootAndNormalizeBones(indexes.map((index) => frameToJoints(frames[index])));
+  const normalized = pelvisRootAndNormalizeBones(indexes.map((index) => frameToJoints(frames[index])));
   return {
     motion: {
       id,
       boundary: candidate.boundary === "calibrated_multi_view_3d" ? "calibrated_multi_view_3d" : "monocular_relative_pose_not_metric_3d",
-      frames: SHOT_PHASES.map((label, index) => ({ label, progress: index / (SHOT_PHASES.length - 1), joints: correctedJoints[index] })),
+      frames: SHOT_PHASES.map((label, index) => ({ label, progress: index / (SHOT_PHASES.length - 1), joints: normalized.correctedFrames[index] })),
     },
     correction: {
-      version: "pelvis_root_median_bone_length_v1",
+      version: "pelvis_root_anthropometric_ratio_angle_preserving_v2",
       sourcePhaseIndexes: indexes,
       sourcePhaseTimestampsMs: indexes.map((index) => frames[index].timestampMs),
       correctedBoneCount: BONES.length,
+      templateId: ADULT_PROPORTION_TEMPLATE.id,
+      scaleBasis: ADULT_PROPORTION_TEMPLATE.scaleBasis,
+      targetBoneLengths: normalized.targetBoneLengths,
+      anglePreservation: "source_parent_child_direction_preserved_per_phase",
       boundary: "analysis_only_not_actual_3d",
     },
   };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createPersonalPoseCandidate, personalPoseToCorrectedMotion, personalPoseToMotion, type MediaPipeLandmark, type PersonalPoseFrame } from "../lib/personal-pose";
+import { createPersonalPoseCandidate, frameToJoints, personalPoseToCorrectedMotion, personalPoseToMotion, type MediaPipeLandmark, type PersonalPoseFrame } from "../lib/personal-pose";
+import { SKELETON_BONES } from "../lib/human-proportion-template";
 
 function frame(timestampMs: number, wristY: number): PersonalPoseFrame {
   const landmarks: MediaPipeLandmark[] = Array.from({ length: 33 }, (_, index) => ({ x: 0.45 + (index % 3) * 0.04, y: 0.35 + (index % 5) * 0.05, z: 0.02 * (index % 4), visibility: 0.9 }));
@@ -46,6 +47,8 @@ describe("personal pose candidate", () => {
     const corrected = personalPoseToCorrectedMotion(candidate, "test-corrected-personal-pose");
     expect(corrected?.motion.boundary).toBe("monocular_relative_pose_not_metric_3d");
     expect(corrected?.correction.boundary).toBe("analysis_only_not_actual_3d");
+    expect(corrected?.correction.version).toBe("pelvis_root_anthropometric_ratio_angle_preserving_v2");
+    expect(corrected?.correction.templateId).toBe("adult_joint_center_shoulder_scaled_v1");
     expect(corrected?.correction.sourcePhaseTimestampsMs).toEqual([0, 120, 360, 480, 600]);
     expect(corrected?.motion.frames).toHaveLength(5);
     corrected?.motion.frames.forEach((phase) => expect(phase.joints.pelvis).toEqual({ x: 0, y: 0, z: 0 }));
@@ -55,5 +58,20 @@ describe("personal pose candidate", () => {
       phase.joints.rightElbow.z - phase.joints.rightShoulder.z,
     )) ?? [];
     expect(new Set(upperArmLengths.map((length) => length.toFixed(6)))).toHaveLength(1);
+    expect(corrected?.correction.targetBoneLengths["rightShoulder->rightElbow"]).toBeCloseTo(upperArmLengths[0], 6);
+    const normalizedFrames = corrected?.motion.frames ?? [];
+    const sourcePhaseFrames = [0, 1, 3, 4, 5].map((index) => frameToJoints(candidate.frames[index]));
+    const sourcePairs = SKELETON_BONES.map(([parent, child]) => [parent, child] as const);
+    normalizedFrames.forEach((phase, index) => {
+      const source = sourcePhaseFrames[index];
+      sourcePairs.forEach(([parent, child]) => {
+        const a = source[parent]; const b = source[child];
+        const sourceVector = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
+        const correctedVector = { x: phase.joints[child].x - phase.joints[parent].x, y: phase.joints[child].y - phase.joints[parent].y, z: phase.joints[child].z - phase.joints[parent].z };
+        const dot = sourceVector.x * correctedVector.x + sourceVector.y * correctedVector.y + sourceVector.z * correctedVector.z;
+        const denominator = Math.hypot(sourceVector.x, sourceVector.y, sourceVector.z) * Math.hypot(correctedVector.x, correctedVector.y, correctedVector.z);
+        expect(dot / denominator).toBeCloseTo(1, 6);
+      });
+    });
   });
 });
