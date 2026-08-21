@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "pairId": "curry-front-oblique",
+  "boundary": "uncalibrated_projective_3d_review_only",
+  "state": "rejected",
+  "source": {
+    "views": [
+      "artifacts/curry-front-relative-pose.json",
+      "artifacts/additional-curry-relative-pose.json"
+    ],
+    "videoStored": false,
+    "inputBoundaries": [
+      "monocular_relative_pose_not_metric_3d",
+      "monocular_relative_pose_not_metric_3d"
+    ]
+  },
+  "alignment": {
+    "method": "release_pinned_dtw",
+    "releaseAnchor": {
+      "aFrame": 30,
+      "bFrame": 36,
+      "hand": "right"
+    }
+  },
+  "fixedF": {
+    "state": "fitted",
+    "correspondences": 726,
+    "inliers": 112,
+    "inlierRatio": 0.15427,
+    "minimumInlierRatio": 0.72
+  },
+  "frames": [],
+  "quality": {
+    "passed": false,
+    "reasons": [
+      "fixed_f_inlier_ratio_below_threshold"
+    ]
+  },
+  "productAdmission": "forbidden_without_calibrated_multi_view_3d"
+}

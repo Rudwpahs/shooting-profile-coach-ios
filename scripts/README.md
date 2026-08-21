@@ -13,6 +13,10 @@
 | 7. Product candidate | `convert-calibrated-pose-to-product-motion.py` | passing calibrated record | 16-joint five-phase candidate |
 | 8. Product admission | code review plus `validatePoseMotion` and visual audit | candidate + evidence | approved library asset or rejection |
 
+## Uncalibrated review-only path
+
+`run-uncalibrated-multiview-pipeline.py` is the sole entrypoint for non-metric two-view review candidates. It owns release-pinned DTW, global fixed-F gating, canonical projective triangulation, canonical reprojection checking, and the explicit review-only boundary. The older individual `align-*` and `debug-*` scripts remain diagnostic tools and do not admit a candidate.
+
 ## Pair debugging before calibration
 
 | Tool | Checks | Use |

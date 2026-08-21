@@ -9,6 +9,7 @@ FormPath Basketball은 iPhone 우선 농구 슈팅 분석 prototype입니다. �
 | 현재 product·data boundary | [`docs/PROJECT_MAP.md`](docs/PROJECT_MAP.md) |
 | 단계별 개발·test·checkpoint 규칙 | [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md) |
 | 3D source admission과 capture 절차 | [`docs/authorized-multiview-capture-kit.md`](docs/authorized-multiview-capture-kit.md) |
+| uncalibrated two-view review algorithm | [`docs/UNCALIBRATED_RECONSTRUCTION_ALGORITHM.md`](docs/UNCALIBRATED_RECONSTRUCTION_ALGORITHM.md) |
 | 3D reconstruction script 단계 | [`scripts/README.md`](scripts/README.md) |
 | Superpowers 적용 검토 | [`docs/superpowers-integration-review.md`](docs/superpowers-integration-review.md) |
 | active work history | [`todo.md`](todo.md) |

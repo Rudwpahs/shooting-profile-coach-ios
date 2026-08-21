@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "algorithm": "run-uncalibrated-multiview-pipeline.py",
+  "thresholds": {
+    "globalFundamentalInlierRatioMin": 0.72,
+    "minFrameJointInliers": 20,
+    "minValidProjectiveFrameRatio": 0.72,
+    "maxCanonicalReprojectionError": 0.02
+  },
+  "curry": [
+    {
+      "pairId": "curry-front-side",
+      "output": "curry-front-side.json",
+      "state": "rejected",
+      "fixedFInlierRatio": 0.10833,
+      "reason": "fixed_f_inlier_ratio_below_threshold",
+      "projectiveCandidateFrames": 0
+    },
+    {
+      "pairId": "curry-front-oblique",
+      "output": "curry-front-oblique.json",
+      "state": "rejected",
+      "fixedFInlierRatio": 0.15427,
+      "reason": "fixed_f_inlier_ratio_below_threshold",
+      "projectiveCandidateFrames": 0
+    },
+    {
+      "pairId": "curry-side-oblique",
+      "output": "curry-side-oblique.json",
+      "state": "rejected",
+      "fixedFInlierRatio": 0.06962,
+      "reason": "fixed_f_inlier_ratio_below_threshold",
+      "projectiveCandidateFrames": 0
+    }
+  ],
+  "paulGeorge": [
+    {
+      "pairId": "paul-george-input-pair",
+      "state": "rejected_before_pipeline",
+      "reason": "The submitted clips are different physical events: Pacers baseline footage versus All-Star side footage. Same-time joint correspondence does not exist."
+    }
+  ],
+  "approvedReviewOnlyProjectiveCandidates": [],
+  "productAdmission": "No uncalibrated result may enter product motion, viewer, or recommendation."
+}

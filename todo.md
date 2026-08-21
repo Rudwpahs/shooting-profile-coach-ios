@@ -111,3 +111,5 @@
 - [x] Curry 정면·측면 landmark sequence의 temporal dynamic time warping alignment를 적용해 fixed-F fit 재검증
 - [x] fixed-F inlier·fixed-camera consistency gate를 통과한 Curry/Paul George 영상 pair만 uncalibrated reconstruction 후보 생성 — 통과 source 0개, candidate 0개
 - [x] uncalibrated candidate의 reprojection·temporal bone consistency·source boundary 검증 기록 — 통과 source가 없어 downstream 검증을 실행하지 않음
+- [x] Curry·Paul George multi-view reconstruction의 correspondence·fixed-F·triangulation·admission을 단일 pipeline으로 통합
+- [x] 통합 pipeline으로 모든 기존 Curry·Paul George source pair를 재실행하고 결과를 재검증
