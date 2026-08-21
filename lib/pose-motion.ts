@@ -1,6 +1,13 @@
 export type JointName = "head" | "neck" | "spine" | "pelvis" | "leftShoulder" | "leftElbow" | "leftWrist" | "rightShoulder" | "rightElbow" | "rightWrist" | "leftHip" | "leftKnee" | "leftAnkle" | "rightHip" | "rightKnee" | "rightAnkle";
 export type Vector3 = { x: number; y: number; z: number };
 export type PoseFrame = { label: string; progress: number; joints: Record<JointName, Vector3> };
+export type InterpolatedPoseFrame = {
+  joints: Record<JointName, Vector3>;
+  progress: number;
+  startPhaseIndex: number;
+  endPhaseIndex: number;
+  phaseAmount: number;
+};
 export type PoseMotion = {
   id: string;
   frames: PoseFrame[];
@@ -23,6 +30,7 @@ export const POSE_ZOOM_MAX = 1.65;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const lerp = (from: number, to: number, amount: number) => from + (to - from) * amount;
+const smoothstep = (amount: number) => amount * amount * (3 - 2 * amount);
 
 export function clampPoseZoom(value: number) {
   return clamp(value, POSE_ZOOM_MIN, POSE_ZOOM_MAX);
@@ -31,6 +39,25 @@ export function clampPoseZoom(value: number) {
 export function normalizePoseYaw(value: number) {
   const normalized = ((value + 180) % 360 + 360) % 360 - 180;
   return normalized === -180 ? 180 : normalized;
+}
+
+/** Display-only in-between pose. Audited source phase endpoints are unchanged. */
+export function interpolatePoseFrame(motion: PoseMotion, displayProgress: number): InterpolatedPoseFrame {
+  const lastIndex = motion.frames.length - 1;
+  const progress = clamp(displayProgress, 0, 1);
+  const scaled = progress * lastIndex;
+  const startPhaseIndex = Math.min(lastIndex, Math.floor(scaled));
+  const endPhaseIndex = Math.min(lastIndex, startPhaseIndex + 1);
+  const rawAmount = startPhaseIndex === endPhaseIndex ? 0 : scaled - startPhaseIndex;
+  const phaseAmount = smoothstep(rawAmount);
+  const start = motion.frames[startPhaseIndex];
+  const end = motion.frames[endPhaseIndex];
+  const joints = Object.fromEntries((Object.keys(start.joints) as JointName[]).map((joint) => [joint, {
+    x: lerp(start.joints[joint].x, end.joints[joint].x, phaseAmount),
+    y: lerp(start.joints[joint].y, end.joints[joint].y, phaseAmount),
+    z: lerp(start.joints[joint].z, end.joints[joint].z, phaseAmount),
+  }])) as Record<JointName, Vector3>;
+  return { joints, progress, startPhaseIndex, endPhaseIndex, phaseAmount };
 }
 
 /**

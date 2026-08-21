@@ -33,30 +33,20 @@ export default function MotionStudioScreen() {
     <View style={styles.canvas}><View style={styles.arc} /><View style={styles.trackLine} /></View>
     <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
       <View style={styles.header}><View><Text style={styles.kicker}>FORMPATH / FILM ROOM</Text><Text style={styles.title}>모션 랩</Text></View><View style={styles.analysisBadge}><MaterialIcons name="visibility" size={14} color="#C74B11" /><Text style={styles.analysisBadgeText}>분석용</Text></View></View>
-      <Text style={styles.lead}>최종 보정 analysis를 선택해 다섯 단계 슛폼을 확인하세요. 검증된 실제 3D는 아래 reference에 따로 표시됩니다.</Text>
+      <Text style={styles.lead}>단계 기준점 사이를 부드럽게 연결한 motion을 재생합니다. phase는 아래 marker에서 바로 확인할 수 있습니다.</Text>
 
       <View style={styles.selector}><Text style={styles.selectorLabel}>ANALYSIS SELECT</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>{PLAYER_MONOCULAR_3D_ANALYSES.map((analysis) => <Pressable key={analysis.id} onPress={() => setSelectedId(analysis.id)} style={({ pressed }) => [styles.chip, selected.id === analysis.id && styles.chipActive, pressed && styles.pressed]}><Text style={[styles.chipText, selected.id === analysis.id && styles.chipTextActive]}>{compactLabel(analysis)}</Text></Pressable>)}</ScrollView></View>
 
       <View style={styles.filmHeader}><View><Text style={styles.filmEyebrow}>ACTIVE MOTION</Text><Text style={styles.filmTitle}>{selected.displayName}</Text></View><View style={styles.viewPill}><Text style={styles.viewPillText}>{selected.sourceView.toUpperCase()}</Text></View></View>
       <View style={styles.viewerShell}><PoseMotionViewer motion={selected.motion} title={selected.shortLabel} boundary={analysisBoundary(selected)} hand="right" sourcePhaseTimestampsMs={selected.sourcePhaseTimestampsMs} /></View>
 
-      <View style={styles.metaGrid}>
-        <MetaTile icon="timeline" label="SOURCE PHASE" value={`${selected.sourcePhaseTimestampsMs?.[0] ?? 0}–${selected.sourcePhaseTimestampsMs?.[4] ?? 0}ms`} />
-        <MetaTile icon="auto-fix-high" label="CORRECTION" value={selected.autoCorrection ? "적용됨" : "제한 depth"} />
-      </View>
-      <View style={styles.boundaryRow}><MaterialIcons name="info-outline" size={18} color="#C74B11" /><Text style={styles.boundaryCopy}>{selected.depthTreatment}</Text></View>
-      {selected.autoCorrection ? <View style={styles.correctionRow}><Text style={styles.rowKicker}>AUTO CORRECTION</Text><Text style={styles.rowCopy}>{selected.autoCorrection}</Text></View> : null}
-      {selected.formMatch ? <View style={styles.formCard}><View style={styles.formHead}><Text style={styles.rowKicker}>SOURCE MATCH</Text><Text style={styles.formCount}>{selected.formMatch.filter((check) => check.status === "match").length}/{selected.formMatch.length}</Text></View>{selected.formMatch.map((check) => <View key={check.id} style={styles.checkRow}><View style={[styles.checkDot, check.status === "match" ? styles.checkDotMatch : check.status === "review" ? styles.checkDotReview : styles.checkDotUnknown]} /><View style={styles.checkCopy}><Text style={styles.checkLabel}>{check.label}</Text><Text style={styles.checkDetail}>{check.status === "match" ? "영상에서 확인" : check.status === "review" ? "추가 검토" : "확인 불가"}</Text></View></View>)}</View> : null}
+      <View style={styles.analysisNote}><MaterialIcons name="auto-fix-high" size={16} color="#C74B11" /><Text style={styles.analysisNoteText}>{selected.autoCorrection ? "자동 보정 적용 · " : "제한 depth · "}{selected.depthTreatment}</Text></View>
 
       <View style={styles.referenceHeader}><View><Text style={styles.referenceEyebrow}>VERIFIED REFERENCE</Text><Text style={styles.referenceTitle}>실제 3D 기준 모션</Text></View><View style={styles.verifiedBadge}><MaterialIcons name="verified" size={14} color="#1D9B77" /><Text style={styles.verifiedText}>승인됨</Text></View></View>
       <View style={styles.referenceShell}><PoseMotionViewer motion={reference.motion} title={reference.shortLabel} boundary="CMU optical-marker로 기록된 검증 실제 3D · 추천 사용 가능" hand="right" sourcePhaseFrames={reference.sourcePhaseFrames} /></View>
       <Pressable onPress={() => router.navigate("/profile" as never)} style={({ pressed }) => [styles.compareButton, pressed && styles.pressed]}><MaterialIcons name="person-outline" size={19} color="#F5F1E8" /><Text style={styles.compareText}>내 기록과 비교하기</Text></Pressable>
     </ScrollView>
   </ScreenContainer>;
-}
-
-function MetaTile({ icon, label, value }: { icon: React.ComponentProps<typeof MaterialIcons>["name"]; label: string; value: string }) {
-  return <View style={styles.metaTile}><MaterialIcons name={icon} size={18} color="#F97316" /><View><Text style={styles.metaLabel}>{label}</Text><Text style={styles.metaValue}>{value}</Text></View></View>;
 }
 
 const styles = StyleSheet.create({
@@ -83,26 +73,8 @@ const styles = StyleSheet.create({
   viewPill: { backgroundColor: "#E8F6F1", borderRadius: 12, paddingHorizontal: 8, paddingVertical: 5 },
   viewPillText: { color: "#167359", fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 0.8 },
   viewerShell: { marginTop: 10 },
-  metaGrid: { flexDirection: "row", gap: 10, marginTop: 10 },
-  metaTile: { alignItems: "center", backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 15, borderWidth: 1, flex: 1, flexDirection: "row", gap: 8, minHeight: 58, paddingHorizontal: 10 },
-  metaLabel: { color: "#667789", fontFamily: "BarlowCondensed-Bold", fontSize: 9, letterSpacing: 0.8 },
-  metaValue: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 13, marginTop: 1 },
-  boundaryRow: { alignItems: "flex-start", backgroundColor: "#FFF0E8", borderLeftColor: "#F97316", borderLeftWidth: 3, flexDirection: "row", gap: 8, marginTop: 10, padding: 12 },
-  boundaryCopy: { color: "#8B3B19", flex: 1, fontFamily: "Barlow", fontSize: 12, lineHeight: 17 },
-  correctionRow: { backgroundColor: "#EAF1F7", borderRadius: 15, marginTop: 10, padding: 12 },
-  rowKicker: { color: "#F97316", fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 1.1 },
-  rowCopy: { color: "#33495D", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 3 },
-  formCard: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 16, borderWidth: 1, marginTop: 10, padding: 13 },
-  formHead: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  formCount: { color: "#1D9B77", fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
-  checkRow: { alignItems: "center", borderTopColor: "#E7EDF1", borderTopWidth: 1, flexDirection: "row", gap: 9, marginTop: 10, paddingTop: 10 },
-  checkDot: { borderRadius: 99, height: 8, width: 8 },
-  checkDotMatch: { backgroundColor: "#1D9B77" },
-  checkDotReview: { backgroundColor: "#F97316" },
-  checkDotUnknown: { backgroundColor: "#9AA8B5" },
-  checkCopy: { flex: 1 },
-  checkLabel: { color: "#102235", fontFamily: "Barlow-SemiBold", fontSize: 13 },
-  checkDetail: { color: "#667789", fontFamily: "Barlow", fontSize: 11, marginTop: 1 },
+  analysisNote: { alignItems: "center", backgroundColor: "#FFF0E8", borderRadius: 12, flexDirection: "row", gap: 7, marginTop: 10, paddingHorizontal: 11, paddingVertical: 9 },
+  analysisNoteText: { color: "#8B3B19", flex: 1, fontFamily: "Barlow", fontSize: 11, lineHeight: 15 },
   referenceHeader: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", marginTop: 29 },
   referenceEyebrow: { color: "#1D9B77", fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1.1 },
   referenceTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 29, marginTop: 1 },

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES, PLAYER_MONOCULAR_3D_ANALYSES, PLAYER_SOURCE_SKELETON_REVIEWS, PLAYER_VIDEO_REVIEW_RECORDS } from "@/lib/anonymous-pose-library";
-import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, POSE_ZOOM_MAX, POSE_ZOOM_MIN, projectPosePoint, validatePoseMotion } from "@/lib/pose-motion";
+import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, interpolatePoseFrame, POSE_ZOOM_MAX, POSE_ZOOM_MIN, projectPosePoint, validatePoseMotion } from "@/lib/pose-motion";
 
 describe("approved actual optical-mocap pose motion", () => {
   it("uses a validated five-phase measured motion with a high follow-through", () => {
@@ -85,5 +85,17 @@ describe("approved actual optical-mocap pose motion", () => {
     const normal = projectPosePoint({ x: 0.5, y: 1.2, z: 0.25 }, frontView.yaw, 8, 330, 270, 1);
     const enlarged = projectPosePoint({ x: 0.5, y: 1.2, z: 0.25 }, frontView.yaw, 8, 330, 270, 1.3);
     expect(Math.abs(enlarged.x - 165)).toBeGreaterThan(Math.abs(normal.x - 165));
+  });
+  it("renders fluid display interpolation without modifying audited phase endpoints", () => {
+    const motion = ANONYMOUS_POSE_REFERENCES[0].motion;
+    const start = interpolatePoseFrame(motion, 0);
+    const midpoint = interpolatePoseFrame(motion, 0.125);
+    const end = interpolatePoseFrame(motion, 1);
+    expect(start.joints.rightWrist).toEqual(motion.frames[0].joints.rightWrist);
+    expect(end.joints.rightWrist).toEqual(motion.frames[4].joints.rightWrist);
+    expect(midpoint.startPhaseIndex).toBe(0);
+    expect(midpoint.endPhaseIndex).toBe(1);
+    expect(midpoint.joints.rightWrist.y).toBeGreaterThanOrEqual(Math.min(motion.frames[0].joints.rightWrist.y, motion.frames[1].joints.rightWrist.y));
+    expect(midpoint.joints.rightWrist.y).toBeLessThanOrEqual(Math.max(motion.frames[0].joints.rightWrist.y, motion.frames[1].joints.rightWrist.y));
   });
 });

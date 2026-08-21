@@ -155,3 +155,6 @@
 - [x] FormPath Basketball의 mobile-first UI design system·screen hierarchy·interaction plan을 전면 재설계 — Court·Film design system과 3탭 information architecture 문서화
 - [x] 홈·Motion Studio·프로필·floating navigation을 새 제품 언어로 전면 구현
 - [x] UI 개편 후 iPhone portrait·웹 시각 검증과 기능 regression 수행 — Vitest·TypeScript·Expo export 통과, 390×844 hydrated capture 확인
+- [x] 5개 source phase를 기준점으로 유지하면서 PoseMotion viewer에 fluid interpolation·continuous playback 구현 — endpoint 보존 smooth interpolation, phase marker 유지
+- [x] Motion Studio에서 큰 card stack·중복 header·zoom controls를 줄이고 skeleton-first fluid player로 재구성
+- [x] Paul George·Curry analysis의 fluid playback과 phase-marker UI를 iPhone viewport에서 검증 — 390×844 hydrated capture, Vitest·TypeScript·Expo export 통과
