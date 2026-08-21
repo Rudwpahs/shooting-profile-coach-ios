@@ -17,7 +17,7 @@ function analysisBoundary(analysis: PlayerMonocular3DAnalysis) {
 function compactLabel(analysis: PlayerMonocular3DAnalysis) {
   if (analysis.displayName === "Stephen Curry" && analysis.state === "dual_view_auto_corrected_estimate_not_actual_3d") return "Curry / 보정";
   if (analysis.displayName === "Stephen Curry" && analysis.state === "dual_view_phase_aligned_estimate_not_actual_3d") return "Curry / 결합";
-  if (analysis.displayName === "Stephen Curry") return "Curry / 정면";
+  if (analysis.displayName === "Stephen Curry") return "Curry / 원본 실루엣";
   return "Paul George / 보정";
 }
 
@@ -38,9 +38,9 @@ export default function MotionStudioScreen() {
       <View style={styles.selector}><Text style={styles.selectorLabel}>ANALYSIS SELECT</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>{PLAYER_MONOCULAR_3D_ANALYSES.map((analysis) => <Pressable key={analysis.id} onPress={() => setSelectedId(analysis.id)} style={({ pressed }) => [styles.chip, selected.id === analysis.id && styles.chipActive, pressed && styles.pressed]}><Text style={[styles.chipText, selected.id === analysis.id && styles.chipTextActive]}>{compactLabel(analysis)}</Text></Pressable>)}</ScrollView></View>
 
       <View style={styles.filmHeader}><View><Text style={styles.filmEyebrow}>ACTIVE MOTION</Text><Text style={styles.filmTitle}>{selected.displayName}</Text></View><View style={styles.viewPill}><Text style={styles.viewPillText}>{selected.sourceView.toUpperCase()}</Text></View></View>
-      <View style={styles.viewerShell}><PoseMotionViewer motion={selected.motion} title={selected.shortLabel} boundary={analysisBoundary(selected)} hand="right" sourcePhaseTimestampsMs={selected.sourcePhaseTimestampsMs} /></View>
+      <View style={styles.viewerShell}><PoseMotionViewer motion={selected.motion} title={selected.shortLabel} boundary={analysisBoundary(selected)} hand={selected.shootingHand} initialCameraView={selected.displayName === "Stephen Curry" ? "front" : "oblique"} sourcePhaseTimestampsMs={selected.sourcePhaseTimestampsMs} /></View>
 
-      <View style={styles.analysisNote}><MaterialIcons name="auto-fix-high" size={16} color="#C74B11" /><Text style={styles.analysisNoteText}>{selected.autoCorrection ? "관절 방향·슛 단계 유지 · 성인 비율 길이 보정 · 분석용" : "제한 depth · "}{selected.autoCorrection ? "개인 신체 측정·실제 3D·추천에는 사용하지 않습니다." : selected.depthTreatment}</Text></View>
+      <View style={styles.analysisNote}><MaterialIcons name="auto-fix-high" size={16} color="#C74B11" /><Text style={styles.analysisNoteText}>{selected.displayName === "Stephen Curry" ? "감사된 원본 2D 실루엣·왼손 arm chain 유지 · z depth 미추정 · 분석용" : selected.autoCorrection ? "관절 방향·슛 단계 유지 · 성인 비율 길이 보정 · 분석용" : "제한 depth · "}{selected.displayName === "Stephen Curry" || selected.autoCorrection ? "개인 신체 측정·실제 3D·추천에는 사용하지 않습니다." : selected.depthTreatment}</Text></View>
 
       <View style={styles.referenceHeader}><View><Text style={styles.referenceEyebrow}>VERIFIED REFERENCE</Text><Text style={styles.referenceTitle}>실제 3D 기준 모션</Text></View><View style={styles.verifiedBadge}><MaterialIcons name="verified" size={14} color="#1D9B77" /><Text style={styles.verifiedText}>승인됨</Text></View></View>
       <View style={styles.referenceShell}><PoseMotionViewer motion={reference.motion} title={reference.shortLabel} boundary="CMU optical-marker로 기록된 검증 실제 3D · 추천 사용 가능" hand="right" sourcePhaseFrames={reference.sourcePhaseFrames} /></View>

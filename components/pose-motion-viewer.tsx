@@ -2,19 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
 
-import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, interpolatePoseFrame, normalizePoseYaw, projectPosePoint, type JointName, type PoseMotion } from "@/lib/pose-motion";
+import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, getPoseDisplayTransform, interpolatePoseFrame, normalizePoseYaw, projectPosePoint, type JointName, type PoseMotion } from "@/lib/pose-motion";
 
 type Camera = { yaw: number; zoom: number };
-
-export type PoseDisplayTransform = { groundY: number; scale: number };
-
-/** Fits heterogeneous measured and relative pose coordinate spaces into one display canvas without altering source data. */
-export function getPoseDisplayTransform(motion: PoseMotion): PoseDisplayTransform {
-  const ankleYs = motion.frames.flatMap((frame) => [frame.joints.leftAnkle.y, frame.joints.rightAnkle.y]);
-  const groundY = Math.min(...ankleYs);
-  const highestY = Math.max(...motion.frames.flatMap((frame) => Object.values(frame.joints).map((point) => point.y)));
-  return { groundY, scale: Math.min(1, 2.72 / Math.max(2.72, highestY - groundY)) };
-}
 
 function touchDistance(touches: ReadonlyArray<{ pageX: number; pageY: number }>) {
   if (touches.length < 2) return 0;
@@ -26,17 +16,19 @@ type PoseMotionViewerProps = {
   title?: string;
   boundary?: string;
   hand?: "auto" | "right" | "left";
+  initialCameraView?: "front" | "oblique" | "side";
   activeFrameIndex?: number;
   sourcePhaseFrames?: number[];
   sourcePhaseTimestampsMs?: number[];
   onPhaseSelect?: (index: number) => void;
 };
 
-export function PoseMotionViewer({ motion, title, boundary, hand = "right", activeFrameIndex, sourcePhaseFrames, sourcePhaseTimestampsMs, onPhaseSelect }: PoseMotionViewerProps) {
+export function PoseMotionViewer({ motion, title, boundary, hand = "right", initialCameraView = "oblique", activeFrameIndex, sourcePhaseFrames, sourcePhaseTimestampsMs, onPhaseSelect }: PoseMotionViewerProps) {
   const [displayProgress, setDisplayProgress] = useState(0);
   const [playing, setPlaying] = useState(true);
   const presets = useMemo(() => getPoseCameraPresets(motion, hand), [motion, hand]);
-  const [camera, setCamera] = useState<Camera>(() => ({ yaw: presets[1].yaw, zoom: 1 }));
+  const preferredPreset = presets.find((preset) => preset.id === initialCameraView) ?? presets[1];
+  const [camera, setCamera] = useState<Camera>(() => ({ yaw: preferredPreset.yaw, zoom: 1 }));
   const [isInteracting, setIsInteracting] = useState(false);
   const cameraRef = useRef<Camera>(camera);
   const startCamera = useRef<Camera>(camera);
@@ -76,7 +68,7 @@ export function PoseMotionViewer({ motion, title, boundary, hand = "right", acti
     if (playbackFrame.current !== null) cancelAnimationFrame(playbackFrame.current);
   }, []);
   useEffect(() => { displayProgressRef.current = displayProgress; }, [displayProgress]);
-  useEffect(() => { setDisplayProgress(0); setPlaying(true); scheduleCamera({ yaw: presets[1].yaw, zoom: 1 }); }, [motion.id, presets, scheduleCamera]);
+  useEffect(() => { setDisplayProgress(0); setPlaying(true); scheduleCamera({ yaw: preferredPreset.yaw, zoom: 1 }); }, [motion.id, preferredPreset.yaw, scheduleCamera]);
   useEffect(() => {
     if (activeFrameIndex === undefined) return;
     setDisplayProgress(activeFrameIndex / lastPhaseIndex);
@@ -121,7 +113,7 @@ export function PoseMotionViewer({ motion, title, boundary, hand = "right", acti
   }), [scheduleCamera]);
 
   const seekPhase = (index: number) => { setDisplayProgress(index / lastPhaseIndex); setPlaying(false); onPhaseSelect?.(index); };
-  const resetView = () => scheduleCamera({ yaw: presets[1].yaw, zoom: 1 });
+  const resetView = () => scheduleCamera({ yaw: preferredPreset.yaw, zoom: 1 });
   const displayTitle = title ?? "MOTION";
   const boundaryCopy = boundary ?? "source phase를 매끄럽게 보간한 display motion입니다.";
 

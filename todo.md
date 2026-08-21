@@ -172,3 +172,5 @@
 - [x] iPhone·web build·accessibility·interactive navigation의 release readiness를 자동 검사로 보강
 - [x] Curry·Paul George·개인 fluid skeleton에서 source joint direction·phase를 보존하고 bone length만 실제 인체 비율로 정규화
 - [x] 실제 비율 target·angle preservation·analysis-only boundary를 correction audit metadata와 regression test로 검증
+- [x] Curry current skeleton의 upper-body·arm-chain·leg proportion silhouette을 source phase 기준으로 재감사하고 기존 비율 asset 폐기
+- [x] Curry source-derived display motion을 재생성하고 Motion Studio·visual regression에서 자연스러운 full-body silhouette을 검증

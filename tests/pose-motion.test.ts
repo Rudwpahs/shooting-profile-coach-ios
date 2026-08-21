@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES, PLAYER_MONOCULAR_3D_ANALYSES, PLAYER_SOURCE_SKELETON_REVIEWS, PLAYER_VIDEO_REVIEW_RECORDS } from "@/lib/anonymous-pose-library";
-import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, interpolatePoseFrame, POSE_ZOOM_MAX, POSE_ZOOM_MIN, projectPosePoint, validatePoseMotion } from "@/lib/pose-motion";
+import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, getPoseDisplayTransform, interpolatePoseFrame, POSE_ZOOM_MAX, POSE_ZOOM_MIN, projectPosePoint, validatePoseMotion } from "@/lib/pose-motion";
 
 describe("approved actual optical-mocap pose motion", () => {
   it("uses a validated five-phase measured motion with a high follow-through", () => {
@@ -24,11 +24,13 @@ describe("approved actual optical-mocap pose motion", () => {
       id: "curry-front-side-auto-corrected-analysis-01",
       displayName: "Stephen Curry",
       boundary: "monocular_relative_pose_not_metric_3d",
-      state: "dual_view_auto_corrected_estimate_not_actual_3d",
-      sourcePhaseTimestampsMs: [0, 1002, 1503, 2088, 2422],
+      state: "single_view_auto_corrected_estimate_not_actual_3d",
+      shootingHand: "left",
+      sourcePhaseTimestampsMs: [0, 1153, 1657, 2162, 2738],
     });
-    expect(PLAYER_MONOCULAR_3D_ANALYSES[0].motion.frames[4].joints.rightWrist.y).toBeGreaterThan(PLAYER_MONOCULAR_3D_ANALYSES[0].motion.frames[4].joints.rightShoulder.y);
+    expect(PLAYER_MONOCULAR_3D_ANALYSES[0].motion.frames[4].joints.leftWrist.y).toBeGreaterThan(PLAYER_MONOCULAR_3D_ANALYSES[0].motion.frames[4].joints.leftShoulder.y);
     expect(PLAYER_MONOCULAR_3D_ANALYSES[0].formMatch?.find((check) => check.id === "release_wrist_height")?.status).toBe("match");
+    expect(getPoseDisplayTransform(PLAYER_MONOCULAR_3D_ANALYSES[0].motion).scale).toBeGreaterThan(1.8);
     expect(PLAYER_MONOCULAR_3D_ANALYSES[1]).toMatchObject({
       id: "paul-george-side-auto-corrected-analysis-01",
       displayName: "Paul George",

@@ -65,6 +65,7 @@ export type PlayerMonocular3DAnalysis = {
   boundary: "monocular_relative_pose_not_metric_3d";
   state: "video_based_depth_limited_estimate_not_actual_3d" | "dual_view_phase_aligned_estimate_not_actual_3d" | "dual_view_auto_corrected_estimate_not_actual_3d" | "single_view_auto_corrected_estimate_not_actual_3d";
   sourceAttribution: string;
+  shootingHand: "left" | "right";
   sourcePhaseTimestampsMs: number[];
   inputQuality: { landmarkFrameRatio: number; meanVisibility: number };
   depthTreatment: string;
@@ -123,8 +124,8 @@ export const PLAYER_VIDEO_REVIEW_RECORDS: PlayerVideoReviewRecord[] = [
 
 const currySourceSkeleton = currySourceSkeletonRaw as { id: string; label: string; boundary: "single_view_2d_skeleton_review"; state: "review_only_not_3d"; sourceView: "front" | "side" | "oblique"; phases: PlayerSourceSkeletonPhase[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number } };
 const paulGeorgeSourceSkeleton = paulGeorgeSourceSkeletonRaw as typeof currySourceSkeleton;
-const curryAutoCorrectedAnalysis = curryAutoCorrectedAnalysisRaw as { state: "dual_view_auto_corrected_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; phaseAlignment: { frontPhaseTimestampsMs: number[] }; autoCorrection: { meaning: string }; formMatch: { checks: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }> }; motion: PoseMotion };
-const paulGeorgeAutoCorrectedAnalysis = paulGeorgeAutoCorrectedAnalysisRaw as { state: "single_view_auto_corrected_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "side"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; autoCorrection: { meaning: string }; formMatch: { checks: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }> }; motion: PoseMotion };
+const curryAutoCorrectedAnalysis = curryAutoCorrectedAnalysisRaw as unknown as { state: "single_view_auto_corrected_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "oblique"; shootingHandEstimate: "left"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; autoCorrection: { meaning: string }; formMatch: { checks: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }> }; motion: PoseMotion };
+const paulGeorgeAutoCorrectedAnalysis = paulGeorgeAutoCorrectedAnalysisRaw as { state: "single_view_auto_corrected_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "side"; shootingHandEstimate: "right"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; autoCorrection: { meaning: string }; formMatch: { checks: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }> }; motion: PoseMotion };
 
 const sourceViewLabel = (view: "front" | "side" | "oblique"): PlayerSourceSkeletonReview["sourceView"] => {
   if (view === "front") return "정면";
@@ -143,14 +144,15 @@ export const PLAYER_MONOCULAR_3D_ANALYSES: PlayerMonocular3DAnalysis[] = [
   {
     id: "curry-front-side-auto-corrected-analysis-01",
     displayName: "Stephen Curry",
-    shortLabel: "CURRY · AUTO-CORRECTED ANALYSIS",
+    shortLabel: "CURRY · SOURCE-FAITHFUL 2D ANALYSIS",
     sourceView: "사선",
     boundary: curryAutoCorrectedAnalysis.boundary,
     state: curryAutoCorrectedAnalysis.state,
-    sourceAttribution: "Curry 정면·측면 semantic phase blend에 pelvis root·median bone-length auto-correction을 적용한 display analysis",
-    sourcePhaseTimestampsMs: curryAutoCorrectedAnalysis.phaseAlignment.frontPhaseTimestampsMs,
+    sourceAttribution: "사용자 제공 Curry 사선 source의 audited 2D five phase에 z depth inference 없이 source-faithful stabilization을 적용한 display analysis",
+    shootingHand: curryAutoCorrectedAnalysis.shootingHandEstimate,
+    sourcePhaseTimestampsMs: curryAutoCorrectedAnalysis.sourcePhaseTimestampsMs,
     inputQuality: { landmarkFrameRatio: 1, meanVisibility: 0.915 },
-    depthTreatment: "정면 shape와 측면 depth cue의 source phase 순서를 보존합니다. 실제 camera geometry·측정 depth는 아닙니다.",
+    depthTreatment: "감사된 단일 source의 x/y full-body silhouette을 직접 유지하며 z를 0으로 고정합니다. 실제 3D·camera geometry·측정 depth가 아닙니다.",
     autoCorrection: curryAutoCorrectedAnalysis.autoCorrection.meaning,
     formMatch: curryAutoCorrectedAnalysis.formMatch.checks,
     motion: curryAutoCorrectedAnalysis.motion,
@@ -163,6 +165,7 @@ export const PLAYER_MONOCULAR_3D_ANALYSES: PlayerMonocular3DAnalysis[] = [
     boundary: paulGeorgeAutoCorrectedAnalysis.boundary,
     state: paulGeorgeAutoCorrectedAnalysis.state,
     sourceAttribution: "사용자 제공 Paul George All-Star single side source에 video-audited right shooting hand와 conservative auto-correction을 적용한 display analysis",
+    shootingHand: paulGeorgeAutoCorrectedAnalysis.shootingHandEstimate,
     sourcePhaseTimestampsMs: paulGeorgeAutoCorrectedAnalysis.sourcePhaseTimestampsMs,
     inputQuality: paulGeorgeAutoCorrectedAnalysis.inputQuality,
     depthTreatment: "하나의 실제 측면 source의 x/y를 유지하고 relative depth만 제한합니다. 공개 multi-angle 영상은 qualitative reference로만 감사했으며 결합하지 않았습니다.",

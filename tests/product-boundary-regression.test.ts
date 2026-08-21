@@ -21,9 +21,13 @@ describe("fixed product motion boundary", () => {
       expect(analysis.sourcePhaseTimestampsMs.every((timestamp, index, all) => index === 0 || timestamp > all[index - 1])).toBe(true);
       expect(analysis.formMatch?.find((check) => check.id === "form_details_unavailable")?.status).toBe("unavailable");
     });
+    expect(PLAYER_MONOCULAR_3D_ANALYSES.find((analysis) => analysis.id === "curry-front-side-auto-corrected-analysis-01")).toMatchObject({
+      shootingHand: "left",
+      sourcePhaseTimestampsMs: [0, 1153, 1657, 2162, 2738],
+    });
   });
 
-  it("uses the adult-ratio display template without changing the analysis-only boundary", () => {
+  it("keeps Curry source-faithful 2D depth-free and Paul George's adult-ratio correction analysis-only", () => {
     for (const filename of ["curry-front-side-auto-corrected-analysis-01.json", "paul-george-side-auto-corrected-analysis-01.json"]) {
       const asset = JSON.parse(readFileSync(resolve(process.cwd(), "lib/motions", filename), "utf8")) as {
         boundary: string;
@@ -31,11 +35,20 @@ describe("fixed product motion boundary", () => {
         motion: { frames: { joints: Record<string, { x: number; y: number; z: number }> }[] };
       };
       expect(asset.boundary).toBe("monocular_relative_pose_not_metric_3d");
-      expect(asset.autoCorrection).toMatchObject({
-        boneLength: "adult_joint_center_ratio_scaled_to_median_shoulder_breadth",
-        templateId: "adult_joint_center_shoulder_scaled_v1",
-        trajectory: "source_joint_directions_and_phase_order_preserved",
-      });
+      if (filename.startsWith("curry")) {
+        expect(asset.autoCorrection).toMatchObject({
+          boneLength: "median_source_2d_visible_bone_length",
+          templateId: "curry_source_faithful_2d_silhouette_v1",
+          trajectory: "source_2d_parent_child_direction_and_phase_order_preserved",
+        });
+        for (const frame of asset.motion.frames) Object.values(frame.joints).forEach((joint) => expect(joint.z).toBe(0));
+      } else {
+        expect(asset.autoCorrection).toMatchObject({
+          boneLength: "adult_joint_center_ratio_scaled_to_median_shoulder_breadth",
+          templateId: "adult_joint_center_shoulder_scaled_v1",
+          trajectory: "source_joint_directions_and_phase_order_preserved",
+        });
+      }
       for (const frame of asset.motion.frames) {
         for (const [bone, target] of Object.entries(asset.autoCorrection.targetBoneLengths)) {
           const [parent, child] = bone.split("->");

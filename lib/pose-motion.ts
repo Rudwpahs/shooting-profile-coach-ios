@@ -15,6 +15,7 @@ export type PoseMotion = {
 };
 export type MotionQualityGate = { passed: boolean; failures: string[]; maxJointStep: number };
 export type PoseCameraPreset = { id: "front" | "oblique" | "side"; label: "정면" | "사선" | "측면"; yaw: number };
+export type PoseDisplayTransform = { groundY: number; scale: number };
 
 export const BONE_LINKS: Array<[JointName, JointName]> = [
   ["head", "neck"], ["neck", "spine"], ["spine", "pelvis"],
@@ -34,6 +35,15 @@ const smoothstep = (amount: number) => amount * amount * (3 - 2 * amount);
 
 export function clampPoseZoom(value: number) {
   return clamp(value, POSE_ZOOM_MIN, POSE_ZOOM_MAX);
+}
+
+/** Fits measured and relative coordinate ranges into one viewer canvas without changing source data. */
+export function getPoseDisplayTransform(motion: PoseMotion): PoseDisplayTransform {
+  const ankleYs = motion.frames.flatMap((frame) => [frame.joints.leftAnkle.y, frame.joints.rightAnkle.y]);
+  const groundY = Math.min(...ankleYs);
+  const highestY = Math.max(...motion.frames.flatMap((frame) => Object.values(frame.joints).map((point) => point.y)));
+  const height = Math.max(0.01, highestY - groundY);
+  return { groundY, scale: Math.max(0.72, Math.min(3.15, 2.38 / height)) };
 }
 
 export function normalizePoseYaw(value: number) {
