@@ -140,3 +140,6 @@
 - [x] Curry 정면·측면 source의 release·딥·상승·팔로우스루 phase correspondence를 camera-geometry score와 분리해 재감사 — 5개 semantic phase pairing 완료; fixed-F score는 실제 3D admission에만 유지
 - [x] 정면 2D shape와 측면 depth cue를 결합한 dual-view Curry 추정 3D analysis asset 생성 — mirrored side cue를 제한 depth로 사용, 실제 3D·측정값 아님
 - [x] Motion Studio에서 single-view·dual-view Curry analysis를 구분해 표시하고 실제 3D·추천에서 계속 제외
+- [x] 신뢰 가능한 Curry 슛폼 설명과 coaching 기준을 수집해 source-based review rubric 작성 — Curry 본인 팁·코치 분석·jump-shot biomechanics 근거와 proxy 한계 기록
+- [x] Curry dual-view analysis의 body-center·shoulder-line·bone-length·release·follow-through auto-correction 규칙 구현 — pelvis root와 median source bone-length 정규화, source phase·방향 보존
+- [x] 보정 전후 motion과 Curry form-match 설명을 Motion Studio에 분석 전용으로 표시하고 actual 3D·추천에서 분리

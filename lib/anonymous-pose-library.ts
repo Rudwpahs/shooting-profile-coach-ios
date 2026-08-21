@@ -1,6 +1,7 @@
 import cmuShoot01Raw from "@/lib/motions/cmu-shoot-01.json";
 import curryConstrainedAnalysisRaw from "@/lib/motions/curry-front-constrained-analysis-01.json";
 import curryDualViewAnalysisRaw from "@/lib/motions/curry-front-side-dual-view-analysis-01.json";
+import curryAutoCorrectedAnalysisRaw from "@/lib/motions/curry-front-side-auto-corrected-analysis-01.json";
 import currySourceSkeletonRaw from "@/lib/skeleton-reviews/curry-source-skeleton-01.json";
 import paulGeorgeSourceSkeletonRaw from "@/lib/skeleton-reviews/paul-george-source-skeleton-01.json";
 import type { PoseMotion } from "@/lib/pose-motion";
@@ -63,12 +64,14 @@ export type PlayerMonocular3DAnalysis = {
   shortLabel: string;
   sourceView: "정면" | "측면" | "사선";
   boundary: "monocular_relative_pose_not_metric_3d";
-  state: "video_based_depth_limited_estimate_not_actual_3d" | "dual_view_phase_aligned_estimate_not_actual_3d";
+  state: "video_based_depth_limited_estimate_not_actual_3d" | "dual_view_phase_aligned_estimate_not_actual_3d" | "dual_view_auto_corrected_estimate_not_actual_3d";
   sourceAttribution: string;
   sourcePhaseTimestampsMs: number[];
   inputQuality: { landmarkFrameRatio: number; meanVisibility: number };
   depthTreatment: string;
   motion: PoseMotion;
+  autoCorrection?: string;
+  formMatch?: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }>;
 };
 
 const cmuShoot01 = cmuShoot01Raw.motion as PoseMotion;
@@ -123,6 +126,7 @@ const currySourceSkeleton = currySourceSkeletonRaw as { id: string; label: strin
 const paulGeorgeSourceSkeleton = paulGeorgeSourceSkeletonRaw as typeof currySourceSkeleton;
 const curryConstrainedAnalysis = curryConstrainedAnalysisRaw as { state: "video_based_depth_limited_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "front"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; depthTreatment: { meaning: string }; motion: PoseMotion };
 const curryDualViewAnalysis = curryDualViewAnalysisRaw as { state: "dual_view_phase_aligned_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; phaseAlignment: { frontPhaseTimestampsMs: number[]; sidePhaseTimestampsMs: number[]; meaning: string }; inputQuality: { front: { landmarkFrameRatio: number; meanVisibility: number }; side: { landmarkFrameRatio: number; meanVisibility: number } }; depthTreatment: { meaning: string }; motion: PoseMotion };
+const curryAutoCorrectedAnalysis = curryAutoCorrectedAnalysisRaw as { state: "dual_view_auto_corrected_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; phaseAlignment: { frontPhaseTimestampsMs: number[] }; autoCorrection: { meaning: string }; formMatch: { checks: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }> }; motion: PoseMotion };
 
 const sourceViewLabel = (view: "front" | "side" | "oblique"): PlayerSourceSkeletonReview["sourceView"] => {
   if (view === "front") return "정면";
@@ -163,6 +167,21 @@ export const PLAYER_MONOCULAR_3D_ANALYSES: PlayerMonocular3DAnalysis[] = [
     inputQuality: curryDualViewAnalysis.inputQuality.front,
     depthTreatment: curryDualViewAnalysis.depthTreatment.meaning,
     motion: curryDualViewAnalysis.motion,
+  },
+  {
+    id: "curry-front-side-auto-corrected-analysis-01",
+    displayName: "Stephen Curry",
+    shortLabel: "CURRY · AUTO-CORRECTED ANALYSIS",
+    sourceView: "사선",
+    boundary: curryAutoCorrectedAnalysis.boundary,
+    state: curryAutoCorrectedAnalysis.state,
+    sourceAttribution: "Curry 정면·측면 semantic phase blend에 pelvis root·median bone-length auto-correction을 적용한 display analysis",
+    sourcePhaseTimestampsMs: curryAutoCorrectedAnalysis.phaseAlignment.frontPhaseTimestampsMs,
+    inputQuality: curryDualViewAnalysis.inputQuality.front,
+    depthTreatment: "정면 shape와 측면 depth cue의 source phase 순서를 보존합니다. 실제 camera geometry·측정 depth는 아닙니다.",
+    autoCorrection: curryAutoCorrectedAnalysis.autoCorrection.meaning,
+    formMatch: curryAutoCorrectedAnalysis.formMatch.checks,
+    motion: curryAutoCorrectedAnalysis.motion,
   },
 ];
 
