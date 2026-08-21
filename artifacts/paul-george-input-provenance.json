@@ -1,0 +1,21 @@
+{
+  "subject": "Paul George",
+  "sourceType": "user_provided_screen_recording",
+  "productStoragePolicy": "raw media is temporary for local audit only and must be removed before checkpoint",
+  "clips": [
+    {
+      "id": "pg-clip-a",
+      "originalFilename": "ScreenRecording_08-21-202616-05-39_1.mp4",
+      "sha256": "fb3430a1272dcf4af755c09b3e3ddec370e43798912057c1e133a603845d03e1",
+      "video": { "codec": "hevc", "width": 1126, "height": 2436, "durationMs": 1235, "frameRate": "47400/821", "frameCount": 79 },
+      "auditStatus": "rejected_identity_conflict_and_low_landmark_visibility"
+    },
+    {
+      "id": "pg-clip-b",
+      "originalFilename": "ScreenRecording_08-21-202616-02-46_1.mp4",
+      "sha256": "2b4eae5e83599f9eea2bbbfd693e7795ef62367b5f66b0f4e22f6074503db766",
+      "video": { "codec": "hevc", "width": 686, "height": 316, "durationMs": 1000, "frameRate": "31/1", "frameCount": 31 },
+      "auditStatus": "rejected_too_few_temporal_samples"
+    }
+  ]
+}

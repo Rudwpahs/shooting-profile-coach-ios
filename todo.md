@@ -91,3 +91,6 @@
 - [x] 추가 영상 relative pose candidate 추출·원본 media 제외·Curry와 source 경계 분리
 - [x] 검증된 추가 선수 video candidate를 Motion Studio·Library에 추천 제외 상태로 표시
 - [x] Motion Studio에서 정면·사선 Curry relative-pose candidate를 직접 전환
+- [x] Paul George 제공 영상 2개를 독립적으로 hash·시점·슈팅 event·33-landmark 품질 감사
+- [ ] 품질을 통과한 Paul George relative-pose candidate를 추천 제외 상태로 생성·표시
+- [ ] Paul George 신원 확인 가능·2초 이상 연속 슈팅 영상을 확보해 최소 temporal sample gate 통과
