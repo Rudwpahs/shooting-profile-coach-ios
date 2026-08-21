@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "kind": "release_pinned_multisignal_epipolar_frame_sync",
+  "boundary": "correspondence_hypothesis_not_metric_3d",
+  "inputs": {
+    "viewA": "artifacts/curry-side-relative-pose.json",
+    "viewB": "artifacts/additional-curry-relative-pose.json",
+    "aFrames": 40,
+    "bFrames": 48
+  },
+  "releaseAnchor": {
+    "aFrame": 25,
+    "bFrame": 36,
+    "hand": "right"
+  },
+  "signals": [
+    "visibility_weighted_joint_motion_signature",
+    "release_anchor",
+    "iterative_fixed_f_sampson_residual"
+  ],
+  "iterations": [
+    {
+      "iteration": 1,
+      "matchedFrames": 3,
+      "fixedFInlierRatio": 0.20202,
+      "fixedFInliers": 20,
+      "fixedFCorrespondences": 99
+    },
+    {
+      "iteration": 2,
+      "matchedFrames": 3,
+      "fixedFInlierRatio": 0.20202,
+      "fixedFInliers": 20,
+      "fixedFCorrespondences": 99
+    },
+    {
+      "iteration": 3,
+      "matchedFrames": 3,
+      "fixedFInlierRatio": 0.20202,
+      "fixedFInliers": 20,
+      "fixedFCorrespondences": 99
+    }
+  ],
+  "matchedFrames": [
+    {
+      "aIndex": 16,
+      "bIndex": 13,
+      "aTimestampMs": 1336,
+      "bTimestampMs": 1083,
+      "motionSignatureCost": 0.958239
+    },
+    {
+      "aIndex": 18,
+      "bIndex": 18,
+      "aTimestampMs": 1503,
+      "bTimestampMs": 1500,
+      "motionSignatureCost": 0.971933
+    },
+    {
+      "aIndex": 25,
+      "bIndex": 36,
+      "aTimestampMs": 2088,
+      "bTimestampMs": 3000,
+      "motionSignatureCost": 2.434402
+    }
+  ],
+  "quality": {
+    "matchedFrameCount": 3,
+    "meanMotionSignatureCost": 1.454858,
+    "fixedFInlierRatio": 0.20202
+  },
+  "admission": "must_pass_independent_fixed_f_and_reprojection_gates"
+}

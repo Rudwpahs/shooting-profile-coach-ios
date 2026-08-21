@@ -15,7 +15,7 @@
 
 ## Uncalibrated review-only path
 
-`run-uncalibrated-multiview-pipeline.py` is the sole entrypoint for non-metric two-view review candidates. It owns release-pinned DTW, global fixed-F gating, canonical projective triangulation, canonical reprojection checking, and the explicit review-only boundary. The older individual `align-*` and `debug-*` scripts remain diagnostic tools and do not admit a candidate.
+`synchronize-pose-pair-multisignal.py` creates the sole admissible correspondence hypothesis for non-metric two-view review candidates. `run-uncalibrated-multiview-pipeline.py --alignment <hypothesis>` independently applies global fixed-F gating, canonical projective triangulation, canonical reprojection checking, and the explicit review-only boundary. The older individual `align-*` and `debug-*` scripts remain diagnostic tools and do not admit a candidate.
 
 ## Pair debugging before calibration
 
@@ -25,5 +25,6 @@
 | `debug-uncalibrated-pose-pair.py` | global fixed-F fit and camera-pose proxy stability | determine whether a pair plausibly comes from one fixed rig before calibration admission |
 | `debug-video-pair-correspondence.py` | raw image feature/homography overlap | determine whether clips are same/near-identical footage or distinct image planes |
 | `align-pose-pair-dtw.py` | release-pinned dynamic time warping | remove different clip starts and slow-motion rate variation before fixed-F diagnostic |
+| `synchronize-pose-pair-multisignal.py` | release-pinned visibility-weighted motion signature plus iterative Sampson residual | produce a strict one-to-one correspondence hypothesis before fixed-F admission |
 
 The capture command sequence and thresholds are documented in [`../docs/authorized-multiview-capture-kit.md`](../docs/authorized-multiview-capture-kit.md).

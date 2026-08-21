@@ -22,8 +22,8 @@
 
 ## 단일 algorithm
 
-1. **Release-pinned correspondence.** 각 view에서 shooting wrist의 image-y 최저점을 release anchor로 선택한다. pre-release와 post-release 구간을 독립 DTW로 정렬하고 anchor pair는 절대 바꾸지 않는다.
-2. **Global fixed-F gate.** DTW path의 모든 `(frame, joint)` correspondence를 하나의 RANSAC fundamental matrix `F`에 fit한다. 한 frame마다 다른 `F`를 추정하지 않는다.
+1. **Release-pinned multi-signal correspondence.** 각 view에서 shooting wrist의 image-y 최저점을 release anchor로 선택하고 anchor pair는 절대 바꾸지 않는다. pre/post release는 visibility-weighted wrist·elbow·hip motion signature로 monotonic one-to-one path를 구하고, provisional fixed-F의 Sampson residual을 반복 cost로 반영한다.
+2. **Global fixed-F gate.** multi-signal path의 모든 `(frame, joint)` correspondence를 하나의 RANSAC fundamental matrix `F`에 fit한다. 한 frame마다 다른 `F`를 추정하지 않는다.
 3. **Pair admission.** `F` global inlier ratio가 0.72 이상이고, 5개 이상 frame에서 20개 이상 joint inlier가 있어야 한다. 이 조건을 만족하지 않으면 즉시 `rejected` output을 생성하고 triangulation하지 않는다.
 4. **Canonical projective reconstruction.** 통과 pair만 `P₁=[I|0]`, `P₂=[[e′]×F|e′]` canonical camera pair에서 inlier point를 DLT triangulate한다. 이 결과는 projective gauge에 있으므로 metric world coordinate가 아니다.
 5. **Review quality.** inlier observation의 canonical reprojection median과 valid-frame ratio를 기록한다. frame 간 projective joint displacement는 temporal outlier detector일 뿐 bone length 검증이 아니다.
@@ -45,8 +45,12 @@ MediaPipe image landmark `z`는 second camera observation을 대체하지 않으
 
 ## Existing scripts after consolidation
 
-`run-uncalibrated-multiview-pipeline.py`가 새로운 execution entrypoint다. 기존 `align-*`, `debug-*` script는 historical diagnosis 또는 audit comparison에만 남고, player candidate admission을 직접 결정하지 않는다.
+`synchronize-pose-pair-multisignal.py`가 admissible correspondence entrypoint이며, `run-uncalibrated-multiview-pipeline.py --alignment`가 independent fixed-F/reprojection admission을 수행한다. 기존 `align-*`, `debug-*` script는 historical diagnosis 또는 audit comparison에만 남고, player candidate admission을 직접 결정하지 않는다.
 
 ## 2026-08-21 Curry·Paul George re-run
 
 The unified entrypoint was run on every available Curry landmark pair. `front-side`, `front-oblique`, and `side-oblique` produced global F inlier ratios of 0.10833, 0.15427, and 0.06962, respectively. None reached the 0.72 threshold, so the pipeline correctly stopped before projective triangulation and emitted zero candidate frames. The submitted Paul George clips remain pre-pipeline rejected because they are distinct Pacers and All-Star events. See [`../artifacts/unified-uncalibrated-run/run-summary.json`](../artifacts/unified-uncalibrated-run/run-summary.json).
+
+## 2026-08-21 Multi-signal synchronization re-run
+
+Release-pinned multi-signal matching changed the correspondence hypotheses before fixed-F admission. Curry `front-side`, `front-oblique`, and `side-oblique` then produced independent fixed-F inlier ratios of 0.21591, 0.63636, and 0.20202. The best pair remained below 0.72 and had only one temporal match, so all three were correctly rejected before projective triangulation. See [`../artifacts/multisignal-sync/run-summary.md`](../artifacts/multisignal-sync/run-summary.md).

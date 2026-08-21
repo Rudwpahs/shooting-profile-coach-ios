@@ -30,6 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--view-a", type=Path, required=True)
     parser.add_argument("--view-b", type=Path, required=True)
     parser.add_argument("--hand", choices=["right", "left"], default="right")
+    parser.add_argument("--alignment", type=Path, help="Optional release-pinned correspondence hypothesis from synchronize-pose-pair-multisignal.py")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--min-global-f-inlier-ratio", type=float, default=0.72)
     parser.add_argument("--min-frame-joint-inliers", type=int, default=20)
@@ -109,6 +110,29 @@ def release_pinned_pairs(a_frames: list[dict[str, Any]], b_frames: list[dict[str
     return unique, a_release, b_release
 
 
+def load_alignment(path: Path, a_count: int, b_count: int, hand: str) -> tuple[list[tuple[int, int]], int, int, str]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("kind") != "release_pinned_multisignal_epipolar_frame_sync":
+        raise ValueError(f"Unsupported alignment kind: {payload.get('kind')}")
+    anchor = payload.get("releaseAnchor", {})
+    if anchor.get("hand") != hand:
+        raise ValueError("Alignment shooting hand does not match reconstruction hand")
+    pairs = [(int(item["aIndex"]), int(item["bIndex"])) for item in payload.get("matchedFrames", [])]
+    if not pairs:
+        raise ValueError("Alignment contains no matched frames")
+    previous_a, previous_b = -1, -1
+    for a_index, b_index in pairs:
+        if not (0 <= a_index < a_count and 0 <= b_index < b_count):
+            raise ValueError("Alignment contains frame index outside input sequences")
+        if a_index <= previous_a or b_index <= previous_b:
+            raise ValueError("Alignment must be strictly monotonic and one-to-one")
+        previous_a, previous_b = a_index, b_index
+    anchor_a, anchor_b = int(anchor["aFrame"]), int(anchor["bFrame"])
+    if (anchor_a, anchor_b) not in pairs:
+        raise ValueError("Alignment release anchor is not included in matched frames")
+    return pairs, anchor_a, anchor_b, payload["kind"]
+
+
 def skew(vector: np.ndarray) -> np.ndarray:
     x, y, z = vector.reshape(3)
     return np.asarray([[0.0, -z, y], [z, 0.0, -x], [-y, x, 0.0]], dtype=float)
@@ -128,14 +152,14 @@ def project(matrix: np.ndarray, point: np.ndarray) -> np.ndarray:
     return homogeneous[:2] / homogeneous[2]
 
 
-def empty_output(args: argparse.Namespace, a: dict[str, Any], b: dict[str, Any], anchor_a: int, anchor_b: int, reason: str, fixed_f: dict[str, Any]) -> dict[str, Any]:
+def empty_output(args: argparse.Namespace, a: dict[str, Any], b: dict[str, Any], anchor_a: int, anchor_b: int, alignment_method: str, reason: str, fixed_f: dict[str, Any]) -> dict[str, Any]:
     return {
         "version": 1,
         "pairId": args.pair_id,
         "boundary": "uncalibrated_projective_3d_review_only",
         "state": "rejected",
         "source": {"views": [str(args.view_a), str(args.view_b)], "videoStored": False, "inputBoundaries": [a["boundary"], b["boundary"]]},
-        "alignment": {"method": "release_pinned_dtw", "releaseAnchor": {"aFrame": anchor_a, "bFrame": anchor_b, "hand": args.hand}},
+        "alignment": {"method": alignment_method, "releaseAnchor": {"aFrame": anchor_a, "bFrame": anchor_b, "hand": args.hand}},
         "fixedF": fixed_f,
         "frames": [],
         "quality": {"passed": False, "reasons": [reason]},
@@ -149,7 +173,11 @@ def main() -> int:
         raise SystemExit("--min-global-f-inlier-ratio must be in (0, 1]")
     a, b = load_candidate(args.view_a), load_candidate(args.view_b)
     a_frames, b_frames = a["frames"], b["frames"]
-    matched, a_release, b_release = release_pinned_pairs(a_frames, b_frames, args.hand)
+    if args.alignment:
+        matched, a_release, b_release, alignment_method = load_alignment(args.alignment, len(a_frames), len(b_frames), args.hand)
+    else:
+        matched, a_release, b_release = release_pinned_pairs(a_frames, b_frames, args.hand)
+        alignment_method = "release_pinned_dtw"
     observations_a = np.concatenate([points(a_frames[index_a]) for index_a, _ in matched]) - np.asarray([0.5, 0.5])
     observations_b = np.concatenate([points(b_frames[index_b]) for _, index_b in matched]) - np.asarray([0.5, 0.5])
     fundamental, mask = cv2.findFundamentalMat(observations_a, observations_b, cv2.FM_RANSAC, 0.003, 0.99)
@@ -157,9 +185,9 @@ def main() -> int:
     inlier_ratio = float(np.count_nonzero(inlier_mask) / max(len(observations_a), 1))
     fixed_f = {"state": "fitted" if fundamental is not None and fundamental.shape == (3, 3) else "failed", "correspondences": int(len(observations_a)), "inliers": int(np.count_nonzero(inlier_mask)), "inlierRatio": round(inlier_ratio, 5), "minimumInlierRatio": args.min_global_f_inlier_ratio}
     if fundamental is None or fundamental.shape != (3, 3):
-        payload = empty_output(args, a, b, a_release, b_release, "fixed_f_fit_failed", fixed_f)
+        payload = empty_output(args, a, b, a_release, b_release, alignment_method, "fixed_f_fit_failed", fixed_f)
     elif inlier_ratio < args.min_global_f_inlier_ratio:
-        payload = empty_output(args, a, b, a_release, b_release, "fixed_f_inlier_ratio_below_threshold", fixed_f)
+        payload = empty_output(args, a, b, a_release, b_release, alignment_method, "fixed_f_inlier_ratio_below_threshold", fixed_f)
     else:
         first, second = canonical_cameras(fundamental)
         frames: list[dict[str, Any]] = []
@@ -200,7 +228,7 @@ def main() -> int:
             "boundary": "uncalibrated_projective_3d_review_only",
             "state": "review_only_projective_3d" if not reasons else "rejected",
             "source": {"views": [str(args.view_a), str(args.view_b)], "videoStored": False, "inputBoundaries": [a["boundary"], b["boundary"]]},
-            "alignment": {"method": "release_pinned_dtw", "releaseAnchor": {"aFrame": a_release, "bFrame": b_release, "hand": args.hand}, "matchedFrameCount": len(matched)},
+            "alignment": {"method": alignment_method, "releaseAnchor": {"aFrame": a_release, "bFrame": b_release, "hand": args.hand}, "matchedFrameCount": len(matched)},
             "fixedF": fixed_f,
             "frames": frames if not reasons else [],
             "quality": {"passed": not reasons, "validProjectiveFrameRatio": round(frame_ratio, 5), "medianCanonicalReprojectionError": round(median_error, 7) if np.isfinite(median_error) else None, "reasons": reasons},

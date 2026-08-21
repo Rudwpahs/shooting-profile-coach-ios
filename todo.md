@@ -119,3 +119,5 @@
 - [x] Paul George의 짧은 고품질 source를 frame-rate 보존 extraction으로 재처리해 실제 skeleton temporal density 확보
 - [x] Motion Studio·Library에서 Curry·Paul George 2D skeleton을 optical 3D viewer보다 먼저 표시
 - [x] 실제 source 2D skeleton을 canvas 내 fit-to-frame으로 확대해 두 선수 관절 형상을 즉시 읽을 수 있게 보정
+- [x] Curry·Paul George source pair의 동일 순간을 multi-signal frame matching으로 정렬 — Curry 3 pair 실행, Paul George는 다른 event로 pre-pair 제외
+- [x] 새 frame correspondence가 fixed-F gate와 uncalibrated reconstruction admission에 미치는 영향 재검증 — Curry 최고 63.636%/1 frame으로 72% gate 미달, candidate 0개
