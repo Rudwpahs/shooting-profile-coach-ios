@@ -27,10 +27,11 @@ type PoseMotionViewerProps = {
   boundary?: string;
   hand?: "auto" | "right" | "left";
   activeFrameIndex?: number;
+  sourcePhaseFrames?: number[];
   onPhaseSelect?: (index: number) => void;
 };
 
-export function PoseMotionViewer({ motion, title, boundary, hand = "right", activeFrameIndex, onPhaseSelect }: PoseMotionViewerProps) {
+export function PoseMotionViewer({ motion, title, boundary, hand = "right", activeFrameIndex, sourcePhaseFrames, onPhaseSelect }: PoseMotionViewerProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const presets = useMemo(() => getPoseCameraPresets(motion, hand), [motion, hand]);
@@ -99,7 +100,7 @@ export function PoseMotionViewer({ motion, title, boundary, hand = "right", acti
   const displayTitle = title ?? "ACTUAL MOTION";
   const boundaryCopy = boundary ?? "실제 source motion에서 변환된 관절 데이터입니다. source 승인·관절 품질 상태는 모션별 기록을 따릅니다.";
   return <View style={styles.card}>
-    <View style={styles.header}><View><Text style={styles.eyebrow}>MOTION VIEW</Text><Text style={styles.title}>{displayTitle} · {frame.label}</Text></View><Text style={styles.phase}>{visibleFrameIndex + 1}/{motion.frames.length}</Text></View>
+    <View style={styles.header}><View style={styles.titleWrap}><Text style={styles.eyebrow}>MOTION VIEW</Text><Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{displayTitle} · {frame.label}</Text></View><View style={styles.phaseStack}><Text style={styles.phase}>{visibleFrameIndex + 1}/{motion.frames.length}</Text>{sourcePhaseFrames?.[visibleFrameIndex] ? <Text style={styles.sourceFrame}>SRC {sourcePhaseFrames[visibleFrameIndex]}</Text> : null}</View></View>
     <View style={[styles.stage, isInteracting && styles.stageInteracting]} {...panResponder.panHandlers}>
       <Svg width="100%" height={270} viewBox="0 0 330 270">
         <Line x1="22" y1="243" x2="308" y2="243" stroke="#21445B" strokeWidth="1" strokeDasharray="4 5" />
@@ -117,7 +118,7 @@ export function PoseMotionViewer({ motion, title, boundary, hand = "right", acti
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: "#F8FAFC", borderColor: "#DBE3EE", borderRadius: 0, borderWidth: 2, gap: 12, overflow: "hidden", padding: 14 }, header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" }, eyebrow: { color: "#EA580C", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.2 }, title: { color: "#1E3A5F", fontFamily: "BarlowCondensed-Bold", fontSize: 20, letterSpacing: 0.4, marginTop: 2, textTransform: "uppercase" }, phase: { color: "#64748B", fontFamily: "Barlow-SemiBold", fontSize: 12 },
+  card: { backgroundColor: "#F8FAFC", borderColor: "#DBE3EE", borderRadius: 0, borderWidth: 2, gap: 12, overflow: "hidden", padding: 14 }, header: { alignItems: "center", flexDirection: "row", gap: 8 }, titleWrap: { flex: 1, minWidth: 0 }, eyebrow: { color: "#EA580C", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.2 }, title: { color: "#1E3A5F", fontFamily: "BarlowCondensed-Bold", fontSize: 18, letterSpacing: 0.25, marginTop: 2, textTransform: "uppercase" }, phaseStack: { alignItems: "flex-end", minWidth: 47 }, phase: { color: "#64748B", fontFamily: "Barlow-SemiBold", fontSize: 12 }, sourceFrame: { color: "#16A34A", fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 0.1, marginTop: 2 },
   stage: { alignItems: "center", backgroundColor: "#EFF6FF", borderColor: "#1E3A5F", borderRadius: 0, borderWidth: 2, minHeight: 270, overflow: "hidden" }, stageInteracting: { borderColor: "#F97316" }, dragHint: { color: "#64748B", fontFamily: "Barlow-SemiBold", fontSize: 11, marginBottom: 10, marginTop: -12 },
   angleRow: { flexDirection: "row", gap: 8 }, angleButton: { alignItems: "center", borderColor: "#DBE3EE", borderRadius: 0, borderWidth: 2, flex: 1, minHeight: 36, justifyContent: "center" }, angleActive: { backgroundColor: "#FFF7ED", borderColor: "#F97316" }, angleText: { color: "#1E3A5F", fontFamily: "BarlowCondensed-Bold", fontSize: 13, letterSpacing: 0.4 }, angleTextActive: { color: "#EA580C" },
   zoomRow: { alignItems: "stretch", flexDirection: "row", gap: 8 }, zoomButton: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#DBE3EE", borderWidth: 2, justifyContent: "center", minWidth: 42 }, zoomButtonText: { color: "#1E3A5F", fontFamily: "BarlowCondensed-Bold", fontSize: 23, lineHeight: 24 }, zoomReadout: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#DBE3EE", borderWidth: 2, flex: 1, flexDirection: "row", justifyContent: "center", gap: 7, minHeight: 40 }, zoomLabel: { color: "#64748B", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 0.8 }, zoomValue: { color: "#1E3A5F", fontFamily: "BarlowCondensed-Bold", fontSize: 17 }, resetButton: { alignItems: "center", borderColor: "#1E3A5F", borderWidth: 2, justifyContent: "center", minWidth: 62 }, resetText: { color: "#1E3A5F", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 0.4 },

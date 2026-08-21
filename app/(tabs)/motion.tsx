@@ -13,9 +13,9 @@ export default function MotionStudioScreen() {
     <View style={styles.background}><View style={styles.orbitOrange} /><View style={styles.orbitGreen} /></View>
     <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
       <View style={styles.topRow}><View><Text style={styles.eyebrow}>MOTION STUDIO</Text><Text style={styles.title}>3D 스켈레톤</Text></View><View style={styles.live}><View style={styles.liveDot} /><Text style={styles.liveText}>ACTUAL 3D</Text></View></View>
-      <Text style={styles.lead}>정면·사선·측면은 실제 슛 진행 방향과 슈팅 팔을 기준으로 정렬됩니다. 회전·확대·단계 선택으로 릴리스와 팔로우스루를 확인하세요.</Text>
+      <Text style={styles.lead}>정면·사선·측면은 릴리스 frame의 실제 어깨선과 슈팅 팔을 기준으로 정렬됩니다. 단계마다 표시되는 SRC 번호로 원본 C3D marker frame을 추적할 수 있습니다.</Text>
       <View style={styles.prototypeBadge}><MaterialIcons name="science" size={15} color="#9A3412" /><Text style={styles.prototypeText}>PROTOTYPE · {reference.prototypeDisplayName}</Text></View>
-      <View style={styles.viewerWrap}><PoseMotionViewer motion={reference.motion} title={reference.prototypeDisplayName ? `${reference.prototypeDisplayName} · Prototype` : reference.shortLabel} boundary="프로토타입 비교 레이블만 선수명으로 표시합니다. 현재 모션 데이터의 실제 출처는 익명 CMU optical-mocap이며, Stephen Curry의 실측 3D라고 주장하지 않습니다." hand="right" /></View>
+      <View style={styles.viewerWrap}><PoseMotionViewer motion={reference.motion} title={reference.prototypeDisplayName ? `${reference.prototypeDisplayName} · Prototype` : reference.shortLabel} boundary="프로토타입 비교 레이블만 선수명으로 표시합니다. 현재 모션 데이터의 실제 출처는 익명 CMU optical-mocap이며, Stephen Curry의 실측 3D라고 주장하지 않습니다." hand="right" sourcePhaseFrames={reference.sourcePhaseFrames} /></View>
       <View style={styles.sourceCard}><View style={styles.sourceIcon}><MaterialIcons name="verified" size={20} color="#16A34A" /></View><View style={styles.sourceTextWrap}><Text style={styles.sourceTitle}>승인된 실제 모션 {ANONYMOUS_POSE_LIBRARY_STATUS.profileCount}개</Text><Text style={styles.sourceCopy}>{reference.sourceAttribution}</Text></View></View>
       <Pressable onPress={() => router.navigate("/profile" as never)} style={({ pressed }) => [styles.compareButton, pressed && styles.pressed]}><MaterialIcons name="person-outline" size={18} color="#FFFFFF" /><Text style={styles.compareText}>내 스켈레톤과 비교하기</Text></Pressable>
     </ScrollView>

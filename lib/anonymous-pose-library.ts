@@ -16,6 +16,8 @@ export type AnonymousPoseReference = {
   sourceSequenceStatus: SourceSequenceStatus;
   motion: PoseMotion;
   sourceAttribution: string;
+  /** Source C3D frames paired in order with the five product shot phases. */
+  sourcePhaseFrames?: number[];
   /** Temporary UI-only label. It never changes measured motion provenance. */
   prototypeDisplayName?: string;
 };
@@ -34,6 +36,7 @@ export const ANONYMOUS_POSE_REFERENCES: AnonymousPoseReference[] = [
     sourceSequenceStatus: "approved_actual_optical_mocap",
     motion: cmuShoot01,
     sourceAttribution: "CMU Graphics Lab Motion Capture Database · licensed optical marker data · anonymous source",
+    sourcePhaseFrames: [269, 317, 335, 353, 385],
     prototypeDisplayName: "Stephen Curry",
   },
 ];

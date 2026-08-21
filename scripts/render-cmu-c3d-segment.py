@@ -32,6 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--center-frame", type=int, required=True, help="C3D source frame number")
+    parser.add_argument("--frames", help="Optional comma-separated C3D source frame numbers to render instead of center offsets.")
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
@@ -43,16 +44,22 @@ def main() -> int:
     labels = [str(label) for label in c3d["parameters"]["POINT"]["LABELS"]["value"]]
     first_frame = int(c3d["header"]["points"]["first_frame"])
     center = args.center_frame - first_frame
-    offsets = [-72, -36, 0, 36, 72]
+    if args.frames:
+        source_frames = [int(value.strip()) for value in args.frames.split(",") if value.strip()]
+        if len(source_frames) < 2:
+            raise SystemExit("--frames requires at least two comma-separated source frame numbers")
+        selected_frames = [min(max(frame - first_frame, 0), points.shape[2] - 1) for frame in source_frames]
+    else:
+        offsets = [-72, -36, 0, 36, 72]
+        selected_frames = [min(max(center + offset, 0), points.shape[2] - 1) for offset in offsets]
     resolved: dict[str, list[int]] = {}
     for joint, suffixes in JOINT_MARKERS.items():
         resolved[joint] = [next(index for index, label in enumerate(labels) if label.strip().split(":")[-1] == suffix.removeprefix(":")) for suffix in suffixes]
 
-    figure = plt.figure(figsize=(15, 3.4))
-    for panel, offset in enumerate(offsets, start=1):
-        frame = min(max(center + offset, 0), points.shape[2] - 1)
+    figure = plt.figure(figsize=(3 * len(selected_frames), 3.4))
+    for panel, frame in enumerate(selected_frames, start=1):
         joints = {joint: np.nanmean(points[:3, indexes, frame], axis=1) for joint, indexes in resolved.items()}
-        axes = figure.add_subplot(1, len(offsets), panel, projection="3d")
+        axes = figure.add_subplot(1, len(selected_frames), panel, projection="3d")
         for left, right in EDGES:
             line = np.stack((joints[left], joints[right]))
             axes.plot(line[:, 0], line[:, 1], line[:, 2], color="#f97316", linewidth=2.6)

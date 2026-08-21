@@ -34,18 +34,20 @@ export function normalizePoseYaw(value: number) {
 }
 
 /**
- * Builds named camera views from the measured release-to-follow direction.
- * Front faces the shooter, and side is the shooting-arm side — not an
- * arbitrary world-axis value. This works for optical-mocap and mirrors for
- * a left-handed viewer without changing the source joints.
+ * Builds named camera views from the measured shoulder line at release.
+ * A wrist's release-to-follow displacement is a motion vector, not the
+ * athlete's facing direction, so it must not define front or side. Front
+ * makes the measured shoulder line horizontal on screen; side is the
+ * shooting-arm side. This works for optical-mocap and mirrors for a
+ * left-handed viewer without changing the source joints.
  */
 export function getPoseCameraPresets(motion: PoseMotion, hand: "auto" | "right" | "left" = "right"): PoseCameraPreset[] {
-  const release = motion.frames.find((frame) => frame.label === "릴리스")?.joints.rightWrist ?? motion.frames[0]?.joints.rightWrist;
-  const follow = motion.frames.find((frame) => frame.label === "팔로우스루")?.joints.rightWrist ?? motion.frames.at(-1)?.joints.rightWrist;
-  const deltaX = (follow?.x ?? 0) - (release?.x ?? 0);
-  const deltaZ = (follow?.z ?? 0) - (release?.z ?? 1);
-  const shotYaw = Math.hypot(deltaX, deltaZ) < 0.05 ? 0 : (Math.atan2(deltaX, deltaZ) * 180) / Math.PI;
-  const frontYaw = normalizePoseYaw(shotYaw + 180);
+  const release = motion.frames.find((frame) => frame.label === "릴리스") ?? motion.frames[0];
+  const shoulderLineX = (release?.joints.rightShoulder.x ?? 1) - (release?.joints.leftShoulder.x ?? 0);
+  const shoulderLineZ = (release?.joints.rightShoulder.z ?? 0) - (release?.joints.leftShoulder.z ?? 0);
+  const frontYaw = Math.hypot(shoulderLineX, shoulderLineZ) < 0.05
+    ? 0
+    : normalizePoseYaw((Math.atan2(-shoulderLineZ, shoulderLineX) * 180) / Math.PI);
   const shootingArmOffset = hand === "left" ? 90 : -90;
   return [
     { id: "front", label: "정면", yaw: frontYaw },
