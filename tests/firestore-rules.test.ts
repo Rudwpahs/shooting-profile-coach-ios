@@ -14,6 +14,8 @@ describe("Firestore private pose rules", () => {
     expect(rules).toContain("match /poses/{poseId}");
     expect(rules).toContain("request.resource.data.poseJson.size() <= 900000");
     expect(rules).toContain("request.resource.data.qualityJson.size() <= 20000");
+    expect(rules).toContain("request.resource.data.correctedMotionJson.size() <= 450000");
+    expect(rules).toContain("request.resource.data.correctionJson.size() <= 20000");
     expect(rules).toContain("monocular_relative_pose_not_metric_3d");
     expect(rules).toContain("allow update: if false");
   });

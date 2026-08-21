@@ -21,6 +21,13 @@ service cloud.firestore {
           && request.resource.data.poseJson.size() <= 900000
           && request.resource.data.qualityJson is string
           && request.resource.data.qualityJson.size() <= 20000
+          && (!('correctedMotionJson' in request.resource.data)
+            || (request.resource.data.correctedMotionJson is string
+              && request.resource.data.correctedMotionJson.size() <= 450000))
+          && (!('correctionJson' in request.resource.data)
+            || (request.resource.data.correctionJson is string
+              && request.resource.data.correctionJson.size() <= 20000))
+          && (('correctedMotionJson' in request.resource.data) == ('correctionJson' in request.resource.data))
           && request.resource.data.boundary == 'monocular_relative_pose_not_metric_3d';
         allow update: if false;
       }

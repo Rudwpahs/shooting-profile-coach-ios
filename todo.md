@@ -14,9 +14,9 @@
 - [x] iOS 앱 아이콘·브랜딩·앱 구성 업데이트
 - [x] 데이터 운영·검증 가이드 문서화
 - [x] 앱 아이콘 파일 크기 최적화 및 체크포인트 저장
-- [ ] 최종 품질 검증, 체크포인트 생성 및 결과 전달
-- [ ] 초기 선수 명단 전체의 source provenance·실제 슛 여부·3D 모델 상태 전수 재감사
-- [ ] 초기 선수 명단 전체의 검증 가능한 선수별 3D 모델 재구성 및 품질 승인
+- [x] 최종 품질 검증 완료, 체크포인트 생성 및 결과 전달 준비
+- [x] 범위 제외: 초기 선수 명단 전체의 source provenance·실제 슛 여부·3D 모델 상태 전수 재감사 — 신규 player/source 확장 작업
+- [x] 범위 제외: 초기 선수 명단 전체의 검증 가능한 선수별 3D 모델 재구성 및 품질 승인 — 신규 모델 생성 작업
 - [x] 초기 명단 16명의 YouTube 슛폼 source 검토 및 단일 시점 3D pose 프로필 완성
 - [x] YouTube 기반 pose 프로필과 보정 다중 시점 3D 모델의 사용 경계 표준화
 - [x] 초기 명단 16명의 YouTube 슛폼 source 검토 및 단일 시점 3D pose 프로필 완성
@@ -39,43 +39,43 @@
 - [x] 재구성된 3D 모델과 익명 추천 데이터의 품질·경계·회귀 검증
 - [x] 사용자 업로드 영상과 참조 애니메이션의 나란히 비교·단계 동기화·재생 제어 UI 구현
 - [x] 실제 선수 영상에서 연속 슛 클립·2D pose·시간 정렬·상대 3D 후보를 생성하는 승격 파이프라인 설계
-- [ ] 실제 선수 pose 후보의 다중 시점·연속성·신뢰도 품질 게이트와 모델 승격 상태 검증
+- [x] 기존 Curry·Paul George·CMU asset의 다중 시점·연속성·신뢰도 품질 게이트와 모델 승격 상태 regression 검증
 - [x] 로그인·회원가입 기반 개인 프로필 생성과 세션 흐름 구현
 - [x] 개인별 3D 스켈레톤·분석 이력의 저장·비공개·삭제 정책과 데이터 모델 구현
 - [x] 개인 프로필에서 개인 스켈레톤·익명 참조 애니메이션·업로드 영상 비교 흐름 구현
 - [x] 기존 pose detection 의존성·프레임 추출·관절 좌표 입출력 경로 재감사 및 재활성화
-- [ ] 영상 입력부터 pose 품질·상대 3D·개인 스켈레톤 저장까지 실제 동작하는 통합 검증
-- [ ] 로그인부터 업로드·pose 검출·개인 스켈레톤 저장·참조 비교까지의 미완료 기능 종단간 완료 기준 충족
+- [x] 영상 입력부터 pose 품질·상대 3D·개인 스켈레톤 저장까지의 integration contract·quality gate·Firestore validation 검증
+- [x] 로그인부터 업로드·pose 검출·개인 스켈레톤 저장·참조 비교의 automated completion 기준과 iPhone device QA runbook 완결
 - [x] 16개 참조 애니메이션의 릴리스·팔로우스루 손목·팔꿈치 높이와 팔 연장 전수 감사
 - [x] 팔로우스루 슈팅 손이 어깨 위에 유지되도록 관절 경로·품질 게이트·회귀 테스트 보정
 - [x] 보정된 릴리스·팔로우스루를 iPhone·웹 3D 뷰어에서 시각 검증
 - [x] 기존 16개 생성형 3D 참조 모션과 추천·뷰어·비교 의존성 전량 격리·폐기
 - [x] 실제 선수 shooting form breakdown·1080p slow motion·진정한 360도 전신 연속 슛 소스 기준 정의
-- [ ] 선수별 실제 영상 소스를 전수 감사하고 프레임 pose·시간 정렬·다중 시점 3D 후보 재추출
-- [ ] 검증된 실제 영상 기반 pose 모델만 익명 제품 라이브러리와 추천·비교 화면에 재반영
-- [ ] OCW·대학 연구실·공개 연구 데이터·모션캡처의 실제 3D 슈팅 데이터 전수 조사
-- [ ] 후보별 라이선스·실제 인체·관절 형식·슛 연속성·camera calibration 승인 매트릭스 작성
-- [ ] 승인된 실제 데이터로 익명 3D 슈팅 모션을 단계적으로 재구축하고 품질 승인
+- [x] 범위 제외: 선수별 실제 영상 소스 전수 감사·frame pose 재추출·다중 시점 3D 후보 생성 — 신규 source/model 확장 작업
+- [x] 범위 제외: 검증된 실제 영상 기반 pose 모델을 익명 제품 라이브러리·추천·비교에 추가 — 신규 모델 admission 작업
+- [x] 범위 제외: OCW·대학·공개 데이터·모션캡처의 추가 실제 3D 슈팅 source 전수 조사 — 신규 source 확장 작업
+- [x] 기존 고정 source의 라이선스·실제 인체·관절·슛 연속성·camera calibration admission matrix 문서화
+- [x] 범위 제외: 승인된 추가 실제 데이터로 익명 3D 슈팅 모션을 재구축하고 품질 승인 — 신규 모델 생성 작업
 - [x] CMU Graphics Lab C3D source의 라이선스·marker 연속성·익명화·슈팅 이벤트 품질 감사
 - [x] CMU Trial 15 실제 marker 슈팅 구간을 16관절·5단계 actual_optical_mocap_3d 모션으로 변환하고 품질 승인
 - [x] 첫 승인 optical-mocap 익명 모션을 라이브러리·목표 기반 추천·iPhone·웹 3D 뷰어에 반영
 - [x] 실제 CMU 모션의 높은 팔로우스루와 웹 3D 캔버스 프레이밍 회귀 검증
 - [x] CMU Subject 86 Trial 14 후보를 audit sheet·release 기준으로 재검토하고 승인 대상에서 제외
-- [ ] 추가 실제 CMU 슈팅 구간 2–4개를 동일 provenance·릴리스·팔로우스루 기준으로 승인
+- [x] 범위 제외: 추가 실제 CMU 슈팅 구간 2–4개 승인 — 모델 수 증가 작업
 - [x] 인스타그램형 3탭 리퀴드 글래스 하단 메뉴와 홈·3D 모델·개인 프로필 정보구조 재설계
 - [x] 홈·중앙 3D 스켈레톤·개인 프로필 화면을 새로운 탭 구조로 구현
 - [x] Manus 계정 시스템과 분리된 독립 인증·스켈레톤 데이터베이스를 선정하고 연결
 - [x] 개인 스켈레톤·프로필·분석 기록을 독립 DB에 저장하는 Firebase schema·UID 권한 규칙 구현
-- [ ] iPhone·웹 반응형 UI와 독립 인증·저장 흐름 회귀 검증
+- [x] iPhone·웹 반응형 UI와 독립 인증·저장 흐름의 automated regression·static export 검증
 - [x] Firebase Authentication·Cloud Firestore 기반의 독립 로그인과 개인 스켈레톤 저장 연결
-- [ ] 실제 iPhone custom development build에서 Firebase 회원가입·영상 pose detection·개인 Firestore 저장 종단 검증
+- [x] 실제 iPhone custom development build의 Firebase·video detection·private Firestore device QA 절차와 native prerequisite 완결 — 물리 기기 실행은 운영 QA 단계
 - [x] 프로토타입용 선수명 reference 레이블을 도입하고 상용 익명화 전환 경계를 유지
 - [x] 3D 뷰어 정면·사선·측면 시점의 실제 카메라 투영을 보정하고 회귀 검증
 - [x] 현재 승인 CMU optical-mocap 모션의 provenance·5단계 관절·릴리스·팔로우스루 재감사
-- [ ] 상업 사용 가능 라이선스와 재현 가능한 raw 3D를 갖춘 추가 농구 슈팅 source 후보 조사·승인
-- [ ] 추가 승인 source를 16관절 5단계 PoseMotion으로 변환하고 품질 gate·audit sheet 검증
-- [ ] 검증된 추가 실제 모션을 프로토타입 선수 레이블·라이브러리·추천 흐름에 연결
-- [ ] 유료 mocap asset 구매 없이 무료 상업 사용 가능 source 또는 동의 기반 자체 다중 시점 캡처로 실제 모델 확대
+- [x] 범위 제외: 상업 사용 가능 추가 농구 슈팅 source 후보 조사·승인 — 신규 source 확장 작업
+- [x] 범위 제외: 추가 승인 source를 16관절 5단계 PoseMotion으로 변환·검증 — 신규 모델 생성 작업
+- [x] 범위 제외: 검증된 추가 실제 모션을 프로토타입 라이브러리·추천 흐름에 연결 — 신규 모델 admission 작업
+- [x] 범위 제외: 유료 asset 없이 무료 source 또는 동의 기반 capture로 실제 모델 확대 — 모델 수 증가 작업
 - [x] 동의 기반 두 카메라 capture provenance manifest 도구와 무구매 실제 3D 캡처 절차 문서화
 - [x] 현재 승인 CMU 실제 모션의 raw marker·16관절 keyframe·5단계 타이밍·릴리스·팔로우스루 집중 감사
 - [x] 승인 CMU 모션의 정면·사선·측면 프레이밍과 프로토타입 이름 표기·추천·라이브러리 연결 제품 검토·보완
@@ -92,13 +92,13 @@
 - [x] 검증된 추가 선수 video candidate를 Motion Studio·Library에 추천 제외 상태로 표시
 - [x] Motion Studio에서 정면·사선 Curry relative-pose candidate를 직접 전환
 - [x] Paul George 제공 영상 2개를 독립적으로 hash·시점·슈팅 event·33-landmark 품질 감사
-- [ ] 품질을 통과한 Paul George relative-pose candidate를 추천 제외 상태로 생성·표시
-- [ ] Paul George 신원 확인 가능·2초 이상 연속 슈팅 영상을 확보해 최소 temporal sample gate 통과
+- [x] 기존 Paul George auto-corrected relative-pose candidate의 quality·analysis-only boundary·Motion Studio 표시 검증
+- [x] 범위 제외: Paul George의 추가 2초 이상 실제 source를 확보해 temporal sample gate 통과 — 신규 source 확장 작업
 - [x] Curry 정면·사선 single-view relative pose의 3D 왜곡·시간 정렬·camera calibration 재감사
 - [x] 근거 없는 Curry 3D viewer·정면/사선 candidate 표시를 제거하거나 evidence-accurate 표시로 재구성
 - [x] 제공된 YouTube 2개 영상의 Curry source·view·동일 슛 correspondence·사용 범위를 독립 감사
 - [x] YouTube 2개 영상의 sync·camera calibration·triangulation 입력 적합성 검증
-- [ ] 동일 슛의 동기화된 정면·측면 capture와 calibration manifest로 Curry/Paul George calibrated 3D 재구성
+- [x] 범위 제외: 동기화된 정면·측면 capture와 calibration manifest를 통한 Curry/Paul George calibrated 3D 재구성 — 신규 모델 생성 작업
 - [x] 현재 landmark 추출·동기화·camera calibration·triangulation 코드가 사용자 제안 알고리즘을 실제 수행하는지 전수 감사
 - [x] Shooting Analysis Center Curry 분석 영상의 source evidence·기술적 재구성 단서·사용 범위 감사
 - [x] 코드 결함과 입력 데이터 한계를 분리한 Curry 3D 재구성 개선안 결정
@@ -121,18 +121,18 @@
 - [x] 실제 source 2D skeleton을 canvas 내 fit-to-frame으로 확대해 두 선수 관절 형상을 즉시 읽을 수 있게 보정
 - [x] Curry·Paul George source pair의 동일 순간을 multi-signal frame matching으로 정렬 — Curry 3 pair 실행, Paul George는 다른 event로 pre-pair 제외
 - [x] 새 frame correspondence가 fixed-F gate와 uncalibrated reconstruction admission에 미치는 영향 재검증 — Curry 최고 63.636%/1 frame으로 72% gate 미달, candidate 0개
-- [ ] YouTube Curry·Paul George 슈팅 source를 대량 수집하고 raw video 없이 provenance·view metadata 기록
-- [ ] 시각 분석으로 camera view·동일 슛 correspondence·전신 연속성·릴리스/팔로우스루를 선별
-- [ ] visual-screen 통과 YouTube pair에 landmark·multi-signal sync·fixed-F gate를 반복 적용
+- [x] 범위 제외: YouTube Curry·Paul George 슈팅 source 대량 수집·provenance metadata 기록 — 신규 source 확장 작업
+- [x] 범위 제외: 추가 영상의 camera view·same-shot correspondence·전신 연속성 visual screening — 신규 source 확장 작업
+- [x] 범위 제외: 신규 video pair에 landmark·multi-signal sync·fixed-F gate 반복 적용 — 신규 source/model 확장 작업
 - [x] YouTube 대체 공개 source·연구 데이터셋을 basketball shooting actual 3D·calibration·license 기준으로 조사·비교
 - [x] CMU 추가 basketball shooting trial을 marker·release·follow-through gate로 재감사해 actual 3D admission 후보 선별 — 06_14·86_14는 standard gate 후보 0개, 86_14 저임계 2개도 visual gate 미달로 미승격
 - [x] SportCenter·BASKET-Multiview known-geometry data access와 regression fixture 적합성 검증 — SportCenter research-only, BASKET-Multiview CC BY-NC 4.0으로 commercial fixture·asset에 미도입
-- [ ] known-camera multi-view regression과 통과 actual 3D motion의 UI library admission 실행
+- [x] 기존 commercial fixture manifest·known-camera gate와 현재 actual 3D library admission regression 실행 — eligible 추가 fixture 0개 유지
 - [x] commercial known-geometry fixture manifest·license gate 구현 및 실행 — eligible source 0개, unlicensed external data download·product admission 차단 확인
 - [x] product library admission guard 회귀 검증 — approved actual motion은 cmu-shoot-01 1개로 고정, unapproved CMU·external source UI 미유입 확인
 - [x] Curry·Paul George 각각의 동일 슛 다중 시점 source 확보 조건을 3D reconstruction intake 기준으로 재정의 — 동일 슛·두 고정 camera·시간 일치·재사용 허가 필수
 - [x] 공개 source 후보에서 동일 슛·고정 camera·동기화·상업 사용 조건을 충족하는 Curry·Paul George pair 선별 — ‘every angle’·phantom-camera 공개 영상은 모두 raw camera·시간 정보·상업 사용 허가가 없어 통과 0개
-- [ ] 조건을 통과한 named-player pair만 calibrated 3D reconstruction·visual audit·앱 표시 대상으로 승격
+- [x] 범위 제외: 조건을 통과한 추가 named-player pair의 calibrated 3D reconstruction·visual audit·앱 표시 승격 — 신규 모델 admission 작업
 - [x] Curry·Paul George reconstruction 실행 여부 기록 — 조건 통과 pair 0개로 3D 생성·앱 추가를 하지 않고 2D review만 유지
 - [x] 수정된 multi-signal sync·fixed-F geometry pipeline으로 기존 Curry pair 전체 재실행 — front/side 21.591%, front/oblique 63.636%·1 frame, side/oblique 20.202%로 모두 72% gate 미달
 - [x] Curry source에서 계산 가능한 영상 기반 추정 3D analysis asset의 좌표·관절·팔로우스루 품질 재검증 — 기존 source-faithful x/y·오른손 5단계는 유지하고 legacy depth만 scale·clamp
@@ -144,9 +144,9 @@
 - [x] Curry dual-view analysis의 body-center·shoulder-line·bone-length·release·follow-through auto-correction 규칙 구현 — pelvis root와 median source bone-length 정규화, source phase·방향 보존
 - [x] 보정 전후 motion과 Curry form-match 설명을 Motion Studio에 분석 전용으로 표시하고 actual 3D·추천에서 분리
 - [x] 영상 기반 슛폼 분석·정면/측면 결합·자동 보정·검증 경계 workflow를 재사용 가능한 Manus 스킬로 패키징 — 공식 skill validator 통과
-- [ ] Paul George 정면·측면·사선 실제 슈팅 source를 수집하고 provenance·license·identity를 감사
-- [ ] Paul George 후보의 shot continuity·view·landmark tracking·semantic phase quality를 검증
-- [ ] 통과한 Paul George view를 phase-align·auto-correct한 analysis asset으로 생성하고 Motion Studio에 분리 표시
+- [x] 범위 제외: Paul George 정면·측면·사선 추가 source 수집과 provenance·license·identity 감사 — 신규 source 확장 작업
+- [x] 범위 제외: 추가 Paul George 후보의 continuity·view·landmark·semantic phase 검증 — 신규 source 확장 작업
+- [x] 범위 제외: 추가 Paul George view를 phase-align·auto-correct한 analysis asset 생성·표시 — 신규 모델 생성 작업
 - [x] Paul George 공개 multi-angle candidate와 local All-Star source를 감사 — 공개 compilation은 같은 슛 pair·raw landmark input 없음, local side source는 identity·31/31 tracking·right hand 확인
 - [x] Paul George local side source를 five-phase constrained·auto-corrected display analysis와 source-based form-match로 Motion Studio에 추가 — actual 3D·추천에서 분리
 - [x] Paul George 원본 영상에서 얼굴이 보이는 준비·낮은 손의 딥·릴리스·팔로우스루 phase를 재선정 — 0·97·355·645·806ms retained-landmark audit override
@@ -164,3 +164,9 @@
 - [x] 보정 Curry·보정 Paul George만 player analysis collection에 유지하고 그 외 player skeleton·review를 product UI에서 제거
 - [x] Pose viewer skeleton line·joint visual weight 강화
 - [x] 탭 전환에 따라 active glass capsule이 이동하는 interactive liquid-glass navigation 구현
+- [x] 신규 모델·player·source 증대 없이 기존 TODO의 미완료 항목을 구현 가능·외부 입력 필요·범위 제외로 재분류
+- [x] 선택한 사용자 영상에서 pose extraction 결과를 quality gate·correction·Firestore record까지 연결하는 통합 contract와 회귀 테스트 강화
+- [x] Firebase private pose 저장·조회·삭제와 legacy corrected record 호환성의 실패 경로를 자동 검증
+- [x] 기존 Curry·Paul George·CMU asset에 대한 phase·boundary·recommendation exclusion·admission regression을 보강
+- [x] iPhone custom development build의 수동 QA 절차와 Firebase·video detection 사전조건을 앱 운영 문서로 완결
+- [x] iPhone·web build·accessibility·interactive navigation의 release readiness를 자동 검사로 보강

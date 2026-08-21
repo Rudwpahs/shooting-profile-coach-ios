@@ -2,6 +2,7 @@ import type { User } from "firebase/auth";
 import { collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc, type Timestamp } from "firebase/firestore";
 
 import { firestore } from "@/lib/firebase";
+import { validateFirebasePrivatePoseInput, type FirebasePrivatePoseInput } from "@/lib/firebase-private-pose-contract";
 
 export type FirebasePrivatePose = {
   id: string;
@@ -27,7 +28,9 @@ export async function ensureFirebaseProfile(user: User) {
   }, { merge: true });
 }
 
-export async function saveFirebasePrivatePose(user: User, input: Omit<FirebasePrivatePose, "id" | "createdAt">) {
+export async function saveFirebasePrivatePose(user: User, input: FirebasePrivatePoseInput) {
+  const failures = validateFirebasePrivatePoseInput(input);
+  if (failures.length) throw new Error(`개인 pose 저장 데이터가 유효하지 않습니다: ${failures.join(", ")}`);
   const poseRef = doc(collection(requireFirestore(), "users", user.uid, "poses"));
   await setDoc(poseRef, { ...input, createdAt: serverTimestamp(), boundary: "monocular_relative_pose_not_metric_3d" });
   return poseRef.id;

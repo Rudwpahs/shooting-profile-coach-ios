@@ -7,6 +7,7 @@ import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { saveFirebasePrivatePose } from "@/lib/firebase-private-data";
 import { detectPoseFromSelectedVideo } from "@/lib/pose-detection";
 import { personalPoseToCorrectedMotion } from "@/lib/personal-pose";
+import { validateSelectedShootingVideo } from "@/lib/video-intake";
 
 type CaptureState = "idle" | "picking" | "detecting" | "saving" | "complete" | "error";
 
@@ -19,6 +20,13 @@ export function PrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> |
     if (!user) return;
     try {
       setState("picking");
+      setDetail("영상 접근 권한을 확인하는 중입니다.");
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setState("error");
+        setDetail("영상 선택 권한이 필요합니다. iPhone 설정에서 사진 접근을 허용한 뒤 다시 시도하세요.");
+        return;
+      }
       setDetail("영상 선택기를 여는 중입니다.");
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["videos"],
@@ -28,6 +36,8 @@ export function PrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> |
       });
       if (result.canceled || !result.assets[0]) { setState("idle"); setDetail("분석할 영상을 선택하지 않았습니다."); return; }
       const asset = result.assets[0];
+      const intakeFailure = validateSelectedShootingVideo(asset);
+      if (intakeFailure) { setState("error"); setDetail(intakeFailure); return; }
       setState("detecting");
       const output = await detectPoseFromSelectedVideo(asset.uri, (progress) => {
         setDetail(`포즈 추출 중 · ${progress.completed}/${progress.total} 프레임`);
@@ -64,7 +74,7 @@ export function PrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> |
   const working = state === "picking" || state === "detecting" || state === "saving";
   return <View style={styles.card}>
     <View style={styles.heading}><View><Text style={styles.title}>새 개인 스켈레톤</Text><Text style={styles.subtitle}>통과한 pose는 보수 보정 뒤 fluid motion으로 저장합니다.</Text></View><MaterialIcons name="video-library" size={22} color="#F97316" /></View>
-    <View style={styles.tip}><MaterialIcons name="tips-and-updates" size={17} color="#102C46" /><Text style={styles.tipText}>측면·전신·밝은 조명에서 2–20초 슈팅 영상을 선택하세요.</Text></View>
+    <View style={styles.tip}><MaterialIcons name="tips-and-updates" size={17} color="#102C46" /><Text style={styles.tipText}>측면·전신·밝은 조명에서 2–20초 슈팅 영상을 선택하세요. 추출은 iPhone custom development build에서 기기 안에서 실행됩니다.</Text></View>
     <Pressable disabled={working} onPress={() => void chooseAndAnalyze()} style={({ pressed }) => [styles.button, working && styles.disabled, pressed && styles.pressed]}>
       {working ? <ActivityIndicator color="#FFFFFF" /> : <MaterialIcons name="add-to-photos" size={18} color="#FFFFFF" />}<Text style={styles.buttonText}>{working ? "분석 중" : "영상 선택 후 분석"}</Text>
     </Pressable>
