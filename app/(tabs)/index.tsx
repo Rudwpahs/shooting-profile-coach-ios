@@ -11,21 +11,95 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const focus = getPracticeFocus(profile.goal);
-  return <ScreenContainer>
-    <View style={styles.background}><View style={styles.orangeArc} /><View style={styles.greenArc} /></View>
+  const goalLabel = profile.goal === "release" ? "릴리스" : profile.goal === "range" ? "거리" : profile.goal === "rhythm" ? "리듬" : "일관성";
+
+  return <ScreenContainer containerClassName="bg-background">
+    <View style={styles.canvas}><View style={styles.courtArc} /><View style={styles.courtLine} /></View>
     <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}><View><Text style={styles.eyebrow}>FORMPATH BASKETBALL</Text><Text style={styles.title}>오늘의 코트</Text></View><Pressable onPress={() => router.navigate("/profile" as never)} style={({ pressed }) => [styles.avatar, pressed && styles.pressed]} accessibilityLabel="프로필 열기"><MaterialIcons name="person" size={22} color="#102C46" /></Pressable></View>
-      <View style={styles.goalCard}><View style={styles.cardTop}><View style={styles.goalTag}><MaterialIcons name="bolt" size={15} color="#F97316" /><Text style={styles.goalTagText}>TODAY'S FOCUS</Text></View><MaterialIcons name="more-horiz" size={21} color="#61738A" /></View><Text style={styles.goalTitle}>{focus.title}</Text><Text style={styles.goalCopy}>{focus.detail}</Text><View style={styles.drill}><MaterialIcons name="sports-basketball" size={18} color="#102C46" /><Text style={styles.drillText}>{focus.drill}</Text></View><Pressable onPress={() => router.navigate("/motion" as never)} style={({ pressed }) => [styles.primary, pressed && styles.pressed]}><Text style={styles.primaryText}>3D 모션으로 확인</Text><MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" /></Pressable></View>
-      <View style={styles.sectionHead}><Text style={styles.sectionTitle}>나의 흐름</Text><Pressable onPress={() => router.navigate("/profile" as never)}><Text style={styles.link}>전체 보기</Text></Pressable></View>
-      <View style={styles.storyRow}><StatusOrb icon="view-in-ar" label="3D 모션" tint="#FFF7ED" color="#F97316" onPress={() => router.navigate("/motion" as never)} /><StatusOrb icon="add" label="새 분석" tint="#EFF6FF" color="#102C46" onPress={() => router.navigate("/motion" as never)} /><StatusOrb icon="lock-outline" label="비공개" tint="#F0FDF4" color="#16A34A" onPress={() => router.navigate("/profile" as never)} /></View>
-      <View style={styles.sectionHead}><Text style={styles.sectionTitle}>검증 상태</Text><Text style={styles.muted}>LIVE</Text></View>
-      <View style={styles.statusCard}><View style={styles.statusIcon}><MaterialIcons name="verified" size={22} color="#16A34A" /></View><View style={styles.statusCopy}><Text style={styles.statusTitle}>승인 실제 모션 {ANONYMOUS_POSE_LIBRARY_STATUS.profileCount}개</Text><Text style={styles.statusDetail}>{getGoalApplicationSummary(profile.goal)}</Text></View><Pressable onPress={() => router.navigate("/motion" as never)}><MaterialIcons name="chevron-right" size={25} color="#102C46" /></Pressable></View>
+      <View style={styles.header}>
+        <View><Text style={styles.kicker}>FORMPATH / PRACTICE</Text><Text style={styles.title}>오늘의 리듬</Text></View>
+        <Pressable onPress={() => router.navigate("/profile" as never)} style={({ pressed }) => [styles.profileButton, pressed && styles.pressed]} accessibilityLabel="내 기록 열기">
+          <MaterialIcons name="person-outline" size={23} color="#F5F1E8" />
+        </Pressable>
+      </View>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroGrid} />
+        <View style={styles.heroTop}><View style={styles.focusTag}><View style={styles.signalDot} /><Text style={styles.focusTagText}>TODAY'S FOCUS</Text></View><Text style={styles.goalNumber}>01</Text></View>
+        <Text style={styles.heroTitle}>{focus.title}</Text>
+        <Text style={styles.heroCopy}>{focus.detail}</Text>
+        <View style={styles.drillRow}><MaterialIcons name="sports-basketball" size={18} color="#F97316" /><Text style={styles.drillText}>{focus.drill}</Text></View>
+        <Pressable onPress={() => router.navigate("/motion" as never)} style={({ pressed }) => [styles.heroAction, pressed && styles.pressed]}>
+          <Text style={styles.heroActionText}>모션 분석 시작</Text><MaterialIcons name="arrow-forward" size={19} color="#0B1623" />
+        </Pressable>
+      </View>
+
+      <View style={styles.metrics}>
+        <Metric icon="track-changes" value={goalLabel} label="현재 목표" />
+        <Metric icon="verified" value={`${ANONYMOUS_POSE_LIBRARY_STATUS.profileCount}개`} label="검증 모션" />
+        <Metric icon="lock-outline" value="비공개" label="내 기록" />
+      </View>
+
+      <View style={styles.sectionHead}><View><Text style={styles.sectionKicker}>NEXT UP</Text><Text style={styles.sectionTitle}>다음 움직임</Text></View><Text style={styles.sectionIndex}>02 / 03</Text></View>
+      <View style={styles.actionStack}>
+        <ActionRow icon="accessibility-new" title="슛폼 분석" detail="Curry · Paul George 분석과 검증 모션을 확인합니다." tone="orange" onPress={() => router.navigate("/motion" as never)} />
+        <ActionRow icon="folder-shared" title="내 분석 보관함" detail="저장한 개인 스켈레톤과 계정 상태를 관리합니다." tone="mint" onPress={() => router.navigate("/profile" as never)} />
+      </View>
+
+      <View style={styles.statusStrip}><View style={styles.statusIcon}><MaterialIcons name="verified" size={18} color="#1D9B77" /></View><View style={styles.statusTextWrap}><Text style={styles.statusEyebrow}>VERIFIED REFERENCE</Text><Text style={styles.statusText}>{getGoalApplicationSummary(profile.goal)}</Text></View><MaterialIcons name="chevron-right" size={23} color="#F5F1E8" /></View>
     </ScrollView>
   </ScreenContainer>;
 }
 
-function StatusOrb({ icon, label, tint, color, onPress }: { icon: React.ComponentProps<typeof MaterialIcons>["name"]; label: string; tint: string; color: string; onPress: () => void }) { return <Pressable onPress={onPress} style={({ pressed }) => [styles.story, pressed && styles.pressed]}><View style={[styles.storyIcon, { backgroundColor: tint }]}><MaterialIcons name={icon} size={23} color={color} /></View><Text style={styles.storyLabel}>{label}</Text></Pressable>; }
+function Metric({ icon, value, label }: { icon: React.ComponentProps<typeof MaterialIcons>["name"]; value: string; label: string }) {
+  return <View style={styles.metric}><MaterialIcons name={icon} size={18} color="#F97316" /><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>;
+}
+
+function ActionRow({ icon, title, detail, tone, onPress }: { icon: React.ComponentProps<typeof MaterialIcons>["name"]; title: string; detail: string; tone: "orange" | "mint"; onPress: () => void }) {
+  return <Pressable onPress={onPress} style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}><View style={[styles.actionIcon, tone === "mint" && styles.actionIconMint]}><MaterialIcons name={icon} size={23} color={tone === "mint" ? "#1D9B77" : "#F97316"} /></View><View style={styles.actionCopy}><Text style={styles.actionTitle}>{title}</Text><Text style={styles.actionDetail}>{detail}</Text></View><MaterialIcons name="arrow-forward" size={20} color="#102235" /></Pressable>;
+}
 
 const styles = StyleSheet.create({
-  background: { backgroundColor: "#EEF4F8", bottom: 0, left: 0, overflow: "hidden", position: "absolute", right: 0, top: 0 }, orangeArc: { backgroundColor: "rgba(249,115,22,0.10)", borderRadius: 230, height: 360, left: -200, position: "absolute", top: -185, width: 360 }, greenArc: { backgroundColor: "rgba(22,163,74,0.08)", borderRadius: 180, height: 260, position: "absolute", right: -140, top: 170, width: 260 }, page: { alignSelf: "center", maxWidth: 680, paddingBottom: 118, paddingHorizontal: 16, paddingTop: 24, width: "100%" }, header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" }, eyebrow: { color: "#F97316", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 2 }, title: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 46, letterSpacing: -0.8, lineHeight: 49, marginTop: 4 }, avatar: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.78)", borderColor: "rgba(255,255,255,0.96)", borderRadius: 24, borderWidth: 2, height: 46, justifyContent: "center", width: 46 }, goalCard: { backgroundColor: "rgba(255,255,255,0.80)", borderColor: "rgba(255,255,255,0.98)", borderRadius: 24, borderWidth: 1, marginTop: 22, padding: 18, shadowColor: "#102C46", shadowOffset: { height: 10, width: 0 }, shadowOpacity: 0.08, shadowRadius: 22 }, cardTop: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" }, goalTag: { alignItems: "center", backgroundColor: "#FFF7ED", borderRadius: 14, flexDirection: "row", gap: 5, paddingHorizontal: 9, paddingVertical: 5 }, goalTagText: { color: "#C2410C", fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1 }, goalTitle: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 29, lineHeight: 31, marginTop: 16 }, goalCopy: { color: "#61738A", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 4 }, drill: { alignItems: "flex-start", backgroundColor: "rgba(238,244,248,0.80)", borderRadius: 15, flexDirection: "row", gap: 9, marginTop: 15, padding: 11 }, drillText: { color: "#102C46", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18 }, primary: { alignItems: "center", backgroundColor: "#F97316", borderRadius: 16, flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 15, minHeight: 50 }, primaryText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16, letterSpacing: 0.3 }, sectionHead: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginTop: 25 }, sectionTitle: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 23 }, link: { color: "#F97316", fontFamily: "Barlow-SemiBold", fontSize: 13 }, muted: { color: "#16A34A", fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1 }, storyRow: { flexDirection: "row", gap: 18, marginTop: 14 }, story: { alignItems: "center", gap: 6 }, storyIcon: { alignItems: "center", borderColor: "rgba(255,255,255,0.98)", borderRadius: 25, borderWidth: 2, height: 50, justifyContent: "center", width: 50 }, storyLabel: { color: "#61738A", fontFamily: "Barlow-SemiBold", fontSize: 11 }, statusCard: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.76)", borderColor: "rgba(255,255,255,0.98)", borderRadius: 19, borderWidth: 1, flexDirection: "row", gap: 11, marginTop: 12, padding: 14 }, statusIcon: { alignItems: "center", backgroundColor: "#F0FDF4", borderRadius: 14, height: 38, justifyContent: "center", width: 38 }, statusCopy: { flex: 1 }, statusTitle: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 18 }, statusDetail: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, marginTop: 1 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
+  canvas: { backgroundColor: "#F5F1E8", bottom: 0, left: 0, overflow: "hidden", position: "absolute", right: 0, top: 0 },
+  courtArc: { borderColor: "rgba(16,34,53,0.08)", borderRadius: 300, borderWidth: 1, height: 480, left: -278, position: "absolute", top: -190, width: 480 },
+  courtLine: { backgroundColor: "rgba(249,115,22,0.22)", height: 1, position: "absolute", right: 0, top: 112, width: 96 },
+  page: { alignSelf: "center", maxWidth: 680, paddingBottom: 116, paddingHorizontal: 16, paddingTop: 20, width: "100%" },
+  header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  kicker: { color: "#F97316", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.7 },
+  title: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 45, letterSpacing: -1.1, lineHeight: 49, marginTop: 2 },
+  profileButton: { alignItems: "center", backgroundColor: "#102235", borderRadius: 16, height: 48, justifyContent: "center", width: 48 },
+  heroCard: { backgroundColor: "#0B1623", borderRadius: 24, marginTop: 20, minHeight: 315, overflow: "hidden", padding: 20 },
+  heroGrid: { borderColor: "rgba(231,237,241,0.08)", borderRadius: 160, borderWidth: 1, height: 310, position: "absolute", right: -95, top: -105, width: 310 },
+  heroTop: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  focusTag: { alignItems: "center", flexDirection: "row", gap: 7 },
+  signalDot: { backgroundColor: "#F97316", borderRadius: 99, height: 7, width: 7 },
+  focusTagText: { color: "#E7EDF1", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.2 },
+  goalNumber: { color: "rgba(231,237,241,0.38)", fontFamily: "BarlowCondensed-Bold", fontSize: 20, letterSpacing: 1 },
+  heroTitle: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 34, lineHeight: 36, marginTop: 28, maxWidth: "88%" },
+  heroCopy: { color: "#B6C2CD", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 8, maxWidth: "88%" },
+  drillRow: { alignItems: "flex-start", borderTopColor: "rgba(231,237,241,0.14)", borderTopWidth: 1, flexDirection: "row", gap: 8, marginTop: 20, paddingTop: 13 },
+  drillText: { color: "#E7EDF1", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18 },
+  heroAction: { alignItems: "center", backgroundColor: "#F97316", borderRadius: 15, flexDirection: "row", gap: 9, justifyContent: "center", marginTop: 16, minHeight: 49 },
+  heroActionText: { color: "#0B1623", fontFamily: "BarlowCondensed-Bold", fontSize: 16, letterSpacing: 0.4 },
+  metrics: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 18, borderWidth: 1, flexDirection: "row", marginTop: 14, paddingVertical: 14 },
+  metric: { alignItems: "center", flex: 1, gap: 3 },
+  metricValue: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 19 },
+  metricLabel: { color: "#667789", fontFamily: "Barlow-SemiBold", fontSize: 10 },
+  sectionHead: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", marginTop: 27 },
+  sectionKicker: { color: "#F97316", fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1.2 },
+  sectionTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 28, marginTop: 1 },
+  sectionIndex: { color: "#667789", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 0.8 },
+  actionStack: { gap: 10, marginTop: 12 },
+  actionRow: { alignItems: "center", backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 18, borderWidth: 1, flexDirection: "row", gap: 12, minHeight: 82, paddingHorizontal: 14 },
+  actionIcon: { alignItems: "center", backgroundColor: "#FFF1E8", borderRadius: 13, height: 46, justifyContent: "center", width: 46 },
+  actionIconMint: { backgroundColor: "#E8F6F1" },
+  actionCopy: { flex: 1 },
+  actionTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 19 },
+  actionDetail: { color: "#667789", fontFamily: "Barlow", fontSize: 12, lineHeight: 16, marginTop: 1 },
+  statusStrip: { alignItems: "center", backgroundColor: "#102235", borderRadius: 18, flexDirection: "row", gap: 10, marginTop: 16, minHeight: 72, paddingHorizontal: 14 },
+  statusIcon: { alignItems: "center", backgroundColor: "rgba(29,155,119,0.16)", borderRadius: 12, height: 38, justifyContent: "center", width: 38 },
+  statusTextWrap: { flex: 1 },
+  statusEyebrow: { color: "#7AD8B7", fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 1.2 },
+  statusText: { color: "#F5F1E8", fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17, marginTop: 2 },
+  pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
 });

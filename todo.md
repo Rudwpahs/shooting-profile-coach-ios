@@ -152,3 +152,6 @@
 - [x] Paul George 원본 영상에서 얼굴이 보이는 준비·낮은 손의 딥·릴리스·팔로우스루 phase를 재선정 — 0·65·355·645·742ms source audit override
 - [x] Pose viewer에서 검증된 주손·팔 라인을 주황색으로 강조하고 비주손은 중립색으로 표시
 - [x] Paul George 최종 보정 motion만 UI에 반영하고 intermediate source·candidate 산출물은 product 화면에서 숨김
+- [x] FormPath Basketball의 mobile-first UI design system·screen hierarchy·interaction plan을 전면 재설계 — Court·Film design system과 3탭 information architecture 문서화
+- [x] 홈·Motion Studio·프로필·floating navigation을 새 제품 언어로 전면 구현
+- [x] UI 개편 후 iPhone portrait·웹 시각 검증과 기능 regression 수행 — Vitest·TypeScript·Expo export 통과, 390×844 hydrated capture 확인
