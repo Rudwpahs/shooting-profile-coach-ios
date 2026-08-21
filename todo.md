@@ -94,3 +94,8 @@
 - [x] Paul George 제공 영상 2개를 독립적으로 hash·시점·슈팅 event·33-landmark 품질 감사
 - [ ] 품질을 통과한 Paul George relative-pose candidate를 추천 제외 상태로 생성·표시
 - [ ] Paul George 신원 확인 가능·2초 이상 연속 슈팅 영상을 확보해 최소 temporal sample gate 통과
+- [x] Curry 정면·사선 single-view relative pose의 3D 왜곡·시간 정렬·camera calibration 재감사
+- [x] 근거 없는 Curry 3D viewer·정면/사선 candidate 표시를 제거하거나 evidence-accurate 표시로 재구성
+- [x] 제공된 YouTube 2개 영상의 Curry source·view·동일 슛 correspondence·사용 범위를 독립 감사
+- [x] YouTube 2개 영상의 sync·camera calibration·triangulation 입력 적합성 검증
+- [ ] 동일 슛의 동기화된 정면·측면 capture와 calibration manifest로 Curry/Paul George calibrated 3D 재구성

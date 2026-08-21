@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES, PLAYER_VIDEO_POSE_CANDIDATES } from "@/lib/anonymous-pose-library";
+import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES, PLAYER_VIDEO_REVIEW_RECORDS } from "@/lib/anonymous-pose-library";
 import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, POSE_ZOOM_MAX, POSE_ZOOM_MIN, projectPosePoint, validatePoseMotion } from "@/lib/pose-motion";
 
 describe("approved actual optical-mocap pose motion", () => {
@@ -9,10 +9,12 @@ describe("approved actual optical-mocap pose motion", () => {
     const quality = validatePoseMotion(motion);
     expect(ANONYMOUS_POSE_LIBRARY_STATUS.visiblePlayerIdentity).toBe(false);
     expect(ANONYMOUS_POSE_REFERENCES[0].prototypeDisplayName).toBeUndefined();
-    expect(PLAYER_VIDEO_POSE_CANDIDATES).toHaveLength(2);
-    expect(PLAYER_VIDEO_POSE_CANDIDATES[0]).toMatchObject({ playerDisplayName: "Stephen Curry", boundary: "monocular_relative_pose_not_metric_3d", state: "candidate_not_product_approved" });
-    expect(PLAYER_VIDEO_POSE_CANDIDATES[0].sourcePhaseTimestampsMs).toEqual([0, 1002, 1503, 2088, 2422]);
-    expect(PLAYER_VIDEO_POSE_CANDIDATES[1].sourcePhaseTimestampsMs).toEqual([2000, 2667, 2833, 3000, 3250]);
+    expect(PLAYER_VIDEO_REVIEW_RECORDS).toHaveLength(2);
+    expect(ANONYMOUS_POSE_LIBRARY_STATUS.withdrawnVideoReviewCount).toBe(2);
+    expect(PLAYER_VIDEO_REVIEW_RECORDS[0]).toMatchObject({ playerDisplayName: "Stephen Curry", boundary: "monocular_relative_pose_not_metric_3d", state: "withdrawn_unreconstructed_single_view" });
+    expect(PLAYER_VIDEO_REVIEW_RECORDS[0]).not.toHaveProperty("motion");
+    expect(PLAYER_VIDEO_REVIEW_RECORDS[0].sourcePhaseTimestampsMs).toEqual([0, 1002, 1503, 2088, 2422]);
+    expect(PLAYER_VIDEO_REVIEW_RECORDS[1].sourcePhaseTimestampsMs).toEqual([2000, 2667, 2833, 3000, 3250]);
     expect(motion.boundary).toBe("actual_optical_mocap_3d");
     expect(motion.frames.map((frame) => frame.label)).toEqual(["준비", "딥", "상승", "릴리스", "팔로우스루"]);
     expect(ANONYMOUS_POSE_REFERENCES[0].sourcePhaseFrames).toEqual([269, 317, 335, 353, 385]);
@@ -22,7 +24,7 @@ describe("approved actual optical-mocap pose motion", () => {
     expect(follow.rightWrist.y).toBeGreaterThanOrEqual(follow.head.y - 0.08);
     expect(BONE_LINKS).toContainEqual(["rightElbow", "rightWrist"]);
   });
-  it("derives front, oblique, and shooting-arm side views from the measured release shoulder line", () => {
+  it("derives front, oblique, and shooting-arm side views only from the measured 3D release shoulder line", () => {
     expect(clampPoseZoom(0.1)).toBe(POSE_ZOOM_MIN);
     expect(clampPoseZoom(4)).toBe(POSE_ZOOM_MAX);
     const motion = ANONYMOUS_POSE_REFERENCES[0].motion;
