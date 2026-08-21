@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "gate": {
+    "globalFundamentalInlierRatioMin": 0.72,
+    "requiresStableFixedCameraProxy": true,
+    "translationDirectionSpreadDegMax": 5,
+    "rotationSpreadDegMax": 5
+  },
+  "screenedPairs": [
+    {
+      "id": "curry-front-side",
+      "globalFundamentalInlierRatio": 0.1489,
+      "fixedCameraProxyStable": false,
+      "state": "rejected"
+    },
+    {
+      "id": "curry-front-oblique",
+      "globalFundamentalInlierRatio": 0.1262,
+      "fixedCameraProxyStable": false,
+      "state": "rejected"
+    },
+    {
+      "id": "curry-side-oblique",
+      "globalFundamentalInlierRatio": 0.0576,
+      "fixedCameraProxyStable": false,
+      "state": "rejected"
+    },
+    {
+      "id": "paul-george-input-pair",
+      "state": "rejected_before_landmark_gate",
+      "reason": "different event, uniform, court, and no same-time correspondence"
+    }
+  ],
+  "approvedUncalibratedCandidates": [],
+  "productBoundary": "No failed pair can be converted into an uncalibrated reconstruction candidate."
+}

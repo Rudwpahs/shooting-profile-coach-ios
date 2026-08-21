@@ -1,0 +1,324 @@
+{
+  "version": 1,
+  "kind": "release_pinned_dtw_pair_alignment",
+  "inputs": {
+    "a": "artifacts/curry-side-relative-pose.json",
+    "b": "artifacts/additional-curry-relative-pose.json",
+    "aFrames": 40,
+    "bFrames": 48
+  },
+  "releaseAnchor": {
+    "aFrame": 25,
+    "bFrame": 36,
+    "hand": "right"
+  },
+  "matchedFrames": [
+    {
+      "aIndex": 0,
+      "bIndex": 0,
+      "aTimestampMs": 0,
+      "bTimestampMs": 0
+    },
+    {
+      "aIndex": 1,
+      "bIndex": 1,
+      "aTimestampMs": 84,
+      "bTimestampMs": 83
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 2,
+      "aTimestampMs": 167,
+      "bTimestampMs": 167
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 3,
+      "aTimestampMs": 167,
+      "bTimestampMs": 250
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 4,
+      "aTimestampMs": 167,
+      "bTimestampMs": 333
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 5,
+      "aTimestampMs": 167,
+      "bTimestampMs": 417
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 6,
+      "aTimestampMs": 167,
+      "bTimestampMs": 500
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 7,
+      "aTimestampMs": 167,
+      "bTimestampMs": 583
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 8,
+      "aTimestampMs": 167,
+      "bTimestampMs": 667
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 9,
+      "aTimestampMs": 167,
+      "bTimestampMs": 750
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 10,
+      "aTimestampMs": 167,
+      "bTimestampMs": 833
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 11,
+      "aTimestampMs": 167,
+      "bTimestampMs": 917
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 12,
+      "aTimestampMs": 167,
+      "bTimestampMs": 1000
+    },
+    {
+      "aIndex": 3,
+      "bIndex": 13,
+      "aTimestampMs": 251,
+      "bTimestampMs": 1083
+    },
+    {
+      "aIndex": 4,
+      "bIndex": 14,
+      "aTimestampMs": 334,
+      "bTimestampMs": 1167
+    },
+    {
+      "aIndex": 5,
+      "bIndex": 15,
+      "aTimestampMs": 418,
+      "bTimestampMs": 1250
+    },
+    {
+      "aIndex": 5,
+      "bIndex": 16,
+      "aTimestampMs": 418,
+      "bTimestampMs": 1333
+    },
+    {
+      "aIndex": 6,
+      "bIndex": 17,
+      "aTimestampMs": 501,
+      "bTimestampMs": 1417
+    },
+    {
+      "aIndex": 7,
+      "bIndex": 18,
+      "aTimestampMs": 585,
+      "bTimestampMs": 1500
+    },
+    {
+      "aIndex": 8,
+      "bIndex": 19,
+      "aTimestampMs": 668,
+      "bTimestampMs": 1583
+    },
+    {
+      "aIndex": 9,
+      "bIndex": 20,
+      "aTimestampMs": 752,
+      "bTimestampMs": 1667
+    },
+    {
+      "aIndex": 10,
+      "bIndex": 21,
+      "aTimestampMs": 835,
+      "bTimestampMs": 1750
+    },
+    {
+      "aIndex": 11,
+      "bIndex": 22,
+      "aTimestampMs": 919,
+      "bTimestampMs": 1833
+    },
+    {
+      "aIndex": 12,
+      "bIndex": 23,
+      "aTimestampMs": 1002,
+      "bTimestampMs": 1917
+    },
+    {
+      "aIndex": 13,
+      "bIndex": 24,
+      "aTimestampMs": 1086,
+      "bTimestampMs": 2000
+    },
+    {
+      "aIndex": 14,
+      "bIndex": 25,
+      "aTimestampMs": 1169,
+      "bTimestampMs": 2083
+    },
+    {
+      "aIndex": 15,
+      "bIndex": 26,
+      "aTimestampMs": 1253,
+      "bTimestampMs": 2167
+    },
+    {
+      "aIndex": 16,
+      "bIndex": 27,
+      "aTimestampMs": 1336,
+      "bTimestampMs": 2250
+    },
+    {
+      "aIndex": 17,
+      "bIndex": 28,
+      "aTimestampMs": 1420,
+      "bTimestampMs": 2333
+    },
+    {
+      "aIndex": 18,
+      "bIndex": 29,
+      "aTimestampMs": 1503,
+      "bTimestampMs": 2417
+    },
+    {
+      "aIndex": 19,
+      "bIndex": 30,
+      "aTimestampMs": 1587,
+      "bTimestampMs": 2500
+    },
+    {
+      "aIndex": 20,
+      "bIndex": 31,
+      "aTimestampMs": 1670,
+      "bTimestampMs": 2583
+    },
+    {
+      "aIndex": 21,
+      "bIndex": 32,
+      "aTimestampMs": 1754,
+      "bTimestampMs": 2667
+    },
+    {
+      "aIndex": 22,
+      "bIndex": 33,
+      "aTimestampMs": 1837,
+      "bTimestampMs": 2750
+    },
+    {
+      "aIndex": 23,
+      "bIndex": 34,
+      "aTimestampMs": 1921,
+      "bTimestampMs": 2833
+    },
+    {
+      "aIndex": 24,
+      "bIndex": 35,
+      "aTimestampMs": 2004,
+      "bTimestampMs": 2917
+    },
+    {
+      "aIndex": 25,
+      "bIndex": 36,
+      "aTimestampMs": 2088,
+      "bTimestampMs": 3000
+    },
+    {
+      "aIndex": 26,
+      "bIndex": 37,
+      "aTimestampMs": 2171,
+      "bTimestampMs": 3083
+    },
+    {
+      "aIndex": 27,
+      "bIndex": 37,
+      "aTimestampMs": 2255,
+      "bTimestampMs": 3083
+    },
+    {
+      "aIndex": 28,
+      "bIndex": 37,
+      "aTimestampMs": 2338,
+      "bTimestampMs": 3083
+    },
+    {
+      "aIndex": 29,
+      "bIndex": 37,
+      "aTimestampMs": 2422,
+      "bTimestampMs": 3083
+    },
+    {
+      "aIndex": 30,
+      "bIndex": 38,
+      "aTimestampMs": 2505,
+      "bTimestampMs": 3167
+    },
+    {
+      "aIndex": 31,
+      "bIndex": 39,
+      "aTimestampMs": 2589,
+      "bTimestampMs": 3250
+    },
+    {
+      "aIndex": 32,
+      "bIndex": 40,
+      "aTimestampMs": 2672,
+      "bTimestampMs": 3333
+    },
+    {
+      "aIndex": 33,
+      "bIndex": 41,
+      "aTimestampMs": 2756,
+      "bTimestampMs": 3417
+    },
+    {
+      "aIndex": 34,
+      "bIndex": 42,
+      "aTimestampMs": 2839,
+      "bTimestampMs": 3500
+    },
+    {
+      "aIndex": 35,
+      "bIndex": 43,
+      "aTimestampMs": 2923,
+      "bTimestampMs": 3583
+    },
+    {
+      "aIndex": 36,
+      "bIndex": 44,
+      "aTimestampMs": 3006,
+      "bTimestampMs": 3667
+    },
+    {
+      "aIndex": 37,
+      "bIndex": 45,
+      "aTimestampMs": 3090,
+      "bTimestampMs": 3750
+    },
+    {
+      "aIndex": 38,
+      "bIndex": 46,
+      "aTimestampMs": 3173,
+      "bTimestampMs": 3833
+    },
+    {
+      "aIndex": 39,
+      "bIndex": 47,
+      "aTimestampMs": 3257,
+      "bTimestampMs": 3917
+    }
+  ],
+  "alignmentBoundary": "phase correspondence only; no calibration or metric 3D claim"
+}

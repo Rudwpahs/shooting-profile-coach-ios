@@ -1,0 +1,687 @@
+{
+  "version": 1,
+  "kind": "uncalibrated_epipolar_debug",
+  "assumptions": [
+    "unit focal-length proxy",
+    "principal point at normalized image center",
+    "each 33-landmark body frame supplies correspondences"
+  ],
+  "results": [
+    {
+      "aIndex": 0,
+      "bIndex": 0,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.01868,
+      "translationDirection": [
+        -0.624,
+        -0.16874,
+        0.76298
+      ],
+      "rotationAngleDeg": 11.651
+    },
+    {
+      "aIndex": 1,
+      "bIndex": 1,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.046342,
+      "translationDirection": [
+        0.43645,
+        -0.12845,
+        0.89051
+      ],
+      "rotationAngleDeg": 93.205
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 2,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 23,
+      "medianProxyReprojectionError": 0.0061,
+      "translationDirection": [
+        -0.92071,
+        0.07697,
+        -0.38259
+      ],
+      "rotationAngleDeg": 4.816
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 3,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 27,
+      "medianProxyReprojectionError": 0.056895,
+      "translationDirection": [
+        0.90514,
+        -0.04405,
+        0.42283
+      ],
+      "rotationAngleDeg": 10.424
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 4,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 24,
+      "medianProxyReprojectionError": 0.10728,
+      "translationDirection": [
+        -0.99406,
+        -0.06898,
+        0.08417
+      ],
+      "rotationAngleDeg": 9.44
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 5,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.004003,
+      "translationDirection": [
+        -0.84935,
+        0.03412,
+        0.52672
+      ],
+      "rotationAngleDeg": 40.976
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 6,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.008453,
+      "translationDirection": [
+        -0.79357,
+        0.04493,
+        0.60682
+      ],
+      "rotationAngleDeg": 43.264
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 7,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.010993,
+      "translationDirection": [
+        -0.73676,
+        0.03954,
+        0.675
+      ],
+      "rotationAngleDeg": 52.561
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 8,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.005783,
+      "translationDirection": [
+        -0.68425,
+        0.00298,
+        0.72924
+      ],
+      "rotationAngleDeg": 77.975
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 9,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.002992,
+      "translationDirection": [
+        -0.55355,
+        -0.01784,
+        0.83263
+      ],
+      "rotationAngleDeg": 92.172
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 10,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.004378,
+      "translationDirection": [
+        -0.38343,
+        -0.11666,
+        0.91617
+      ],
+      "rotationAngleDeg": 118.176
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 11,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.012988,
+      "translationDirection": [
+        0.59332,
+        -0.25531,
+        0.7634
+      ],
+      "rotationAngleDeg": 88.511
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 12,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.027065,
+      "translationDirection": [
+        -0.62346,
+        -0.05729,
+        0.77975
+      ],
+      "rotationAngleDeg": 87.624
+    },
+    {
+      "aIndex": 3,
+      "bIndex": 13,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.021998,
+      "translationDirection": [
+        0.46955,
+        -0.22428,
+        0.85394
+      ],
+      "rotationAngleDeg": 92.705
+    },
+    {
+      "aIndex": 4,
+      "bIndex": 14,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.010282,
+      "translationDirection": [
+        0.20904,
+        -0.17584,
+        0.96197
+      ],
+      "rotationAngleDeg": 150.226
+    },
+    {
+      "aIndex": 5,
+      "bIndex": 15,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.031422,
+      "translationDirection": [
+        0.30255,
+        -0.19286,
+        0.93342
+      ],
+      "rotationAngleDeg": 66.866
+    },
+    {
+      "aIndex": 5,
+      "bIndex": 16,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.019038,
+      "translationDirection": [
+        0.42267,
+        -0.17114,
+        0.88998
+      ],
+      "rotationAngleDeg": 66.16
+    },
+    {
+      "aIndex": 6,
+      "bIndex": 17,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.04689,
+      "translationDirection": [
+        0.18666,
+        -0.14154,
+        0.97217
+      ],
+      "rotationAngleDeg": 60.037
+    },
+    {
+      "aIndex": 7,
+      "bIndex": 18,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.007983,
+      "translationDirection": [
+        -0.0534,
+        0.00194,
+        0.99857
+      ],
+      "rotationAngleDeg": 152.645
+    },
+    {
+      "aIndex": 8,
+      "bIndex": 19,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.008813,
+      "translationDirection": [
+        -0.22105,
+        -0.07445,
+        0.97242
+      ],
+      "rotationAngleDeg": 103.835
+    },
+    {
+      "aIndex": 9,
+      "bIndex": 20,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.053727,
+      "translationDirection": [
+        -0.48267,
+        -0.04687,
+        0.87454
+      ],
+      "rotationAngleDeg": 76.273
+    },
+    {
+      "aIndex": 10,
+      "bIndex": 21,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.036593,
+      "translationDirection": [
+        -0.32916,
+        -0.02084,
+        0.94405
+      ],
+      "rotationAngleDeg": 91.393
+    },
+    {
+      "aIndex": 11,
+      "bIndex": 22,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.014007,
+      "translationDirection": [
+        0.0745,
+        -0.12376,
+        0.98951
+      ],
+      "rotationAngleDeg": 157.263
+    },
+    {
+      "aIndex": 12,
+      "bIndex": 23,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.1035,
+      "translationDirection": [
+        0.88509,
+        -0.40132,
+        -0.23569
+      ],
+      "rotationAngleDeg": 55.093
+    },
+    {
+      "aIndex": 13,
+      "bIndex": 24,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 19,
+      "medianProxyReprojectionError": 0.091117,
+      "translationDirection": [
+        -0.99287,
+        0.02274,
+        0.11703
+      ],
+      "rotationAngleDeg": 14.118
+    },
+    {
+      "aIndex": 14,
+      "bIndex": 25,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.013268,
+      "translationDirection": [
+        0.29131,
+        -0.08999,
+        0.95239
+      ],
+      "rotationAngleDeg": 111.363
+    },
+    {
+      "aIndex": 15,
+      "bIndex": 26,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.05935,
+      "translationDirection": [
+        -0.13488,
+        -0.12388,
+        0.98309
+      ],
+      "rotationAngleDeg": 85.828
+    },
+    {
+      "aIndex": 16,
+      "bIndex": 27,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 25,
+      "medianProxyReprojectionError": 0.030926,
+      "translationDirection": [
+        -0.75289,
+        -0.029,
+        -0.6575
+      ],
+      "rotationAngleDeg": 10.472
+    },
+    {
+      "aIndex": 17,
+      "bIndex": 28,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 25,
+      "medianProxyReprojectionError": 0.022023,
+      "translationDirection": [
+        -0.00685,
+        -0.20904,
+        0.97788
+      ],
+      "rotationAngleDeg": 178.298
+    },
+    {
+      "aIndex": 18,
+      "bIndex": 29,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 19,
+      "medianProxyReprojectionError": 0.038914,
+      "translationDirection": [
+        -0.0351,
+        -0.12163,
+        0.99195
+      ],
+      "rotationAngleDeg": 175.538
+    },
+    {
+      "aIndex": 19,
+      "bIndex": 30,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.099482,
+      "translationDirection": [
+        0.95333,
+        0.17575,
+        0.24549
+      ],
+      "rotationAngleDeg": 17.412
+    },
+    {
+      "aIndex": 20,
+      "bIndex": 31,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.090555,
+      "translationDirection": [
+        0.29079,
+        -0.05138,
+        0.95541
+      ],
+      "rotationAngleDeg": 54.507
+    },
+    {
+      "aIndex": 21,
+      "bIndex": 32,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.097798,
+      "translationDirection": [
+        0.72319,
+        -0.00108,
+        0.69065
+      ],
+      "rotationAngleDeg": 77.65
+    },
+    {
+      "aIndex": 22,
+      "bIndex": 33,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.016069,
+      "translationDirection": [
+        -0.35414,
+        0.04747,
+        0.93399
+      ],
+      "rotationAngleDeg": 51.052
+    },
+    {
+      "aIndex": 23,
+      "bIndex": 34,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.071204,
+      "translationDirection": [
+        0.90736,
+        -0.08071,
+        0.41253
+      ],
+      "rotationAngleDeg": 23.73
+    },
+    {
+      "aIndex": 24,
+      "bIndex": 35,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 27,
+      "medianProxyReprojectionError": 0.056095,
+      "translationDirection": [
+        0.98935,
+        -0.06729,
+        0.12904
+      ],
+      "rotationAngleDeg": 8.934
+    },
+    {
+      "aIndex": 25,
+      "bIndex": 36,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 19,
+      "medianProxyReprojectionError": 0.07431,
+      "translationDirection": [
+        -0.4699,
+        -0.12881,
+        0.87327
+      ],
+      "rotationAngleDeg": 11.361
+    },
+    {
+      "aIndex": 26,
+      "bIndex": 37,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.066858,
+      "translationDirection": [
+        0.80993,
+        -0.11178,
+        0.57577
+      ],
+      "rotationAngleDeg": 87.638
+    },
+    {
+      "aIndex": 27,
+      "bIndex": 37,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.140309,
+      "translationDirection": [
+        0.98709,
+        -0.00573,
+        -0.16008
+      ],
+      "rotationAngleDeg": 53.107
+    },
+    {
+      "aIndex": 28,
+      "bIndex": 37,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 30,
+      "medianProxyReprojectionError": 0.081699,
+      "translationDirection": [
+        0.54182,
+        0.15235,
+        -0.82657
+      ],
+      "rotationAngleDeg": 19.007
+    },
+    {
+      "aIndex": 29,
+      "bIndex": 37,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.039231,
+      "translationDirection": [
+        0.8881,
+        -0.07689,
+        0.45317
+      ],
+      "rotationAngleDeg": 21.678
+    },
+    {
+      "aIndex": 30,
+      "bIndex": 38,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 13,
+      "medianProxyReprojectionError": 0.120082,
+      "translationDirection": [
+        -0.98778,
+        -0.11352,
+        0.10679
+      ],
+      "rotationAngleDeg": 4.798
+    },
+    {
+      "aIndex": 31,
+      "bIndex": 39,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.071222,
+      "translationDirection": [
+        -0.71993,
+        -0.06716,
+        0.69079
+      ],
+      "rotationAngleDeg": 34.448
+    },
+    {
+      "aIndex": 32,
+      "bIndex": 40,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.077497,
+      "translationDirection": [
+        -0.86073,
+        0.00352,
+        0.50905
+      ],
+      "rotationAngleDeg": 22.632
+    },
+    {
+      "aIndex": 33,
+      "bIndex": 41,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.13128,
+      "translationDirection": [
+        0.9678,
+        0.09642,
+        0.23253
+      ],
+      "rotationAngleDeg": 19.056
+    },
+    {
+      "aIndex": 34,
+      "bIndex": 42,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 24,
+      "medianProxyReprojectionError": 0.125407,
+      "translationDirection": [
+        0.98735,
+        0.15808,
+        -0.01196
+      ],
+      "rotationAngleDeg": 8.057
+    },
+    {
+      "aIndex": 35,
+      "bIndex": 43,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 29,
+      "medianProxyReprojectionError": 0.025166,
+      "translationDirection": [
+        -0.20188,
+        -0.12862,
+        0.97093
+      ],
+      "rotationAngleDeg": 15.4
+    },
+    {
+      "aIndex": 36,
+      "bIndex": 44,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.093757,
+      "translationDirection": [
+        0.85811,
+        0.1447,
+        0.49265
+      ],
+      "rotationAngleDeg": 28.383
+    },
+    {
+      "aIndex": 37,
+      "bIndex": 45,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.017088,
+      "translationDirection": [
+        -0.59384,
+        0.01697,
+        0.80441
+      ],
+      "rotationAngleDeg": 42.494
+    },
+    {
+      "aIndex": 38,
+      "bIndex": 46,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 33,
+      "medianProxyReprojectionError": 0.031163,
+      "translationDirection": [
+        -0.52358,
+        0.02936,
+        0.85147
+      ],
+      "rotationAngleDeg": 35.68
+    },
+    {
+      "aIndex": 39,
+      "bIndex": 47,
+      "state": "recovered_with_proxy_intrinsics",
+      "inliers": 19,
+      "medianProxyReprojectionError": 0.011747,
+      "translationDirection": [
+        0.00439,
+        -0.05928,
+        0.99823
+      ],
+      "rotationAngleDeg": 166.99
+    }
+  ],
+  "fixedCameraConsistency": {
+    "translationDirectionSpreadDeg": 147.2256,
+    "rotationSpreadDeg": 177.2213,
+    "stableUnderProxy": false
+  },
+  "globalEpipolarFit": {
+    "state": "fixed_fundamental_matrix_fitted",
+    "correspondences": 1683,
+    "inliers": 97,
+    "inlierRatio": 0.0576,
+    "supportsOneFixedCameraPairUnderProxy": false
+  },
+  "productDecision": "not_metric_3d_without_real_K_distortion_R_t_sync"
+}

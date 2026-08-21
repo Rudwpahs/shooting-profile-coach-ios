@@ -109,3 +109,5 @@
 - [x] 두 선수에 대한 최소 가정 3D reconstruction 가능 범위와 product admission 결정을 수치로 기록
 - [x] Curry pair debugger의 release-anchor drift를 제거하고 anchor-preserving correspondence로 epipolar 결과 재검증
 - [x] Curry 정면·측면 landmark sequence의 temporal dynamic time warping alignment를 적용해 fixed-F fit 재검증
+- [x] fixed-F inlier·fixed-camera consistency gate를 통과한 Curry/Paul George 영상 pair만 uncalibrated reconstruction 후보 생성 — 통과 source 0개, candidate 0개
+- [x] uncalibrated candidate의 reprojection·temporal bone consistency·source boundary 검증 기록 — 통과 source가 없어 downstream 검증을 실행하지 않음

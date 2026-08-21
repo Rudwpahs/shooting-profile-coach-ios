@@ -1,0 +1,372 @@
+{
+  "version": 1,
+  "kind": "release_pinned_dtw_pair_alignment",
+  "inputs": {
+    "a": "artifacts/curry-front-relative-pose.json",
+    "b": "artifacts/curry-side-relative-pose.json",
+    "aFrames": 59,
+    "bFrames": 40
+  },
+  "releaseAnchor": {
+    "aFrame": 30,
+    "bFrame": 25,
+    "hand": "right"
+  },
+  "matchedFrames": [
+    {
+      "aIndex": 0,
+      "bIndex": 0,
+      "aTimestampMs": 0,
+      "bTimestampMs": 0
+    },
+    {
+      "aIndex": 1,
+      "bIndex": 1,
+      "aTimestampMs": 72,
+      "bTimestampMs": 84
+    },
+    {
+      "aIndex": 2,
+      "bIndex": 2,
+      "aTimestampMs": 144,
+      "bTimestampMs": 167
+    },
+    {
+      "aIndex": 3,
+      "bIndex": 3,
+      "aTimestampMs": 216,
+      "bTimestampMs": 251
+    },
+    {
+      "aIndex": 4,
+      "bIndex": 4,
+      "aTimestampMs": 288,
+      "bTimestampMs": 334
+    },
+    {
+      "aIndex": 5,
+      "bIndex": 5,
+      "aTimestampMs": 360,
+      "bTimestampMs": 418
+    },
+    {
+      "aIndex": 6,
+      "bIndex": 6,
+      "aTimestampMs": 432,
+      "bTimestampMs": 501
+    },
+    {
+      "aIndex": 7,
+      "bIndex": 7,
+      "aTimestampMs": 504,
+      "bTimestampMs": 585
+    },
+    {
+      "aIndex": 8,
+      "bIndex": 8,
+      "aTimestampMs": 576,
+      "bTimestampMs": 668
+    },
+    {
+      "aIndex": 9,
+      "bIndex": 9,
+      "aTimestampMs": 648,
+      "bTimestampMs": 752
+    },
+    {
+      "aIndex": 10,
+      "bIndex": 10,
+      "aTimestampMs": 721,
+      "bTimestampMs": 835
+    },
+    {
+      "aIndex": 11,
+      "bIndex": 11,
+      "aTimestampMs": 793,
+      "bTimestampMs": 919
+    },
+    {
+      "aIndex": 12,
+      "bIndex": 12,
+      "aTimestampMs": 865,
+      "bTimestampMs": 1002
+    },
+    {
+      "aIndex": 13,
+      "bIndex": 13,
+      "aTimestampMs": 937,
+      "bTimestampMs": 1086
+    },
+    {
+      "aIndex": 14,
+      "bIndex": 14,
+      "aTimestampMs": 1009,
+      "bTimestampMs": 1169
+    },
+    {
+      "aIndex": 15,
+      "bIndex": 15,
+      "aTimestampMs": 1081,
+      "bTimestampMs": 1253
+    },
+    {
+      "aIndex": 16,
+      "bIndex": 16,
+      "aTimestampMs": 1153,
+      "bTimestampMs": 1336
+    },
+    {
+      "aIndex": 17,
+      "bIndex": 17,
+      "aTimestampMs": 1225,
+      "bTimestampMs": 1420
+    },
+    {
+      "aIndex": 18,
+      "bIndex": 18,
+      "aTimestampMs": 1297,
+      "bTimestampMs": 1503
+    },
+    {
+      "aIndex": 19,
+      "bIndex": 19,
+      "aTimestampMs": 1369,
+      "bTimestampMs": 1587
+    },
+    {
+      "aIndex": 20,
+      "bIndex": 20,
+      "aTimestampMs": 1441,
+      "bTimestampMs": 1670
+    },
+    {
+      "aIndex": 21,
+      "bIndex": 21,
+      "aTimestampMs": 1513,
+      "bTimestampMs": 1754
+    },
+    {
+      "aIndex": 22,
+      "bIndex": 22,
+      "aTimestampMs": 1585,
+      "bTimestampMs": 1837
+    },
+    {
+      "aIndex": 23,
+      "bIndex": 23,
+      "aTimestampMs": 1657,
+      "bTimestampMs": 1921
+    },
+    {
+      "aIndex": 24,
+      "bIndex": 24,
+      "aTimestampMs": 1729,
+      "bTimestampMs": 2004
+    },
+    {
+      "aIndex": 25,
+      "bIndex": 24,
+      "aTimestampMs": 1801,
+      "bTimestampMs": 2004
+    },
+    {
+      "aIndex": 26,
+      "bIndex": 24,
+      "aTimestampMs": 1873,
+      "bTimestampMs": 2004
+    },
+    {
+      "aIndex": 27,
+      "bIndex": 24,
+      "aTimestampMs": 1945,
+      "bTimestampMs": 2004
+    },
+    {
+      "aIndex": 28,
+      "bIndex": 24,
+      "aTimestampMs": 2017,
+      "bTimestampMs": 2004
+    },
+    {
+      "aIndex": 29,
+      "bIndex": 24,
+      "aTimestampMs": 2089,
+      "bTimestampMs": 2004
+    },
+    {
+      "aIndex": 30,
+      "bIndex": 25,
+      "aTimestampMs": 2162,
+      "bTimestampMs": 2088
+    },
+    {
+      "aIndex": 31,
+      "bIndex": 26,
+      "aTimestampMs": 2234,
+      "bTimestampMs": 2171
+    },
+    {
+      "aIndex": 32,
+      "bIndex": 27,
+      "aTimestampMs": 2306,
+      "bTimestampMs": 2255
+    },
+    {
+      "aIndex": 33,
+      "bIndex": 28,
+      "aTimestampMs": 2378,
+      "bTimestampMs": 2338
+    },
+    {
+      "aIndex": 34,
+      "bIndex": 29,
+      "aTimestampMs": 2450,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 35,
+      "bIndex": 29,
+      "aTimestampMs": 2522,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 36,
+      "bIndex": 29,
+      "aTimestampMs": 2594,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 37,
+      "bIndex": 29,
+      "aTimestampMs": 2666,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 38,
+      "bIndex": 29,
+      "aTimestampMs": 2738,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 39,
+      "bIndex": 29,
+      "aTimestampMs": 2810,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 40,
+      "bIndex": 29,
+      "aTimestampMs": 2882,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 41,
+      "bIndex": 29,
+      "aTimestampMs": 2954,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 42,
+      "bIndex": 29,
+      "aTimestampMs": 3026,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 43,
+      "bIndex": 29,
+      "aTimestampMs": 3098,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 44,
+      "bIndex": 29,
+      "aTimestampMs": 3170,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 45,
+      "bIndex": 29,
+      "aTimestampMs": 3242,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 46,
+      "bIndex": 29,
+      "aTimestampMs": 3314,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 47,
+      "bIndex": 29,
+      "aTimestampMs": 3386,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 48,
+      "bIndex": 29,
+      "aTimestampMs": 3458,
+      "bTimestampMs": 2422
+    },
+    {
+      "aIndex": 49,
+      "bIndex": 30,
+      "aTimestampMs": 3530,
+      "bTimestampMs": 2505
+    },
+    {
+      "aIndex": 50,
+      "bIndex": 31,
+      "aTimestampMs": 3603,
+      "bTimestampMs": 2589
+    },
+    {
+      "aIndex": 51,
+      "bIndex": 32,
+      "aTimestampMs": 3675,
+      "bTimestampMs": 2672
+    },
+    {
+      "aIndex": 52,
+      "bIndex": 33,
+      "aTimestampMs": 3747,
+      "bTimestampMs": 2756
+    },
+    {
+      "aIndex": 53,
+      "bIndex": 34,
+      "aTimestampMs": 3819,
+      "bTimestampMs": 2839
+    },
+    {
+      "aIndex": 54,
+      "bIndex": 35,
+      "aTimestampMs": 3891,
+      "bTimestampMs": 2923
+    },
+    {
+      "aIndex": 55,
+      "bIndex": 36,
+      "aTimestampMs": 3963,
+      "bTimestampMs": 3006
+    },
+    {
+      "aIndex": 56,
+      "bIndex": 37,
+      "aTimestampMs": 4035,
+      "bTimestampMs": 3090
+    },
+    {
+      "aIndex": 57,
+      "bIndex": 38,
+      "aTimestampMs": 4107,
+      "bTimestampMs": 3173
+    },
+    {
+      "aIndex": 58,
+      "bIndex": 39,
+      "aTimestampMs": 4179,
+      "bTimestampMs": 3257
+    }
+  ],
+  "alignmentBoundary": "phase correspondence only; no calibration or metric 3D claim"
+}
