@@ -32,6 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--video", type=Path, required=True)
     parser.add_argument("--view", choices=["front", "side", "oblique"], required=True)
+    parser.add_argument("--shooting-hand", choices=["auto", "left", "right"], default="auto", help="Use a video-audited shooting hand instead of the wrist-height heuristic when available.")
     parser.add_argument("--id", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--audit", type=Path, required=True)
@@ -58,10 +59,15 @@ def normalized_joints(landmarks: list[dict[str, float]]) -> dict[str, dict[str, 
     return joints
 
 
-def phase_indexes(frames: list[dict[str, Any]]) -> tuple[str, list[int]]:
+def phase_indexes(frames: list[dict[str, Any]], shooting_hand: str = "auto") -> tuple[str, list[int]]:
     right_peak = min(float(frame["landmarks"][16]["y"]) for frame in frames)
     left_peak = min(float(frame["landmarks"][15]["y"]) for frame in frames)
-    hand, wrist_index, hip_index = ("right", 16, 24) if right_peak <= left_peak else ("left", 15, 23)
+    if shooting_hand == "right":
+        hand, wrist_index, hip_index = "right", 16, 24
+    elif shooting_hand == "left":
+        hand, wrist_index, hip_index = "left", 15, 23
+    else:
+        hand, wrist_index, hip_index = ("right", 16, 24) if right_peak <= left_peak else ("left", 15, 23)
     release = min(range(len(frames)), key=lambda index: float(frames[index]["landmarks"][wrist_index]["y"]))
     release = max(2, min(release, len(frames) - 3))
     # Ignore approach or walking frames. The loading dip must occur in the latter
@@ -123,7 +129,7 @@ def main() -> int:
     frames = [frame for frame in payload.get("frames", []) if len(frame.get("landmarks", [])) == 33]
     if len(frames) < 12:
         raise SystemExit("At least 12 full landmark frames are required.")
-    hand, indexes = phase_indexes(frames)
+    hand, indexes = phase_indexes(frames, args.shooting_hand)
     motion = {
         "id": args.id,
         "boundary": "monocular_relative_pose_not_metric_3d",
@@ -137,6 +143,7 @@ def main() -> int:
         "state": "candidate_not_product_approved",
         "view": args.view,
         "shootingHandEstimate": hand,
+        "shootingHandResolution": "video_audit_override" if args.shooting_hand != "auto" else "wrist_height_heuristic",
         "boundary": "monocular_relative_pose_not_metric_3d",
         "phaseIndexes": indexes,
         "phaseTimestampsMs": [int(frames[index]["timestampMs"]) for index in indexes],

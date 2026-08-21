@@ -1,4 +1,4 @@
-"""Auto-correct a dual-view display analysis without claiming physical 3D.
+"""Auto-correct a display analysis without claiming physical 3D.
 
 The correction is deliberately conservative: every frame is pelvis-rooted and
 each visible bone is normalized to its median source length. The incoming joint
@@ -30,6 +30,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--id", required=True)
+    parser.add_argument("--mode", choices=["dual", "single"], required=True)
+    parser.add_argument("--player", required=True)
+    parser.add_argument("--shooting-hand", choices=["right", "left"], required=True)
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
@@ -50,8 +53,9 @@ def main() -> int:
     args = parse_args()
     source = json.loads(args.input.read_text(encoding="utf-8"))
     frames = source.get("motion", {}).get("frames", [])
-    if source.get("state") != "dual_view_phase_aligned_estimate_not_actual_3d" or [frame.get("label") for frame in frames] != PHASES:
-        raise SystemExit("Input must be the audited five-phase dual-view estimate")
+    expected_state = "dual_view_phase_aligned_estimate_not_actual_3d" if args.mode == "dual" else "video_based_depth_limited_estimate_not_actual_3d"
+    if source.get("state") != expected_state or [frame.get("label") for frame in frames] != PHASES:
+        raise SystemExit(f"Input must be the audited five-phase {args.mode}-view display estimate")
 
     lengths: dict[str, list[float]] = {bone_key(parent, child): [] for parent, child in BONES}
     for frame in frames:
@@ -77,21 +81,27 @@ def main() -> int:
 
     release = corrected_frames[3]["joints"]
     follow = corrected_frames[4]["joints"]
+    shooting_hand_label = "오른쪽" if args.shooting_hand == "right" else "왼쪽"
+    source_evidence = "두 source의 semantic phase pair를 같은 순서로 결합" if args.mode == "dual" else "하나의 continuous source에서 five-phase 순서를 보존"
     form_match = {
-        "rubricVersion": "curry-source-video-form-match-v1",
+        "rubricVersion": "player-source-video-form-match-v1",
         "checks": [
-            {"id": "phase_order", "label": "준비→딥→상승→릴리스→팔로우스루 순서", "status": "match", "evidence": "두 source의 semantic phase pair를 같은 순서로 결합"},
-            {"id": "shooting_arm_chain", "label": "오른쪽 shoulder–elbow–wrist chain 연속성", "status": "match", "evidence": "각 bone을 source median length로만 정규화"},
-            {"id": "release_wrist_height", "label": "릴리스 후 손목이 어깨보다 높게 유지", "status": "match" if follow["rightWrist"]["y"] > follow["rightShoulder"]["y"] else "review", "evidence": f"팔로우스루 wrist y={follow['rightWrist']['y']}, shoulder y={follow['rightShoulder']['y']}"},
+            {"id": "phase_order", "label": "준비→딥→상승→릴리스→팔로우스루 순서", "status": "match", "evidence": source_evidence},
+            {"id": "shooting_arm_chain", "label": f"{shooting_hand_label} shoulder–elbow–wrist chain 연속성", "status": "match", "evidence": "각 bone을 source median length로만 정규화"},
+            {"id": "release_wrist_height", "label": "릴리스 후 손목이 어깨보다 높게 유지", "status": "match" if follow[f"{args.shooting_hand}Wrist"]["y"] > follow[f"{args.shooting_hand}Shoulder"]["y"] else "review", "evidence": f"팔로우스루 wrist y={follow[f'{args.shooting_hand}Wrist']['y']}, shoulder y={follow[f'{args.shooting_hand}Shoulder']['y']}"},
             {"id": "form_details_unavailable", "label": "공·림·손가락·정확한 관절각", "status": "unavailable", "evidence": "현재 source landmark에는 ball/rim/camera calibration이 없음"},
         ],
     }
     output = {
         "version": 1,
-        "state": "dual_view_auto_corrected_estimate_not_actual_3d",
+        "state": "dual_view_auto_corrected_estimate_not_actual_3d" if args.mode == "dual" else "single_view_auto_corrected_estimate_not_actual_3d",
         "boundary": "monocular_relative_pose_not_metric_3d",
-        "shootingHandEstimate": "right",
+        "player": args.player,
+        "shootingHandEstimate": args.shooting_hand,
+        "sourceView": source.get("sourceView", source.get("view", "front")),
+        "inputQuality": source.get("inputQuality", {}),
         "sourceState": source["state"],
+        "sourcePhaseTimestampsMs": source.get("sourcePhaseTimestampsMs", source.get("phaseAlignment", {}).get("frontPhaseTimestampsMs", [])),
         "phaseAlignment": source.get("phaseAlignment", {}),
         "autoCorrection": {
             "root": "pelvis_recentered_per_phase",

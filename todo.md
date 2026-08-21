@@ -143,3 +143,9 @@
 - [x] 신뢰 가능한 Curry 슛폼 설명과 coaching 기준을 수집해 source-based review rubric 작성 — Curry 본인 팁·코치 분석·jump-shot biomechanics 근거와 proxy 한계 기록
 - [x] Curry dual-view analysis의 body-center·shoulder-line·bone-length·release·follow-through auto-correction 규칙 구현 — pelvis root와 median source bone-length 정규화, source phase·방향 보존
 - [x] 보정 전후 motion과 Curry form-match 설명을 Motion Studio에 분석 전용으로 표시하고 actual 3D·추천에서 분리
+- [x] 영상 기반 슛폼 분석·정면/측면 결합·자동 보정·검증 경계 workflow를 재사용 가능한 Manus 스킬로 패키징 — 공식 skill validator 통과
+- [ ] Paul George 정면·측면·사선 실제 슈팅 source를 수집하고 provenance·license·identity를 감사
+- [ ] Paul George 후보의 shot continuity·view·landmark tracking·semantic phase quality를 검증
+- [ ] 통과한 Paul George view를 phase-align·auto-correct한 analysis asset으로 생성하고 Motion Studio에 분리 표시
+- [x] Paul George 공개 multi-angle candidate와 local All-Star source를 감사 — 공개 compilation은 같은 슛 pair·raw landmark input 없음, local side source는 identity·31/31 tracking·right hand 확인
+- [x] Paul George local side source를 five-phase constrained·auto-corrected display analysis와 source-based form-match로 Motion Studio에 추가 — actual 3D·추천에서 분리

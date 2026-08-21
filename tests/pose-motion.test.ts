@@ -19,7 +19,7 @@ describe("approved actual optical-mocap pose motion", () => {
     expect(PLAYER_VIDEO_REVIEW_RECORDS[1].sourcePhaseTimestampsMs).toEqual([2000, 2667, 2833, 3000, 3250]);
     expect(PLAYER_SOURCE_SKELETON_REVIEWS.map((review) => review.displayName)).toEqual(["Stephen Curry", "Paul George"]);
     expect(PLAYER_SOURCE_SKELETON_REVIEWS).toHaveLength(2);
-    expect(PLAYER_MONOCULAR_3D_ANALYSES).toHaveLength(3);
+    expect(PLAYER_MONOCULAR_3D_ANALYSES).toHaveLength(4);
     expect(PLAYER_MONOCULAR_3D_ANALYSES[0]).toMatchObject({
       id: "curry-front-constrained-analysis-01",
       displayName: "Stephen Curry",
@@ -42,7 +42,15 @@ describe("approved actual optical-mocap pose motion", () => {
       sourcePhaseTimestampsMs: [0, 1002, 1503, 2088, 2422],
     });
     expect(PLAYER_MONOCULAR_3D_ANALYSES[2].formMatch?.find((check) => check.id === "release_wrist_height")?.status).toBe("match");
-    expect(PLAYER_MONOCULAR_3D_ANALYSES.map((analysis) => analysis.motion.boundary)).toEqual(["monocular_relative_pose_not_metric_3d", "monocular_relative_pose_not_metric_3d", "monocular_relative_pose_not_metric_3d"]);
+    expect(PLAYER_MONOCULAR_3D_ANALYSES[3]).toMatchObject({
+      id: "paul-george-side-auto-corrected-analysis-01",
+      displayName: "Paul George",
+      state: "single_view_auto_corrected_estimate_not_actual_3d",
+      boundary: "monocular_relative_pose_not_metric_3d",
+      sourcePhaseTimestampsMs: [0, 355, 516, 645, 742],
+    });
+    expect(PLAYER_MONOCULAR_3D_ANALYSES[3].formMatch?.find((check) => check.id === "release_wrist_height")?.status).toBe("match");
+    expect(PLAYER_MONOCULAR_3D_ANALYSES.map((analysis) => analysis.motion.boundary)).toEqual(["monocular_relative_pose_not_metric_3d", "monocular_relative_pose_not_metric_3d", "monocular_relative_pose_not_metric_3d", "monocular_relative_pose_not_metric_3d"]);
     for (const review of PLAYER_SOURCE_SKELETON_REVIEWS) {
       expect(review).toMatchObject({ boundary: "single_view_2d_skeleton_review", state: "review_only_not_3d" });
       expect(review.phases.map((phase) => phase.label)).toEqual(["준비", "딥", "상승", "릴리스", "팔로우스루"]);

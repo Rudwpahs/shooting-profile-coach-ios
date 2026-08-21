@@ -1,0 +1,30 @@
+Starting video analysis...
+Submitting video analysis task...
+Task submitted (ID: video-analysis-acf9da77-6743-4df9-8122-c0f43dbe382e)
+[8s] Status: Analyzing video content with AI...
+[27s] Status: Analysis completed
+[27s] Analysis completed!
+Full analysis result saved to: /home/ubuntu/video_BmUSFy9QWEo_analysis_20260821_104636.md
+Note: This tool performs AI-based visual and audio analysis, not verbatim transcription. For detailed speech transcription, use `manus-speech-to-text` instead.
+Analysis result:
+
+Paul George is visible in all segments of this edited video, which is a compilation of his basketball plays. Each segment features a full, continuous basketball shot from a single camera view. No two segments appear to be the same shot from different angles.
+
+**Camera Views and Shot Details:**
+
+*   **00:05 - 00:26:** Paul George (wearing jersey number 13) is shown in a low-angle medium shot against the Suns. He releases the ball at 00:18, and it goes into the hoop at 00:25. This is one continuous shot.
+*   **00:27 - 00:47:** Paul George is shown in a medium shot against the Knicks. He releases the ball at 00:39, and it goes into the hoop at 00:46. This is one continuous shot.
+*   **00:48 - 01:09:** Paul George is shown in a low-angle medium shot against the Hawks. He releases the ball at 01:01, and it goes into the hoop at 01:09. This is one continuous shot.
+*   **01:10 - 01:31:** Paul George is shown in a medium shot against the Hawks. He releases the ball at 01:23, and it goes into the hoop at 01:31. This is one continuous shot.
+*   **01:32 - 01:50:** Paul George is shown in a medium shot against the Lakers. He releases the ball at 01:42, and it goes into the hoop at 01:50. This is one continuous shot.
+*   **01:51 - 02:13:** Paul George is shown in a medium shot against the Hawks. He releases the ball at 02:04, and it goes into the hoop at 02:12. This is one continuous shot.
+*   **02:14 - 02:36:** Paul George is shown in a medium shot against the Hornets. He releases the ball at 02:29, and it goes into the hoop at 02:35. This is one continuous shot.
+*   **02:37 - 02:59:** Paul George is shown in a medium shot against the Hawks. He releases the ball at 02:51, and it goes into the hoop at 02:59. This is one continuous shot.
+*   **03:00 - 03:18:** Paul George is shown in a medium shot against the Thunder. He releases the ball at 03:10, and it goes into the hoop at 03:18. This is one continuous shot.
+*   **03:19 - 03:39:** Paul George is shown in a medium shot against the Celtics. He releases the ball at 03:30, and it goes into the hoop at 03:38. This is one continuous shot.
+*   **03:40 - 03:58:** Paul George is shown in a medium shot against the Jazz. He releases the ball at 03:50, and it goes into the hoop at 03:58. This is one continuous shot.
+*   **03:59 - 04:17:** Paul George is shown in a medium shot against the Jazz. He releases the ball at 04:08, and it goes into the hoop at 04:16. This is one continuous shot.
+*   **04:18 - 04:34:** Paul George is shown in a medium shot against the Cavaliers. He releases the ball at 04:26, and it goes into the hoop at 04:32. This is one continuous shot.
+*   **04:35 - 04:46:** Paul George is shown in a medium shot against the Jazz. He releases the ball at 04:42, and it goes into the hoop at 04:46. This is one continuous shot.
+*   **04:47 - 05:02:** Paul George is shown in a medium shot against the Suns. He releases the ball at 04:56, and it goes into the hoop at 05:02. This is one continuous shot.
+*   **05:03 - 05:19:** Paul George is shown in a medium shot against the Lakers. He releases the ball at 05:13, and it goes into the hoop at 05:19. This is one continuous shot.
