@@ -1,8 +1,10 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { saveFirebasePrivatePose } from "@/lib/firebase-private-data";
 import { detectPoseFromSelectedVideo } from "@/lib/pose-detection";
@@ -12,6 +14,40 @@ import { validateSelectedShootingVideo } from "@/lib/video-intake";
 type CaptureState = "idle" | "picking" | "detecting" | "saving" | "complete" | "error";
 
 export function PrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | void }) {
+  return FORMPATH_FLAGS.captureV2
+    ? <GuidedPrivatePoseCaptureEntry />
+    : <LegacyPrivatePoseCapture onSaved={onSaved} />;
+}
+
+function GuidedPrivatePoseCaptureEntry() {
+  const router = useRouter();
+  return <View style={styles.v2Card}>
+    <View style={styles.heading}>
+      <View style={styles.v2HeadingCopy}>
+        <Text style={styles.title}>정면·측면 대표 슛폼</Text>
+        <Text style={styles.subtitle}>Basic 1+1 또는 High accuracy 3+3 클립을 기기 안에서 분석합니다.</Text>
+      </View>
+      <MaterialIcons name="switch-video" size={23} color="#F97316" />
+    </View>
+    <View style={styles.tip}>
+      <MaterialIcons name="privacy-tip" size={18} color="#102C46" />
+      <Text style={styles.tipText}>정면과 슈팅 측면은 따로 촬영하며, 원본 영상을 업로드하거나 저장했다고 표시하지 않습니다.</Text>
+    </View>
+    <Pressable
+      accessibilityLabel="정면과 슈팅 측면 대표 슛폼 촬영 시작"
+      accessibilityRole="button"
+      accessibilityState={{ disabled: false }}
+      disabled={false}
+      onPress={() => router.push("/private-capture")}
+      style={({ pressed }) => [styles.v2Button, pressed && styles.v2Pressed]}
+    >
+      <MaterialIcons name="videocam" size={19} color="#FFFFFF" />
+      <Text style={styles.buttonText}>정면·측면 슛폼 만들기</Text>
+    </Pressable>
+  </View>;
+}
+
+function LegacyPrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | void }) {
   const { user } = useFirebaseAuth();
   const [state, setState] = useState<CaptureState>("idle");
   const [detail, setDetail] = useState("측면 전신 슈팅 영상을 선택하세요.");
@@ -83,6 +119,10 @@ export function PrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> |
 }
 
 const styles = StyleSheet.create({
+  v2Card: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 16, borderWidth: 1, marginTop: 14, padding: 14 },
+  v2HeadingCopy: { flex: 1, paddingRight: 10 },
+  v2Button: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, paddingHorizontal: 12 },
+  v2Pressed: { opacity: 0.76 },
   card: { backgroundColor: "rgba(238,244,248,0.72)", borderColor: "rgba(16,44,70,0.12)", borderRadius: 16, borderStyle: "dashed", borderWidth: 1, marginTop: 14, padding: 14 },
   heading: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" }, title: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 20 }, subtitle: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
   tip: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 12 }, tipText: { color: "#102C46", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17 },
