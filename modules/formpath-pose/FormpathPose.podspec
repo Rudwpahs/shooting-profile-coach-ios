@@ -12,7 +12,9 @@ Pod::Spec.new do |s|
   s.source = { :git => 'https://github.com/Rudwpahs/shooting-form-analysis.git' }
   s.static_framework = true
   s.dependency 'ExpoModulesCore'
-  s.dependency 'MediaPipeTasksVision'
+  # 0.10.21 is pinned deliberately. Newer CocoaPods releases require an explicit
+  # macOS/Xcode integration check before this native bridge is upgraded.
+  s.dependency 'MediaPipeTasksVision', '= 0.10.21'
   s.source_files = 'ios/**/*.{swift,h,m,mm}'
   s.resource_bundles = { 'FormpathPose' => ['ios/Resources/*.task'] }
   s.swift_version = '5.9'
