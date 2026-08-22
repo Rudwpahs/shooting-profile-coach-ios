@@ -25,9 +25,11 @@ function validProfile() {
       }])),
     })),
     phaseAnchors: [
-      { id: "set", phase: 0 },
-      { id: "release", phase: 0.7 },
-      { id: "follow_through", phase: 1 },
+      { id: "ready", phase: 0 },
+      { id: "deepestDip", phase: 0.25 },
+      { id: "rise", phase: 0.5 },
+      { id: "releaseProxy", phase: 0.75 },
+      { id: "followThrough", phase: 1 },
     ],
     quality: { passed: true, reasons: [] },
   };
@@ -77,6 +79,91 @@ describe("V2 shooting-profile contract", () => {
     const wrongLength = validProfile();
     wrongLength.frames.pop();
     expect(() => parseRepresentativePose4D(wrongLength)).toThrow();
+  });
+
+  it("rejects failed quality and any reason on a framed profile", () => {
+    expect(() => parseRepresentativePose4D({
+      ...validProfile(),
+      quality: { passed: false, reasons: [] },
+    })).toThrow();
+    expect(() => parseRepresentativePose4D({
+      ...validProfile(),
+      quality: { passed: true, reasons: ["recapture_required"] },
+    })).toThrow();
+  });
+
+  it("rejects 100, 102, and sparse frame arrays", () => {
+    const oneHundredFrames = validProfile();
+    oneHundredFrames.frames.pop();
+    expect(() => parseRepresentativePose4D(oneHundredFrames)).toThrow();
+
+    const oneHundredTwoFrames = validProfile();
+    oneHundredTwoFrames.frames.push({
+      ...oneHundredTwoFrames.frames[100],
+      phase: 1,
+    });
+    expect(() => parseRepresentativePose4D(oneHundredTwoFrames)).toThrow();
+
+    const sparseFrames = validProfile();
+    Reflect.deleteProperty(sparseFrames.frames, "50");
+    expect(50 in sparseFrames.frames).toBe(false);
+    expect(() => parseRepresentativePose4D(sparseFrames)).toThrow();
+  });
+
+  it("rejects shifted or otherwise noncanonical frame phases", () => {
+    const shiftedGrid = validProfile();
+    shiftedGrid.frames.forEach((frame, index) => {
+      frame.phase = 0.001 + index * 0.00998;
+    });
+    shiftedGrid.frames[0].phase = 0.001;
+    shiftedGrid.frames[100].phase = 0.999;
+    expect(shiftedGrid.frames[0].phase).toBe(0.001);
+    expect(shiftedGrid.frames[100].phase).toBe(0.999);
+    expect(() => parseRepresentativePose4D(shiftedGrid)).toThrow();
+
+    const shiftedInteriorPhase = validProfile();
+    shiftedInteriorPhase.frames[50].phase = 0.501;
+    expect(() => parseRepresentativePose4D(shiftedInteriorPhase)).toThrow();
+  });
+
+  it("requires the five exact canonical phase anchors in order", () => {
+    const missingAnchor = validProfile();
+    missingAnchor.phaseAnchors.pop();
+    expect(() => parseRepresentativePose4D(missingAnchor)).toThrow();
+
+    const wrongAnchorId = validProfile();
+    wrongAnchorId.phaseAnchors[2] = { id: "releaseProxy", phase: 0.5 };
+    expect(() => parseRepresentativePose4D(wrongAnchorId)).toThrow();
+
+    const wrongAnchorPhase = validProfile();
+    wrongAnchorPhase.phaseAnchors[2] = { id: "rise", phase: 0.51 };
+    expect(() => parseRepresentativePose4D(wrongAnchorPhase)).toThrow();
+  });
+
+  it("rejects covariance with a negative variance or a materially indefinite matrix", () => {
+    const negativeVariance = validProfile();
+    negativeVariance.frames[0].uncertainty.leftWrist.covariance = [-0.01, 0, 0, 0.01, 0, 0.01];
+    expect(() => parseRepresentativePose4D(negativeVariance)).toThrow();
+
+    const indefiniteCovariance = validProfile();
+    indefiniteCovariance.frames[0].uncertainty.leftWrist.covariance = [1, -0.9, -0.9, 1, -0.9, 1];
+    expect(() => parseRepresentativePose4D(indefiniteCovariance)).toThrow();
+  });
+
+  it("accepts a finite correlated positive-semidefinite covariance", () => {
+    const correlatedCovariance = validProfile();
+    correlatedCovariance.frames[0].uncertainty.leftWrist.covariance = [4, 2, 1, 2, 0.75, 1.3125];
+    expect(parseRepresentativePose4D(correlatedCovariance)).toEqual(correlatedCovariance);
+  });
+
+  it("rejects directional cones outside zero through 180 degrees", () => {
+    const negativeCone = validProfile();
+    negativeCone.frames[0].uncertainty.leftWrist.directionalConeDegrees = -0.01;
+    expect(() => parseRepresentativePose4D(negativeCone)).toThrow();
+
+    const oversizedCone = validProfile();
+    oversizedCone.frames[0].uncertainty.leftWrist.directionalConeDegrees = 180.01;
+    expect(() => parseRepresentativePose4D(oversizedCone)).toThrow();
   });
 
   it("persists only the twelve allowed limb and torso landmarks", () => {
