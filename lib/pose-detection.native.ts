@@ -3,6 +3,17 @@ import { createPersonalPoseCandidate } from "@/lib/personal-pose";
 import type { PoseDetectionProgress, PoseDetectionResult } from "@/lib/pose-detection-types";
 
 export type { PoseDetectionProgress, PoseDetectionResult } from "@/lib/pose-detection-types";
+export {
+  cancelPoseClipV2,
+  createPoseClipDetectorV2,
+  detectPoseClipV2,
+  parseLandmarkSequenceV2,
+} from "@/lib/pose-detection-v2";
+export type {
+  AnalyzeClipRequestV2,
+  PoseClipDetectionV2Result,
+  PoseProgressV2,
+} from "@/lib/pose-detection-v2";
 
 export async function detectPoseFromSelectedVideo(uri: string, onProgress?: (progress: PoseDetectionProgress) => void): Promise<PoseDetectionResult> {
   if (!FormpathPose) {
