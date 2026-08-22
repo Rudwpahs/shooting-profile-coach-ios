@@ -1,36 +1,81 @@
-# iPhone Custom Development Build QA
+# iPhone custom-build QA — native pose detector V2
 
-## Purpose
+## Current verification boundary
 
-This is the acceptance procedure for the existing user-upload flow. It does not add a player model or reference motion. A development build is needed because the `FormPathPoseDetector` bridge is native code; Expo documents that development builds can include custom native libraries and configuration whereas Expo Go is limited to its bundled native set. [1] [2]
+The repository snapshot can validate the TypeScript parser, event lifecycle, Expo module configuration, podspec text, and Swift source contracts on Linux. It cannot compile iOS code, run CocoaPods, inspect a built resource bundle, execute MediaPipe, or run a physical iPhone. Those Apple/device gates remain **PENDING** until the steps below are completed and recorded by an owner.
 
-## Prerequisites
+The existing `ios/Resources/pose_landmarker_full.task` binary is intentionally not duplicated here. It is present in the source repository but omitted from this audit snapshot.
 
-| Requirement | Repository state | Owner action before test |
-| --- | --- | --- |
-| Development client | `expo-dev-client` is installed | Build a new development binary after adding the actual native `FormPathPoseDetector` implementation. |
-| iOS permissions | `expo-image-picker` plugin and Korean photo-library message are configured | Install the fresh build; configuration-plugin changes require a new binary. [3] |
-| Native detector | JavaScript bridge expects `NativeModules.FormPathPoseDetector.analyzeVideo(uri)` to return sampled 33-landmark frames | Add or link the Swift/MediaPipe Tasks Vision bridge before executing the test. |
-| Firebase | UID-scoped Auth and Firestore rules are present | Supply the production Firebase configuration and sign in with a test account. |
-| Test media | One private 2–20 second side-view, full-body shooting clip | Use a clip with preparation through follow-through visible; do not use it as a product model. |
+## Fail-closed model integrity gate
 
-## Device procedure
+The exact approved SHA-256 cannot be established from this snapshot because the binary is absent. Do not invent or infer a digest. The release owner must establish it from the reviewed repository object and replace `PENDING_OWNER_APPROVAL` in the release record—not in application logs.
 
-1. Create a new development build. Expo’s documented iOS path is `npx expo run:ios --device` on macOS/Xcode, or an iOS development build through EAS; install it on a physical iPhone and enable Developer Mode. [1]
-2. Sign in, open **내 기록**, and choose **영상 선택 후 분석**. Grant the media-library permission before the picker opens.
-3. Select the prepared video. Confirm that a shorter-than-two-second or longer-than-twenty-second clip is rejected before detector execution.
-4. Confirm the detector reports progress, rejects inadequate landmark visibility/coverage, or yields a five-phase corrected fluid motion. The raw video must remain local; only pose JSON, quality JSON, correction JSON, and corrected motion JSON may be written.
-5. Close and reopen the app. Confirm that the same Firebase UID can view and delete its corrected motion, while another account cannot access it.
-6. Confirm all private motion copy says analysis-only and that it is absent from recommendation inputs.
+Run from a clean macOS checkout containing the existing model:
 
-## Pass criteria and honest stop condition
+```sh
+MODEL_PATH="modules/formpath-pose/ios/Resources/pose_landmarker_full.task"
+EXPECTED_MODEL_SHA256="PENDING_OWNER_APPROVAL"
 
-The test passes only when a physical iPhone returns a valid native detector payload, the independent JavaScript quality gate accepts it, the correction output is stored, and the reopened private viewer renders the same five-phase timeline. If the native bridge is absent, the UI must show its explicit custom-build requirement rather than fabricate a skeleton. This sandbox cannot perform that hardware acceptance test.
+test -f "$MODEL_PATH" || { echo "model file missing" >&2; exit 1; }
+test "$EXPECTED_MODEL_SHA256" != "PENDING_OWNER_APPROVAL" || {
+  echo "approved model SHA-256 is still pending" >&2
+  exit 1
+}
 
-## References
+ACTUAL_MODEL_SHA256="$(shasum -a 256 "$MODEL_PATH" | awk '{print $1}')"
+test "$ACTUAL_MODEL_SHA256" = "$EXPECTED_MODEL_SHA256" || {
+  echo "model SHA-256 mismatch" >&2
+  exit 1
+}
+```
 
-[1] [Expo, *Introduction to development builds*](https://docs.expo.dev/develop/development-builds/introduction/)
+Record the following together in the release evidence: repository commit, Git object ID for the model, 64-character lowercase SHA-256, byte count, verifier, and UTC verification date. Re-run the procedure after every model change. A missing expected digest, missing file, or mismatch blocks the build.
 
-[2] [Expo, *Add custom native code*](https://docs.expo.dev/workflow/customizing/)
+## Fail-closed model license gate
 
-[3] [Expo, *ImagePicker configuration and video permission behavior*](https://docs.expo.dev/versions/latest/sdk/imagepicker/)
+The release owner must verify the exact `pose_landmarker_full.task` artifact against its authoritative model card/download record and applicable terms. Record the source URL, artifact/version identifier, license or terms URL, retrieval date, redistribution review decision, approver, and any attribution/notice obligations. Preserve a durable copy of that evidence with the release record.
+
+Status in this snapshot: **PENDING — model license and redistribution approval not established here.** A missing source/version match, unclear redistribution permission, or unmet notice obligation blocks release even if the hash matches.
+
+## macOS/Xcode and CocoaPods gates
+
+Use a clean checkout and an Xcode/macOS combination supported by the project’s Expo SDK. Record command output and the exact tool versions.
+
+- [ ] Run Expo prebuild for iOS and confirm autolinking reads `FormpathPose.podspec`.
+- [ ] Run CocoaPods installation and confirm `MediaPipeTasksVision` resolves exactly to `0.10.21`.
+- [ ] Build the generated iOS workspace with Xcode for a physical-device destination.
+- [ ] Confirm Swift compilation for the Expo `Record`, async AVFoundation loading, MediaPipe video API, event emission, and cancellation actor.
+- [ ] Inspect the built app and confirm `FormpathPose.bundle/pose_landmarker_full.task` exists and `FormpathPoseResources.poseLandmarkerModelPath()` resolves it.
+- [ ] Confirm the missing-model case returns stable `model_missing` and does not expose a local path.
+
+Status in this Linux run: **PENDING — not executed.**
+
+## Physical-iPhone behavior gates
+
+Use consented local clips only. Do not paste clip URIs, filenames, frames, or landmark arrays into QA notes or console logs.
+
+- [ ] V1 regression: `analyzeVideoAsync(uri, sampleCount)` still returns its existing `frames`/`sampledFrames` shape.
+- [ ] V2 valid clip: metadata is emitted first, coarse sampling targets 15 fps, and dense sampling stays at or below 30 fps inside the bounded wrist/elbow-motion window.
+- [ ] Actual-time proof: compare returned timestamps with the asset’s presentation timestamps; verify they are the `actualTime` values from frame decode, not requested sampling times.
+- [ ] Ordering proof: returned detected frames are deduplicated and strictly timestamp-ordered.
+- [ ] Counter proof: `attempted` increments for every requested decode, `decoded` only after image decode and `MPImage` conversion, `detected` only for a unique 33-landmark pose, and `rejected = attempted - detected`.
+- [ ] Progress proof: only `metadata`, `coarse_pose`, `dense_pose`, `quality`, and `complete` are emitted, each includes the matching request ID, and no event contains media identifiers.
+- [ ] Concurrent-request proof: progress cannot cross request IDs and duplicate active request IDs fail stably.
+- [ ] Cancellation proof: cancel during coarse, dense, and quality boundaries; each must return `analysis_cancelled`, stop before the next frame/stage, and return no partial sequence.
+- [ ] Invalid-media proof: empty, corrupt, non-video, and unreadable local inputs fail without a URI or filename in the result/log.
+- [ ] Privacy proof: inspect the device/app console and network capture; there must be no URI, filename, raw frame, or landmark logging/upload.
+- [ ] Coordinate-boundary proof: MediaPipe `z` is treated only as raw image-relative local detector output. It is not described as reconstructed depth and is not forwarded directly to Task 4 or cloud persistence.
+
+Status in this Linux run: **PENDING — physical iPhone and device network/log inspection not executed.**
+
+## Linux checks available now
+
+```sh
+./node_modules/.bin/vitest run tests/pose-detection-v2-contract.test.ts tests/pose-detection-contract.test.ts
+./node_modules/.bin/vitest run tests/shooting-profile-*.test.ts
+./node_modules/.bin/tsc --noEmit
+./node_modules/.bin/eslint lib/pose-detection-v2.ts lib/pose-detection.native.ts \
+  modules/formpath-pose/src/FormpathPoseModule.ts tests/pose-detection-v2-contract.test.ts
+```
+
+Passing Linux checks do not satisfy any Apple-toolchain or device gate above.
