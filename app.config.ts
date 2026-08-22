@@ -52,6 +52,7 @@ const config: ExpoConfig = {
     bundleIdentifier: env.iosBundleId,
     "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "$(PRODUCT_NAME)이 기기 안에서 포즈 분석할 로컬 슈팅 클립을 촬영하도록 카메라 접근을 허용합니다.",
         "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to select a shooting video for private pose analysis."
       }
   },
@@ -103,6 +104,7 @@ const config: ExpoConfig = {
     [
       "expo-image-picker",
       {
+        cameraPermission: "$(PRODUCT_NAME)이 기기 안에서 포즈 분석할 로컬 슈팅 클립을 촬영하도록 카메라 접근을 허용합니다.",
         photosPermission: "$(PRODUCT_NAME)이 개인 슈팅 영상을 선택해 비공개 pose 분석을 수행하도록 허용합니다.",
       },
     ],
