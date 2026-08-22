@@ -1,4 +1,9 @@
 import { buildCapturePlan } from "@/lib/shooting-profile/capture-plan";
+import {
+  isOpaqueShootingProfileIdV2,
+  type SaveShootingProfileInputV2,
+} from "@/lib/firebase-shooting-profile-contract";
+import type { NormalizedViewAttemptV2 } from "@/lib/shooting-profile/repeated-shot";
 import type {
   CaptureProtocolV2,
   LandmarkSequenceV2,
@@ -34,6 +39,52 @@ export type CaptureProgress = {
 
 export type CaptureSessionRecoveryStatus = "mode_select" | "setup" | "collecting" | "result_review";
 
+export type OwnerValueEnvelope<T> = {
+  ownerUid: string;
+  value: T;
+};
+
+export function valueForExactOwner<T>(
+  currentOwnerUid: string | null,
+  envelope: OwnerValueEnvelope<T> | null,
+): T | undefined {
+  return currentOwnerUid !== null && envelope?.ownerUid === currentOwnerUid
+    ? envelope.value
+    : undefined;
+}
+
+export function ownerGenerationMatches(
+  currentOwnerUid: string | null,
+  expectedOwnerUid: string,
+  activeGeneration: number,
+  expectedGeneration: number,
+): boolean {
+  return currentOwnerUid === expectedOwnerUid && activeGeneration === expectedGeneration;
+}
+
+export type OwnerOperationToken = {
+  ownerUid: string;
+  profileId: string;
+  token: number;
+};
+
+export function ownerOperationMatches(
+  currentOwnerUid: string | null,
+  active: OwnerOperationToken | null,
+  expectedToken: number,
+): boolean {
+  return active !== null
+    && active.ownerUid === currentOwnerUid
+    && active.token === expectedToken;
+}
+
+export function clearOwnerOperationIfMatching(
+  active: OwnerOperationToken | null,
+  expectedToken: number,
+): OwnerOperationToken | null {
+  return active?.token === expectedToken ? null : active;
+}
+
 export function captureSessionRetainsSaveToken(status: CaptureSessionStatus): boolean {
   return status === "result_review" || status === "saving";
 }
@@ -56,9 +107,161 @@ export type CaptureSessionState = {
   sessionGeneration: number;
   profile?: RepresentativePose4DV2;
   confidence?: number;
+  savedProfileId?: string;
   errorMessage?: string;
   recoveryStatus?: CaptureSessionRecoveryStatus;
 };
+
+export type RetainedNormalizedAttemptsV2 = {
+  sessionGeneration: number;
+  mode: CaptureProtocolV2;
+  shootingHand: ShootingHandV2;
+  normalizedAttempts: readonly NormalizedViewAttemptV2[];
+};
+
+export function matchingShootingProfileSaveInputV2(
+  state: CaptureSessionState,
+  retained: RetainedNormalizedAttemptsV2 | null,
+): SaveShootingProfileInputV2 | null {
+  if (
+    state.status !== "result_review"
+    || !state.profile
+    || state.confidence === undefined
+    || state.mode === null
+    || retained === null
+  ) return null;
+  const expectedAttemptsPerView = state.mode === "basic_1_plus_1" ? 1 : 3;
+  const frontAttemptCount = retained.normalizedAttempts.filter(
+    (attempt) => attempt.frames[0]?.view === "front",
+  ).length;
+  const sideAttemptCount = retained.normalizedAttempts.filter(
+    (attempt) => attempt.frames[0]?.view === "shooting_side",
+  ).length;
+  if (
+    retained.sessionGeneration !== state.sessionGeneration
+    || retained.mode !== state.mode
+    || retained.shootingHand !== state.shootingHand
+    || state.profile.mode !== state.mode
+    || retained.normalizedAttempts.length !== expectedAttemptsPerView * 2
+    || frontAttemptCount !== expectedAttemptsPerView
+    || sideAttemptCount !== expectedAttemptsPerView
+  ) return null;
+  return {
+    profile: state.profile,
+    shootingHand: state.shootingHand,
+    confidence: state.confidence,
+    normalizedAttempts: retained.normalizedAttempts,
+  };
+}
+
+export type CaptureSaveOperationTokenV2 = {
+  token: string;
+  sessionGeneration: number;
+};
+
+export function admitCaptureSaveOperationV2(
+  active: CaptureSaveOperationTokenV2 | null,
+  candidate: CaptureSaveOperationTokenV2,
+): CaptureSaveOperationTokenV2 | null {
+  return active === null ? candidate : null;
+}
+
+export function captureSaveOperationMatches(
+  active: CaptureSaveOperationTokenV2 | null,
+  expected: CaptureSaveOperationTokenV2,
+  currentSessionGeneration: number,
+): boolean {
+  return active?.token === expected.token
+    && active.sessionGeneration === expected.sessionGeneration
+    && currentSessionGeneration === expected.sessionGeneration;
+}
+
+export function clearCaptureSaveOperationIfMatching(
+  active: CaptureSaveOperationTokenV2 | null,
+  expected: CaptureSaveOperationTokenV2,
+): CaptureSaveOperationTokenV2 | null {
+  return active?.token === expected.token
+    && active.sessionGeneration === expected.sessionGeneration
+    ? null
+    : active;
+}
+
+export type CaptureSaveRunResultV2 = "not_started" | "succeeded" | "failed" | "ignored";
+
+export async function runCaptureSaveOperationV2({
+  state,
+  retained,
+  saveProfile,
+  isCurrent,
+  onStarted,
+  onSucceeded,
+  onFailed,
+  onFinally,
+}: {
+  state: CaptureSessionState;
+  retained: RetainedNormalizedAttemptsV2 | null;
+  saveProfile: (input: SaveShootingProfileInputV2) => Promise<string>;
+  isCurrent: () => boolean;
+  onStarted: () => void;
+  onSucceeded: (profileId: string, sessionGeneration: number) => void;
+  onFailed: (sessionGeneration: number) => void;
+  onFinally: () => void;
+}): Promise<CaptureSaveRunResultV2> {
+  const saveInput = matchingShootingProfileSaveInputV2(state, retained);
+  if (!saveInput) return "not_started";
+
+  onStarted();
+  try {
+    let profileId: string;
+    try {
+      profileId = await saveProfile(saveInput);
+    } catch {
+      if (!isCurrent()) return "ignored";
+      onFailed(state.sessionGeneration);
+      return "failed";
+    }
+    if (!isCurrent()) return "ignored";
+    if (!isOpaqueShootingProfileIdV2(profileId)) {
+      onFailed(state.sessionGeneration);
+      return "failed";
+    }
+    onSucceeded(profileId, state.sessionGeneration);
+    return "succeeded";
+  } finally {
+    onFinally();
+  }
+}
+
+export type OwnerBoundDeleteRunResultV2 = "succeeded" | "failed" | "ignored";
+
+export async function runOwnerBoundDeleteOperationV2({
+  deleteProfile,
+  isCurrent,
+  onSucceeded,
+  onFailed,
+  onFinally,
+}: {
+  deleteProfile: () => Promise<void>;
+  isCurrent: () => boolean;
+  onSucceeded: () => void;
+  onFailed: () => void;
+  onFinally: () => void;
+}): Promise<OwnerBoundDeleteRunResultV2> {
+  try {
+    try {
+      await deleteProfile();
+    } catch {
+      if (!isCurrent()) return "ignored";
+      onFailed();
+      return "failed";
+    }
+    if (!isCurrent()) return "ignored";
+    onSucceeded();
+    return "succeeded";
+  } finally {
+    onFinally();
+  }
+}
 
 export type CaptureSessionAction =
   | { type: "SELECT_MODE"; mode: CaptureProtocolV2 }
@@ -112,7 +315,7 @@ export type CaptureSessionAction =
     reason: string;
   }
   | { type: "SAVE_STARTED" }
-  | { type: "SAVE_SUCCEEDED"; sessionGeneration: number }
+  | { type: "SAVE_SUCCEEDED"; sessionGeneration: number; profileId: string }
   | { type: "SAVE_FAILED"; sessionGeneration: number; reason: string }
   | { type: "SESSION_ERROR"; reason: string; recoverTo?: CaptureSessionRecoveryStatus }
   | { type: "CANCEL_SESSION" }
@@ -377,8 +580,10 @@ export function captureSessionReducer(
         ? { ...state, status: "saving", errorMessage: undefined, recoveryStatus: undefined }
         : state;
     case "SAVE_SUCCEEDED":
-      return state.status === "saving" && action.sessionGeneration === state.sessionGeneration
-        ? { ...state, status: "complete" }
+      return state.status === "saving"
+        && action.sessionGeneration === state.sessionGeneration
+        && isOpaqueShootingProfileIdV2(action.profileId)
+        ? { ...state, status: "complete", savedProfileId: action.profileId }
         : state;
     case "SAVE_FAILED":
       return state.status === "saving" && action.sessionGeneration === state.sessionGeneration

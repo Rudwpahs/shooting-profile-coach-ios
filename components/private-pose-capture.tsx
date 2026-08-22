@@ -2,7 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
@@ -14,13 +14,14 @@ import { validateSelectedShootingVideo } from "@/lib/video-intake";
 type CaptureState = "idle" | "picking" | "detecting" | "saving" | "complete" | "error";
 
 export function PrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | void }) {
-  return FORMPATH_FLAGS.captureV2
+  return FORMPATH_FLAGS.captureV2 && FORMPATH_FLAGS.profileV2
     ? <GuidedPrivatePoseCaptureEntry />
     : <LegacyPrivatePoseCapture onSaved={onSaved} />;
 }
 
 function GuidedPrivatePoseCaptureEntry() {
   const router = useRouter();
+  const [focused, setFocused] = useState(false);
   return <View style={styles.v2Card}>
     <View style={styles.heading}>
       <View style={styles.v2HeadingCopy}>
@@ -38,8 +39,11 @@ function GuidedPrivatePoseCaptureEntry() {
       accessibilityRole="button"
       accessibilityState={{ disabled: false }}
       disabled={false}
+      focusable
+      onBlur={() => setFocused(false)}
+      onFocus={() => setFocused(true)}
       onPress={() => router.push("/private-capture")}
-      style={({ pressed }) => [styles.v2Button, pressed && styles.v2Pressed]}
+      style={({ pressed }) => [styles.v2Button, focusStyle(focused, true), pressed && styles.v2Pressed]}
     >
       <MaterialIcons name="videocam" size={19} color="#FFFFFF" />
       <Text style={styles.buttonText}>정면·측면 슛폼 만들기</Text>
@@ -51,6 +55,7 @@ function LegacyPrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | 
   const { user } = useFirebaseAuth();
   const [state, setState] = useState<CaptureState>("idle");
   const [detail, setDetail] = useState("측면 전신 슈팅 영상을 선택하세요.");
+  const [focused, setFocused] = useState(false);
 
   const chooseAndAnalyze = async () => {
     if (!user) return;
@@ -111,21 +116,46 @@ function LegacyPrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | 
   return <View style={styles.card}>
     <View style={styles.heading}><View><Text style={styles.title}>새 개인 스켈레톤</Text><Text style={styles.subtitle}>통과한 pose는 보수 보정 뒤 fluid motion으로 저장합니다.</Text></View><MaterialIcons name="video-library" size={22} color="#F97316" /></View>
     <View style={styles.tip}><MaterialIcons name="tips-and-updates" size={17} color="#102C46" /><Text style={styles.tipText}>측면·전신·밝은 조명에서 2–20초 슈팅 영상을 선택하세요. 추출은 iPhone custom development build에서 기기 안에서 실행됩니다.</Text></View>
-    <Pressable disabled={working} onPress={() => void chooseAndAnalyze()} style={({ pressed }) => [styles.button, working && styles.disabled, pressed && styles.pressed]}>
+    <Pressable
+      accessibilityLabel="기존 단일 시점 슈팅 영상 선택 후 분석"
+      accessibilityRole="button"
+      accessibilityState={{ disabled: working, busy: working }}
+      disabled={working}
+      focusable
+      onBlur={() => setFocused(false)}
+      onFocus={() => setFocused(true)}
+      onPress={() => void chooseAndAnalyze()}
+      style={({ pressed }) => [styles.button, focusStyle(focused, true), working && styles.disabled, pressed && !working && styles.pressed]}
+    >
       {working ? <ActivityIndicator color="#FFFFFF" /> : <MaterialIcons name="add-to-photos" size={18} color="#FFFFFF" />}<Text style={styles.buttonText}>{working ? "분석 중" : "영상 선택 후 분석"}</Text>
     </Pressable>
-    <Text style={[styles.status, state === "error" && styles.error, state === "complete" && styles.complete]}>{detail}</Text>
+    <Text accessibilityLiveRegion={state === "error" ? "assertive" : "polite"} style={[styles.status, state === "error" && styles.error, state === "complete" && styles.complete]}>{detail}</Text>
   </View>;
+}
+
+function focusStyle(focused: boolean, dark: boolean): ViewStyle {
+  if (!focused) return {};
+  return {
+    elevation: 8,
+    outlineColor: dark ? "#FFFFFF" : "#102235",
+    outlineOffset: 2,
+    outlineStyle: "solid",
+    outlineWidth: 3,
+    shadowColor: "#102235",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+  };
 }
 
 const styles = StyleSheet.create({
   v2Card: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 16, borderWidth: 1, marginTop: 14, padding: 14 },
   v2HeadingCopy: { flex: 1, paddingRight: 10 },
-  v2Button: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, paddingHorizontal: 12 },
+  v2Button: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, minWidth: 44, paddingHorizontal: 12 },
   v2Pressed: { opacity: 0.76 },
   card: { backgroundColor: "rgba(238,244,248,0.72)", borderColor: "rgba(16,44,70,0.12)", borderRadius: 16, borderStyle: "dashed", borderWidth: 1, marginTop: 14, padding: 14 },
   heading: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" }, title: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 20 }, subtitle: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
   tip: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 12 }, tipText: { color: "#102C46", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17 },
-  button: { alignItems: "center", backgroundColor: "#F97316", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46 }, buttonText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  button: { alignItems: "center", backgroundColor: "#9A3412", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, minWidth: 44 }, buttonText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
   status: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 10 }, error: { color: "#C24122" }, complete: { color: "#166534" }, disabled: { opacity: 0.62 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });

@@ -2,12 +2,25 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
+  admitCaptureSaveOperationV2,
+  captureSaveOperationMatches,
   captureSessionRetainsSaveToken,
   captureSessionReducer,
+  clearCaptureSaveOperationIfMatching,
+  clearOwnerOperationIfMatching,
   createCaptureSession,
+  matchingShootingProfileSaveInputV2,
+  ownerGenerationMatches,
+  ownerOperationMatches,
+  runCaptureSaveOperationV2,
+  runOwnerBoundDeleteOperationV2,
+  valueForExactOwner,
+  type CaptureSaveOperationTokenV2,
   type CaptureSessionState,
+  type OwnerOperationToken,
 } from "@/lib/shooting-profile/capture-session-reducer";
 import { parseRepresentativePose4D } from "@/lib/shooting-profile/codec";
+import type { SaveShootingProfileInputV2 } from "@/lib/firebase-shooting-profile-contract";
 import { parseLandmarkSequenceV2 } from "@/lib/pose-detection-v2";
 import {
   PERSISTED_JOINT_NAMES_V2,
@@ -17,6 +30,7 @@ import {
   type RepresentativePose4DV2,
   type ShootingHandV2,
 } from "@/lib/shooting-profile/types";
+import type { NormalizedViewAttemptV2 } from "@/lib/shooting-profile/repeated-shot";
 
 function landmarkSequence(
   slotId: string,
@@ -96,6 +110,20 @@ function profile(mode: CaptureProtocolV2): RepresentativePose4DV2 {
   };
 }
 
+function normalizedAttempt(id: string, view: "front" | "shooting_side", takeIndex: 0 | 1 | 2): NormalizedViewAttemptV2 {
+  return {
+    id,
+    phaseAnchors: [
+      { id: "ready", timestampMs: 0, phase: 0 },
+      { id: "deepestDip", timestampMs: 250, phase: 0.25 },
+      { id: "rise", timestampMs: 500, phase: 0.5 },
+      { id: "releaseProxy", timestampMs: 750, phase: 0.75 },
+      { id: "followThrough", timestampMs: 1_000, phase: 1 },
+    ],
+    frames: [{ phase: 0, sourceTimestampMs: 0, view, shootingHand: "right", takeIndex, sourceLandmarks: [] }],
+  };
+}
+
 function collecting(
   mode: CaptureProtocolV2,
   shootingHand: ShootingHandV2 = "right",
@@ -134,6 +162,263 @@ function acceptedSession(mode: CaptureProtocolV2): CaptureSessionState {
 }
 
 describe("captureSessionReducer", () => {
+  it("hides owner A values immediately when the current owner becomes B", () => {
+    const ownerARecords = [{ id: "owner-a-private-record" }];
+    const ownerAViewer = { id: "owner-a-selected-viewer" };
+
+    expect(valueForExactOwner("owner-a", { ownerUid: "owner-a", value: ownerARecords })).toBe(ownerARecords);
+    expect(valueForExactOwner("owner-b", { ownerUid: "owner-a", value: ownerARecords })).toBeUndefined();
+    expect(valueForExactOwner("owner-b", { ownerUid: "owner-a", value: ownerAViewer })).toBeUndefined();
+    expect(valueForExactOwner(null, { ownerUid: "owner-a", value: ownerARecords })).toBeUndefined();
+  });
+
+  it("rejects deferred load and delete tokens after an owner changes", () => {
+    const ownerADelete = { ownerUid: "owner-a", profileId: "profile_a", token: 1 };
+    const ownerBDelete = { ownerUid: "owner-b", profileId: "profile_b", token: 2 };
+
+    expect(ownerGenerationMatches("owner-a", "owner-a", 3, 3)).toBe(true);
+    expect(ownerGenerationMatches("owner-b", "owner-a", 3, 3)).toBe(false);
+    expect(ownerGenerationMatches("owner-a", "owner-a", 4, 3)).toBe(false);
+    expect(ownerOperationMatches("owner-b", ownerADelete, 1)).toBe(false);
+    expect(ownerOperationMatches("owner-b", ownerBDelete, 2)).toBe(true);
+    expect(ownerOperationMatches("owner-b", ownerBDelete, 1)).toBe(false);
+    expect(ownerOperationMatches("owner-b", null, 2)).toBe(false);
+  });
+
+  it("lets a new owner delete while the old owner's request hangs and suppresses the late result", async () => {
+    let currentOwnerUid: string | null = "owner-a";
+    let active: OwnerOperationToken | null = { ownerUid: "owner-a", profileId: "profile_a", token: 1 };
+    let resolveOwnerA!: () => void;
+    const ownerAPromise = new Promise<void>((resolve) => { resolveOwnerA = resolve; });
+    const completions: string[] = [];
+    const failures: string[] = [];
+    const ownerACompletion = runOwnerBoundDeleteOperationV2({
+      deleteProfile: () => ownerAPromise,
+      isCurrent: () => ownerOperationMatches(currentOwnerUid, active, 1),
+      onSucceeded: () => completions.push("owner-a"),
+      onFailed: () => failures.push("owner-a"),
+      onFinally: () => { active = clearOwnerOperationIfMatching(active, 1); },
+    });
+
+    currentOwnerUid = "owner-b";
+    active = { ownerUid: "owner-b", profileId: "profile_b", token: 2 };
+    let resolveOwnerB!: () => void;
+    const ownerBPromise = new Promise<void>((resolve) => { resolveOwnerB = resolve; });
+    const ownerBCompletion = runOwnerBoundDeleteOperationV2({
+      deleteProfile: () => ownerBPromise,
+      isCurrent: () => ownerOperationMatches(currentOwnerUid, active, 2),
+      onSucceeded: () => completions.push("owner-b"),
+      onFailed: () => failures.push("owner-b"),
+      onFinally: () => { active = clearOwnerOperationIfMatching(active, 2); },
+    });
+
+    expect(completions).toEqual([]);
+    resolveOwnerB();
+    await expect(ownerBCompletion).resolves.toBe("succeeded");
+    expect(completions).toEqual(["owner-b"]);
+    expect(active).toBeNull();
+
+    resolveOwnerA();
+    await expect(ownerACompletion).resolves.toBe("ignored");
+    expect(completions).toEqual(["owner-b"]);
+    expect(failures).toEqual([]);
+    expect(active).toBeNull();
+  });
+
+  it("reports a current deletion failure and still performs matching-token cleanup", async () => {
+    let active: OwnerOperationToken | null = {
+      ownerUid: "owner-a",
+      profileId: "profile_a",
+      token: 8,
+    };
+    const failures: string[] = [];
+
+    await expect(runOwnerBoundDeleteOperationV2({
+      deleteProfile: async () => { throw new Error("service detail must not escape"); },
+      isCurrent: () => ownerOperationMatches("owner-a", active, 8),
+      onSucceeded: () => { throw new Error("unexpected success"); },
+      onFailed: () => failures.push("stable Korean UI error"),
+      onFinally: () => { active = clearOwnerOperationIfMatching(active, 8); },
+    })).resolves.toBe("failed");
+
+    expect(failures).toEqual(["stable Korean UI error"]);
+    expect(active).toBeNull();
+  });
+
+  it("builds only a matching strict save envelope and preserves normalized-attempt identity", () => {
+    const attempts = [
+      normalizedAttempt("front-0", "front", 0),
+      normalizedAttempt("shooting_side-0", "shooting_side", 0),
+    ];
+    const state: CaptureSessionState = {
+      ...createCaptureSession("basic_1_plus_1", "right"),
+      status: "result_review",
+      sessionGeneration: 7,
+      profile: profile("basic_1_plus_1"),
+      confidence: 0.61,
+    };
+    const retained = {
+      sessionGeneration: 7,
+      mode: "basic_1_plus_1" as const,
+      shootingHand: "right" as const,
+      normalizedAttempts: attempts,
+    };
+
+    const input = matchingShootingProfileSaveInputV2(state, retained);
+
+    expect(Object.keys(input ?? {}).sort()).toEqual(["confidence", "normalizedAttempts", "profile", "shootingHand"]);
+    expect(input?.normalizedAttempts).toBe(attempts);
+    expect(input).toMatchObject({ profile: state.profile, shootingHand: "right", confidence: 0.61 });
+    expect(matchingShootingProfileSaveInputV2({ ...state, sessionGeneration: 8 }, retained)).toBeNull();
+    expect(matchingShootingProfileSaveInputV2(state, { ...retained, normalizedAttempts: attempts.slice(0, 1) })).toBeNull();
+    expect(matchingShootingProfileSaveInputV2(state, {
+      ...retained,
+      normalizedAttempts: [
+        normalizedAttempt("front-0", "front", 0),
+        normalizedAttempt("front-1", "front", 1),
+      ],
+    })).toBeNull();
+
+    const highAttempts = [
+      normalizedAttempt("front-0", "front", 0),
+      normalizedAttempt("front-1", "front", 1),
+      normalizedAttempt("front-2", "front", 2),
+      normalizedAttempt("shooting_side-0", "shooting_side", 0),
+      normalizedAttempt("shooting_side-1", "shooting_side", 1),
+      normalizedAttempt("shooting_side-2", "shooting_side", 2),
+    ];
+    const highState: CaptureSessionState = {
+      ...state,
+      mode: "high_accuracy_3_plus_3",
+      profile: profile("high_accuracy_3_plus_3"),
+    };
+    const highRetained = {
+      ...retained,
+      mode: "high_accuracy_3_plus_3" as const,
+      normalizedAttempts: highAttempts,
+    };
+    expect(matchingShootingProfileSaveInputV2(highState, highRetained)?.normalizedAttempts).toBe(highAttempts);
+    expect(matchingShootingProfileSaveInputV2(highState, { ...highRetained, normalizedAttempts: highAttempts.slice(0, 5) })).toBeNull();
+  });
+
+  it("runs one exact save envelope and reaches complete only after a valid returned ID", async () => {
+    const attempts = [
+      normalizedAttempt("front-0", "front", 0),
+      normalizedAttempt("shooting_side-0", "shooting_side", 0),
+    ];
+    let state: CaptureSessionState = {
+      ...createCaptureSession("basic_1_plus_1", "right"),
+      status: "result_review",
+      sessionGeneration: 11,
+      profile: profile("basic_1_plus_1"),
+      confidence: 0.62,
+    };
+    const retained = {
+      sessionGeneration: 11,
+      mode: "basic_1_plus_1" as const,
+      shootingHand: "right" as const,
+      normalizedAttempts: attempts,
+    };
+    let resolveSave!: (profileId: string) => void;
+    const deferredSave = new Promise<string>((resolve) => { resolveSave = resolve; });
+    let serviceInput: SaveShootingProfileInputV2 | null = null;
+    let active: CaptureSaveOperationTokenV2 | null = null;
+    const operation = { token: "save_opaque_11", sessionGeneration: 11 };
+    active = admitCaptureSaveOperationV2(active, operation);
+    expect(active).toEqual(operation);
+    expect(admitCaptureSaveOperationV2(active, { token: "second", sessionGeneration: 11 })).toBeNull();
+
+    const completion = runCaptureSaveOperationV2({
+      state,
+      retained,
+      saveProfile: (input) => {
+        serviceInput = input;
+        return deferredSave;
+      },
+      isCurrent: () => captureSaveOperationMatches(active, operation, state.sessionGeneration),
+      onStarted: () => { state = captureSessionReducer(state, { type: "SAVE_STARTED" }); },
+      onSucceeded: (profileId, sessionGeneration) => {
+        state = captureSessionReducer(state, { type: "SAVE_SUCCEEDED", profileId, sessionGeneration });
+      },
+      onFailed: (sessionGeneration) => {
+        state = captureSessionReducer(state, { type: "SAVE_FAILED", sessionGeneration, reason: "stable failure" });
+      },
+      onFinally: () => { active = clearCaptureSaveOperationIfMatching(active, operation); },
+    });
+
+    expect(state.status).toBe("saving");
+    expect(serviceInput).toMatchObject({ profile: state.profile, shootingHand: "right", confidence: 0.62 });
+    expect(serviceInput?.normalizedAttempts).toBe(attempts);
+    resolveSave("profile_valid_11");
+    await expect(completion).resolves.toBe("succeeded");
+    expect(state).toMatchObject({ status: "complete", savedProfileId: "profile_valid_11" });
+    expect(active).toBeNull();
+  });
+
+  it("fails closed on a malformed returned ID and suppresses a late save after generation invalidation", async () => {
+    const attempts = [
+      normalizedAttempt("front-0", "front", 0),
+      normalizedAttempt("shooting_side-0", "shooting_side", 0),
+    ];
+    const retained = {
+      sessionGeneration: 13,
+      mode: "basic_1_plus_1" as const,
+      shootingHand: "right" as const,
+      normalizedAttempts: attempts,
+    };
+    const reviewState: CaptureSessionState = {
+      ...createCaptureSession("basic_1_plus_1", "right"),
+      status: "result_review",
+      sessionGeneration: 13,
+      profile: profile("basic_1_plus_1"),
+      confidence: 0.63,
+    };
+    let malformedState = reviewState;
+    const malformedOperation = { token: "save_malformed_13", sessionGeneration: 13 };
+    let malformedActive: CaptureSaveOperationTokenV2 | null = malformedOperation;
+    await expect(runCaptureSaveOperationV2({
+      state: reviewState,
+      retained,
+      saveProfile: async () => "bad/id",
+      isCurrent: () => captureSaveOperationMatches(malformedActive, malformedOperation, malformedState.sessionGeneration),
+      onStarted: () => { malformedState = captureSessionReducer(malformedState, { type: "SAVE_STARTED" }); },
+      onSucceeded: (profileId, sessionGeneration) => {
+        malformedState = captureSessionReducer(malformedState, { type: "SAVE_SUCCEEDED", profileId, sessionGeneration });
+      },
+      onFailed: (sessionGeneration) => {
+        malformedState = captureSessionReducer(malformedState, { type: "SAVE_FAILED", sessionGeneration, reason: "stable failure" });
+      },
+      onFinally: () => { malformedActive = clearCaptureSaveOperationIfMatching(malformedActive, malformedOperation); },
+    })).resolves.toBe("failed");
+    expect(malformedState).toMatchObject({ status: "error", errorMessage: "stable failure" });
+    expect(malformedState.savedProfileId).toBeUndefined();
+
+    let resolveLate!: (profileId: string) => void;
+    const deferredLate = new Promise<string>((resolve) => { resolveLate = resolve; });
+    let staleState = reviewState;
+    const staleOperation = { token: "save_stale_13", sessionGeneration: 13 };
+    let staleActive: CaptureSaveOperationTokenV2 | null = staleOperation;
+    const staleCompletion = runCaptureSaveOperationV2({
+      state: reviewState,
+      retained,
+      saveProfile: () => deferredLate,
+      isCurrent: () => captureSaveOperationMatches(staleActive, staleOperation, staleState.sessionGeneration),
+      onStarted: () => { staleState = captureSessionReducer(staleState, { type: "SAVE_STARTED" }); },
+      onSucceeded: (profileId, sessionGeneration) => {
+        staleState = captureSessionReducer(staleState, { type: "SAVE_SUCCEEDED", profileId, sessionGeneration });
+      },
+      onFailed: (sessionGeneration) => {
+        staleState = captureSessionReducer(staleState, { type: "SAVE_FAILED", sessionGeneration, reason: "stable failure" });
+      },
+      onFinally: () => { staleActive = clearCaptureSaveOperationIfMatching(staleActive, staleOperation); },
+    });
+    staleState = { ...staleState, sessionGeneration: 14 };
+    resolveLate("profile_late_13");
+    await expect(staleCompletion).resolves.toBe("ignored");
+    expect(staleState.savedProfileId).toBeUndefined();
+    expect(staleState.status).toBe("saving");
+  });
+
   it("uses fixtures accepted by the production clip and profile codecs", () => {
     expect(parseLandmarkSequenceV2(landmarkSequence("front-0"))).toEqual(landmarkSequence("front-0"));
     expect(parseRepresentativePose4D(profile("basic_1_plus_1"))).toEqual(profile("basic_1_plus_1"));
@@ -450,8 +735,85 @@ describe("captureSessionReducer", () => {
     state = captureSessionReducer(state, {
       type: "SAVE_SUCCEEDED",
       sessionGeneration: state.sessionGeneration,
+      profileId: "profile_opaque_01",
     });
     expect(state.status).toBe("complete");
+    expect(state.savedProfileId).toBe("profile_opaque_01");
+  });
+
+  it("ignores a late save ID from an older session generation", () => {
+    let state = acceptedSession("basic_1_plus_1");
+    state = captureSessionReducer(state, { type: "AGGREGATE_STARTED" });
+    state = captureSessionReducer(state, {
+      type: "AGGREGATE_COMPLETED",
+      sessionGeneration: state.sessionGeneration,
+      profile: profile("basic_1_plus_1"),
+      confidence: 0.61,
+    });
+    state = captureSessionReducer(state, { type: "SAVE_STARTED" });
+    const staleGeneration = state.sessionGeneration;
+    state = captureSessionReducer(state, {
+      type: "SELECT_MODE",
+      mode: "high_accuracy_3_plus_3",
+    });
+    const newerSession = state;
+
+    state = captureSessionReducer(state, {
+      type: "SAVE_SUCCEEDED",
+      sessionGeneration: staleGeneration,
+      profileId: "stale_profile_id",
+    });
+
+    expect(state).toBe(newerSession);
+    expect(state.savedProfileId).toBeUndefined();
+  });
+
+  it("fails closed when a matching save action carries a malformed profile ID", () => {
+    let state = acceptedSession("basic_1_plus_1");
+    state = captureSessionReducer(state, { type: "AGGREGATE_STARTED" });
+    state = captureSessionReducer(state, {
+      type: "AGGREGATE_COMPLETED",
+      sessionGeneration: state.sessionGeneration,
+      profile: profile("basic_1_plus_1"),
+      confidence: 0.61,
+    });
+    state = captureSessionReducer(state, { type: "SAVE_STARTED" });
+    const saving = state;
+
+    state = captureSessionReducer(state, {
+      type: "SAVE_SUCCEEDED",
+      sessionGeneration: state.sessionGeneration,
+      profileId: "not/a/valid/id",
+    });
+
+    expect(state).toBe(saving);
+    expect(state.savedProfileId).toBeUndefined();
+  });
+
+  it("clears a saved profile ID with the other derived session state", () => {
+    let state = acceptedSession("basic_1_plus_1");
+    state = captureSessionReducer(state, { type: "AGGREGATE_STARTED" });
+    state = captureSessionReducer(state, {
+      type: "AGGREGATE_COMPLETED",
+      sessionGeneration: state.sessionGeneration,
+      profile: profile("basic_1_plus_1"),
+      confidence: 0.61,
+    });
+    state = captureSessionReducer(state, { type: "SAVE_STARTED" });
+    state = captureSessionReducer(state, {
+      type: "SAVE_SUCCEEDED",
+      sessionGeneration: state.sessionGeneration,
+      profileId: "profile_to_clear",
+    });
+
+    state = captureSessionReducer(state, {
+      type: "SELECT_MODE",
+      mode: "high_accuracy_3_plus_3",
+    });
+
+    expect(state.savedProfileId).toBeUndefined();
+    expect(state.profile).toBeUndefined();
+    expect(state.confidence).toBeUndefined();
   });
 
   it("never stores media URI, filename, EXIF, or raw-byte fields in reducer state", () => {
@@ -517,17 +879,21 @@ describe("guided capture static integration contract", () => {
     expect(admission).toBeGreaterThan(guard);
   });
 
-  it("uses an immediate save token and lets only its matching completion dispatch", () => {
+  it("admits one immediate save operation and delegates matching completion and cleanup", () => {
     const hook = readFileSync("hooks/use-shooting-profile-capture.ts", "utf8");
-    const lock = hook.indexOf("if (saveInFlightRef.current) return;");
-    const admission = hook.indexOf("saveInFlightRef.current = { token: saveToken, sessionGeneration };");
-    const dispatch = hook.indexOf('dispatch({ type: "SAVE_STARTED" });');
-    expect(lock).toBeGreaterThan(-1);
-    expect(admission).toBeGreaterThan(lock);
-    expect(dispatch).toBeGreaterThan(admission);
-    expect(hook).toContain("if (saveInFlightRef.current?.token !== saveToken) return;");
+    const admission = hook.indexOf("admitCaptureSaveOperationV2(saveInFlightRef.current");
+    const guard = hook.indexOf("if (!operation) return;");
+    const lock = hook.indexOf("saveInFlightRef.current = operation;");
+    const run = hook.indexOf("await runCaptureSaveOperationV2({");
+    expect(admission).toBeGreaterThan(-1);
+    expect(guard).toBeGreaterThan(admission);
+    expect(lock).toBeGreaterThan(guard);
+    expect(run).toBeGreaterThan(lock);
+    expect(hook).toContain("captureSaveOperationMatches(");
+    expect(hook).toContain('onStarted: () => dispatch({ type: "SAVE_STARTED" })');
+    expect(hook).toContain("clearCaptureSaveOperationIfMatching(");
     const saveSection = hook.slice(hook.indexOf("const save = useCallback"), hook.indexOf("return {", hook.indexOf("const save = useCallback")));
-    expect(saveSection).not.toContain("finally");
+    expect(saveSection).not.toMatch(/\buri\b|filename|sourceLandmarks|sequence:/);
     expect(hook).toContain("if (!captureSessionRetainsSaveToken(state.status)) {");
   });
 

@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 
 import type {
   CaptureProtocolV2,
@@ -23,6 +24,7 @@ export function QualitySummary({
   saving,
   onSave,
 }: QualitySummaryProps) {
+  const [focused, setFocused] = useState(false);
   const saveDisabled = !canSave || saving;
   const qualityLabel = profile.quality.passed ? "결합 품질 통과" : "재촬영 필요";
   const evidence = mode === "basic_1_plus_1"
@@ -68,28 +70,49 @@ export function QualitySummary({
       <View style={styles.saveBoundary}>
         <MaterialIcons name="lock-outline" size={18} color="#102235" />
         <Text style={styles.saveBoundaryText}>
-          {canSave
-            ? "아직 저장되지 않았습니다. 확인 후 비공개 저장을 선택하세요."
-            : "아직 저장되지 않았습니다. 비공개 저장 연결은 다음 구현 단계에서 제공됩니다."}
+          {saving
+            ? "12개 허용 관절의 위상 정규화 2D 관찰값과 대표 추정치만 비공개로 저장하는 중입니다. 원본 영상, 파일명, 원본 MediaPipe 깊이값은 업로드하지 않습니다. 아직 저장 완료로 표시하지 않습니다."
+            : canSave
+            ? "아직 저장되지 않았습니다. 저장하면 12개 허용 관절의 위상 정규화 2D 관찰값과 대표 추정치만 업로드합니다. 원본 영상, 파일명, 원본 MediaPipe 깊이값은 업로드하지 않습니다. 이 파생 데이터는 사용자가 삭제할 때까지 비공개로 보관됩니다."
+            : "아직 저장되지 않았습니다. 이 결과의 비공개 저장 준비 데이터가 현재 세션에 없습니다. 필요한 클립을 다시 촬영해 주세요."}
         </Text>
       </View>
       <Pressable
-        accessibilityLabel={canSave ? "대표 슛폼을 비공개 프로필로 저장" : "비공개 저장 기능 준비 중"}
+        accessibilityLabel={saving ? "대표 슛폼 비공개 저장 중" : canSave ? "대표 슛폼을 비공개 프로필로 저장" : "비공개 저장 기능 준비 중"}
         accessibilityRole="button"
-        accessibilityState={{ disabled: saveDisabled }}
+        accessibilityState={{ disabled: saveDisabled, busy: saving }}
         disabled={saveDisabled}
+        focusable
+        onBlur={() => setFocused(false)}
+        onFocus={() => setFocused(true)}
         onPress={onSave}
         style={({ pressed }) => [
           styles.saveButton,
+          focusStyle(focused),
           saveDisabled && styles.disabled,
           pressed && !saveDisabled && styles.pressed,
         ]}
       >
         <MaterialIcons name="lock" size={18} color="#FFFFFF" />
-        <Text style={styles.saveText}>{saving ? "저장 중" : canSave ? "비공개 저장" : "비공개 저장 준비 중"}</Text>
+        <Text accessibilityLiveRegion="polite" style={styles.saveText}>{saving ? "저장 중" : canSave ? "비공개 저장" : "비공개 저장 준비 중"}</Text>
       </Pressable>
     </View>
   );
+}
+
+function focusStyle(focused: boolean): ViewStyle {
+  if (!focused) return {};
+  return {
+    elevation: 8,
+    outlineColor: "#FFFFFF",
+    outlineOffset: 2,
+    outlineStyle: "solid",
+    outlineWidth: 3,
+    shadowColor: "#102235",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+  };
 }
 
 const styles = StyleSheet.create({
@@ -109,7 +132,7 @@ const styles = StyleSheet.create({
   detail: { color: "#61738A", fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 4 },
   saveBoundary: { alignItems: "flex-start", backgroundColor: "#EEF4F8", borderRadius: 12, flexDirection: "row", gap: 7, marginTop: 14, padding: 11 },
   saveBoundaryText: { color: "#102235", flex: 1, fontFamily: "Barlow", fontSize: 12, lineHeight: 18 },
-  saveButton: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 13, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 44, paddingHorizontal: 14 },
+  saveButton: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 13, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
   saveText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
   disabled: { opacity: 0.44 },
   pressed: { opacity: 0.74 },

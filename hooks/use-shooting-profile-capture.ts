@@ -1,17 +1,24 @@
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 
+import type { SaveShootingProfileInputV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
+  admitCaptureSaveOperationV2,
+  captureSaveOperationMatches,
   captureSessionRetainsSaveToken,
   captureSessionReducer,
+  clearCaptureSaveOperationIfMatching,
   createCaptureSession,
+  matchingShootingProfileSaveInputV2,
+  runCaptureSaveOperationV2,
+  type CaptureSaveOperationTokenV2,
+  type RetainedNormalizedAttemptsV2,
 } from "@/lib/shooting-profile/capture-session-reducer";
 import { detectPhaseAnchors, resampleAttemptToPhaseGrid } from "@/lib/shooting-profile/phase-normalization";
 import { buildRepresentativeSequence } from "@/lib/shooting-profile/representative-sequence";
 import type { NormalizedViewAttemptV2 } from "@/lib/shooting-profile/repeated-shot";
 import type {
   CaptureProtocolV2,
-  RepresentativePose4DV2,
   ShootingHandV2,
 } from "@/lib/shooting-profile/types";
 import {
@@ -23,8 +30,8 @@ import { validateSelectedShootingVideo } from "@/lib/video-intake";
 export type ShootingProfileCaptureSource = "camera" | "library";
 
 export type SaveRepresentativeProfile = (
-  profile: RepresentativePose4DV2,
-) => Promise<void>;
+  input: SaveShootingProfileInputV2,
+) => Promise<string>;
 
 type UseShootingProfileCaptureOptions = {
   saveProfile?: SaveRepresentativeProfile;
@@ -33,11 +40,6 @@ type UseShootingProfileCaptureOptions = {
 type ActiveRequest = {
   requestId: string;
   generation: number;
-};
-
-type SaveInFlight = {
-  token: string;
-  sessionGeneration: number;
 };
 
 let requestCounter = 0;
@@ -88,7 +90,8 @@ export function useShootingProfileCapture(
   );
   const stateRef = useRef(state);
   const activeRequestsRef = useRef(new Map<string, ActiveRequest>());
-  const saveInFlightRef = useRef<SaveInFlight | null>(null);
+  const saveInFlightRef = useRef<CaptureSaveOperationTokenV2 | null>(null);
+  const normalizedAttemptsRef = useRef<RetainedNormalizedAttemptsV2 | null>(null);
 
   useEffect(() => {
     stateRef.current = state;
@@ -115,33 +118,34 @@ export function useShootingProfileCapture(
     });
   }, []);
 
-  const invalidateSave = useCallback(() => {
+  const invalidateDerivedSave = useCallback(() => {
     saveInFlightRef.current = null;
+    normalizedAttemptsRef.current = null;
   }, []);
 
   useEffect(() => () => {
     cancelAllRequests();
-    invalidateSave();
-  }, [cancelAllRequests, invalidateSave]);
+    invalidateDerivedSave();
+  }, [cancelAllRequests, invalidateDerivedSave]);
 
   const selectMode = useCallback((mode: CaptureProtocolV2) => {
     cancelAllRequests();
-    invalidateSave();
+    invalidateDerivedSave();
     dispatch({ type: "SELECT_MODE", mode });
-  }, [cancelAllRequests, invalidateSave]);
+  }, [cancelAllRequests, invalidateDerivedSave]);
 
   const returnToModeSelect = useCallback(() => {
     cancelAllRequests();
-    invalidateSave();
+    invalidateDerivedSave();
     dispatch({ type: "RETURN_TO_MODE_SELECT" });
-  }, [cancelAllRequests, invalidateSave]);
+  }, [cancelAllRequests, invalidateDerivedSave]);
 
   const setShootingHand = useCallback((shootingHand: ShootingHandV2) => {
     if (stateRef.current.shootingHand === shootingHand) return;
     cancelAllRequests();
-    invalidateSave();
+    invalidateDerivedSave();
     dispatch({ type: "SET_SHOOTING_HAND", shootingHand });
-  }, [cancelAllRequests, invalidateSave]);
+  }, [cancelAllRequests, invalidateDerivedSave]);
 
   const startCollection = useCallback(() => {
     dispatch({ type: "START_COLLECTION" });
@@ -283,15 +287,16 @@ export function useShootingProfileCapture(
   }, [cancelRequest]);
 
   const retakeSlot = useCallback((slotId: string) => {
+    invalidateDerivedSave();
     dispatch({ type: "RETAKE_SLOT", slotId });
     cancelRequest(slotId);
-  }, [cancelRequest]);
+  }, [cancelRequest, invalidateDerivedSave]);
 
   const cancelSession = useCallback(() => {
     dispatch({ type: "CANCEL_SESSION" });
     cancelAllRequests();
-    invalidateSave();
-  }, [cancelAllRequests, invalidateSave]);
+    invalidateDerivedSave();
+  }, [cancelAllRequests, invalidateDerivedSave]);
 
   const retrySession = useCallback(() => {
     dispatch({ type: "RETRY_SESSION" });
@@ -306,6 +311,7 @@ export function useShootingProfileCapture(
     if (acceptedSlots.length !== state.slots.length) return;
 
     dispatch({ type: "AGGREGATE_STARTED" });
+    normalizedAttemptsRef.current = null;
     try {
       const attempts = acceptedSlots.map((slot): NormalizedViewAttemptV2 => {
         const sequence = slot.sequence;
@@ -324,6 +330,12 @@ export function useShootingProfileCapture(
         rootMotion: { status: "unavailable" },
       });
       if (result.status === "complete") {
+        normalizedAttemptsRef.current = {
+          sessionGeneration,
+          mode: state.mode,
+          shootingHand: state.shootingHand,
+          normalizedAttempts: attempts,
+        };
         dispatch({
           type: "AGGREGATE_COMPLETED",
           sessionGeneration,
@@ -331,6 +343,7 @@ export function useShootingProfileCapture(
           confidence: result.confidence,
         });
       } else {
+        normalizedAttemptsRef.current = null;
         dispatch({
           type: "AGGREGATE_RECAPTURE_REQUIRED",
           sessionGeneration,
@@ -338,39 +351,61 @@ export function useShootingProfileCapture(
         });
       }
     } catch {
+      normalizedAttemptsRef.current = null;
       dispatch({
         type: "AGGREGATE_RECAPTURE_REQUIRED",
         sessionGeneration,
         reason: "슛 위상 정렬을 완료하지 못했습니다. 전신과 준비부터 팔로우스루가 보이는 클립으로 다시 시도하세요.",
       });
     }
-  }, [state.mode, state.sessionGeneration, state.slots, state.status]);
+  }, [state.mode, state.sessionGeneration, state.shootingHand, state.slots, state.status]);
 
   const save = useCallback(async () => {
     const snapshot = stateRef.current;
-    if (!options.saveProfile || snapshot.status !== "result_review" || !snapshot.profile) return;
-    if (saveInFlightRef.current) return;
-    const sessionGeneration = snapshot.sessionGeneration;
-    const saveToken = opaqueRequestId();
-    saveInFlightRef.current = { token: saveToken, sessionGeneration };
-    dispatch({ type: "SAVE_STARTED" });
-    try {
-      await options.saveProfile(snapshot.profile);
-      if (saveInFlightRef.current?.token !== saveToken) return;
-      dispatch({ type: "SAVE_SUCCEEDED", sessionGeneration });
-    } catch {
-      if (saveInFlightRef.current?.token !== saveToken) return;
-      dispatch({
+    const retained = normalizedAttemptsRef.current;
+    if (!options.saveProfile || !matchingShootingProfileSaveInputV2(snapshot, retained)) return;
+    const operation = admitCaptureSaveOperationV2(saveInFlightRef.current, {
+      token: opaqueRequestId(),
+      sessionGeneration: snapshot.sessionGeneration,
+    });
+    if (!operation) return;
+    saveInFlightRef.current = operation;
+
+    await runCaptureSaveOperationV2({
+      state: snapshot,
+      retained,
+      saveProfile: options.saveProfile,
+      isCurrent: () => captureSaveOperationMatches(
+        saveInFlightRef.current,
+        operation,
+        stateRef.current.sessionGeneration,
+      ),
+      onStarted: () => dispatch({ type: "SAVE_STARTED" }),
+      onSucceeded: (profileId, sessionGeneration) => dispatch({
+        type: "SAVE_SUCCEEDED",
+        sessionGeneration,
+        profileId,
+      }),
+      onFailed: (sessionGeneration) => dispatch({
         type: "SAVE_FAILED",
         sessionGeneration,
         reason: "비공개 저장을 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요.",
-      });
-    }
+      }),
+      onFinally: () => {
+        saveInFlightRef.current = clearCaptureSaveOperationIfMatching(
+          saveInFlightRef.current,
+          operation,
+        );
+      },
+    });
   }, [options.saveProfile]);
+
+  const canSave = options.saveProfile !== undefined
+    && matchingShootingProfileSaveInputV2(state, normalizedAttemptsRef.current) !== null;
 
   return {
     state,
-    canSave: options.saveProfile !== undefined,
+    canSave,
     selectMode,
     returnToModeSelect,
     setShootingHand,
