@@ -9,6 +9,9 @@ export type SyntheticDualViewSessionOptions = {
   noAgreeingSubset?: boolean;
   shootingHand?: ShootingHandV2;
   directionSpikeAtPhaseIndex?: number;
+  phaseSpikeAtPhaseIndex?: number;
+  phaseSpikeRadiansByTake?: Partial<Record<CaptureViewV2, readonly [number, number, number]>>;
+  thirdTakeRotationRadians?: number;
 };
 
 export type SyntheticDualViewSession = {
@@ -114,6 +117,8 @@ export function syntheticTruthDirectionsAtPhase(phase: number): Record<keyof typ
 
 function project(point: Vector3, view: CaptureViewV2): { x: number; y: number } {
   const horizontal = view === "front" ? point.x : point.z;
+  // NormalizedViewAttemptV2 fixtures are already in upright source-height
+  // isotropic units; x and y intentionally share the same 0.12 scale.
   return {
     x: 0.5 + horizontal * 0.12,
     y: 0.72 - point.y * 0.12,
@@ -154,6 +159,7 @@ function syntheticAttempt(
   takeIndex: 0 | 1 | 2,
   rotationRadians: number,
   directionSpikeAtPhaseIndex?: number,
+  directionSpikeRadians = 0.60,
 ): NormalizedViewAttemptV2 {
   const durationMs = 900 + takeIndex * 170 + (view === "shooting_side" ? 230 : 0);
   const offsetMs = 100 + takeIndex * 1_700 + (view === "shooting_side" ? 12_000 : 0);
@@ -170,7 +176,7 @@ function syntheticAttempt(
       const pelvisCenter = scale(add(pose[23], pose[24]), 0.5);
       const projectedCenter = project(pelvisCenter, view);
       const frameRotation = rotationRadians
-        + (frameIndex === directionSpikeAtPhaseIndex ? 0.60 : 0);
+        + (frameIndex === directionSpikeAtPhaseIndex ? directionSpikeRadians : 0);
       return {
         phase,
         sourceTimestampMs: offsetMs + phase * durationMs,
@@ -202,6 +208,9 @@ function takeRotations(
   if (options.corruptTake) {
     return view === "front" ? [0, 0.015, 0.35] : [-0.35, 0, 0.015];
   }
+  if (options.thirdTakeRotationRadians !== undefined) {
+    return [0, 0.015, options.thirdTakeRotationRadians];
+  }
   return view === "front" ? [0, 0.015, 0.030] : [0.005, 0.020, 0.035];
 }
 
@@ -217,7 +226,9 @@ export function syntheticDualViewSession(
       shootingHand,
       takeIndex as 0 | 1 | 2,
       rotation,
-      options.directionSpikeAtPhaseIndex,
+      options.phaseSpikeAtPhaseIndex ?? options.directionSpikeAtPhaseIndex,
+      options.phaseSpikeRadiansByTake?.[view]?.[takeIndex]
+        ?? (options.directionSpikeAtPhaseIndex === undefined ? 0 : 0.60),
     )
   ));
   return {

@@ -360,6 +360,63 @@ describe("buildRepresentativeSequence", () => {
     expect(result.confidence).toBeLessThanOrEqual(1);
   });
 
+  it("excludes one phase-40 corrupted take using one deterministic all-phase subset per view", () => {
+    const result = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "high_accuracy_3_plus_3",
+      phaseSpikeAtPhaseIndex: 40,
+      phaseSpikeRadiansByTake: {
+        front: [0, 0, 0.50],
+        shooting_side: [0, 0, 0.50],
+      },
+    }));
+
+    expect(result.status, JSON.stringify(result)).toBe("complete");
+    if (result.status !== "complete") return;
+    expect(result.selectedAttemptsByView).toEqual({
+      front: ["front-0", "front-1"],
+      shooting_side: ["shooting_side-0", "shooting_side-1"],
+    });
+    expect(result.profile.frames).toHaveLength(101);
+  });
+
+  it("recaptures without a partial profile when phase-40 corruptions leave no complete pair", () => {
+    const result = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "high_accuracy_3_plus_3",
+      phaseSpikeAtPhaseIndex: 40,
+      phaseSpikeRadiansByTake: {
+        front: [0, 0.30, 0.60],
+        shooting_side: [0, 0.30, 0.60],
+      },
+    }));
+
+    expectRecaptureWithoutTrajectory(result);
+    expect(result).toMatchObject({ reason: "no_complete_agreeing_subset" });
+  });
+
+  it("raises heuristic uncertainty and lowers confidence when an accepted third take is more dispersed", () => {
+    const tight = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "high_accuracy_3_plus_3",
+      thirdTakeRotationRadians: 0.03,
+    }));
+    const dispersed = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "high_accuracy_3_plus_3",
+      thirdTakeRotationRadians: 0.045,
+    }));
+
+    expect(tight.status, JSON.stringify(tight)).toBe("complete");
+    expect(dispersed.status, JSON.stringify(dispersed)).toBe("complete");
+    if (tight.status !== "complete" || dispersed.status !== "complete") return;
+    expect(tight.selectedAttemptsByView.front).toHaveLength(3);
+    expect(dispersed.selectedAttemptsByView.front).toHaveLength(3);
+    expect(dispersed.confidence).toBeLessThan(tight.confidence);
+    expect(dispersed.profile.frames[50].uncertainty.leftWrist.directionalConeDegrees).toBeGreaterThan(
+      tight.profile.frames[50].uncertainty.leftWrist.directionalConeDegrees,
+    );
+    expect(dispersed.profile.frames[50].uncertainty.leftWrist.covariance[0]).toBeGreaterThan(
+      tight.profile.frames[50].uncertainty.leftWrist.covariance[0],
+    );
+  });
+
   it("caps Basic single-take confidence at 0.65", () => {
     const result = buildRepresentativeSequence(syntheticDualViewSession({ mode: "basic_1_plus_1" }));
 

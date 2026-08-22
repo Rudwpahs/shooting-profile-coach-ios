@@ -18,6 +18,7 @@ import {
   aggregateViewAttempts,
   CONSENSUS_V1,
   type AggregatedPhaseSampleFrameV1,
+  type AggregatedProjectedBoneV1,
   type AggregatedViewAttemptsResult,
   type NormalizedViewAttemptV2,
 } from "@/lib/shooting-profile/repeated-shot";
@@ -59,6 +60,7 @@ type DirectionEvidenceV1 = {
   direction: Vector3;
   conditioning: number;
   availability: number;
+  retainedSpreadRadians: number;
 };
 
 type DirectionEvidenceMapV1 = Record<ObservedBoneIdV1, DirectionEvidenceV1>;
@@ -107,10 +109,6 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
-function finitePoint(point: { x: number; y: number }): boolean {
-  return Number.isFinite(point.x) && Number.isFinite(point.y);
-}
-
 function sign(value: number): DirectionSign | undefined {
   if (value === 0) return undefined;
   return value < 0 ? -1 : 1;
@@ -124,8 +122,17 @@ function reliableVerticalSign(vertical: number, projectionLength: number): Direc
   return sign(vertical);
 }
 
-function availabilityOf(points: ReadonlyArray<{ visibility?: number }>): number {
-  return Math.min(...points.map((point) => point.visibility ?? 0));
+function validProjectedEvidence(evidence: AggregatedProjectedBoneV1 | undefined): evidence is AggregatedProjectedBoneV1 {
+  return evidence !== undefined
+    && Number.isFinite(evidence.direction.x)
+    && Number.isFinite(evidence.direction.y)
+    && Number.isFinite(evidence.projectedLength)
+    && evidence.projectedLength > 0
+    && Number.isFinite(evidence.availability)
+    && evidence.availability >= 0
+    && evidence.availability <= 1
+    && Number.isFinite(evidence.retainedSpreadRadians)
+    && evidence.retainedSpreadRadians >= 0;
 }
 
 function reconstructObservedBone(
@@ -134,26 +141,23 @@ function reconstructObservedBone(
   bone: (typeof OBSERVED_BONES_V1)[number],
   shootingHand: ShootingHandV2,
 ): DirectionEvidenceV1 | { rejected: DirectionRejectionReason } {
-  const frontProximal = frontFrame.sourceLandmarks[bone.proximalLandmarkIndex];
-  const frontDistal = frontFrame.sourceLandmarks[bone.distalLandmarkIndex];
-  const sideProximal = sideFrame.sourceLandmarks[bone.proximalLandmarkIndex];
-  const sideDistal = sideFrame.sourceLandmarks[bone.distalLandmarkIndex];
-  if (!frontProximal || !frontDistal || !sideProximal || !sideDistal) {
+  const front = frontFrame.bones[bone.id];
+  const side = sideFrame.bones[bone.id];
+  if (!validProjectedEvidence(front) || !validProjectedEvidence(side)) {
     return { rejected: "non_finite_input" };
   }
-  if (![frontProximal, frontDistal, sideProximal, sideDistal].every(finitePoint)) {
-    return { rejected: "non_finite_input" };
-  }
-  const frontHorizontal = frontDistal.x - frontProximal.x;
-  const frontVertical = frontProximal.y - frontDistal.y;
-  const sideHorizontal = sideDistal.x - sideProximal.x;
-  const sideVertical = sideProximal.y - sideDistal.y;
-  const frontLength = Math.hypot(frontHorizontal, frontVertical);
-  const sideLength = Math.hypot(sideHorizontal, sideVertical);
+  const frontHorizontal = front.direction.x;
+  const frontVertical = -front.direction.y;
+  const sideHorizontal = side.direction.x;
+  const sideVertical = -side.direction.y;
+  const frontLength = front.projectedLength;
+  const sideLength = side.projectedLength;
   const rawFrontVerticalSign = sign(frontVertical);
   const rawSideVerticalSign = sign(sideVertical);
-  const frontVerticalSign = reliableVerticalSign(frontVertical, frontLength);
-  const sideVerticalSign = reliableVerticalSign(sideVertical, sideLength);
+  // Aggregated directions are unit vectors; reliability is their vertical
+  // component ratio. Projected physical length remains separate solver input.
+  const frontVerticalSign = reliableVerticalSign(frontVertical, 1);
+  const sideVerticalSign = reliableVerticalSign(sideVertical, 1);
   if (frontVerticalSign !== undefined
     && sideVerticalSign !== undefined
     && frontVerticalSign !== sideVerticalSign) {
@@ -178,8 +182,8 @@ function reconstructObservedBone(
     && rawFrontVerticalSign !== rawSideVerticalSign) {
     return { rejected: "vertical_sign_disagreement" };
   }
-  const frontReliability = frontLength === 0 ? 0 : Math.abs(frontVertical) / frontLength;
-  const sideReliability = sideLength === 0 ? 0 : Math.abs(sideVertical) / sideLength;
+  const frontReliability = Math.abs(frontVertical);
+  const sideReliability = Math.abs(sideVertical);
   const verticalSign = frontVerticalSign
     ?? sideVerticalSign
     ?? (frontReliability >= sideReliability ? sign(frontVertical) : sign(sideVertical))
@@ -198,7 +202,8 @@ function reconstructObservedBone(
   return {
     direction: result.direction,
     conditioning: result.conditioning,
-    availability: availabilityOf([frontProximal, frontDistal, sideProximal, sideDistal]),
+    availability: Math.min(front.availability, side.availability),
+    retainedSpreadRadians: Math.max(front.retainedSpreadRadians, side.retainedSpreadRadians),
   };
 }
 
@@ -363,9 +368,13 @@ const JOINT_EVIDENCE_PATH: Record<PersistedJointNameV2, readonly ObservedBoneIdV
 
 function uncertaintyFor(
   evidence: DirectionEvidenceV1,
-  normalizedDispersion: number,
 ): JointUncertaintyV2 {
   const config = ENGINEERING_THRESHOLDS_V1.uncertainty;
+  const normalizedDispersion = clamp(
+    evidence.retainedSpreadRadians / CONSENSUS_V1.maxAngularDistanceRadians,
+    0,
+    1,
+  );
   const conditioningPenalty = 1 - clamp(evidence.conditioning, 0, 1);
   const availabilityPenalty = 1 - clamp(evidence.availability, 0, 1);
   const directionalConeDegrees = clamp(
@@ -406,10 +415,12 @@ function propagatedUncertainty(
 
 function representativeConfidence(
   mode: CaptureProtocolV2,
-  normalizedDispersion: number,
   evidenceFrames: readonly DirectionEvidenceMapV1[],
 ): number {
   const allEvidence = evidenceFrames.flatMap((frame) => Object.values(frame));
+  const normalizedDispersion = allEvidence.reduce((sum, evidence) => (
+    sum + clamp(evidence.retainedSpreadRadians / CONSENSUS_V1.maxAngularDistanceRadians, 0, 1)
+  ), 0) / allEvidence.length;
   const meanConditioning = allEvidence.reduce((sum, evidence) => sum + evidence.conditioning, 0)
     / allEvidence.length;
   const meanAvailability = allEvidence.reduce((sum, evidence) => sum + evidence.availability, 0)
@@ -459,16 +470,10 @@ export function buildRepresentativeSequence(
     return recapture("missing_critical_bone");
   }
 
-  const normalizedDispersion = clamp(
-    Math.max(aggregated.front.robustScore, aggregated.side.robustScore)
-      / CONSENSUS_V1.maxAngularDistanceRadians,
-    0,
-    1,
-  );
   const uncertaintyByFrame = evidenceFrames.map((evidence) => Object.fromEntries(
     OBSERVED_BONES_V1.map((bone) => [
       bone.id,
-      uncertaintyFor(evidence[bone.id], normalizedDispersion),
+      uncertaintyFor(evidence[bone.id]),
     ]),
   ) as Record<ObservedBoneIdV1, JointUncertaintyV2>);
   const overLimitBones = new Set<ObservedBoneIdV1>();
@@ -515,7 +520,7 @@ export function buildRepresentativeSequence(
     return {
       status: "complete",
       profile,
-      confidence: representativeConfidence(input.mode, normalizedDispersion, evidenceFrames),
+      confidence: representativeConfidence(input.mode, evidenceFrames),
       selectedAttemptsByView,
       rootMotion: { status: "unavailable" },
     };

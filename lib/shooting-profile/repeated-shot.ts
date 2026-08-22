@@ -1,4 +1,3 @@
-import type { SourceObservation2DV2 } from "@/lib/shooting-profile/coordinate-space";
 import {
   PRODUCTION_PHASE_SAMPLE_COUNT,
   type PhaseSampleFrameV2,
@@ -7,6 +6,7 @@ import {
 import type { CaptureViewV2, ShootingHandV2 } from "@/lib/shooting-profile/types";
 
 const PHASE_GRID_TOLERANCE = 1e-12;
+const SCORE_TIE_TOLERANCE = 1e-12;
 const CANONICAL_ANCHOR_IDS = ["ready", "deepestDip", "rise", "releaseProxy", "followThrough"] as const;
 const CANONICAL_ANCHOR_PHASES = [0, 0.25, 0.5, 0.75, 1] as const;
 
@@ -24,6 +24,7 @@ export type RepeatedShotConsensusConfigV1 = {
   maxNormalizedPhaseAnchorDelta: number;
   minimumLandmarkVisibility: number;
   minimumProjectedBoneLength: number;
+  maximumRetainedAngularSpreadRadians: number;
 };
 
 const REQUIRED_BONES_V1 = Object.freeze([
@@ -49,11 +50,15 @@ const REQUIRED_BONES_V1 = Object.freeze([
 export const CONSENSUS_V1: RepeatedShotConsensusConfigV1 = Object.freeze({
   version: "repeated_shot_consensus_v1",
   requiredBones: REQUIRED_BONES_V1,
-  evaluationPhaseIndices: Object.freeze([0, 25, 50, 75, 100]),
+  evaluationPhaseIndices: Object.freeze(Array.from(
+    { length: PRODUCTION_PHASE_SAMPLE_COUNT },
+    (_, index) => index,
+  )),
   maxAngularDistanceRadians: 8 * Math.PI / 180,
   maxNormalizedPhaseAnchorDelta: 0.08,
   minimumLandmarkVisibility: 0.5,
   minimumProjectedBoneLength: 1e-6,
+  maximumRetainedAngularSpreadRadians: 12 * Math.PI / 180,
 });
 
 export type NormalizedViewAttemptV2 = {
@@ -74,11 +79,21 @@ export type AgreeingAttemptSelection =
   }
   | { status: "recapture_required"; reason: "no_complete_agreeing_subset" };
 
+export type AggregatedProjectedBoneV1 = {
+  direction: Readonly<{ x: number; y: number }>;
+  projectedLength: number;
+  availability: number;
+  angularMadRadians: number;
+  retainedSpreadRadians: number;
+  medoidAttemptId: string;
+  supportAttemptIds: readonly string[];
+};
+
 export type AggregatedPhaseSampleFrameV1 = {
   phase: number;
   view: CaptureViewV2;
   shootingHand: ShootingHandV2;
-  sourceLandmarks: readonly SourceObservation2DV2[];
+  bones: Readonly<Record<string, AggregatedProjectedBoneV1>>;
 };
 
 export type AggregatedViewAttemptsResult =
@@ -90,6 +105,7 @@ export type AggregatedViewAttemptsResult =
     robustScore: number;
     view: CaptureViewV2;
     shootingHand: ShootingHandV2;
+    consensusDispersionRadians: number;
     frames: readonly AggregatedPhaseSampleFrameV1[];
   }
   | { status: "recapture_required"; reason: "no_complete_agreeing_subset" };
@@ -106,6 +122,11 @@ function stableStringCompare(a: string, b: string): number {
   if (a < b) return -1;
   if (a > b) return 1;
   return 0;
+}
+
+function compareScores(a: number, b: number): number {
+  const difference = a - b;
+  return Math.abs(difference) <= SCORE_TIE_TOLERANCE ? 0 : difference;
 }
 
 function requireFinite(value: number, name: string): void {
@@ -144,8 +165,12 @@ function validateConfig(config: RepeatedShotConsensusConfigV1): void {
       throw new Error("required bone landmark indices must be distinct nonnegative integers");
     }
   });
-  if (config.evaluationPhaseIndices.length === 0 || new Set(config.evaluationPhaseIndices).size !== config.evaluationPhaseIndices.length) {
-    throw new Error("evaluation phase indices must be unique and nonempty");
+  if (
+    config.evaluationPhaseIndices.length !== PRODUCTION_PHASE_SAMPLE_COUNT
+    || new Set(config.evaluationPhaseIndices).size !== PRODUCTION_PHASE_SAMPLE_COUNT
+    || config.evaluationPhaseIndices.some((index, position) => index !== position)
+  ) {
+    throw new Error("consensus V1 must evaluate all 101 ordered phase samples");
   }
   config.evaluationPhaseIndices.forEach((index) => {
     if (!Number.isInteger(index) || index < 0 || index >= PRODUCTION_PHASE_SAMPLE_COUNT) {
@@ -157,6 +182,7 @@ function validateConfig(config: RepeatedShotConsensusConfigV1): void {
     config.maxNormalizedPhaseAnchorDelta,
     config.minimumLandmarkVisibility,
     config.minimumProjectedBoneLength,
+    config.maximumRetainedAngularSpreadRadians,
   ].forEach((value, index) => requireFinite(value, `consensus limit ${index}`));
   if (
     config.maxAngularDistanceRadians <= 0
@@ -165,6 +191,8 @@ function validateConfig(config: RepeatedShotConsensusConfigV1): void {
     || config.minimumLandmarkVisibility < 0
     || config.minimumLandmarkVisibility > 1
     || config.minimumProjectedBoneLength <= 0
+    || config.maximumRetainedAngularSpreadRadians <= 0
+    || config.maximumRetainedAngularSpreadRadians > Math.PI
   ) {
     throw new Error("repeated-shot consensus limits are outside their valid ranges");
   }
@@ -321,14 +349,26 @@ function projectedBone(
   attempt: NormalizedViewAttemptV2,
   frameIndex: number,
   bone: RequiredProjectedBoneV1,
-): { x: number; y: number } {
+): {
+  direction: { x: number; y: number };
+  length: number;
+  availability: number;
+  confidenceWeight: number;
+} {
   const frame = attempt.frames[frameIndex];
   const proximal = frame.sourceLandmarks[bone.proximalLandmarkIndex];
   const distal = frame.sourceLandmarks[bone.distalLandmarkIndex];
   const x = distal.x - proximal.x;
   const y = distal.y - proximal.y;
   const magnitude = Math.hypot(x, y);
-  return { x: x / magnitude, y: y / magnitude };
+  const proximalVisibility = proximal.visibility ?? 0;
+  const distalVisibility = distal.visibility ?? 0;
+  return {
+    direction: { x: x / magnitude, y: y / magnitude },
+    length: magnitude,
+    availability: Math.min(proximalVisibility, distalVisibility),
+    confidenceWeight: proximalVisibility * distalVisibility,
+  };
 }
 
 function angleBetweenProjectedBones(
@@ -359,8 +399,8 @@ function measurePair(
   for (const frameIndex of config.evaluationPhaseIndices) {
     for (const bone of config.requiredBones) {
       const distance = angleBetweenProjectedBones(
-        projectedBone(a, frameIndex, bone),
-        projectedBone(b, frameIndex, bone),
+        projectedBone(a, frameIndex, bone).direction,
+        projectedBone(b, frameIndex, bone).direction,
       );
       if (distance > config.maxAngularDistanceRadians) {
         return { passes: false, robustScore: Number.POSITIVE_INFINITY };
@@ -369,6 +409,35 @@ function measurePair(
     }
   }
   return { passes: true, robustScore: median(distances) };
+}
+
+function chooseAttemptMedoid(
+  attempts: readonly NormalizedViewAttemptV2[],
+  config: RepeatedShotConsensusConfigV1,
+): NormalizedViewAttemptV2 {
+  const ranked = attempts.map((candidate) => {
+    let score = 0;
+    for (const other of attempts) {
+      if (other === candidate) continue;
+      for (const frameIndex of config.evaluationPhaseIndices) {
+        for (const bone of config.requiredBones) {
+          const candidateBone = projectedBone(candidate, frameIndex, bone);
+          const otherBone = projectedBone(other, frameIndex, bone);
+          score += otherBone.confidenceWeight * angleBetweenProjectedBones(
+            candidateBone.direction,
+            otherBone.direction,
+          );
+        }
+      }
+    }
+    return { attempt: candidate, score };
+  });
+  ranked.sort((a, b) => (
+    compareScores(a.score, b.score) === 0
+      ? stableStringCompare(a.attempt.id, b.attempt.id)
+      : compareScores(a.score, b.score)
+  ));
+  return ranked[0].attempt;
 }
 
 export function selectAgreeingAttemptSubset(
@@ -404,7 +473,8 @@ export function selectAgreeingAttemptSubset(
     }
   }
   candidates.sort((a, b) => {
-    if (a.robustScore !== b.robustScore) return a.robustScore - b.robustScore;
+    const scoreComparison = compareScores(a.robustScore, b.robustScore);
+    if (scoreComparison !== 0) return scoreComparison;
     const firstComparison = stableStringCompare(a.first.id, b.first.id);
     return firstComparison || stableStringCompare(a.second.id, b.second.id);
   });
@@ -413,10 +483,10 @@ export function selectAgreeingAttemptSubset(
     return { status: "recapture_required", reason: "no_complete_agreeing_subset" };
   }
 
-  const medoid = selectedPair.first;
   const chosen = [selectedPair.first, selectedPair.second];
   const third = validated.attempts.find((attempt) => !chosen.includes(attempt));
-  if (third && measurePair(medoid, third, config).passes) chosen.push(third);
+  if (third && chosen.every((attempt) => measurePair(attempt, third, config).passes)) chosen.push(third);
+  const medoid = chooseAttemptMedoid(chosen, config);
   const attemptIds = Object.freeze(chosen.map((attempt) => attempt.id).sort(stableStringCompare));
   return Object.freeze({
     status: "accepted" as const,
@@ -427,16 +497,59 @@ export function selectAgreeingAttemptSubset(
   });
 }
 
-function aggregateLandmark(points: readonly SourceObservation2DV2[]): SourceObservation2DV2 {
-  const visibilities = points
-    .map((point) => point.visibility)
-    .filter((visibility): visibility is number => visibility !== undefined);
-  const aggregated: SourceObservation2DV2 = {
-    x: median(points.map((point) => point.x)),
-    y: median(points.map((point) => point.y)),
-  };
-  if (visibilities.length > 0) aggregated.visibility = median(visibilities);
-  return aggregated;
+function aggregateProjectedBone(
+  chosen: readonly NormalizedViewAttemptV2[],
+  frameIndex: number,
+  bone: RequiredProjectedBoneV1,
+): AggregatedProjectedBoneV1 {
+  const observations = chosen.map((attempt) => ({
+    attemptId: attempt.id,
+    ...projectedBone(attempt, frameIndex, bone),
+  }));
+  const ranked = observations.map((candidate) => ({
+    observation: candidate,
+    score: observations.reduce((sum, other) => (
+      sum + other.confidenceWeight * angleBetweenProjectedBones(
+        candidate.direction,
+        other.direction,
+      )
+    ), 0),
+  })).sort((a, b) => (
+    compareScores(a.score, b.score) === 0
+      ? stableStringCompare(a.observation.attemptId, b.observation.attemptId)
+      : compareScores(a.score, b.score)
+  ));
+  const medoid = ranked[0].observation;
+  const distances = observations.map((observation) => (
+    angleBetweenProjectedBones(medoid.direction, observation.direction)
+  ));
+  let maximumPairwiseSeparationRadians = 0;
+  for (let firstIndex = 0; firstIndex < observations.length - 1; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < observations.length; secondIndex += 1) {
+      maximumPairwiseSeparationRadians = Math.max(
+        maximumPairwiseSeparationRadians,
+        angleBetweenProjectedBones(
+          observations[firstIndex].direction,
+          observations[secondIndex].direction,
+        ),
+      );
+    }
+  }
+  const totalWeight = observations.reduce((sum, observation) => sum + observation.confidenceWeight, 0);
+  const weighted = (value: (observation: (typeof observations)[number]) => number): number => (
+    observations.reduce((sum, observation) => (
+      sum + value(observation) * observation.confidenceWeight
+    ), 0) / totalWeight
+  );
+  return Object.freeze({
+    direction: Object.freeze({ ...medoid.direction }),
+    projectedLength: weighted((observation) => observation.length),
+    availability: weighted((observation) => observation.availability),
+    angularMadRadians: median(distances),
+    retainedSpreadRadians: maximumPairwiseSeparationRadians,
+    medoidAttemptId: medoid.attemptId,
+    supportAttemptIds: Object.freeze(observations.map((observation) => observation.attemptId)),
+  });
 }
 
 export function aggregateViewAttempts(
@@ -451,22 +564,31 @@ export function aggregateViewAttempts(
     .filter((attempt) => chosenIds.has(attempt.id))
     .sort((a, b) => stableStringCompare(a.id, b.id));
   const firstFrame = chosen[0].frames[0];
-  const frames = Object.freeze(Array.from({ length: PRODUCTION_PHASE_SAMPLE_COUNT }, (_, frameIndex) => {
+  const allSpreads: number[] = [];
+  const mutableFrames: AggregatedPhaseSampleFrameV1[] = [];
+  for (let frameIndex = 0; frameIndex < PRODUCTION_PHASE_SAMPLE_COUNT; frameIndex += 1) {
     const frame = chosen[0].frames[frameIndex];
-    const sourceLandmarks = Object.freeze(frame.sourceLandmarks.map((_, landmarkIndex) => (
-      aggregateLandmark(chosen.map((attempt) => attempt.frames[frameIndex].sourceLandmarks[landmarkIndex]))
-    )));
-    return Object.freeze({
+    const bones = Object.fromEntries(config.requiredBones.map((bone) => {
+      const evidence = aggregateProjectedBone(chosen, frameIndex, bone);
+      allSpreads.push(evidence.retainedSpreadRadians);
+      return [bone.id, evidence];
+    })) as Record<string, AggregatedProjectedBoneV1>;
+    mutableFrames.push(Object.freeze({
       phase: frame.phase,
       view: firstFrame.view,
       shootingHand: firstFrame.shootingHand,
-      sourceLandmarks,
-    });
-  }));
+      bones: Object.freeze(bones),
+    }));
+  }
+  if (allSpreads.some((spread) => spread > config.maximumRetainedAngularSpreadRadians)) {
+    return { status: "recapture_required", reason: "no_complete_agreeing_subset" };
+  }
+  const frames = Object.freeze(mutableFrames);
   return Object.freeze({
     ...selection,
     view: firstFrame.view,
     shootingHand: firstFrame.shootingHand,
+    consensusDispersionRadians: allSpreads.reduce((sum, spread) => sum + spread, 0) / allSpreads.length,
     frames,
   });
 }

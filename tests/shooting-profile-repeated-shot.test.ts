@@ -4,6 +4,7 @@ import {
   aggregateViewAttempts,
   CONSENSUS_V1,
   selectAgreeingAttemptSubset,
+  type AggregatedProjectedBoneV1,
   type NormalizedViewAttemptV2,
 } from "@/lib/shooting-profile/repeated-shot";
 import type { PhaseSampleFrameV2 } from "@/lib/shooting-profile/phase-normalization";
@@ -24,6 +25,10 @@ function rotate(x: number, y: number, radians: number): { x: number; y: number }
     x: x * Math.cos(radians) - y * Math.sin(radians),
     y: x * Math.sin(radians) + y * Math.cos(radians),
   };
+}
+
+function degrees(value: number): number {
+  return value * Math.PI / 180;
 }
 
 function syntheticAttempt(
@@ -73,6 +78,41 @@ function replaceFrame(
   };
 }
 
+function withVisibility(
+  attempt: NormalizedViewAttemptV2,
+  visibility: number,
+): NormalizedViewAttemptV2 {
+  return {
+    ...attempt,
+    frames: attempt.frames.map((frame) => ({
+      ...frame,
+      sourceLandmarks: frame.sourceLandmarks.map((point) => ({ ...point, visibility })),
+    })),
+  };
+}
+
+function projectedDirection(
+  attempt: NormalizedViewAttemptV2,
+  frameIndex: number,
+  proximalLandmarkIndex: number,
+  distalLandmarkIndex: number,
+): { x: number; y: number } {
+  const proximal = attempt.frames[frameIndex].sourceLandmarks[proximalLandmarkIndex];
+  const distal = attempt.frames[frameIndex].sourceLandmarks[distalLandmarkIndex];
+  const x = distal.x - proximal.x;
+  const y = distal.y - proximal.y;
+  const magnitude = Math.hypot(x, y);
+  return { x: x / magnitude, y: y / magnitude };
+}
+
+function expectSameDirection(
+  actual: AggregatedProjectedBoneV1["direction"],
+  expected: { x: number; y: number },
+): void {
+  expect(actual.x).toBeCloseTo(expected.x, 12);
+  expect(actual.y).toBeCloseTo(expected.y, 12);
+}
+
 describe("selectAgreeingAttemptSubset", () => {
   it("accepts one complete Basic attempt and labels it as single-take evidence", () => {
     const attempt = syntheticAttempt("front-0", 0);
@@ -109,7 +149,7 @@ describe("selectAgreeingAttemptSubset", () => {
     }
   });
 
-  it("includes the third take only when it agrees with the selected pair medoid", () => {
+  it("includes the third take only by complete link and reports the final subset medoid", () => {
     const takeA = syntheticAttempt("take-a", 0, { takeIndex: 0 });
     const takeB = syntheticAttempt("take-b", 0.04, { takeIndex: 1 });
     const takeC = syntheticAttempt("take-c", 0.06, { takeIndex: 2 });
@@ -120,7 +160,105 @@ describe("selectAgreeingAttemptSubset", () => {
       status: "accepted",
       evidence: "multi_take_consensus",
       attemptIds: ["take-a", "take-b", "take-c"],
+      medoidAttemptId: "take-b",
     });
+  });
+
+  it("treats signed +179/-179-degree directions as two degrees apart across circular wraparound", () => {
+    const takeA = syntheticAttempt("take-a", degrees(179), { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", degrees(-179), { takeIndex: 1 });
+    const takeC = syntheticAttempt("take-c", degrees(0), { takeIndex: 2 });
+
+    const result = aggregateViewAttempts([takeC, takeB, takeA], CONSENSUS_V1);
+
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") return;
+    expect(result.attemptIds).toEqual(["take-a", "take-b"]);
+    expect(result.frames[40].bones.left_forearm.retainedSpreadRadians).toBeCloseTo(degrees(2), 10);
+  });
+
+  it("rejects true antipodal signed directions when no complete pair agrees", () => {
+    const takeA = syntheticAttempt("take-a", degrees(0), { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", degrees(180), { takeIndex: 1 });
+    const takeC = syntheticAttempt("take-c", degrees(90), { takeIndex: 2 });
+
+    expect(selectAgreeingAttemptSubset([takeC, takeA, takeB], CONSENSUS_V1)).toEqual({
+      status: "recapture_required",
+      reason: "no_complete_agreeing_subset",
+    });
+  });
+
+  it("admits 0/+7/-7 degrees by complete link and deterministically excludes the 14-degree endpoint", () => {
+    const takeA = syntheticAttempt("take-a", degrees(0), { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", degrees(7), { takeIndex: 1 });
+    const takeC = syntheticAttempt("take-c", degrees(-7), { takeIndex: 2 });
+    const permutations = [
+      [takeA, takeB, takeC],
+      [takeA, takeC, takeB],
+      [takeB, takeA, takeC],
+      [takeB, takeC, takeA],
+      [takeC, takeA, takeB],
+      [takeC, takeB, takeA],
+    ];
+
+    const results = permutations.map((attempts) => selectAgreeingAttemptSubset(attempts, CONSENSUS_V1));
+
+    expect(results.every((result) => (
+      result.status === "accepted"
+      && result.attemptIds.join("|") === "take-a|take-b"
+      && result.medoidAttemptId === "take-a"
+    ))).toBe(true);
+  });
+
+  it("excludes a phase-40 outlier even when all five marker phases agree", () => {
+    const takeA = syntheticAttempt("take-a", 0, { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", 0.02, { takeIndex: 1 });
+    const takeC = syntheticAttempt("take-c", (frameIndex) => frameIndex === 40 ? 0.50 : 0.01, {
+      takeIndex: 2,
+    });
+
+    const result = selectAgreeingAttemptSubset([takeC, takeB, takeA], CONSENSUS_V1);
+
+    expect(result).toMatchObject({
+      status: "accepted",
+      attemptIds: ["take-a", "take-b"],
+    });
+  });
+
+  it("requires recapture when phase-40 corruptions leave no complete all-phase pair", () => {
+    const takeA = syntheticAttempt("take-a", (index) => index === 40 ? 0 : 0, { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", (index) => index === 40 ? 0.30 : 0, { takeIndex: 1 });
+    const takeC = syntheticAttempt("take-c", (index) => index === 40 ? 0.60 : 0, { takeIndex: 2 });
+
+    expect(selectAgreeingAttemptSubset([takeA, takeB, takeC], CONSENSUS_V1)).toEqual({
+      status: "recapture_required",
+      reason: "no_complete_agreeing_subset",
+    });
+  });
+
+  it("keeps deterministic whole-view selection under every input permutation", () => {
+    const takeA = syntheticAttempt("take-a", 0, { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", 0.02, { takeIndex: 1 });
+    const takeC = syntheticAttempt("take-c", (frameIndex) => frameIndex === 40 ? 0.50 : 0.01, {
+      takeIndex: 2,
+    });
+    const permutations = [
+      [takeA, takeB, takeC],
+      [takeA, takeC, takeB],
+      [takeB, takeA, takeC],
+      [takeB, takeC, takeA],
+      [takeC, takeA, takeB],
+      [takeC, takeB, takeA],
+    ];
+
+    const results = permutations.map((attempts) => aggregateViewAttempts(attempts, CONSENSUS_V1));
+
+    expect(results.every((result) => (
+      result.status === "accepted"
+      && result.attemptIds.join("|") === "take-a|take-b"
+      && result.frames.length === 101
+      && result.frames.every((frame) => Object.keys(frame.bones).length === CONSENSUS_V1.requiredBones.length)
+    ))).toBe(true);
   });
 
   it("excludes an unavailable third take when the other two form a complete pair", () => {
@@ -288,7 +426,7 @@ describe("selectAgreeingAttemptSubset", () => {
 });
 
 describe("aggregateViewAttempts", () => {
-  it("uses the chosen attempt ID set unchanged for every phase and landmark", () => {
+  it("uses the chosen attempt ID set unchanged for every phase and projected bone", () => {
     const takeA = syntheticAttempt("take-a", 0, { takeIndex: 0 });
     const takeB = syntheticAttempt("take-b", 0.04, { takeIndex: 1 });
     const takeC = syntheticAttempt("take-c", (frameIndex) => frameIndex === 0 ? 0.01 : 0.4, {
@@ -302,13 +440,99 @@ describe("aggregateViewAttempts", () => {
     expect(result.attemptIds).toEqual(["take-a", "take-b"]);
     expect(result.frames).toHaveLength(101);
     expect(result.frames.every((frame) => frame.view === "front" && frame.shootingHand === "right")).toBe(true);
-    expect(result.frames[0].sourceLandmarks[28].x).toBeCloseTo(
-      (takeA.frames[0].sourceLandmarks[28].x + takeB.frames[0].sourceLandmarks[28].x) / 2,
-      12,
+    expectSameDirection(
+      result.frames[0].bones.right_shin.direction,
+      projectedDirection(takeA, 0, 26, 28),
     );
-    expect(result.frames[50].sourceLandmarks[28].y).toBeCloseTo(
-      (takeA.frames[50].sourceLandmarks[28].y + takeB.frames[50].sourceLandmarks[28].y) / 2,
-      12,
+    expectSameDirection(
+      result.frames[50].bones.right_shin.direction,
+      projectedDirection(takeA, 50, 26, 28),
     );
+    expect(result.frames.every((frame) => (
+      frame.bones.right_shin.medoidAttemptId === "take-a"
+      && frame.bones.right_shin.supportAttemptIds.join("|") === "take-a|take-b"
+    ))).toBe(true);
+  });
+
+  it("returns an actual retained signed circular-medoid direction with stable ID tie-breaking", () => {
+    const takeA = syntheticAttempt("take-a", 0, { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", 0.04, { takeIndex: 1 });
+    const takeC = syntheticAttempt("take-c", 0.30, { takeIndex: 2 });
+
+    const result = aggregateViewAttempts([takeC, takeB, takeA], CONSENSUS_V1);
+
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") return;
+    const evidence = result.frames[40].bones.left_forearm;
+    expect(evidence.medoidAttemptId).toBe("take-a");
+    expectSameDirection(evidence.direction, projectedDirection(takeA, 40, 13, 15));
+    expect(evidence.angularMadRadians).toBeCloseTo(0.02, 10);
+    expect(evidence.retainedSpreadRadians).toBeCloseTo(0.04, 10);
+    expect(evidence.supportAttemptIds).toEqual(["take-a", "take-b"]);
+  });
+
+  it("weights the circular medoid by retained endpoint visibility", () => {
+    const takeA = withVisibility(syntheticAttempt("take-a", 0, { takeIndex: 0 }), 0.95);
+    const takeB = withVisibility(syntheticAttempt("take-b", 0.12, { takeIndex: 1 }), 0.50);
+    const takeC = withVisibility(syntheticAttempt("take-c", 0.13, { takeIndex: 2 }), 0.50);
+
+    const result = aggregateViewAttempts([takeC, takeB, takeA], CONSENSUS_V1);
+
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") return;
+    const evidence = result.frames[40].bones.left_forearm;
+    expect(result.attemptIds).toEqual(["take-a", "take-b", "take-c"]);
+    expect(evidence.medoidAttemptId).toBe("take-a");
+    expectSameDirection(evidence.direction, projectedDirection(takeA, 40, 13, 15));
+  });
+
+  it("includes accepted third-take dispersion in every bone's retained spread", () => {
+    const takeA = syntheticAttempt("take-a", 0, { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", 0.04, { takeIndex: 1 });
+    const excluded = syntheticAttempt("take-c", 0.30, { takeIndex: 2 });
+    const included = syntheticAttempt("take-c", 0.10, { takeIndex: 2 });
+
+    const pairOnly = aggregateViewAttempts([excluded, takeB, takeA], CONSENSUS_V1);
+    const withThird = aggregateViewAttempts([included, takeB, takeA], CONSENSUS_V1);
+
+    expect(pairOnly.status).toBe("accepted");
+    expect(withThird.status).toBe("accepted");
+    if (pairOnly.status !== "accepted" || withThird.status !== "accepted") return;
+    expect(pairOnly.attemptIds).toEqual(["take-a", "take-b"]);
+    expect(withThird.attemptIds).toEqual(["take-a", "take-b", "take-c"]);
+    expect(withThird.frames[40].bones.left_forearm.retainedSpreadRadians).toBeGreaterThan(
+      pairOnly.frames[40].bones.left_forearm.retainedSpreadRadians,
+    );
+    expect(withThird.consensusDispersionRadians).toBeGreaterThan(pairOnly.consensusDispersionRadians);
+  });
+
+  it("reports retained spread as maximum pairwise separation rather than medoid radius", () => {
+    const takeA = syntheticAttempt("take-a", degrees(0), { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", degrees(3), { takeIndex: 1 });
+    const takeC = syntheticAttempt("take-c", degrees(6), { takeIndex: 2 });
+
+    const result = aggregateViewAttempts([takeC, takeA, takeB], CONSENSUS_V1);
+
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") return;
+    expect(result.attemptIds).toEqual(["take-a", "take-b", "take-c"]);
+    expect(result.frames[40].bones.left_forearm.medoidAttemptId).toBe("take-b");
+    expect(result.frames[40].bones.left_forearm.retainedSpreadRadians).toBeCloseTo(degrees(6), 10);
+  });
+
+  it("fails closed when retained circular spread exceeds its named gate", () => {
+    const takeA = syntheticAttempt("take-a", 0, { takeIndex: 0 });
+    const takeB = syntheticAttempt("take-b", 0.05, { takeIndex: 1 });
+    const takeC = syntheticAttempt("take-c", 0.30, { takeIndex: 2 });
+    const permissivePairGate = {
+      ...CONSENSUS_V1,
+      maxAngularDistanceRadians: 0.35,
+      maximumRetainedAngularSpreadRadians: 0.20,
+    };
+
+    expect(aggregateViewAttempts([takeC, takeB, takeA], permissivePairGate)).toEqual({
+      status: "recapture_required",
+      reason: "no_complete_agreeing_subset",
+    });
   });
 });
