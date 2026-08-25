@@ -57,6 +57,12 @@ function qualityRejectionReason(reasons: readonly string[]): string {
   if (reasons.includes("low_detection_ratio")) {
     return "영상 대부분에서 전신 포즈를 안정적으로 찾지 못했습니다. 카메라를 고정하고 같은 거리에서 다시 촬영하세요.";
   }
+  if (reasons.includes("low_critical_joint_coverage")) {
+    return "어깨·손목·골반·무릎·발목이 충분히 보이지 않았습니다. 전신과 슈팅 팔이 가려지지 않게 다시 촬영하세요.";
+  }
+  if (reasons.includes("critical_phase_gap")) {
+    return "공을 올리고 놓는 구간의 포즈가 끊겼습니다. 해당 동작이 프레임 안에서 선명하게 이어지도록 다시 촬영하세요.";
+  }
   return "이 클립은 포즈 품질 기준을 통과하지 못했습니다. 전신과 팔로우스루가 보이도록 다시 촬영하세요.";
 }
 
@@ -69,6 +75,9 @@ function detectorFailureReason(status: string, reason: string): string {
   }
   if (reason === "invalid_video") {
     return "선택한 영상을 기기에서 읽지 못했습니다. 다른 2–20초 영상을 선택하세요.";
+  }
+  if (reason === "person_roi_unavailable") {
+    return "영상에서 한 사람의 전신 영역을 안정적으로 잡지 못했습니다. 전신과 뻗은 팔이 화면 안에 계속 보이도록 다시 촬영하세요.";
   }
   return "기기 내 포즈 분석을 완료하지 못했습니다. 잠시 후 다시 시도하세요.";
 }
@@ -223,6 +232,7 @@ export function useShootingProfileCapture(
         view: slot.view,
         shootingHand: snapshot.shootingHand,
         takeIndex: slot.takeIndex,
+        profile: "personal_v2",
       }, (progress) => {
         dispatch({
           type: "SLOT_PROGRESS",

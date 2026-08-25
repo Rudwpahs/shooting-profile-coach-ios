@@ -55,13 +55,22 @@ Status in this Linux run: **PENDING — not executed.**
 Use consented local clips only. Do not paste clip URIs, filenames, frames, or landmark arrays into QA notes or console logs.
 
 - [ ] V1 regression: `analyzeVideoAsync(uri, sampleCount)` still returns its existing `frames`/`sampledFrames` shape.
-- [ ] V2 valid clip: metadata is emitted first, coarse sampling targets 15 fps, and dense sampling stays at or below 30 fps inside the bounded wrist/elbow-motion window.
+- [ ] Exact V2 request: only `uri`, `requestId`, `view`, `shootingHand`, `takeIndex`, and `profile: "personal_v2"` are accepted; missing, changed, or extra fields fail as `invalid_request`.
+- [ ] V2 valid clip: metadata is emitted first, the full-frame locator targets 15 fps, and the complete cropped output pass merges locator timestamps with at-most-30-fps samples from the bounded wrist/elbow-motion window.
+- [ ] Visible full-body ROI: the one clip-level crop contains the head, both shoulders, hips, knees, ankles, and the shooting arm through maximum extension for every output timestamp.
+- [ ] Portrait/landscape ROI: repeat in both orientations and verify the upright crop uses the displayed pixel dimensions after preferred-track transform.
+- [ ] Frame-edge ROI: repeat with the subject near the left, right, top, and bottom edge; proportional padding clamps to the source without a degenerate crop or clipped extended arm.
+- [ ] Locator failure: insufficient light, a partially hidden body, or unstable multi-person framing returns only stable `person_roi_unavailable`, no accepted sequence, and no media context.
+- [ ] Crop overlay: draw restored public x/y over the upright source and compare with the cropped model overlay; verify a non-full crop is restored exactly once and raw MediaPipe z is not drawn as metric depth.
 - [ ] Actual-time proof: compare returned timestamps with the asset’s presentation timestamps; verify they are the `actualTime` values from frame decode, not requested sampling times.
 - [ ] Ordering proof: returned detected frames are deduplicated and strictly timestamp-ordered.
-- [ ] Counter proof: `attempted` increments for every requested decode, `decoded` only after image decode and `MPImage` conversion, `detected` only for a unique 33-landmark pose, and `rejected = attempted - detected`.
-- [ ] Progress proof: only `metadata`, `coarse_pose`, `dense_pose`, `quality`, and `complete` are emitted, each includes the matching request ID, and no event contains media identifiers.
+- [ ] Counter proof: locator attempted/decoded/detected counters are separate; final `attempted` increments for every merged timestamp, `decoded` only after source decode/crop/`MPImage` conversion, `detected` only for a unique 33-landmark cropped pose, and `rejected = attempted - detected`.
+- [ ] Attempt-evidence proof: every final requested timestamp has a decoded/detected marker, and a failed interval spanning the release proxy fails `critical_phase_gap` instead of being interpolated into acceptance.
+- [ ] Quality-boundary proof: 9/15 and 12/20 fail the final 80% gate, the exact 80% boundary passes when other gates pass, and every shoulder/wrist/hip/knee/ankle reaches at least 85% visible coverage.
+- [ ] Progress proof: only `metadata`, `coarse_pose`, `dense_pose`, `quality`, and `complete` are emitted; coarse progress covers the locator, dense progress covers the entire cropped output pass, each event includes the matching request ID, and no event contains media identifiers.
 - [ ] Concurrent-request proof: progress cannot cross request IDs and duplicate active request IDs fail stably.
-- [ ] Cancellation proof: cancel during coarse, dense, and quality boundaries; each must return `analysis_cancelled`, stop before the next frame/stage, and return no partial sequence.
+- [ ] Cancellation proof: cancel during locator decode/detect and output decode/crop/detect, plus quality; each returns `analysis_cancelled`, stops before the next boundary, and returns no partial sequence.
+- [ ] Codec proof: repeat with HEVC, VFR, and slow-motion clips and record exact locator/output counters and progress totals without assuming nominal FPS means constant frame rate.
 - [ ] Invalid-media proof: empty, corrupt, non-video, and unreadable local inputs fail without a URI or filename in the result/log.
 - [ ] Privacy proof: inspect the device/app console and network capture; there must be no URI, filename, raw frame, or landmark logging/upload.
 - [ ] Coordinate-boundary proof: MediaPipe `z` is treated only as raw image-relative local detector output. It is not described as reconstructed depth and is not forwarded directly to Task 4 or cloud persistence.
@@ -79,3 +88,5 @@ Status in this Linux run: **PENDING — physical iPhone and device network/log i
 ```
 
 Passing Linux checks do not satisfy any Apple-toolchain or device gate above.
+
+Task 5B status in this Linux run: **PENDING — Xcode compilation, CocoaPods resolution, physical-iPhone ROI overlays, cancellation timing, and codec matrix were not executed.**

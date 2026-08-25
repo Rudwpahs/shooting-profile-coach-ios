@@ -11,6 +11,7 @@ export type AnalyzeClipRequestV2 = {
   view: "front" | "shooting_side";
   shootingHand: "left" | "right";
   takeIndex: 0 | 1 | 2;
+  profile: "personal_v2";
 };
 
 export type NativePoseProgressV2 = {
@@ -28,6 +29,12 @@ export type NativePoseLandmarkV2 = {
   visibility?: number;
 };
 
+export type NativePoseAttemptV2 = {
+  requestedTimestampMs: number;
+  decodedTimestampMs: number | null;
+  detectedTimestampMs: number | null;
+};
+
 export type NativeLandmarkSequenceV2 = {
   version: 2;
   view: AnalyzeClipRequestV2["view"];
@@ -39,21 +46,32 @@ export type NativeLandmarkSequenceV2 = {
     displayHeight: number;
     nominalFrameRate: number;
     frameRateMode: "constant" | "variable" | "unknown";
+    locatorAttemptedFrames: number;
+    locatorDecodedFrames: number;
+    locatorDetectedFrames: number;
     attemptedFrames: number;
     decodedFrames: number;
     detectedFrames: number;
     rejectedFrames: number;
+    releaseProxyTimestampMs: number;
+    attempts: NativePoseAttemptV2[];
   };
   frames: {
     timestampMs: number;
-    sourceLandmarks: NativePoseLandmarkV2[];
+    /** Landmarks normalized to the stable cropped model input, not the source image. */
+    modelLandmarks: NativePoseLandmarkV2[];
     cropRectPx: { x: number; y: number; width: number; height: number };
     modelToSourcePx: number[];
   }[];
-  transformConvention: "upright_source_top_left_v1";
+  transformConvention: "cropped_model_to_upright_source_v1";
   quality: {
     passed: boolean;
-    reasons: ("too_few_detected_frames" | "low_detection_ratio")[];
+    reasons: (
+      | "too_few_detected_frames"
+      | "low_detection_ratio"
+      | "low_critical_joint_coverage"
+      | "critical_phase_gap"
+    )[];
   };
 };
 

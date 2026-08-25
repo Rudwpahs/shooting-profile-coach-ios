@@ -54,6 +54,8 @@ function landmarkSequence(
       0, 0, 1,
     ],
   }));
+  const attemptedTimestamps = [0, 500, 1_000, 1_500, 1_750, 2_000, 2_500, 3_000, 3_500, 3_750];
+  const detectedTimestamps = new Set(frames.map((frame) => frame.timestampMs));
   return {
     version: 2,
     view: view === "front" ? "front" : "shooting_side",
@@ -65,10 +67,21 @@ function landmarkSequence(
       displayHeight,
       nominalFrameRate: 30,
       frameRateMode: "constant",
+      locatorAttemptedFrames: 15,
+      locatorDecodedFrames: 15,
+      locatorDetectedFrames: 12,
       attemptedFrames: 10,
       decodedFrames: 10,
       detectedFrames: 8,
       rejectedFrames: 2,
+      releaseProxyTimestampMs: 1_500,
+      attempts: attemptedTimestamps.map((requestedTimestampMs) => ({
+        requestedTimestampMs,
+        decodedTimestampMs: requestedTimestampMs,
+        detectedTimestampMs: detectedTimestamps.has(requestedTimestampMs)
+          ? requestedTimestampMs
+          : null,
+      })),
     },
     frames,
     transformConvention: "upright_source_top_left_v1",

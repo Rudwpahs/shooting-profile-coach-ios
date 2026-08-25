@@ -58,6 +58,12 @@ export type RepresentativePose4DV2 = {
 
 export type SourceLandmarkV2 = Vector3 & { visibility?: number };
 
+export type FinalPoseAttemptEvidenceV2 = {
+  requestedTimestampMs: number;
+  decodedTimestampMs: number | null;
+  detectedTimestampMs: number | null;
+};
+
 export type LandmarkSequenceFrameV2 = {
   timestampMs: number;
   sourceLandmarks: SourceLandmarkV2[];
@@ -76,10 +82,15 @@ export type LandmarkSequenceV2 = {
     displayHeight: number;
     nominalFrameRate: number;
     frameRateMode: "constant" | "variable" | "unknown";
+    locatorAttemptedFrames: number;
+    locatorDecodedFrames: number;
+    locatorDetectedFrames: number;
     attemptedFrames: number;
     decodedFrames: number;
     detectedFrames: number;
     rejectedFrames: number;
+    releaseProxyTimestampMs: number;
+    attempts: FinalPoseAttemptEvidenceV2[];
   };
   frames: LandmarkSequenceFrameV2[];
   transformConvention: "upright_source_top_left_v1";
