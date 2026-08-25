@@ -18,6 +18,10 @@ import {
 } from "@/lib/shooting-profile/representative-sequence";
 import { PERSISTED_JOINT_NAMES_V2 } from "@/lib/shooting-profile/types";
 import {
+  DETERMINISTIC_PERTURBATION_SCENARIOS_V1,
+  buildDeterministicUncertaintyScenarioPlan,
+} from "@/lib/shooting-profile/uncertainty";
+import {
   syntheticDualViewSession,
   syntheticTruthDirectionsAtPhase,
   type SyntheticDualViewSession,
@@ -214,6 +218,116 @@ function replaceLandmark(
   };
 }
 
+function reverseAttemptOrder(session: SyntheticDualViewSession): SyntheticDualViewSession {
+  return {
+    ...session,
+    frontAttempts: [...session.frontAttempts].reverse(),
+    shootingSideAttempts: [...session.shootingSideAttempts].reverse(),
+  };
+}
+
+function withProjectedBoneLength(
+  session: SyntheticDualViewSession,
+  projectedLength: number,
+  proximalLandmarkIndex = 13,
+  distalLandmarkIndex = 15,
+): SyntheticDualViewSession {
+  const mutate = (attempts: SyntheticDualViewSession["frontAttempts"]) => attempts.map((attempt) => ({
+    ...attempt,
+    frames: attempt.frames.map((frame) => {
+      const proximal = frame.sourceLandmarks[proximalLandmarkIndex];
+      const distal = frame.sourceLandmarks[distalLandmarkIndex];
+      const dx = distal.x - proximal.x;
+      const dy = distal.y - proximal.y;
+      const magnitude = Math.hypot(dx, dy);
+      return {
+        ...frame,
+        sourceLandmarks: frame.sourceLandmarks.map((point, landmarkIndex) => (
+          landmarkIndex === distalLandmarkIndex
+            ? {
+              ...point,
+              x: proximal.x + dx / magnitude * projectedLength,
+              y: proximal.y + dy / magnitude * projectedLength,
+            }
+            : point
+        )),
+      };
+    }),
+  }));
+  return {
+    ...session,
+    frontAttempts: mutate(session.frontAttempts),
+    shootingSideAttempts: mutate(session.shootingSideAttempts),
+  };
+}
+
+function withVerticalTemplateTorsos(session: SyntheticDualViewSession): SyntheticDualViewSession {
+  const mutate = (attempts: SyntheticDualViewSession["frontAttempts"]) => attempts.map((attempt) => ({
+    ...attempt,
+    frames: attempt.frames.map((frame) => ({
+      ...frame,
+      sourceLandmarks: frame.sourceLandmarks.map((point, landmarkIndex) => {
+        if (landmarkIndex !== 11 && landmarkIndex !== 12) return point;
+        const hip = frame.sourceLandmarks[landmarkIndex === 11 ? 23 : 24];
+        return { ...point, x: hip.x, y: hip.y - 1.10 * 0.12 };
+      }),
+    })),
+  }));
+  return {
+    ...session,
+    frontAttempts: mutate(session.frontAttempts),
+    shootingSideAttempts: mutate(session.shootingSideAttempts),
+  };
+}
+
+function withCompressedSideShoulderRise(session: SyntheticDualViewSession): SyntheticDualViewSession {
+  return {
+    ...session,
+    shootingSideAttempts: session.shootingSideAttempts.map((attempt) => ({
+      ...attempt,
+      frames: attempt.frames.map((frame) => {
+        const leftShoulder = frame.sourceLandmarks[11];
+        const rightShoulder = frame.sourceLandmarks[12];
+        const centerY = (leftShoulder.y + rightShoulder.y) / 2;
+        const compressedDifferenceY = (rightShoulder.y - leftShoulder.y) * 0.4;
+        return {
+          ...frame,
+          sourceLandmarks: frame.sourceLandmarks.map((point, landmarkIndex) => {
+            if (landmarkIndex === 11) return { ...point, y: centerY - compressedDifferenceY / 2 };
+            if (landmarkIndex === 12) return { ...point, y: centerY + compressedDifferenceY / 2 };
+            return point;
+          }),
+        };
+      }),
+    })),
+  };
+}
+
+function covarianceTrace(covariance: readonly number[]): number {
+  return covariance[0] + covariance[3] + covariance[5];
+}
+
+function maximumProfileTrace(result: Extract<RepresentativeSequenceResultV1, { status: "complete" }>): number {
+  return Math.max(...result.profile.frames.flatMap((frame) => (
+    Object.values(frame.uncertainty).map((uncertainty) => covarianceTrace(uncertainty.covariance))
+  )));
+}
+
+function covarianceIsPositiveSemidefinite(
+  covariance: readonly [number, number, number, number, number, number],
+): boolean {
+  const [xx, xy, xz, yy, yz, zz] = covariance;
+  const determinant = xx * yy * zz + 2 * xy * xz * yz
+    - xx * yz * yz - yy * xz * xz - zz * xy * xy;
+  return xx >= 0
+    && yy >= 0
+    && zz >= 0
+    && xx * yy - xy * xy >= -1e-12
+    && xx * zz - xz * xz >= -1e-12
+    && yy * zz - yz * yz >= -1e-12
+    && determinant >= -1e-12;
+}
+
 describe("forwardKinematicsFrame", () => {
   it("normalizes directions and guarantees finite fixed template lengths", () => {
     const directions = Object.fromEntries(KINEMATIC_TREE_V1.map((bone, index) => [
@@ -298,6 +412,42 @@ describe("forwardKinematicsFrame", () => {
   });
 });
 
+describe("deterministic uncertainty scenarios", () => {
+  it("plans fixed coordinate-only and phase-only perturbations over whole retained view pairs", () => {
+    const plan = buildDeterministicUncertaintyScenarioPlan({
+      frontAttemptIds: ["front-c", "front-a", "front-b"],
+      shootingSideAttemptIds: ["side-b", "side-a"],
+      phaseIndexRadius: 2,
+    });
+
+    expect(DETERMINISTIC_PERTURBATION_SCENARIOS_V1.some((scenario) => (
+      scenario.coordinateSign !== 0 && scenario.phaseDirection === 0
+    ))).toBe(true);
+    expect(DETERMINISTIC_PERTURBATION_SCENARIOS_V1.some((scenario) => (
+      scenario.coordinateSign === 0 && scenario.phaseDirection !== 0
+    ))).toBe(true);
+    expect(plan).toHaveLength(3 * 2 * DETERMINISTIC_PERTURBATION_SCENARIOS_V1.length);
+    expect(plan[0]).toMatchObject({
+      frontAttemptId: "front-a",
+      shootingSideAttemptId: "side-a",
+    });
+    expect(new Set(plan.map((scenario) => scenario.frontAttemptId))).toEqual(
+      new Set(["front-a", "front-b", "front-c"]),
+    );
+    expect(new Set(plan.map((scenario) => scenario.shootingSideAttemptId))).toEqual(
+      new Set(["side-a", "side-b"]),
+    );
+    expect(plan.every((scenario) => (
+      scenario.phaseIndexShift === scenario.pattern.phaseDirection * 2
+    ))).toBe(true);
+    expect(buildDeterministicUncertaintyScenarioPlan({
+      frontAttemptIds: ["front-b", "front-c", "front-a"],
+      shootingSideAttemptIds: ["side-a", "side-b"],
+      phaseIndexRadius: 2,
+    })).toEqual(plan);
+  });
+});
+
 describe("buildRepresentativeSequence", () => {
   it("builds the strict 101-frame golden profile from one stable 2-of-3 subset per view", () => {
     const result = buildRepresentativeSequence(syntheticDualViewSession({
@@ -379,6 +529,52 @@ describe("buildRepresentativeSequence", () => {
     expect(result.profile.frames).toHaveLength(101);
   });
 
+  it("is byte-repeatable and invariant to High input permutation", () => {
+    const session = syntheticDualViewSession({
+      mode: "high_accuracy_3_plus_3",
+      thirdTakeRotationRadians: 0.035,
+      anchorTimingJitterNormalized: 0.015,
+    });
+    const first = buildRepresentativeSequence(session);
+    const repeated = buildRepresentativeSequence(session);
+    const permuted = buildRepresentativeSequence(reverseAttemptOrder(session));
+
+    expect(first.status, JSON.stringify(first)).toBe("complete");
+    expect(repeated.status, JSON.stringify(repeated)).toBe("complete");
+    expect(permuted.status, JSON.stringify(permuted)).toBe("complete");
+    expect(JSON.stringify(repeated)).toBe(JSON.stringify(first));
+    expect(JSON.stringify(permuted)).toBe(JSON.stringify(first));
+  });
+
+  it("resamples every admitted third take and excludes Task 3B rejected takes", () => {
+    const admitted = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "high_accuracy_3_plus_3",
+      thirdTakeRotationRadians: 0.035,
+    }));
+    const rejected = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "high_accuracy_3_plus_3",
+      corruptTake: true,
+    }));
+
+    expect(admitted.status, JSON.stringify(admitted)).toBe("complete");
+    expect(rejected.status, JSON.stringify(rejected)).toBe("complete");
+    if (admitted.status !== "complete" || rejected.status !== "complete") return;
+    const admittedPlan = buildDeterministicUncertaintyScenarioPlan({
+      frontAttemptIds: admitted.selectedAttemptsByView.front,
+      shootingSideAttemptIds: admitted.selectedAttemptsByView.shooting_side,
+      phaseIndexRadius: 1,
+    });
+    const rejectedPlan = buildDeterministicUncertaintyScenarioPlan({
+      frontAttemptIds: rejected.selectedAttemptsByView.front,
+      shootingSideAttemptIds: rejected.selectedAttemptsByView.shooting_side,
+      phaseIndexRadius: 1,
+    });
+    expect(admittedPlan.some((scenario) => scenario.frontAttemptId === "front-2")).toBe(true);
+    expect(admittedPlan.some((scenario) => scenario.shootingSideAttemptId === "shooting_side-2")).toBe(true);
+    expect(rejectedPlan.some((scenario) => scenario.frontAttemptId === "front-2")).toBe(false);
+    expect(rejectedPlan.some((scenario) => scenario.shootingSideAttemptId === "shooting_side-0")).toBe(false);
+  });
+
   it("recaptures without a partial profile when phase-40 corruptions leave no complete pair", () => {
     const result = buildRepresentativeSequence(syntheticDualViewSession({
       mode: "high_accuracy_3_plus_3",
@@ -415,6 +611,90 @@ describe("buildRepresentativeSequence", () => {
     expect(dispersed.profile.frames[50].uncertainty.leftWrist.covariance[0]).toBeGreaterThan(
       tight.profile.frames[50].uncertainty.leftWrist.covariance[0],
     );
+  });
+
+  it("emits finite PSD sample covariances with a nonzero floor and real correlation", () => {
+    const result = buildRepresentativeSequence(syntheticDualViewSession({ mode: "basic_1_plus_1" }));
+
+    expect(result.status, JSON.stringify(result)).toBe("complete");
+    if (result.status !== "complete") return;
+    let foundCorrelatedCovariance = false;
+    result.profile.frames.forEach((frame) => {
+      PERSISTED_JOINT_NAMES_V2.forEach((joint) => {
+        const uncertainty = frame.uncertainty[joint];
+        expect(uncertainty.model).toBe("heuristic_v1");
+        expect(uncertainty.covariance.every(Number.isFinite)).toBe(true);
+        expect(covarianceIsPositiveSemidefinite(uncertainty.covariance)).toBe(true);
+        expect(covarianceTrace(uncertainty.covariance)).toBeGreaterThan(0);
+        if (uncertainty.covariance.slice(1, 5).some((value, index) => index !== 2 && Math.abs(value) > 1e-14)) {
+          foundCorrelatedCovariance = true;
+        }
+      });
+    });
+    expect(foundCorrelatedCovariance).toBe(true);
+    expect(parseRepresentativePose4D(result.profile)).toEqual(result.profile);
+    expect(result.confidence).toBeLessThanOrEqual(0.65);
+  });
+
+  it("does not reduce overall uncertainty when landmark visibility falls", () => {
+    const highVisibility = buildRepresentativeSequence(syntheticDualViewSession({ mode: "basic_1_plus_1" }));
+    const lowVisibility = buildRepresentativeSequence(withLandmarkVisibility(
+      syntheticDualViewSession({ mode: "basic_1_plus_1" }),
+      [13, 15],
+      0.82,
+    ));
+
+    expect(highVisibility.status, JSON.stringify(highVisibility)).toBe("complete");
+    expect(lowVisibility.status, JSON.stringify(lowVisibility)).toBe("complete");
+    if (highVisibility.status !== "complete" || lowVisibility.status !== "complete") return;
+    expect(maximumProfileTrace(lowVisibility)).toBeGreaterThanOrEqual(maximumProfileTrace(highVisibility));
+    expect(lowVisibility.profile.frames[50].uncertainty.leftWrist.directionalConeDegrees).toBeGreaterThanOrEqual(
+      highVisibility.profile.frames[50].uncertainty.leftWrist.directionalConeDegrees,
+    );
+    expect(lowVisibility.profile.frames[50].uncertainty.leftWrist.covariance[0]).toBeGreaterThan(
+      highVisibility.profile.frames[50].uncertainty.leftWrist.covariance[0],
+    );
+  });
+
+  it("turns larger bounded 2D coordinate jitter into no-smaller uncertainty", () => {
+    const tight = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "basic_1_plus_1",
+      observationNoiseAmplitude: 0.00002,
+    }));
+    const noisy = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "basic_1_plus_1",
+      observationNoiseAmplitude: 0.00030,
+    }));
+
+    expect(tight.status, JSON.stringify(tight)).toBe("complete");
+    expect(noisy.status, JSON.stringify(noisy)).toBe("complete");
+    if (tight.status !== "complete" || noisy.status !== "complete") return;
+    expect(maximumProfileTrace(noisy)).toBeGreaterThanOrEqual(maximumProfileTrace(tight));
+    expect(noisy.profile.frames[50].uncertainty.leftWrist.covariance[0]).toBeGreaterThan(
+      tight.profile.frames[50].uncertainty.leftWrist.covariance[0],
+    );
+  });
+
+  it("uses retained anchor dispersion for bounded phase shifts without moving baseline joints", () => {
+    const stable = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "high_accuracy_3_plus_3",
+      thirdTakeRotationRadians: 0.035,
+      anchorTimingJitterNormalized: 0,
+    }));
+    const jittered = buildRepresentativeSequence(syntheticDualViewSession({
+      mode: "high_accuracy_3_plus_3",
+      thirdTakeRotationRadians: 0.035,
+      anchorTimingJitterNormalized: 0.02,
+    }));
+
+    expect(stable.status, JSON.stringify(stable)).toBe("complete");
+    expect(jittered.status, JSON.stringify(jittered)).toBe("complete");
+    if (stable.status !== "complete" || jittered.status !== "complete") return;
+    expect(jittered.profile.frames.map((frame) => frame.joints)).toEqual(
+      stable.profile.frames.map((frame) => frame.joints),
+    );
+    expect(jittered.selectedAttemptsByView).toEqual(stable.selectedAttemptsByView);
+    expect(maximumProfileTrace(jittered)).toBeGreaterThan(maximumProfileTrace(stable));
   });
 
   it("caps Basic single-take confidence at 0.65", () => {
@@ -641,6 +921,60 @@ describe("buildRepresentativeSequence", () => {
       status: "recapture_required",
       reason: "uncertainty_exceeds_limit",
       affectedBones: expect.arrayContaining(["shoulder_line"]),
+    });
+  });
+
+  it("accepts the consistent shoulder loop but rejects angular inconsistency without partial output", () => {
+    const consistent = buildRepresentativeSequence(syntheticDualViewSession({ mode: "basic_1_plus_1" }));
+    const inconsistent = buildRepresentativeSequence(withCompressedSideShoulderRise(
+      syntheticDualViewSession({ mode: "basic_1_plus_1" }),
+    ));
+
+    expect(consistent.status, JSON.stringify(consistent)).toBe("complete");
+    expectRecaptureWithoutTrajectory(inconsistent);
+    expect(inconsistent).toEqual({
+      status: "recapture_required",
+      reason: "inconsistent_skeleton_closure",
+      affectedBones: ["shoulder_line"],
+    });
+  });
+
+  it("rejects a shoulder-breadth length closure mismatch independently of angle", () => {
+    const result = buildRepresentativeSequence(withVerticalTemplateTorsos(
+      syntheticDualViewSession({ mode: "basic_1_plus_1" }),
+    ));
+
+    expectRecaptureWithoutTrajectory(result);
+    expect(result).toEqual({
+      status: "recapture_required",
+      reason: "inconsistent_skeleton_closure",
+      affectedBones: ["shoulder_line"],
+    });
+  });
+
+  it("fails closed when too few deterministic perturbation scenarios remain valid", () => {
+    const result = buildRepresentativeSequence(withProjectedBoneLength(
+      syntheticDualViewSession({ mode: "basic_1_plus_1" }),
+      0.00010,
+    ));
+
+    expectRecaptureWithoutTrajectory(result);
+    expect(result).toMatchObject({
+      reason: "perturbation_scenario_shortfall",
+      affectedBones: expect.arrayContaining(["left_forearm"]),
+    });
+  });
+
+  it("fails closed when accepted perturbations expose a cone overflow", () => {
+    const result = buildRepresentativeSequence(withProjectedBoneLength(
+      syntheticDualViewSession({ mode: "basic_1_plus_1" }),
+      0.0010,
+    ));
+
+    expectRecaptureWithoutTrajectory(result);
+    expect(result).toMatchObject({
+      reason: "uncertainty_exceeds_limit",
+      affectedBones: expect.arrayContaining(["left_forearm"]),
     });
   });
 

@@ -12,6 +12,8 @@ export type SyntheticDualViewSessionOptions = {
   phaseSpikeAtPhaseIndex?: number;
   phaseSpikeRadiansByTake?: Partial<Record<CaptureViewV2, readonly [number, number, number]>>;
   thirdTakeRotationRadians?: number;
+  observationNoiseAmplitude?: number;
+  anchorTimingJitterNormalized?: number;
 };
 
 export type SyntheticDualViewSession = {
@@ -65,8 +67,42 @@ function syntheticPose(phase: number): { root: Vector3; joints: Record<number, V
   const hipLine = unit({ x: 0.92, y: 0.18, z: 0.34 });
   const leftHip = add(root, scale(hipLine, -SYNTHETIC_TEMPLATE_LENGTHS.pelvis_to_left_hip));
   const rightHip = add(root, scale(hipLine, SYNTHETIC_TEMPLATE_LENGTHS.pelvis_to_right_hip));
-  const leftShoulder = add(leftHip, scale(unit({ x: -0.16, y: 0.96, z: -0.23 }), SYNTHETIC_TEMPLATE_LENGTHS.left_torso));
-  const rightShoulder = add(rightHip, scale(unit({ x: 0.15, y: 0.93, z: 0.31 }), SYNTHETIC_TEMPLATE_LENGTHS.right_torso));
+  // Keep the independent golden physically closed in the declared output
+  // unit: the shoulder-to-shoulder vector is exactly one template shoulder
+  // breadth while both torso edges retain their fixed 1.10 lengths.
+  const templateShoulderDirection = unit({ x: 0.76, y: 0.14, z: 0.65 });
+  const hipSeparation = scale(
+    hipLine,
+    SYNTHETIC_TEMPLATE_LENGTHS.pelvis_to_left_hip
+      + SYNTHETIC_TEMPLATE_LENGTHS.pelvis_to_right_hip,
+  );
+  const torsoDirectionHalfDifference = scale(
+    subtract(templateShoulderDirection, hipSeparation),
+    1 / (SYNTHETIC_TEMPLATE_LENGTHS.left_torso + SYNTHETIC_TEMPLATE_LENGTHS.right_torso),
+  );
+  const halfDifferenceDirection = unit(torsoDirectionHalfDifference);
+  const commonTorsoDirection = unit({
+    x: -halfDifferenceDirection.x * halfDifferenceDirection.y,
+    y: 1 - halfDifferenceDirection.y * halfDifferenceDirection.y,
+    z: -halfDifferenceDirection.z * halfDifferenceDirection.y,
+  });
+  const commonTorsoMagnitude = Math.sqrt(
+    1 - Math.hypot(
+      torsoDirectionHalfDifference.x,
+      torsoDirectionHalfDifference.y,
+      torsoDirectionHalfDifference.z,
+    ) ** 2,
+  );
+  const leftTorsoDirection = add(
+    scale(commonTorsoDirection, commonTorsoMagnitude),
+    scale(torsoDirectionHalfDifference, -1),
+  );
+  const rightTorsoDirection = add(
+    scale(commonTorsoDirection, commonTorsoMagnitude),
+    torsoDirectionHalfDifference,
+  );
+  const leftShoulder = add(leftHip, scale(leftTorsoDirection, SYNTHETIC_TEMPLATE_LENGTHS.left_torso));
+  const rightShoulder = add(rightHip, scale(rightTorsoDirection, SYNTHETIC_TEMPLATE_LENGTHS.right_torso));
   const lift = 0.14 * Math.sin(Math.PI * phase);
   const leftElbow = add(leftShoulder, scale(unit({ x: -0.55, y: 0.63 + lift, z: 0.45 }), SYNTHETIC_TEMPLATE_LENGTHS.left_upper_arm));
   const leftWrist = add(leftElbow, scale(unit({ x: -0.28, y: 0.82 + lift, z: 0.49 }), SYNTHETIC_TEMPLATE_LENGTHS.left_forearm));
@@ -143,12 +179,13 @@ function deterministicObservationNoise(
   takeIndex: number,
   frameIndex: number,
   landmarkIndex: number,
+  amplitude: number,
 ): { x: number; y: number } {
   const viewSeed = view === "front" ? 17 : 43;
   const seed = viewSeed + takeIndex * 131 + frameIndex * 7 + landmarkIndex * 19;
   return {
-    x: Math.sin(seed * 0.73) * 0.00002,
-    y: Math.cos(seed * 0.61) * 0.00002,
+    x: Math.sin(seed * 0.73) * amplitude,
+    y: Math.cos(seed * 0.61) * amplitude,
   };
 }
 
@@ -160,16 +197,24 @@ function syntheticAttempt(
   rotationRadians: number,
   directionSpikeAtPhaseIndex?: number,
   directionSpikeRadians = 0.60,
+  observationNoiseAmplitude = 0.00002,
+  anchorTimingJitterNormalized = 0,
 ): NormalizedViewAttemptV2 {
   const durationMs = 900 + takeIndex * 170 + (view === "shooting_side" ? 230 : 0);
   const offsetMs = 100 + takeIndex * 1_700 + (view === "shooting_side" ? 12_000 : 0);
   return {
     id,
-    phaseAnchors: ANCHOR_IDS.map((anchorId, index) => ({
-      id: anchorId,
-      phase: ANCHOR_PHASES[index],
-      timestampMs: offsetMs + ANCHOR_PHASES[index] * durationMs,
-    })),
+    phaseAnchors: ANCHOR_IDS.map((anchorId, index) => {
+      const takeJitterSign = takeIndex === 0 ? -1 : takeIndex === 2 ? 1 : 0;
+      const normalizedTimestamp = index === 0 || index === ANCHOR_IDS.length - 1
+        ? ANCHOR_PHASES[index]
+        : ANCHOR_PHASES[index] + takeJitterSign * anchorTimingJitterNormalized;
+      return {
+        id: anchorId,
+        phase: ANCHOR_PHASES[index],
+        timestampMs: offsetMs + normalizedTimestamp * durationMs,
+      };
+    }),
     frames: Array.from({ length: 101 }, (_, frameIndex) => {
       const phase = frameIndex / 100;
       const pose = syntheticPose(phase).joints;
@@ -186,7 +231,13 @@ function syntheticAttempt(
         sourceLandmarks: Array.from({ length: 29 }, (_, landmarkIndex) => {
           const sourcePoint = pose[landmarkIndex] ?? pelvisCenter;
           const rotated = rotateAbout(project(sourcePoint, view), projectedCenter, frameRotation);
-          const noise = deterministicObservationNoise(view, takeIndex, frameIndex, landmarkIndex);
+          const noise = deterministicObservationNoise(
+            view,
+            takeIndex,
+            frameIndex,
+            landmarkIndex,
+            observationNoiseAmplitude,
+          );
           return {
             x: rotated.x + noise.x,
             y: rotated.y + noise.y,
@@ -229,6 +280,8 @@ export function syntheticDualViewSession(
       options.phaseSpikeAtPhaseIndex ?? options.directionSpikeAtPhaseIndex,
       options.phaseSpikeRadiansByTake?.[view]?.[takeIndex]
         ?? (options.directionSpikeAtPhaseIndex === undefined ? 0 : 0.60),
+      options.observationNoiseAmplitude,
+      options.anchorTimingJitterNormalized,
     )
   ));
   return {

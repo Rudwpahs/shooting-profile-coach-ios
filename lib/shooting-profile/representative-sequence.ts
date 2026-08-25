@@ -1,6 +1,7 @@
 import type { Vector3 } from "@/lib/pose-motion";
 import { parseRepresentativePose4D } from "@/lib/shooting-profile/codec";
 import {
+  angleBetweenDirections,
   reconstructBoneDirection,
   type DirectionRejectionReason,
   type DirectionSign,
@@ -14,6 +15,7 @@ import {
   type KinematicBoneIdV1,
   type ReconstructionErrorReasonV1,
 } from "@/lib/shooting-profile/kinematics";
+import { PRODUCTION_PHASE_SAMPLE_COUNT } from "@/lib/shooting-profile/phase-normalization";
 import {
   aggregateViewAttempts,
   CONSENSUS_V1,
@@ -26,10 +28,17 @@ import {
   PERSISTED_JOINT_NAMES_V2,
   type CaptureProtocolV2,
   type JointUncertaintyV2,
+  type PersistedJointMapV2,
   type PersistedJointNameV2,
   type RepresentativePose4DV2,
   type ShootingHandV2,
 } from "@/lib/shooting-profile/types";
+import {
+  buildDeterministicUncertaintyScenarioPlan,
+  perturbSourceObservation2D,
+  sampleCovarianceWithIsotropicFloor,
+  type DeterministicPerturbationPatternV1,
+} from "@/lib/shooting-profile/uncertainty";
 
 const CANONICAL_PHASE_ANCHORS = Object.freeze([
   Object.freeze({ id: "ready", phase: 0 }),
@@ -88,6 +97,8 @@ export type RepresentativeSequenceRecaptureReasonV1 =
   | "invalid_root_motion_signal"
   | "invalid_profile"
   | "uncertainty_exceeds_limit"
+  | "perturbation_scenario_shortfall"
+  | "inconsistent_skeleton_closure"
   | DirectionRejectionReason
   | ReconstructionErrorReasonV1;
 
@@ -228,24 +239,24 @@ function toKinematicDirections(evidence: DirectionEvidenceMapV1): BoneDirectionM
   };
 }
 
-function normalize(vector: Vector3, boneId: KinematicBoneIdV1): Vector3 {
+function normalizedVector(vector: Vector3): Vector3 | undefined {
   const magnitude = Math.hypot(vector.x, vector.y, vector.z);
-  if (!Number.isFinite(magnitude)) throw new ReconstructionError("non_finite_direction", boneId);
-  if (magnitude === 0) throw new ReconstructionError("zero_direction", boneId);
+  if (!Number.isFinite(magnitude) || magnitude === 0) return undefined;
   return { x: vector.x / magnitude, y: vector.y / magnitude, z: vector.z / magnitude };
 }
 
-function smoothDirectionSeries(
+function smoothVectorSeries(
   directions: readonly Vector3[],
-  boneId: KinematicBoneIdV1,
-): Vector3[] {
+): Vector3[] | undefined {
   const radius = ENGINEERING_THRESHOLDS_V1.smoothingWindowRadius;
-  return directions.map((_, frameIndex) => {
+  const smoothed: Vector3[] = [];
+  for (let frameIndex = 0; frameIndex < directions.length; frameIndex += 1) {
     const start = Math.max(0, frameIndex - radius);
     const end = Math.min(directions.length - 1, frameIndex + radius);
     const sum = { x: 0, y: 0, z: 0 };
     for (let index = start; index <= end; index += 1) {
-      const direction = normalize(directions[index], boneId);
+      const direction = normalizedVector(directions[index]);
+      if (!direction) return undefined;
       sum.x += direction.x;
       sum.y += direction.y;
       sum.z += direction.z;
@@ -254,10 +265,22 @@ function smoothDirectionSeries(
     const resultantStrength = Math.hypot(sum.x, sum.y, sum.z) / sampleCount;
     if (!Number.isFinite(resultantStrength)
       || resultantStrength < ENGINEERING_THRESHOLDS_V1.minimumSmoothingResultantStrength) {
-      throw new ReconstructionError("unstable_direction_smoothing", boneId);
+      return undefined;
     }
-    return normalize(sum, boneId);
-  });
+    const direction = normalizedVector(sum);
+    if (!direction) return undefined;
+    smoothed.push(direction);
+  }
+  return smoothed;
+}
+
+function smoothDirectionSeries(
+  directions: readonly Vector3[],
+  boneId: KinematicBoneIdV1,
+): Vector3[] {
+  const smoothed = smoothVectorSeries(directions);
+  if (!smoothed) throw new ReconstructionError("unstable_direction_smoothing", boneId);
+  return smoothed;
 }
 
 function smoothDirections(
@@ -271,6 +294,23 @@ function smoothDirections(
     bone.id,
     series[bone.id][frameIndex],
   ])) as BoneDirectionMapV1);
+}
+
+type ObservedDirectionMapV1 = Record<ObservedBoneIdV1, Vector3>;
+
+function smoothObservedDirections(
+  frames: readonly DirectionEvidenceMapV1[],
+): ObservedDirectionMapV1[] | undefined {
+  const series = {} as Record<ObservedBoneIdV1, Vector3[]>;
+  for (const bone of OBSERVED_BONES_V1) {
+    const smoothed = smoothVectorSeries(frames.map((frame) => frame[bone.id].direction));
+    if (!smoothed) return undefined;
+    series[bone.id] = smoothed;
+  }
+  return frames.map((_, frameIndex) => Object.fromEntries(OBSERVED_BONES_V1.map((bone) => [
+    bone.id,
+    series[bone.id][frameIndex],
+  ])) as ObservedDirectionMapV1);
 }
 
 function recapture(
@@ -351,13 +391,259 @@ function aggregateSessionViews(input: RepresentativeSequenceInputV1):
   return { front, side };
 }
 
+function selectedAttempts(
+  attempts: readonly NormalizedViewAttemptV2[],
+  selectedIds: readonly string[],
+): NormalizedViewAttemptV2[] {
+  const selected = new Set(selectedIds);
+  return [...attempts]
+    .filter((attempt) => selected.has(attempt.id))
+    .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+}
+
+function normalizedAnchorPositions(attempt: NormalizedViewAttemptV2): number[] {
+  const first = attempt.phaseAnchors[0].timestampMs;
+  const last = attempt.phaseAnchors[attempt.phaseAnchors.length - 1].timestampMs;
+  const duration = last - first;
+  return attempt.phaseAnchors.map((anchor) => (anchor.timestampMs - first) / duration);
+}
+
+function maximumRetainedAnchorDispersion(
+  attemptsByView: readonly (readonly NormalizedViewAttemptV2[])[],
+): number {
+  let maximum = 0;
+  attemptsByView.forEach((attempts) => {
+    const positions = attempts.map(normalizedAnchorPositions);
+    for (let first = 0; first < positions.length - 1; first += 1) {
+      for (let second = first + 1; second < positions.length; second += 1) {
+        positions[first].forEach((position, anchorIndex) => {
+          maximum = Math.max(maximum, Math.abs(position - positions[second][anchorIndex]));
+        });
+      }
+    }
+  });
+  return maximum;
+}
+
+function phaseIndexRadiusFor(
+  frontAttempts: readonly NormalizedViewAttemptV2[],
+  sideAttempts: readonly NormalizedViewAttemptV2[],
+): number {
+  const config = ENGINEERING_THRESHOLDS_V1.uncertaintyPerturbation;
+  const dispersion = maximumRetainedAnchorDispersion([frontAttempts, sideAttempts]);
+  return clamp(
+    config.minimumPhaseIndexRadius
+      + Math.ceil(dispersion * config.anchorDispersionPhaseIndexGain),
+    config.minimumPhaseIndexRadius,
+    config.maximumPhaseIndexRadius,
+  );
+}
+
+type ProjectedScenarioFrameResultV1 =
+  | { status: "accepted"; frame: AggregatedPhaseSampleFrameV1 }
+  | { status: "rejected"; boneId: ObservedBoneIdV1 };
+
+function projectedScenarioFrame(
+  attempt: NormalizedViewAttemptV2,
+  sourceFrameIndex: number,
+  outputFrameIndex: number,
+  pattern: DeterministicPerturbationPatternV1,
+): ProjectedScenarioFrameResultV1 {
+  const frame = attempt.frames[sourceFrameIndex];
+  const bones = {} as Record<ObservedBoneIdV1, AggregatedProjectedBoneV1>;
+  for (const bone of OBSERVED_BONES_V1) {
+    const proximal = frame.sourceLandmarks[bone.proximalLandmarkIndex];
+    const distal = frame.sourceLandmarks[bone.distalLandmarkIndex];
+    const originalLength = Math.hypot(distal.x - proximal.x, distal.y - proximal.y);
+    const perturbedProximal = perturbSourceObservation2D(
+      proximal,
+      bone.proximalLandmarkIndex,
+      frame.view,
+      pattern,
+    );
+    const perturbedDistal = perturbSourceObservation2D(
+      distal,
+      bone.distalLandmarkIndex,
+      frame.view,
+      pattern,
+    );
+    const config = ENGINEERING_THRESHOLDS_V1.uncertaintyPerturbation;
+    if (
+      !Number.isFinite(originalLength)
+      || !perturbedProximal
+      || !perturbedDistal
+      || Math.max(perturbedProximal.offsetMagnitude, perturbedDistal.offsetMagnitude)
+        > originalLength * config.maximumLandmarkOffsetFractionOfProjectedBone
+    ) {
+      return { status: "rejected", boneId: bone.id };
+    }
+    const x = perturbedDistal.point.x - perturbedProximal.point.x;
+    const y = perturbedDistal.point.y - perturbedProximal.point.y;
+    const projectedLength = Math.hypot(x, y);
+    const availability = Math.min(
+      perturbedProximal.point.visibility ?? 0,
+      perturbedDistal.point.visibility ?? 0,
+    );
+    if (
+      !Number.isFinite(projectedLength)
+      || projectedLength < CONSENSUS_V1.minimumProjectedBoneLength
+      || !Number.isFinite(availability)
+    ) {
+      return { status: "rejected", boneId: bone.id };
+    }
+    bones[bone.id] = Object.freeze({
+      direction: Object.freeze({ x: x / projectedLength, y: y / projectedLength }),
+      projectedLength,
+      availability,
+      angularMadRadians: 0,
+      retainedSpreadRadians: 0,
+      medoidAttemptId: attempt.id,
+      supportAttemptIds: Object.freeze([attempt.id]),
+    });
+  }
+  return {
+    status: "accepted",
+    frame: Object.freeze({
+      phase: outputFrameIndex / (PRODUCTION_PHASE_SAMPLE_COUNT - 1),
+      view: frame.view,
+      shootingHand: frame.shootingHand,
+      bones: Object.freeze(bones),
+    }),
+  };
+}
+
+function shoulderClosureIsValid(
+  jointsByFrame: readonly PersistedJointMapV2[],
+  observedDirectionsByFrame: readonly ObservedDirectionMapV1[],
+): boolean {
+  const config = ENGINEERING_THRESHOLDS_V1.shoulderClosure;
+  if (jointsByFrame.length !== observedDirectionsByFrame.length) return false;
+  return jointsByFrame.every((joints, frameIndex) => {
+    const implied = {
+      x: joints.rightShoulder.x - joints.leftShoulder.x,
+      y: joints.rightShoulder.y - joints.leftShoulder.y,
+      z: joints.rightShoulder.z - joints.leftShoulder.z,
+    };
+    const length = Math.hypot(implied.x, implied.y, implied.z);
+    const normalizedLengthResidual = Math.abs(length - config.templateShoulderBreadth)
+      / config.templateShoulderBreadth;
+    let angularResidual: number;
+    try {
+      angularResidual = angleBetweenDirections(
+        implied,
+        observedDirectionsByFrame[frameIndex].shoulder_line,
+      );
+    } catch {
+      return false;
+    }
+    return Number.isFinite(length)
+      && Number.isFinite(normalizedLengthResidual)
+      && Number.isFinite(angularResidual)
+      && normalizedLengthResidual <= config.maximumNormalizedLengthResidual
+      && angularResidual <= config.maximumAngularResidualRadians;
+  });
+}
+
+type AcceptedScenarioTrajectoryV1 = Readonly<{
+  jointsByFrame: readonly PersistedJointMapV2[];
+  observedDirectionsByFrame: readonly ObservedDirectionMapV1[];
+}>;
+
+type ScenarioTrajectoryResultV1 =
+  | { status: "accepted"; trajectory: AcceptedScenarioTrajectoryV1 }
+  | { status: "rejected"; affectedBone: string }
+  | { status: "closure_rejected" };
+
+function reconstructScenarioTrajectory(
+  frontAttempt: NormalizedViewAttemptV2,
+  sideAttempt: NormalizedViewAttemptV2,
+  phaseIndexShift: number,
+  pattern: DeterministicPerturbationPatternV1,
+  shootingHand: ShootingHandV2,
+): ScenarioTrajectoryResultV1 {
+  const evidenceFrames: DirectionEvidenceMapV1[] = [];
+  const rawDirections: BoneDirectionMapV1[] = [];
+  for (let outputFrameIndex = 0;
+    outputFrameIndex < PRODUCTION_PHASE_SAMPLE_COUNT;
+    outputFrameIndex += 1) {
+    const sourceFrameIndex = clamp(
+      outputFrameIndex + phaseIndexShift,
+      0,
+      PRODUCTION_PHASE_SAMPLE_COUNT - 1,
+    );
+    const front = projectedScenarioFrame(frontAttempt, sourceFrameIndex, outputFrameIndex, pattern);
+    if (front.status === "rejected") return { status: "rejected", affectedBone: front.boneId };
+    const side = projectedScenarioFrame(sideAttempt, sourceFrameIndex, outputFrameIndex, pattern);
+    if (side.status === "rejected") return { status: "rejected", affectedBone: side.boneId };
+    const evidence = {} as DirectionEvidenceMapV1;
+    for (const bone of OBSERVED_BONES_V1) {
+      const reconstructed = reconstructObservedBone(front.frame, side.frame, bone, shootingHand);
+      if ("rejected" in reconstructed) return { status: "rejected", affectedBone: bone.id };
+      evidence[bone.id] = reconstructed;
+    }
+    evidenceFrames.push(evidence);
+    rawDirections.push(toKinematicDirections(evidence));
+  }
+  try {
+    const directionsByFrame = smoothDirections(rawDirections);
+    const observedDirectionsByFrame = smoothObservedDirections(evidenceFrames);
+    if (!observedDirectionsByFrame) return { status: "rejected", affectedBone: "shoulder_line" };
+    const jointsByFrame = directionsByFrame.map((directions) => forwardKinematicsFrame(
+      directions,
+      ENGINEERING_THRESHOLDS_V1.templateBoneLengths,
+    ));
+    if (!shoulderClosureIsValid(jointsByFrame, observedDirectionsByFrame)) {
+      return { status: "closure_rejected" };
+    }
+    return {
+      status: "accepted",
+      trajectory: Object.freeze({
+        jointsByFrame: Object.freeze(jointsByFrame),
+        observedDirectionsByFrame: Object.freeze(observedDirectionsByFrame),
+      }),
+    };
+  } catch (error) {
+    return {
+      status: "rejected",
+      affectedBone: error instanceof ReconstructionError && error.boneId
+        ? error.boneId
+        : "missing_critical_bone",
+    };
+  }
+}
+
+function coordinateRoughnessSquaredByBone(
+  attemptsByView: readonly (readonly NormalizedViewAttemptV2[])[],
+): Record<ObservedBoneIdV1, number> {
+  return Object.fromEntries(OBSERVED_BONES_V1.map((bone) => {
+    let squaredSum = 0;
+    let sampleCount = 0;
+    attemptsByView.forEach((attempts) => attempts.forEach((attempt) => {
+      [bone.proximalLandmarkIndex, bone.distalLandmarkIndex].forEach((landmarkIndex) => {
+        for (let frameIndex = 1;
+          frameIndex < PRODUCTION_PHASE_SAMPLE_COUNT - 1;
+          frameIndex += 1) {
+          const previous = attempt.frames[frameIndex - 1].sourceLandmarks[landmarkIndex];
+          const current = attempt.frames[frameIndex].sourceLandmarks[landmarkIndex];
+          const next = attempt.frames[frameIndex + 1].sourceLandmarks[landmarkIndex];
+          const secondDifferenceX = previous.x - 2 * current.x + next.x;
+          const secondDifferenceY = previous.y - 2 * current.y + next.y;
+          squaredSum += secondDifferenceX ** 2 + secondDifferenceY ** 2;
+          sampleCount += 1;
+        }
+      });
+    }));
+    return [bone.id, sampleCount === 0 ? 0 : squaredSum / sampleCount];
+  })) as Record<ObservedBoneIdV1, number>;
+}
+
 const JOINT_EVIDENCE_PATH: Record<PersistedJointNameV2, readonly ObservedBoneIdV1[]> = {
-  leftShoulder: ["hip_line", "left_torso"],
-  leftElbow: ["hip_line", "left_torso", "left_upper_arm"],
-  leftWrist: ["hip_line", "left_torso", "left_upper_arm", "left_forearm"],
-  rightShoulder: ["hip_line", "right_torso"],
-  rightElbow: ["hip_line", "right_torso", "right_upper_arm"],
-  rightWrist: ["hip_line", "right_torso", "right_upper_arm", "right_forearm"],
+  leftShoulder: ["hip_line", "left_torso", "shoulder_line"],
+  leftElbow: ["hip_line", "left_torso", "shoulder_line", "left_upper_arm"],
+  leftWrist: ["hip_line", "left_torso", "shoulder_line", "left_upper_arm", "left_forearm"],
+  rightShoulder: ["hip_line", "right_torso", "shoulder_line"],
+  rightElbow: ["hip_line", "right_torso", "shoulder_line", "right_upper_arm"],
+  rightWrist: ["hip_line", "right_torso", "shoulder_line", "right_upper_arm", "right_forearm"],
   leftHip: ["hip_line"],
   leftKnee: ["hip_line", "left_thigh"],
   leftAnkle: ["hip_line", "left_thigh", "left_shin"],
@@ -365,6 +651,19 @@ const JOINT_EVIDENCE_PATH: Record<PersistedJointNameV2, readonly ObservedBoneIdV
   rightKnee: ["hip_line", "right_thigh"],
   rightAnkle: ["hip_line", "right_thigh", "right_shin"],
 };
+
+const JOINT_PARENT_V1: Readonly<Partial<Record<PersistedJointNameV2, PersistedJointNameV2>>> = Object.freeze({
+  leftShoulder: "leftHip",
+  leftElbow: "leftShoulder",
+  leftWrist: "leftElbow",
+  rightShoulder: "rightHip",
+  rightElbow: "rightShoulder",
+  rightWrist: "rightElbow",
+  leftKnee: "leftHip",
+  leftAnkle: "leftKnee",
+  rightKnee: "rightHip",
+  rightAnkle: "rightKnee",
+});
 
 function uncertaintyFor(
   evidence: DirectionEvidenceV1,
@@ -400,22 +699,115 @@ function uncertaintyFor(
   };
 }
 
-function propagatedUncertainty(
-  path: readonly ObservedBoneIdV1[],
-  uncertaintyByBone: Record<ObservedBoneIdV1, JointUncertaintyV2>,
-): JointUncertaintyV2 {
-  const values = path.map((boneId) => uncertaintyByBone[boneId]);
-  const variance = Math.max(...values.map((value) => value.covariance[0]));
-  return {
-    model: "heuristic_v1",
-    covariance: [variance, 0, 0, variance, 0, variance],
-    directionalConeDegrees: Math.max(...values.map((value) => value.directionalConeDegrees)),
-  };
+function addIsotropicFloor(
+  covariance: JointUncertaintyV2["covariance"],
+  floor: number,
+): JointUncertaintyV2["covariance"] {
+  return [
+    covariance[0] + floor,
+    covariance[1],
+    covariance[2],
+    covariance[3] + floor,
+    covariance[4],
+    covariance[5] + floor,
+  ];
+}
+
+type UncertaintyFramesResultV1 = Readonly<{
+  frames: readonly Record<PersistedJointNameV2, JointUncertaintyV2>[];
+  overLimitBones: readonly ObservedBoneIdV1[];
+  maximumDirectionalSensitivityDegrees: number;
+}>;
+
+function buildPerturbationUncertaintyFrames(
+  evidenceFrames: readonly DirectionEvidenceMapV1[],
+  baselineObservedDirections: readonly ObservedDirectionMapV1[],
+  scenarios: readonly AcceptedScenarioTrajectoryV1[],
+  roughnessSquaredByBone: Record<ObservedBoneIdV1, number>,
+  retainedAnchorDispersion: number,
+): UncertaintyFramesResultV1 {
+  const config = ENGINEERING_THRESHOLDS_V1.uncertaintyPerturbation;
+  const evidenceUncertaintyByFrame = evidenceFrames.map((evidence) => Object.fromEntries(
+    OBSERVED_BONES_V1.map((bone) => [bone.id, uncertaintyFor(evidence[bone.id])]),
+  ) as Record<ObservedBoneIdV1, JointUncertaintyV2>);
+  const overLimitBones = new Set<ObservedBoneIdV1>();
+  let maximumDirectionalSensitivityDegrees = 0;
+  const frames = evidenceFrames.map((_, frameIndex) => {
+    const built = {} as Record<PersistedJointNameV2, JointUncertaintyV2>;
+    const buildJoint = (joint: PersistedJointNameV2): JointUncertaintyV2 => {
+      if (built[joint]) return built[joint];
+      const path = JOINT_EVIDENCE_PATH[joint];
+      const evidenceValues = path.map((boneId) => evidenceUncertaintyByFrame[frameIndex][boneId]);
+      const evidenceVarianceFloor = Math.max(...evidenceValues.map((value) => value.covariance[0]));
+      const evidenceConeFloor = Math.max(...evidenceValues.map((value) => value.directionalConeDegrees));
+      const roughnessVarianceFloor = Math.max(...path.map((boneId) => roughnessSquaredByBone[boneId]))
+        * config.coordinateRoughnessVarianceGain;
+      const samples = scenarios.map((scenario) => scenario.jointsByFrame[frameIndex][joint]);
+      const sampleCovariance = sampleCovarianceWithIsotropicFloor(samples, 0);
+      let isotropicFloor = evidenceVarianceFloor
+        + config.isotropicSampleCovarianceFloorVariance
+        + roughnessVarianceFloor
+        + retainedAnchorDispersion ** 2 * config.anchorDispersionVarianceGain;
+      const parent = JOINT_PARENT_V1[joint];
+      if (parent) {
+        const parentCovariance = buildJoint(parent).covariance;
+        const parentEnvelope = Math.max(
+          parentCovariance[0],
+          parentCovariance[3],
+          parentCovariance[5],
+        );
+        const ownMinimumSampleVariance = Math.min(
+          sampleCovariance[0],
+          sampleCovariance[3],
+          sampleCovariance[5],
+        );
+        isotropicFloor = Math.max(isotropicFloor, parentEnvelope - ownMinimumSampleVariance);
+      }
+      let directionalSensitivityDegrees = 0;
+      path.forEach((boneId) => {
+        scenarios.forEach((scenario) => {
+          const degrees = angleBetweenDirections(
+            baselineObservedDirections[frameIndex][boneId],
+            scenario.observedDirectionsByFrame[frameIndex][boneId],
+          ) * 180 / Math.PI;
+          directionalSensitivityDegrees = Math.max(directionalSensitivityDegrees, degrees);
+          maximumDirectionalSensitivityDegrees = Math.max(maximumDirectionalSensitivityDegrees, degrees);
+          if (degrees > ENGINEERING_THRESHOLDS_V1.maximumAcceptedDirectionalConeDegrees) {
+            overLimitBones.add(boneId);
+          }
+        });
+      });
+      const directionalConeDegrees = Math.max(evidenceConeFloor, directionalSensitivityDegrees);
+      if (directionalConeDegrees > ENGINEERING_THRESHOLDS_V1.maximumAcceptedDirectionalConeDegrees) {
+        path.forEach((boneId) => {
+          if (evidenceUncertaintyByFrame[frameIndex][boneId].directionalConeDegrees
+            > ENGINEERING_THRESHOLDS_V1.maximumAcceptedDirectionalConeDegrees) {
+            overLimitBones.add(boneId);
+          }
+        });
+      }
+      const uncertainty: JointUncertaintyV2 = {
+        model: "heuristic_v1",
+        covariance: addIsotropicFloor(sampleCovariance, Math.max(0, isotropicFloor)),
+        directionalConeDegrees,
+      };
+      built[joint] = uncertainty;
+      return uncertainty;
+    };
+    PERSISTED_JOINT_NAMES_V2.forEach(buildJoint);
+    return built;
+  });
+  return Object.freeze({
+    frames: Object.freeze(frames),
+    overLimitBones: Object.freeze([...overLimitBones].sort()),
+    maximumDirectionalSensitivityDegrees,
+  });
 }
 
 function representativeConfidence(
   mode: CaptureProtocolV2,
   evidenceFrames: readonly DirectionEvidenceMapV1[],
+  maximumDirectionalSensitivityDegrees: number,
 ): number {
   const allEvidence = evidenceFrames.flatMap((frame) => Object.values(frame));
   const normalizedDispersion = allEvidence.reduce((sum, evidence) => (
@@ -426,11 +818,19 @@ function representativeConfidence(
   const meanAvailability = allEvidence.reduce((sum, evidence) => sum + evidence.availability, 0)
     / allEvidence.length;
   const weights = ENGINEERING_THRESHOLDS_V1.confidenceWeights;
-  const raw = clamp(1 - (
+  const evidenceOnly = clamp(1 - (
     weights.dispersion * normalizedDispersion
     + weights.conditioningPenalty * (1 - clamp(meanConditioning, 0, 1))
     + weights.availabilityPenalty * (1 - clamp(meanAvailability, 0, 1))
   ), 0, 1);
+  const sensitivityPenalty = ENGINEERING_THRESHOLDS_V1.uncertaintyPerturbation
+    .maximumConfidenceSensitivityPenalty * clamp(
+      maximumDirectionalSensitivityDegrees
+        / ENGINEERING_THRESHOLDS_V1.maximumAcceptedDirectionalConeDegrees,
+      0,
+      1,
+    );
+  const raw = Math.min(evidenceOnly, evidenceOnly * (1 - sensitivityPenalty));
   return mode === "basic_1_plus_1"
     ? Math.min(raw, ENGINEERING_THRESHOLDS_V1.basicConfidenceCap)
     : raw;
@@ -446,7 +846,7 @@ export function buildRepresentativeSequence(
 
   const evidenceFrames: DirectionEvidenceMapV1[] = [];
   const rawDirections: BoneDirectionMapV1[] = [];
-  for (let frameIndex = 0; frameIndex < 101; frameIndex += 1) {
+  for (let frameIndex = 0; frameIndex < PRODUCTION_PHASE_SAMPLE_COUNT; frameIndex += 1) {
     const evidence = {} as DirectionEvidenceMapV1;
     for (const bone of OBSERVED_BONES_V1) {
       const result = reconstructObservedBone(
@@ -463,46 +863,124 @@ export function buildRepresentativeSequence(
   }
 
   let smoothedDirections: BoneDirectionMapV1[];
+  let baselineObservedDirections: ObservedDirectionMapV1[];
+  let baselineJoints: PersistedJointMapV2[];
   try {
     smoothedDirections = smoothDirections(rawDirections);
+    const smoothedObserved = smoothObservedDirections(evidenceFrames);
+    if (!smoothedObserved) return recapture("inconsistent_skeleton_closure", ["shoulder_line"]);
+    baselineObservedDirections = smoothedObserved;
+    baselineJoints = smoothedDirections.map((directions) => forwardKinematicsFrame(
+      directions,
+      ENGINEERING_THRESHOLDS_V1.templateBoneLengths,
+    ));
   } catch (error) {
     if (error instanceof ReconstructionError) return recapture(error.reason, error.boneId ? [error.boneId] : []);
     return recapture("missing_critical_bone");
   }
 
-  const uncertaintyByFrame = evidenceFrames.map((evidence) => Object.fromEntries(
+  if (!shoulderClosureIsValid(baselineJoints, baselineObservedDirections)) {
+    return recapture("inconsistent_skeleton_closure", ["shoulder_line"]);
+  }
+
+  const evidenceUncertaintyByFrame = evidenceFrames.map((evidence) => Object.fromEntries(
     OBSERVED_BONES_V1.map((bone) => [
       bone.id,
       uncertaintyFor(evidence[bone.id]),
     ]),
   ) as Record<ObservedBoneIdV1, JointUncertaintyV2>);
-  const overLimitBones = new Set<ObservedBoneIdV1>();
-  uncertaintyByFrame.forEach((uncertainty) => {
+  const evidenceOverLimitBones = new Set<ObservedBoneIdV1>();
+  evidenceUncertaintyByFrame.forEach((uncertainty) => {
     OBSERVED_BONES_V1.forEach((bone) => {
       if (uncertainty[bone.id].directionalConeDegrees
         > ENGINEERING_THRESHOLDS_V1.maximumAcceptedDirectionalConeDegrees) {
-        overLimitBones.add(bone.id);
+        evidenceOverLimitBones.add(bone.id);
       }
     });
   });
-  if (overLimitBones.size > 0) {
-    return recapture("uncertainty_exceeds_limit", [...overLimitBones]);
+  if (evidenceOverLimitBones.size > 0) {
+    return recapture("uncertainty_exceeds_limit", [...evidenceOverLimitBones]);
   }
+
+  const retainedFrontAttempts = selectedAttempts(input.frontAttempts, aggregated.front.attemptIds);
+  const retainedSideAttempts = selectedAttempts(
+    input.shootingSideAttempts,
+    aggregated.side.attemptIds,
+  );
+  if (
+    retainedFrontAttempts.length !== aggregated.front.attemptIds.length
+    || retainedSideAttempts.length !== aggregated.side.attemptIds.length
+  ) {
+    return recapture("invalid_attempt", OBSERVED_BONES_V1.map((bone) => bone.id));
+  }
+
   try {
-    const frames = smoothedDirections.map((directions, frameIndex) => {
-      const uncertainty = Object.fromEntries(PERSISTED_JOINT_NAMES_V2.map((joint) => [
-        joint,
-        propagatedUncertainty(JOINT_EVIDENCE_PATH[joint], uncertaintyByFrame[frameIndex]),
-      ])) as Record<PersistedJointNameV2, JointUncertaintyV2>;
-      return {
-        phase: frameIndex / 100,
-        joints: forwardKinematicsFrame(
-          directions,
-          ENGINEERING_THRESHOLDS_V1.templateBoneLengths,
-        ),
-        uncertainty,
-      };
+    const retainedAnchorDispersion = maximumRetainedAnchorDispersion([
+      retainedFrontAttempts,
+      retainedSideAttempts,
+    ]);
+    const phaseIndexRadius = phaseIndexRadiusFor(retainedFrontAttempts, retainedSideAttempts);
+    const scenarioPlan = buildDeterministicUncertaintyScenarioPlan({
+      frontAttemptIds: aggregated.front.attemptIds,
+      shootingSideAttemptIds: aggregated.side.attemptIds,
+      phaseIndexRadius,
     });
+    const frontById = new Map(retainedFrontAttempts.map((attempt) => [attempt.id, attempt]));
+    const sideById = new Map(retainedSideAttempts.map((attempt) => [attempt.id, attempt]));
+    const acceptedScenarios: AcceptedScenarioTrajectoryV1[] = [];
+    const rejectedScenarioBones = new Set<string>();
+    for (const scenario of scenarioPlan) {
+      const frontAttempt = frontById.get(scenario.frontAttemptId);
+      const sideAttempt = sideById.get(scenario.shootingSideAttemptId);
+      if (!frontAttempt || !sideAttempt) {
+        return recapture("invalid_attempt", OBSERVED_BONES_V1.map((bone) => bone.id));
+      }
+      const result = reconstructScenarioTrajectory(
+        frontAttempt,
+        sideAttempt,
+        scenario.phaseIndexShift,
+        scenario.pattern,
+        aggregated.front.shootingHand,
+      );
+      if (result.status === "closure_rejected") {
+        return recapture("inconsistent_skeleton_closure", ["shoulder_line"]);
+      }
+      if (result.status === "rejected") {
+        rejectedScenarioBones.add(result.affectedBone);
+      } else {
+        acceptedScenarios.push(result.trajectory);
+      }
+    }
+    const perturbationConfig = ENGINEERING_THRESHOLDS_V1.uncertaintyPerturbation;
+    const minimumAcceptedScenarios = Math.max(
+      perturbationConfig.minimumAcceptedScenarioCount,
+      Math.ceil(scenarioPlan.length * perturbationConfig.minimumAcceptedScenarioFraction),
+    );
+    if (acceptedScenarios.length < minimumAcceptedScenarios) {
+      return recapture(
+        "perturbation_scenario_shortfall",
+        [...rejectedScenarioBones].sort(),
+      );
+    }
+    const roughnessSquaredByBone = coordinateRoughnessSquaredByBone([
+      retainedFrontAttempts,
+      retainedSideAttempts,
+    ]);
+    const perturbationUncertainty = buildPerturbationUncertaintyFrames(
+      evidenceFrames,
+      baselineObservedDirections,
+      acceptedScenarios,
+      roughnessSquaredByBone,
+      retainedAnchorDispersion,
+    );
+    if (perturbationUncertainty.overLimitBones.length > 0) {
+      return recapture("uncertainty_exceeds_limit", perturbationUncertainty.overLimitBones);
+    }
+    const frames = baselineJoints.map((joints, frameIndex) => ({
+      phase: frameIndex / (PRODUCTION_PHASE_SAMPLE_COUNT - 1),
+      joints,
+      uncertainty: perturbationUncertainty.frames[frameIndex],
+    }));
     const profile = parseRepresentativePose4D({
       schemaVersion: 2,
       boundary: "representative_phase_fused_4d_estimate_not_actual_3d",
@@ -520,7 +998,11 @@ export function buildRepresentativeSequence(
     return {
       status: "complete",
       profile,
-      confidence: representativeConfidence(input.mode, evidenceFrames),
+      confidence: representativeConfidence(
+        input.mode,
+        evidenceFrames,
+        perturbationUncertainty.maximumDirectionalSensitivityDegrees,
+      ),
       selectedAttemptsByView,
       rootMotion: { status: "unavailable" },
     };

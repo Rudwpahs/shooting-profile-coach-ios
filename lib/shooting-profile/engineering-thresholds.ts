@@ -47,6 +47,34 @@ export const ENGINEERING_THRESHOLDS_V1 = Object.freeze({
     conditioningVariance: 0.028,
     availabilityVariance: 0.022,
   }),
+  /**
+   * Deterministic sensitivity probes in upright source-height observation
+   * units. These are engineering defaults, not calibrated coverage levels.
+   */
+  uncertaintyPerturbation: Object.freeze({
+    version: "deterministic_landmark_phase_perturbation_v1" as const,
+    landmarkOffsetSourceHeightUnits: 0.00025,
+    maximumLandmarkOffsetSourceHeightUnits: 0.00075,
+    visibilityAmplification: 2,
+    minimumPhaseIndexRadius: 1,
+    maximumPhaseIndexRadius: 3,
+    anchorDispersionPhaseIndexGain: 100,
+    scenarioPatternCount: 9,
+    minimumAcceptedScenarioCount: 7,
+    minimumAcceptedScenarioFraction: 0.75,
+    maximumLandmarkOffsetFractionOfProjectedBone: 0.30,
+    isotropicSampleCovarianceFloorVariance: 0.000001,
+    coordinateRoughnessVarianceGain: 25,
+    anchorDispersionVarianceGain: 0.02,
+    maximumConfidenceSensitivityPenalty: 0.05,
+  }),
+  shoulderClosure: Object.freeze({
+    version: "template_shoulder_closure_v1" as const,
+    /** Exactly one persisted template-shoulder-breadth unit. */
+    templateShoulderBreadth: 1,
+    maximumAngularResidualRadians: 15 * Math.PI / 180,
+    maximumNormalizedLengthResidual: 0.12,
+  }),
   templateBoneLengths: Object.freeze({
     pelvis_to_left_hip: 0.34,
     pelvis_to_right_hip: 0.34,
