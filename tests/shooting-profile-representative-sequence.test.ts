@@ -421,10 +421,20 @@ describe("deterministic uncertainty scenarios", () => {
     });
 
     expect(DETERMINISTIC_PERTURBATION_SCENARIOS_V1.some((scenario) => (
-      scenario.coordinateSign !== 0 && scenario.phaseDirection === 0
+      scenario.coordinateSign !== 0
+      && scenario.frontPhaseDirection === 0
+      && scenario.shootingSidePhaseDirection === 0
     ))).toBe(true);
     expect(DETERMINISTIC_PERTURBATION_SCENARIOS_V1.some((scenario) => (
-      scenario.coordinateSign === 0 && scenario.phaseDirection !== 0
+      scenario.coordinateSign === 0
+      && scenario.frontPhaseDirection === -scenario.shootingSidePhaseDirection
+      && scenario.frontPhaseDirection !== 0
+    ))).toBe(true);
+    expect(DETERMINISTIC_PERTURBATION_SCENARIOS_V1.some((scenario) => (
+      scenario.frontPhaseDirection !== 0 && scenario.shootingSidePhaseDirection === 0
+    ))).toBe(true);
+    expect(DETERMINISTIC_PERTURBATION_SCENARIOS_V1.some((scenario) => (
+      scenario.frontPhaseDirection === 0 && scenario.shootingSidePhaseDirection !== 0
     ))).toBe(true);
     expect(plan).toHaveLength(3 * 2 * DETERMINISTIC_PERTURBATION_SCENARIOS_V1.length);
     expect(plan[0]).toMatchObject({
@@ -438,7 +448,12 @@ describe("deterministic uncertainty scenarios", () => {
       new Set(["side-a", "side-b"]),
     );
     expect(plan.every((scenario) => (
-      scenario.phaseIndexShift === scenario.pattern.phaseDirection * 2
+      scenario.frontPhaseIndexShift === scenario.pattern.frontPhaseDirection * 2
+      && scenario.shootingSidePhaseIndexShift
+        === scenario.pattern.shootingSidePhaseDirection * 2
+    ))).toBe(true);
+    expect(plan.some((scenario) => (
+      scenario.frontPhaseIndexShift === 2 && scenario.shootingSidePhaseIndexShift === -2
     ))).toBe(true);
     expect(buildDeterministicUncertaintyScenarioPlan({
       frontAttemptIds: ["front-b", "front-c", "front-a"],

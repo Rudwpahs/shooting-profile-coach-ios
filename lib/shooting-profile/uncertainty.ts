@@ -7,7 +7,8 @@ export type DeterministicPerturbationPatternV1 = Readonly<{
   id: string;
   coordinatePattern: 0 | 1 | 2;
   coordinateSign: -1 | 0 | 1;
-  phaseDirection: -1 | 0 | 1;
+  frontPhaseDirection: -1 | 0 | 1;
+  shootingSidePhaseDirection: -1 | 0 | 1;
 }>;
 
 /**
@@ -16,22 +17,23 @@ export type DeterministicPerturbationPatternV1 = Readonly<{
  * paired combined patterns expose their interaction. No row is randomized.
  */
 export const DETERMINISTIC_PERTURBATION_SCENARIOS_V1 = Object.freeze([
-  Object.freeze({ id: "baseline", coordinatePattern: 0, coordinateSign: 0, phaseDirection: 0 }),
-  Object.freeze({ id: "landmark_a_plus", coordinatePattern: 0, coordinateSign: 1, phaseDirection: 0 }),
-  Object.freeze({ id: "landmark_a_minus", coordinatePattern: 0, coordinateSign: -1, phaseDirection: 0 }),
-  Object.freeze({ id: "phase_plus", coordinatePattern: 0, coordinateSign: 0, phaseDirection: 1 }),
-  Object.freeze({ id: "phase_minus", coordinatePattern: 0, coordinateSign: 0, phaseDirection: -1 }),
-  Object.freeze({ id: "combined_b_plus", coordinatePattern: 1, coordinateSign: 1, phaseDirection: 1 }),
-  Object.freeze({ id: "combined_b_minus", coordinatePattern: 1, coordinateSign: -1, phaseDirection: -1 }),
-  Object.freeze({ id: "combined_c_plus", coordinatePattern: 2, coordinateSign: 1, phaseDirection: 1 }),
-  Object.freeze({ id: "combined_c_minus", coordinatePattern: 2, coordinateSign: -1, phaseDirection: -1 }),
+  Object.freeze({ id: "baseline", coordinatePattern: 0, coordinateSign: 0, frontPhaseDirection: 0, shootingSidePhaseDirection: 0 }),
+  Object.freeze({ id: "landmark_a_plus", coordinatePattern: 0, coordinateSign: 1, frontPhaseDirection: 0, shootingSidePhaseDirection: 0 }),
+  Object.freeze({ id: "landmark_a_minus", coordinatePattern: 0, coordinateSign: -1, frontPhaseDirection: 0, shootingSidePhaseDirection: 0 }),
+  Object.freeze({ id: "phase_opposed_plus", coordinatePattern: 0, coordinateSign: 0, frontPhaseDirection: 1, shootingSidePhaseDirection: -1 }),
+  Object.freeze({ id: "phase_opposed_minus", coordinatePattern: 0, coordinateSign: 0, frontPhaseDirection: -1, shootingSidePhaseDirection: 1 }),
+  Object.freeze({ id: "combined_b_front_plus", coordinatePattern: 1, coordinateSign: 1, frontPhaseDirection: 1, shootingSidePhaseDirection: 0 }),
+  Object.freeze({ id: "combined_b_front_minus", coordinatePattern: 1, coordinateSign: -1, frontPhaseDirection: -1, shootingSidePhaseDirection: 0 }),
+  Object.freeze({ id: "combined_c_side_plus", coordinatePattern: 2, coordinateSign: 1, frontPhaseDirection: 0, shootingSidePhaseDirection: 1 }),
+  Object.freeze({ id: "combined_c_side_minus", coordinatePattern: 2, coordinateSign: -1, frontPhaseDirection: 0, shootingSidePhaseDirection: -1 }),
 ] as const satisfies readonly DeterministicPerturbationPatternV1[]);
 
 export type DeterministicUncertaintyScenarioV1 = Readonly<{
   id: string;
   frontAttemptId: string;
   shootingSideAttemptId: string;
-  phaseIndexShift: number;
+  frontPhaseIndexShift: number;
+  shootingSidePhaseIndexShift: number;
   pattern: DeterministicPerturbationPatternV1;
 }>;
 
@@ -77,7 +79,9 @@ export function buildDeterministicUncertaintyScenarioPlan(
         id: `${frontAttemptId}|${shootingSideAttemptId}|${pattern.id}`,
         frontAttemptId,
         shootingSideAttemptId,
-        phaseIndexShift: pattern.phaseDirection * input.phaseIndexRadius,
+        frontPhaseIndexShift: pattern.frontPhaseDirection * input.phaseIndexRadius,
+        shootingSidePhaseIndexShift:
+          pattern.shootingSidePhaseDirection * input.phaseIndexRadius,
         pattern,
       }))
     ))

@@ -35,17 +35,17 @@ Because executable project tests are prohibited while the dependency tree is qua
 
 The table is frozen as `DETERMINISTIC_PERTURBATION_SCENARIOS_V1`; there is no randomness, clock, wall time, or input-order dependence.
 
-| ID | Coordinate pattern | Coordinate sign | Phase direction |
-|---|---:|---:|---:|
-| `baseline` | A | 0 | 0 |
-| `landmark_a_plus` | A | +1 | 0 |
-| `landmark_a_minus` | A | -1 | 0 |
-| `phase_plus` | A | 0 | +1 |
-| `phase_minus` | A | 0 | -1 |
-| `combined_b_plus` | B | +1 | +1 |
-| `combined_b_minus` | B | -1 | -1 |
-| `combined_c_plus` | C | +1 | +1 |
-| `combined_c_minus` | C | -1 | -1 |
+| ID | Coordinate pattern | Coordinate sign | Front phase | Side phase |
+|---|---:|---:|---:|---:|
+| `baseline` | A | 0 | 0 | 0 |
+| `landmark_a_plus` | A | +1 | 0 | 0 |
+| `landmark_a_minus` | A | -1 | 0 | 0 |
+| `phase_opposed_plus` | A | 0 | +1 | -1 |
+| `phase_opposed_minus` | A | 0 | -1 | +1 |
+| `combined_b_front_plus` | B | +1 | +1 | 0 |
+| `combined_b_front_minus` | B | -1 | -1 | 0 |
+| `combined_c_side_plus` | C | +1 | 0 | +1 |
+| `combined_c_side_minus` | C | -1 | 0 | -1 |
 
 Landmark base directions cycle by landmark index through `(+x, +y, -x, -y)`. Pattern A is identity, B is a 90-degree rotation, and C is a 45-degree rotation. Shooting-side x offsets are mirrored to respect the current side-axis convention. A landmark is perturbed once by a deterministic function of `(landmarkIndex, view, pattern)`, so a shoulder/elbow/wrist shared by connected bones receives exactly the same offset in every use.
 
@@ -59,7 +59,7 @@ For retained normalized anchor positions, let `A` be the maximum pairwise absolu
 
 `r = clamp(1 + ceil(100 * A), 1, 3)`
 
-Each row samples source index `clamp(outputIndex + phaseDirection * r, 0, 100)` while the returned frame remains at the canonical `outputIndex / 100`. A continuous `0.02 * A^2` isotropic variance floor ensures a larger still-admissible anchor dispersion remains observable even when two values fall in the same discrete/clamped radius bucket.
+Each view samples its own source index `clamp(outputIndex + viewPhaseDirection * r, 0, 100)` while the returned frame remains at the canonical `outputIndex / 100`. The opposed rows directly probe the core separate-shot risk where the front evidence is early while the side evidence is late (and vice versa); the combined rows also isolate a one-view shift. A continuous `0.02 * A^2` isotropic variance floor ensures a larger still-admissible anchor dispersion remains observable even when two values fall in the same discrete/clamped radius bucket.
 
 Basic uses the one retained front/side pair times all 9 patterns. High sorts the final Task 3B retained IDs and enumerates the Cartesian product:
 

@@ -557,7 +557,8 @@ type ScenarioTrajectoryResultV1 =
 function reconstructScenarioTrajectory(
   frontAttempt: NormalizedViewAttemptV2,
   sideAttempt: NormalizedViewAttemptV2,
-  phaseIndexShift: number,
+  frontPhaseIndexShift: number,
+  shootingSidePhaseIndexShift: number,
   pattern: DeterministicPerturbationPatternV1,
   shootingHand: ShootingHandV2,
 ): ScenarioTrajectoryResultV1 {
@@ -566,14 +567,29 @@ function reconstructScenarioTrajectory(
   for (let outputFrameIndex = 0;
     outputFrameIndex < PRODUCTION_PHASE_SAMPLE_COUNT;
     outputFrameIndex += 1) {
-    const sourceFrameIndex = clamp(
-      outputFrameIndex + phaseIndexShift,
+    const frontSourceFrameIndex = clamp(
+      outputFrameIndex + frontPhaseIndexShift,
       0,
       PRODUCTION_PHASE_SAMPLE_COUNT - 1,
     );
-    const front = projectedScenarioFrame(frontAttempt, sourceFrameIndex, outputFrameIndex, pattern);
+    const sideSourceFrameIndex = clamp(
+      outputFrameIndex + shootingSidePhaseIndexShift,
+      0,
+      PRODUCTION_PHASE_SAMPLE_COUNT - 1,
+    );
+    const front = projectedScenarioFrame(
+      frontAttempt,
+      frontSourceFrameIndex,
+      outputFrameIndex,
+      pattern,
+    );
     if (front.status === "rejected") return { status: "rejected", affectedBone: front.boneId };
-    const side = projectedScenarioFrame(sideAttempt, sourceFrameIndex, outputFrameIndex, pattern);
+    const side = projectedScenarioFrame(
+      sideAttempt,
+      sideSourceFrameIndex,
+      outputFrameIndex,
+      pattern,
+    );
     if (side.status === "rejected") return { status: "rejected", affectedBone: side.boneId };
     const evidence = {} as DirectionEvidenceMapV1;
     for (const bone of OBSERVED_BONES_V1) {
@@ -938,7 +954,8 @@ export function buildRepresentativeSequence(
       const result = reconstructScenarioTrajectory(
         frontAttempt,
         sideAttempt,
-        scenario.phaseIndexShift,
+        scenario.frontPhaseIndexShift,
+        scenario.shootingSidePhaseIndexShift,
         scenario.pattern,
         aggregated.front.shootingHand,
       );
