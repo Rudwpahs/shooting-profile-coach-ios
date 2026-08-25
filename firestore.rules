@@ -5,6 +5,304 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    function validOpaqueId(value) {
+      return value is string
+        && value.size() >= 1
+        && value.size() <= 128
+        && value.matches('^[A-Za-z0-9_-]+$');
+    }
+
+    function validExactKeys(data, keys) {
+      return data is map
+        && data.keys().hasAll(keys)
+        && data.keys().hasOnly(keys);
+    }
+
+    function boundedNumber(value, minimum, maximum) {
+      return value is number
+        && value >= minimum
+        && value <= maximum;
+    }
+
+    function boundedInteger(value, minimum, maximum) {
+      return value is int
+        && value >= minimum
+        && value <= maximum;
+    }
+
+    function validCommonV2(data, userId, recordType) {
+      return data.ownerUid == userId
+        && data.schemaVersion == 2
+        && data.boundary == 'representative_phase_fused_4d_estimate_not_actual_3d'
+        && data.timeBasis == 'normalized_shot_phase'
+        && data.dataClass == 'owner_private_derived_biomechanics_v2'
+        && data.retentionClass == 'owner_deleted_v2'
+        && data.consentReference == 'owner_capture_consent_v2'
+        && data.algorithmVersion == 'representative_phase_fusion_v1'
+        && data.modelVersion == 'mediapipe_pose_landmarker_v2'
+        && data.recordType == recordType
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function validCreateTimestamps(data) {
+      return data.createdAt == request.time && data.updatedAt == request.time;
+    }
+
+    function validMode(mode) {
+      return mode == 'basic_1_plus_1' || mode == 'high_accuracy_3_plus_3';
+    }
+
+    function validShootingHand(hand) {
+      return hand == 'left' || hand == 'right';
+    }
+
+    function validView(view) {
+      return view == 'front' || view == 'shooting_side';
+    }
+
+    function validAttemptIds(ids, mode) {
+      return ids is list
+        && ((mode == 'basic_1_plus_1'
+            && ids.size() == 2
+            && ids[0] == 'front-0'
+            && ids[1] == 'shooting_side-0')
+          || (mode == 'high_accuracy_3_plus_3'
+            && ids.size() == 6
+            && ids[0] == 'front-0'
+            && ids[1] == 'front-1'
+            && ids[2] == 'front-2'
+            && ids[3] == 'shooting_side-0'
+            && ids[4] == 'shooting_side-1'
+            && ids[5] == 'shooting_side-2'));
+    }
+
+    function validQuality(quality) {
+      return validExactKeys(quality, ['passed', 'reasons'])
+        && quality.passed == true
+        && quality.reasons is list
+        && quality.reasons.size() == 0;
+    }
+
+    function validCaptureSession(data, userId, captureSessionId) {
+      return validExactKeys(data, [
+          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
+          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
+          'createdAt', 'updatedAt', 'recordType', 'captureSessionId', 'profileId',
+          'revisionId', 'status', 'mode', 'shootingHand', 'attemptIds', 'attemptCount'
+        ])
+        && validCommonV2(data, userId, 'capture_session_v2')
+        && data.captureSessionId == captureSessionId
+        && validOpaqueId(captureSessionId)
+        && validOpaqueId(data.profileId)
+        && validOpaqueId(data.revisionId)
+        && data.status == 'complete'
+        && validMode(data.mode)
+        && validShootingHand(data.shootingHand)
+        && data.attemptCount == (data.mode == 'basic_1_plus_1' ? 2 : 6)
+        && validAttemptIds(data.attemptIds, data.mode);
+    }
+
+    function validObservationHead(data, userId, captureSessionId, attemptId) {
+      return validExactKeys(data, [
+          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
+          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
+          'createdAt', 'updatedAt', 'recordType', 'captureSessionId', 'profileId',
+          'revisionId', 'attemptId', 'status', 'view', 'shootingHand', 'takeIndex',
+          'frameCount', 'frameChunkCount'
+        ])
+        && validCommonV2(data, userId, 'normalized_observation_v2')
+        && data.captureSessionId == captureSessionId
+        && data.attemptId == attemptId
+        && validOpaqueId(captureSessionId)
+        && validOpaqueId(attemptId)
+        && validOpaqueId(data.profileId)
+        && validOpaqueId(data.revisionId)
+        && data.status == 'complete'
+        && validView(data.view)
+        && validShootingHand(data.shootingHand)
+        && boundedInteger(data.takeIndex, 0, 2)
+        && data.attemptId == data.view + '-' + string(data.takeIndex)
+        && data.frameCount == 101
+        && data.frameChunkCount == 101;
+    }
+
+    function validObservationChunk(data, userId, captureSessionId, attemptId, chunkId) {
+      return validExactKeys(data, [
+          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
+          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
+          'createdAt', 'updatedAt', 'recordType', 'captureSessionId', 'profileId',
+          'revisionId', 'attemptId', 'view', 'shootingHand', 'takeIndex',
+          'phaseIndex', 'payloadFormat', 'payloadByteLength', 'fixedPointScale',
+          'packingOrder', 'missingVisibilitySentinel', 'payload'
+        ])
+        && validCommonV2(data, userId, 'observation_frame_chunk_v2')
+        && data.captureSessionId == captureSessionId
+        && data.attemptId == attemptId
+        && validOpaqueId(captureSessionId)
+        && validOpaqueId(attemptId)
+        && validOpaqueId(data.profileId)
+        && validOpaqueId(data.revisionId)
+        && validView(data.view)
+        && validShootingHand(data.shootingHand)
+        && boundedInteger(data.takeIndex, 0, 2)
+        && data.attemptId == data.view + '-' + string(data.takeIndex)
+        && boundedInteger(data.phaseIndex, 0, 100)
+        && chunkId == string(data.phaseIndex)
+        && data.payloadFormat == 'int32_be_fixed_1e6_v1'
+        && data.payloadByteLength == 144
+        && data.fixedPointScale == 1000000
+        && data.packingOrder == 'joint_major_xy_visibility_v1'
+        && data.missingVisibilitySentinel == -2147483648
+        && data.payload is bytes
+        && data.payload.size() == 144;
+    }
+
+    function validRepresentativePhaseChunk(data, userId, profileId, revisionId, chunkId) {
+      return validExactKeys(data, [
+          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
+          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
+          'createdAt', 'updatedAt', 'recordType', 'profileId', 'captureSessionId',
+          'revisionId', 'phaseIndex', 'payloadFormat', 'payloadByteLength',
+          'fixedPointScale', 'packingOrder', 'units', 'uncertaintyModel', 'payload'
+        ])
+        && validCommonV2(data, userId, 'representative_phase_chunk_v2')
+        && data.profileId == profileId
+        && data.revisionId == revisionId
+        && validOpaqueId(profileId)
+        && validOpaqueId(revisionId)
+        && validOpaqueId(data.captureSessionId)
+        && boundedInteger(data.phaseIndex, 0, 100)
+        && chunkId == string(data.phaseIndex)
+        && data.payloadFormat == 'int32_be_fixed_1e6_v1'
+        && data.payloadByteLength == 480
+        && data.fixedPointScale == 1000000
+        && data.packingOrder == 'joint_major_xyz_covariance6_cone_v1'
+        && data.units == 'template_shoulder_breadths'
+        && data.uncertaintyModel == 'heuristic_v1'
+        && data.payload is bytes
+        && data.payload.size() == 480;
+    }
+
+    function validRevision(data, userId, profileId, revisionId) {
+      return validExactKeys(data, [
+          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
+          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
+          'createdAt', 'updatedAt', 'recordType', 'profileId', 'captureSessionId',
+          'revisionId', 'status', 'mode', 'shootingHand', 'confidence', 'attemptCount',
+          'frameCount', 'sequenceChunkCount', 'phaseSummaryCount', 'units', 'quality'
+        ])
+        && validCommonV2(data, userId, 'representative_revision_v2')
+        && data.profileId == profileId
+        && data.revisionId == revisionId
+        && validOpaqueId(profileId)
+        && validOpaqueId(revisionId)
+        && validOpaqueId(data.captureSessionId)
+        && data.status == 'complete'
+        && validMode(data.mode)
+        && validShootingHand(data.shootingHand)
+        && boundedNumber(data.confidence, 0, 1)
+        && (data.mode != 'basic_1_plus_1' || data.confidence <= 0.65)
+        && data.attemptCount == (data.mode == 'basic_1_plus_1' ? 2 : 6)
+        && data.frameCount == 101
+        && data.sequenceChunkCount == 101
+        && data.phaseSummaryCount == 5
+        && data.units == 'template_shoulder_breadths'
+        && validQuality(data.quality);
+    }
+
+    function validCanonicalPhase(phaseId, phaseIndex) {
+      return (phaseId == 'ready' && phaseIndex == 0)
+        || (phaseId == 'deepestDip' && phaseIndex == 25)
+        || (phaseId == 'rise' && phaseIndex == 50)
+        || (phaseId == 'releaseProxy' && phaseIndex == 75)
+        || (phaseId == 'followThrough' && phaseIndex == 100);
+    }
+
+    function validPhaseSummary(data, userId, profileId, revisionId, phaseId) {
+      return validExactKeys(data, [
+          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
+          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
+          'createdAt', 'updatedAt', 'recordType', 'profileId', 'captureSessionId',
+          'revisionId', 'phaseId', 'phaseIndex'
+        ])
+        && validCommonV2(data, userId, 'representative_phase_summary_v2')
+        && data.profileId == profileId
+        && data.revisionId == revisionId
+        && data.phaseId == phaseId
+        && validOpaqueId(profileId)
+        && validOpaqueId(revisionId)
+        && validOpaqueId(data.captureSessionId)
+        && validCanonicalPhase(data.phaseId, data.phaseIndex);
+    }
+
+    function validMotionProfileHead(data, userId, profileId) {
+      return validExactKeys(data, [
+          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
+          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
+          'createdAt', 'updatedAt', 'recordType', 'profileId', 'captureSessionId',
+          'revisionId', 'status', 'deletionState', 'mode', 'shootingHand', 'confidence',
+          'attemptIds', 'attemptCount', 'frameCount', 'sequenceChunkCount',
+          'phaseSummaryCount', 'units'
+        ])
+        && validCommonV2(data, userId, 'motion_profile_v2')
+        && data.profileId == profileId
+        && validOpaqueId(profileId)
+        && validOpaqueId(data.captureSessionId)
+        && validOpaqueId(data.revisionId)
+        && data.status == 'complete'
+        && (data.deletionState == 'active' || data.deletionState == 'in_progress')
+        && validMode(data.mode)
+        && validShootingHand(data.shootingHand)
+        && boundedNumber(data.confidence, 0, 1)
+        && (data.mode != 'basic_1_plus_1' || data.confidence <= 0.65)
+        && data.attemptCount == (data.mode == 'basic_1_plus_1' ? 2 : 6)
+        && validAttemptIds(data.attemptIds, data.mode)
+        && data.frameCount == 101
+        && data.sequenceChunkCount == 101
+        && data.phaseSummaryCount == 5
+        && data.units == 'template_shoulder_breadths';
+    }
+
+    function completedRevisionExists(userId, profileId, head) {
+      let revisionPath = /databases/$(database)/documents/users/$(userId)/motionProfiles/$(profileId)/revisions/$(head.revisionId);
+      let revision = get(revisionPath).data;
+      return revision.status == 'complete'
+        && revision.ownerUid == userId
+        && revision.profileId == profileId
+        && revision.revisionId == head.revisionId
+        && revision.captureSessionId == head.captureSessionId
+        && revision.mode == head.mode
+        && revision.shootingHand == head.shootingHand
+        && revision.confidence == head.confidence
+        && revision.attemptCount == head.attemptCount
+        && revision.frameCount == head.frameCount
+        && revision.sequenceChunkCount == head.sequenceChunkCount
+        && revision.phaseSummaryCount == head.phaseSummaryCount
+        && revision.units == head.units
+        && revision.timeBasis == head.timeBasis
+        && revision.schemaVersion == head.schemaVersion
+        && revision.algorithmVersion == head.algorithmVersion;
+    }
+
+    function validDeletionTransition(userId, profileId) {
+      return signedInOwner(userId)
+        && validMotionProfileHead(request.resource.data, userId, profileId)
+        && resource.data.deletionState == 'active'
+        && request.resource.data.deletionState == 'in_progress'
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletionState', 'updatedAt']);
+    }
+
+    function canDeleteV2(userId, profileId) {
+      let profilePath = /databases/$(database)/documents/users/$(userId)/motionProfiles/$(profileId);
+      return signedInOwner(userId)
+        && validOpaqueId(profileId)
+        && (!exists(profilePath)
+          || get(profilePath).data.deletionState == 'in_progress');
+    }
+
     match /users/{userId} {
       allow read: if signedInOwner(userId);
       allow create, update: if signedInOwner(userId)
@@ -38,6 +336,71 @@ service cloud.firestore {
           && request.resource.data.goal is string
           && request.resource.data.status is string;
         allow update: if false;
+      }
+
+      match /captureSessions/{captureSessionId} {
+        allow read: if signedInOwner(userId);
+        allow delete: if canDeleteV2(userId, resource.data.profileId);
+        allow create: if signedInOwner(userId)
+          && validCaptureSession(request.resource.data, userId, captureSessionId)
+          && validCreateTimestamps(request.resource.data);
+        allow update: if false;
+
+        match /observations/{attemptId} {
+          allow read: if signedInOwner(userId);
+          allow delete: if canDeleteV2(userId, resource.data.profileId);
+          allow create: if signedInOwner(userId)
+            && validObservationHead(request.resource.data, userId, captureSessionId, attemptId)
+            && validCreateTimestamps(request.resource.data);
+          allow update: if false;
+
+          match /frameChunks/{chunkId} {
+            allow read: if signedInOwner(userId);
+            allow delete: if canDeleteV2(userId, resource.data.profileId);
+            allow create: if signedInOwner(userId)
+              && validObservationChunk(request.resource.data, userId, captureSessionId, attemptId, chunkId)
+              && validCreateTimestamps(request.resource.data);
+            allow update: if false;
+          }
+        }
+      }
+
+      match /motionProfiles/{profileId} {
+        allow read: if signedInOwner(userId);
+        allow create: if signedInOwner(userId)
+          && validMotionProfileHead(request.resource.data, userId, profileId)
+          && request.resource.data.deletionState == 'active'
+          && validCreateTimestamps(request.resource.data)
+          && completedRevisionExists(userId, profileId, request.resource.data);
+        allow update: if validDeletionTransition(userId, profileId);
+        allow delete: if signedInOwner(userId) && resource.data.deletionState == 'in_progress';
+
+        match /revisions/{revisionId} {
+          allow read: if signedInOwner(userId);
+          allow delete: if canDeleteV2(userId, resource.data.profileId);
+          allow create: if signedInOwner(userId)
+            && validRevision(request.resource.data, userId, profileId, revisionId)
+            && validCreateTimestamps(request.resource.data);
+          allow update: if false;
+
+          match /sequenceChunks/{chunkId} {
+            allow read: if signedInOwner(userId);
+            allow delete: if canDeleteV2(userId, resource.data.profileId);
+            allow create: if signedInOwner(userId)
+              && validRepresentativePhaseChunk(request.resource.data, userId, profileId, revisionId, chunkId)
+              && validCreateTimestamps(request.resource.data);
+            allow update: if false;
+          }
+
+          match /phaseSummaries/{phaseId} {
+            allow read: if signedInOwner(userId);
+            allow delete: if canDeleteV2(userId, resource.data.profileId);
+            allow create: if signedInOwner(userId)
+              && validPhaseSummary(request.resource.data, userId, profileId, revisionId, phaseId)
+              && validCreateTimestamps(request.resource.data);
+            allow update: if false;
+          }
+        }
       }
     }
   }
