@@ -4,6 +4,8 @@
 
 The repository snapshot can validate the TypeScript parser, event lifecycle, Expo module configuration, podspec text, and Swift source contracts on Linux. It cannot compile iOS code, run CocoaPods, inspect a built resource bundle, execute MediaPipe, or run a physical iPhone. Those Apple/device gates remain **PENDING** until the steps below are completed and recorded by an owner.
 
+The representative V2 flags must remain off until this checklist and the Firebase emulator/network gates in `representative-4d-validation-protocol.md` pass. A successful TypeScript/static check is not permission to enable capture in production.
+
 The existing `ios/Resources/pose_landmarker_full.task` binary is intentionally not duplicated here. It is present in the source repository but omitted from this audit snapshot.
 
 ## Fail-closed model integrity gate
@@ -46,6 +48,25 @@ Use a clean checkout and an Xcode/macOS combination supported by the project’s
 - [ ] Build the generated iOS workspace with Xcode for a physical-device destination.
 - [ ] Confirm Swift compilation for the Expo `Record`, async AVFoundation loading, MediaPipe video API, event emission, and cancellation actor.
 - [ ] Inspect the built app and confirm `FormpathPose.bundle/pose_landmarker_full.task` exists and `FormpathPoseResources.poseLandmarkerModelPath()` resolves it.
+- [ ] Measure end-to-end owner-private save time and failure cleanup for Basic and High on normal Wi-Fi and cellular; High currently stages 720 one-mutation requests and is release-blocking if the UX cannot complete reliably.
+- [ ] Verify every V2 environment flag is absent or `0` before the acceptance run, then enable only the specific test build with all three values exactly `1`.
+
+## End-to-end physical acceptance matrix
+
+- [ ] Camera and Photos permissions: test first denial, settings recovery, grant, and least-privilege copy.
+- [ ] Complete one Basic 1+1 profile and one High 3+3 profile without bypassing recapture gates.
+- [ ] Complete left- and right-hand capture sessions and confirm the selected hand persists through analysis/reopen.
+- [ ] Capture in portrait and landscape and confirm upright-source overlays and final skeleton orientation.
+- [ ] Decode HEVC, slow-motion, and variable-frame-rate clips using actual presentation timestamps.
+- [ ] Exercise accepted and rejected 2-second and 20-second boundary clips.
+- [ ] Verify real progress and cancellation, including no progress or save after cancellation.
+- [ ] Interrupt the app with a background interruption during each native pass and during persistence; confirm safe retry/cleanup.
+- [ ] Use retake for every capture slot and confirm stale attempts never enter the representative subset.
+- [ ] Play all 101-phase playback samples, including exact phase 0 and phase 1 endpoints.
+- [ ] Run airplane mode local detection and reconstruction; cloud save must wait/fail clearly without losing the local result.
+- [ ] Force-quit and reopen after save, then strictly reconstruct the same 101-phase owner profile.
+- [ ] Sign in as a second account and verify other-account denial for list, read, delete, and resume paths.
+- [ ] Verify deletion and deletion resumption after interruption, with subordinate documents removed before the head.
 - [ ] Confirm the missing-model case returns stable `model_missing` and does not expose a local path.
 
 Status in this Linux run: **PENDING — not executed.**

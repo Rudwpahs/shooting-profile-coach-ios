@@ -20,7 +20,13 @@ New reference data must first pass the source pipeline in `shooting-form-analysi
 
 ## Privacy boundary
 
-Version one uses device-local storage for the user’s level, goal, and self-assessed shooting traits. It does not require an account, does not upload a video, and does not create a player identity record. Before adding cloud sync, analytics, video processing, or user accounts, the product must add a privacy review, a retention policy, and opt-in consent flow.
+Version one uses device-local storage for the user’s level, goal, and self-assessed shooting traits. The default-off V2 path requires an authenticated owner and explicit capture consent, but pose detection still runs locally and raw video is not uploaded. Only the 12 allowlisted joints' normalized x/y/visibility observations and the derived representative x/y/z/uncertainty sequence may be stored in owner-private Firestore documents. Filename, URI, EXIF, thumbnail, source timestamp, nonallowlisted landmarks, and native MediaPipe z are forbidden from cloud writes.
+
+V2 owner data uses the retention class `owner_deleted_v2`; deletion must remove subordinate evidence before the profile head. These controls do not make client-written bytes trusted reference data. Comparative-player or coaching systems must not consume them as authoritative until server attestation, abuse controls, validation, retention review, and explicit product consent are approved.
+
+## Representative estimate wording
+
+The separate-shot V2 output must be labeled `representative_phase_fused_4d_estimate_not_actual_3d`. It may describe a repeatable phase-aligned shooting-form estimate, confidence/quality gates, and recapture guidance. It must not be called synchronized capture, triangulated 3D, metric anatomy, a calibrated uncertainty interval, medical/clinical analysis, or proof that the user matches a named player.
 
 ## References
 

@@ -12,6 +12,7 @@ FormPath Basketball은 iPhone 우선 농구 슈팅 분석 prototype입니다. �
 | uncalibrated two-view review algorithm | [`docs/UNCALIBRATED_RECONSTRUCTION_ALGORITHM.md`](docs/UNCALIBRATED_RECONSTRUCTION_ALGORITHM.md) |
 | 3D reconstruction script 단계 | [`scripts/README.md`](scripts/README.md) |
 | Superpowers 적용 검토 | [`docs/superpowers-integration-review.md`](docs/superpowers-integration-review.md) |
+| separate-shot representative 4D 검증 계획 | [`docs/representative-4d-validation-protocol.md`](docs/representative-4d-validation-protocol.md) |
 | active work history | [`todo.md`](todo.md) |
 
 ## Non-negotiable data boundary
@@ -22,9 +23,12 @@ FormPath Basketball은 iPhone 우선 농구 슈팅 분석 prototype입니다. �
 | `calibrated_multi_view_3d` | Allowed only after sync/calibration/reprojection/audit | Allowed only after product approval | candidate artifact, then `lib/motions/` |
 | learned image-to-3D / monocular 3D estimate | **Display-only analysis allowed with explicit estimate labeling** | Never | analysis asset / audit record |
 | source-faithful 2D or corrected relative player analysis | Display-only analysis allowed | Never as actual 3D evidence | analysis asset / audit record |
+| separate-shot representative phase-fused 4D | Private display only after V2 gates | Not reference-grade; coaching rollout pending validation | owner-private derived data, flags default off |
 | qualitative video breakdown | Explanation only | Explanation only | `docs/` / `artifacts/` |
 
 A learned or monocular 3D estimate must never be relabeled as calibrated, metric, optical-mocap, or otherwise “actual” 3D. Display availability does not imply admission into the recommendation reference set.
+
+정면과 슈팅 측면을 따로 촬영하는 personal V2는 두 영상에서 사람을 안정적으로 crop하고, 각 슛을 101개의 정규화 단계로 맞춘 뒤, 같은 단계의 2D 방향 증거를 결합해 12관절의 대표 `(x, y, z, phase)` 스켈레톤을 만든다. 동시 촬영·카메라 calibration·triangulation이 없으므로 결과는 `representative_phase_fused_4d_estimate_not_actual_3d`이며 실제 계측 3D가 아니다. Basic은 1+1 촬영과 신뢰도 상한 0.65, High는 3+3 촬영과 최소 2개 일치 subset을 사용한다. 모든 V2 플래그는 검증 전 기본 OFF다.
 
 ## Current motion status
 

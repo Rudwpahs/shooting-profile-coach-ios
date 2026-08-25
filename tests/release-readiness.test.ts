@@ -19,4 +19,43 @@ describe("release readiness configuration", () => {
     expect(tabBar).toContain("duration: 250");
     expect(tabBar).not.toContain("withSpring");
   });
+
+  it("keeps representative capture behind three explicit opt-in flags", () => {
+    const flags = readFileSync("lib/feature-flags.ts", "utf8");
+    const captureRoute = readFileSync("app/private-capture.tsx", "utf8");
+    expect(flags).toMatch(/^\s*captureV2:\s*process\.env\.EXPO_PUBLIC_FORMPATH_CAPTURE_V2 === "1",\s*$/m);
+    expect(flags).toMatch(/^\s*representative4DViewer:\s*process\.env\.EXPO_PUBLIC_FORMPATH_REPRESENTATIVE_4D === "1",\s*$/m);
+    expect(flags).toMatch(/^\s*profileV2:\s*process\.env\.EXPO_PUBLIC_FORMPATH_PROFILE_V2 === "1",\s*$/m);
+    expect(captureRoute).toContain("FORMPATH_FLAGS.captureV2 && FORMPATH_FLAGS.profileV2");
+  });
+
+  it("lists every physical-iPhone acceptance case before V2 rollout", () => {
+    const qa = readFileSync("docs/iphone-custom-build-qa.md", "utf8");
+    for (const requiredCase of [
+      "Camera and Photos permissions",
+      "Basic 1+1",
+      "High 3+3",
+      "left- and right-hand",
+      "portrait and landscape",
+      "HEVC, slow-motion, and variable-frame-rate",
+      "2-second and 20-second",
+      "progress and cancellation",
+      "background interruption",
+      "retake",
+      "101-phase playback",
+      "airplane mode",
+      "reopen",
+      "other-account denial",
+      "deletion and deletion resumption",
+    ]) {
+      expect(qa).toContain(requiredCase);
+    }
+  });
+
+  it("measures false rejects over independently labeled attempts, not accepted-only samples", () => {
+    const protocol = readFileSync("docs/representative-4d-validation-protocol.md", "utf8");
+    expect(protocol).toContain("independently labeled valid attempted shots");
+    expect(protocol).toContain("retain every product rejection and reason");
+    expect(protocol).not.toContain("60 adults × 10 accepted shots per view");
+  });
 });

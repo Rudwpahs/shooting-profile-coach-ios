@@ -87,4 +87,14 @@ describe("fixed product motion boundary", () => {
     expect(libraryScreen).not.toContain("PLAYER_SOURCE_SKELETON_REVIEWS");
     expect(libraryScreen).not.toContain("PLAYER_VIDEO_REVIEW_RECORDS");
   });
+
+  it("does not admit a representative separate-shot profile as actual calibrated 3D", () => {
+    const representative = readFileSync(
+      resolve(process.cwd(), "lib/shooting-profile/representative-sequence.ts"),
+      "utf8",
+    );
+    expect(representative).toContain("representative_phase_fused_4d_estimate_not_actual_3d");
+    expect(representative).toContain('timeBasis: "normalized_shot_phase"');
+    expect(representative).not.toContain('boundary: "calibrated_multi_view_3d"');
+  });
 });

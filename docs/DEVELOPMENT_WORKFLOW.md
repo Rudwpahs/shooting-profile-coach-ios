@@ -22,14 +22,19 @@
 | Runtime motion | `validatePoseMotion`, provenance, source phase traceability |
 | Player video | raw media outside product, state/boundary shown, recommendation exclusion |
 | Multi-view 3D | shared-flash sync, checkerboard calibration, undistortion, triangulation, reprojection, visual audit |
+| Separate-shot representative 4D | exact 101-phase grid, all-phase consensus, uncertainty/closure gates, explicit estimate label, flags default off |
 | Firebase | UID-only rules and regression tests |
 
 ## Stage 4 — Review and checkpoint
 
 수정 뒤 test·type check·필요 시 web export를 실행하고, `todo.md` 완료 상태를 읽어 확인한다. 성공한 변경만 checkpoint로 보존한다. 불확실한 motion은 checkpoint에 “approved”로 표시하지 않고 evidence record로만 남긴다.
 
+V2 representative profile은 정면·슈팅 측면 영상을 동시에 촬영한 계측 3D가 아니다. 서로 다른 슛의 대응점을 `normalized_shot_phase`로 맞춘 뒤 방향을 결합한 추정치다. `EXPO_PUBLIC_FORMPATH_CAPTURE_V2`, `EXPO_PUBLIC_FORMPATH_PROFILE_V2`, `EXPO_PUBLIC_FORMPATH_REPRESENTATIVE_4D`는 각각 값이 정확히 `1`일 때만 활성화하며, 검증 프로토콜과 iPhone/Firebase 출시 gate가 끝나기 전에는 모두 비활성으로 유지한다.
+
 ## Current priority order
 
 1. Approved actual 3D library를 CMU 또는 calibrated own-capture로 늘린다.
 2. User video analysis의 iPhone end-to-end validation을 끝낸다.
 3. 승인된 data가 늘어난 뒤에만 player-name prototype 또는 anonymous archetype UI를 확장한다.
+
+Representative V2의 정량 검증 항목은 [`representative-4d-validation-protocol.md`](representative-4d-validation-protocol.md)를 따른다.
