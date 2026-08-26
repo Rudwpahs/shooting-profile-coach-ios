@@ -27,10 +27,18 @@ export const RULE_SAFE_BATCH_MUTATIONS_V2 = 1 as const;
 export const NUMERIC_PRECISION_DIGITS_V2 = 6 as const;
 export const FIXED_POINT_SCALE_V2 = 1_000_000 as const;
 export const BINARY_PAYLOAD_FORMAT_V2 = "int32_be_fixed_1e6_v1" as const;
-export const OBSERVATION_PAYLOAD_BYTE_LENGTH_V2 = 144 as const;
-export const REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2 = 480 as const;
+export const OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2 = 144 as const;
+export const OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2 = 14_544 as const;
+export const REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2 = 480 as const;
+export const REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2 = 48_480 as const;
+// Temporary compatibility aliases for the unreleased per-phase V2 service. The
+// compact service uses the explicit frame/sequence names above.
+export const OBSERVATION_PAYLOAD_BYTE_LENGTH_V2 = OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2;
+export const REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2 = REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2;
 export const OBSERVATION_PAYLOAD_PACKING_ORDER_V2 = "joint_major_xy_visibility_v1" as const;
 export const REPRESENTATIVE_PAYLOAD_PACKING_ORDER_V2 = "joint_major_xyz_covariance6_cone_v1" as const;
+export const OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2 = "phase_major_joint_major_xy_visibility_v1" as const;
+export const REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2 = "phase_major_joint_major_xyz_covariance6_cone_v1" as const;
 export const MISSING_VISIBILITY_SENTINEL_V2 = -2_147_483_648 as const;
 
 const NUMERIC_SCALE_V2 = FIXED_POINT_SCALE_V2;
@@ -121,6 +129,32 @@ export type SerializedRepresentativeProfileV2 = {
   quality: RepresentativePose4DV2["quality"];
 };
 
+export type SerializedObservationSequenceV2 = {
+  attemptId: string;
+  view: CaptureViewV2;
+  shootingHand: ShootingHandV2;
+  takeIndex: 0 | 1 | 2;
+  frameCount: typeof PHASE_SAMPLE_COUNT_V2;
+  framePayloadByteLength: typeof OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2;
+  payloadByteLength: typeof OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2;
+  payloadFormat: typeof BINARY_PAYLOAD_FORMAT_V2;
+  fixedPointScale: typeof FIXED_POINT_SCALE_V2;
+  packingOrder: typeof OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2;
+  missingVisibilitySentinel: typeof MISSING_VISIBILITY_SENTINEL_V2;
+  payload: Uint8Array;
+};
+
+export type SerializedRepresentativeSequenceV2 = {
+  frameCount: typeof PHASE_SAMPLE_COUNT_V2;
+  framePayloadByteLength: typeof REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2;
+  payloadByteLength: typeof REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2;
+  payloadFormat: typeof BINARY_PAYLOAD_FORMAT_V2;
+  fixedPointScale: typeof FIXED_POINT_SCALE_V2;
+  packingOrder: typeof REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2;
+  uncertaintyModel: "heuristic_v1";
+  payload: Uint8Array;
+};
+
 export type OrderedFrameChunkV2<T> = {
   documentId: string;
   phaseIndex: number;
@@ -131,7 +165,7 @@ export type RepresentativeSequenceChunkV2 = {
   documentId: string;
   phaseIndex: number;
   payloadFormat: typeof BINARY_PAYLOAD_FORMAT_V2;
-  payloadByteLength: typeof REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2;
+  payloadByteLength: typeof REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2;
   fixedPointScale: typeof FIXED_POINT_SCALE_V2;
   packingOrder: typeof REPRESENTATIVE_PAYLOAD_PACKING_ORDER_V2;
   uncertaintyModel: "heuristic_v1";
@@ -476,7 +510,7 @@ export function validatePersistedObservationFrameV2(value: unknown): PersistedOb
   const phaseIndex = requireInteger(frame.phaseIndex, 0, 100, "persisted observation frame.phaseIndex");
   const payload = requireBinaryPayload(
     frame.payload,
-    OBSERVATION_PAYLOAD_BYTE_LENGTH_V2,
+    OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2,
     "persisted observation frame",
   );
   const joints = Object.fromEntries(PERSISTED_JOINT_NAMES_V2.map((joint, jointIndex) => {
@@ -522,7 +556,7 @@ export function validatePersistedRepresentativeFrameV2(value: unknown): Persiste
   }
   const payload = requireBinaryPayload(
     frame.payload,
-    REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2,
+    REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2,
     "persisted representative frame",
   );
   for (let index = 0; index < PERSISTED_JOINT_NAMES_V2.length * 10; index += 1) {
@@ -553,7 +587,7 @@ export function serializeObservationForCloud(attempt: NormalizedViewAttemptV2): 
     shootingHand: firstFrame.shootingHand,
     takeIndex: firstFrame.takeIndex,
     frames: validated.frames.map((frame, frameIndex) => {
-      const payload = new Uint8Array(OBSERVATION_PAYLOAD_BYTE_LENGTH_V2);
+      const payload = new Uint8Array(OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2);
       PERSISTED_JOINT_NAMES_V2.forEach((joint, jointIndex) => {
         const point = validateSourcePoint(
           frame.sourceLandmarks[PERSISTED_OBSERVATION_LANDMARK_INDEX_V2[joint]],
@@ -587,7 +621,7 @@ export function serializeRepresentativeProfileForCloud(
   validateCanonicalProfile(parsed);
   const serialized: SerializedRepresentativeProfileV2 = {
     frames: parsed.frames.map((frame, phaseIndex) => {
-      const payload = new Uint8Array(REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2);
+      const payload = new Uint8Array(REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2);
       PERSISTED_JOINT_NAMES_V2.forEach((joint, jointIndex) => {
         const offset = jointIndex * 10;
         const uncertainty = frame.uncertainty[joint];
@@ -632,6 +666,251 @@ export function serializeRepresentativeProfileForCloud(
   return serialized;
 }
 
+export function serializeObservationSequenceForCloud(
+  attempt: NormalizedViewAttemptV2,
+): SerializedObservationSequenceV2 {
+  const serialized = serializeObservationForCloud(attempt);
+  const payload = new Uint8Array(OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2);
+  serialized.frames.forEach((frame, phaseIndex) => {
+    if (frame.phaseIndex !== phaseIndex) {
+      throw new Error("serialized observation frames must use canonical ordered phase indices");
+    }
+    payload.set(frame.payload, phaseIndex * OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2);
+  });
+  return {
+    attemptId: serialized.attemptId,
+    view: serialized.view,
+    shootingHand: serialized.shootingHand,
+    takeIndex: serialized.takeIndex,
+    frameCount: PHASE_SAMPLE_COUNT_V2,
+    framePayloadByteLength: OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2,
+    payloadByteLength: OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+    payloadFormat: BINARY_PAYLOAD_FORMAT_V2,
+    fixedPointScale: FIXED_POINT_SCALE_V2,
+    packingOrder: OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
+    missingVisibilitySentinel: MISSING_VISIBILITY_SENTINEL_V2,
+    payload,
+  };
+}
+
+function requireObservationSequenceEnvelopeV2(value: unknown): SerializedObservationSequenceV2 {
+  const sequence = requireRecord(value, "persisted observation sequence");
+  assertExactKeys(sequence, [
+    "attemptId",
+    "view",
+    "shootingHand",
+    "takeIndex",
+    "frameCount",
+    "framePayloadByteLength",
+    "payloadByteLength",
+    "payloadFormat",
+    "fixedPointScale",
+    "packingOrder",
+    "missingVisibilitySentinel",
+    "payload",
+  ], "persisted observation sequence");
+  const attemptId = requireOpaqueId(sequence.attemptId, "persisted observation sequence.attemptId");
+  if (sequence.view !== "front" && sequence.view !== "shooting_side") {
+    throw new Error("persisted observation sequence view metadata is invalid");
+  }
+  if (sequence.shootingHand !== "left" && sequence.shootingHand !== "right") {
+    throw new Error("persisted observation sequence shootingHand metadata is invalid");
+  }
+  const takeIndex = requireInteger(
+    sequence.takeIndex,
+    0,
+    2,
+    "persisted observation sequence.takeIndex",
+  ) as 0 | 1 | 2;
+  if (attemptId !== `${sequence.view}-${takeIndex}`) {
+    throw new Error("persisted observation sequence attemptId metadata is not canonical");
+  }
+  if (sequence.frameCount !== PHASE_SAMPLE_COUNT_V2) {
+    throw new Error("persisted observation sequence frameCount metadata is invalid");
+  }
+  if (sequence.framePayloadByteLength !== OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2) {
+    throw new Error("persisted observation sequence framePayloadByteLength metadata is invalid");
+  }
+  if (sequence.payloadByteLength !== OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2) {
+    throw new Error("persisted observation sequence payloadByteLength metadata is invalid");
+  }
+  if (sequence.payloadFormat !== BINARY_PAYLOAD_FORMAT_V2) {
+    throw new Error("persisted observation sequence payloadFormat metadata is invalid");
+  }
+  if (sequence.fixedPointScale !== FIXED_POINT_SCALE_V2) {
+    throw new Error("persisted observation sequence fixedPointScale metadata is invalid");
+  }
+  if (sequence.packingOrder !== OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2) {
+    throw new Error("persisted observation sequence packingOrder metadata is invalid");
+  }
+  if (sequence.missingVisibilitySentinel !== MISSING_VISIBILITY_SENTINEL_V2) {
+    throw new Error("persisted observation sequence missingVisibilitySentinel metadata is invalid");
+  }
+  const payload = requireBinaryPayload(
+    sequence.payload,
+    OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+    "persisted observation sequence",
+  );
+  return {
+    attemptId,
+    view: sequence.view,
+    shootingHand: sequence.shootingHand,
+    takeIndex,
+    frameCount: PHASE_SAMPLE_COUNT_V2,
+    framePayloadByteLength: OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2,
+    payloadByteLength: OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+    payloadFormat: BINARY_PAYLOAD_FORMAT_V2,
+    fixedPointScale: FIXED_POINT_SCALE_V2,
+    packingOrder: OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
+    missingVisibilitySentinel: MISSING_VISIBILITY_SENTINEL_V2,
+    payload,
+  };
+}
+
+export function reconstructObservationFramesFromSequencePayloadV2(
+  value: unknown,
+): PersistedObservationFrameV2[] {
+  const sequence = validatePersistedObservationSequenceV2(value);
+  return Array.from({ length: PHASE_SAMPLE_COUNT_V2 }, (_, phaseIndex) => {
+    const offset = phaseIndex * OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2;
+    return validatePersistedObservationFrameV2({
+      phaseIndex,
+      payload: sequence.payload.slice(offset, offset + OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2),
+    });
+  });
+}
+
+export function validatePersistedObservationSequenceV2(
+  value: unknown,
+): SerializedObservationSequenceV2 {
+  const sequence = requireObservationSequenceEnvelopeV2(value);
+  for (let phaseIndex = 0; phaseIndex < PHASE_SAMPLE_COUNT_V2; phaseIndex += 1) {
+    const offset = phaseIndex * OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2;
+    validatePersistedObservationFrameV2({
+      phaseIndex,
+      payload: sequence.payload.slice(offset, offset + OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2),
+    });
+  }
+  return { ...sequence, payload: sequence.payload.slice() };
+}
+
+export function serializeRepresentativeSequenceForCloud(
+  profile: RepresentativePose4DV2,
+): SerializedRepresentativeSequenceV2 {
+  const serialized = serializeRepresentativeProfileForCloud(profile);
+  const payload = new Uint8Array(REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2);
+  serialized.frames.forEach((frame, phaseIndex) => {
+    if (frame.phaseIndex !== phaseIndex) {
+      throw new Error("serialized representative frames must use canonical ordered phase indices");
+    }
+    payload.set(frame.payload, phaseIndex * REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2);
+  });
+  return {
+    frameCount: PHASE_SAMPLE_COUNT_V2,
+    framePayloadByteLength: REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2,
+    payloadByteLength: REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+    payloadFormat: BINARY_PAYLOAD_FORMAT_V2,
+    fixedPointScale: FIXED_POINT_SCALE_V2,
+    packingOrder: REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
+    uncertaintyModel: "heuristic_v1",
+    payload,
+  };
+}
+
+function requireRepresentativeSequenceEnvelopeV2(value: unknown): SerializedRepresentativeSequenceV2 {
+  const sequence = requireRecord(value, "persisted representative sequence");
+  assertExactKeys(sequence, [
+    "frameCount",
+    "framePayloadByteLength",
+    "payloadByteLength",
+    "payloadFormat",
+    "fixedPointScale",
+    "packingOrder",
+    "uncertaintyModel",
+    "payload",
+  ], "persisted representative sequence");
+  if (sequence.frameCount !== PHASE_SAMPLE_COUNT_V2) {
+    throw new Error("persisted representative sequence frameCount metadata is invalid");
+  }
+  if (sequence.framePayloadByteLength !== REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2) {
+    throw new Error("persisted representative sequence framePayloadByteLength metadata is invalid");
+  }
+  if (sequence.payloadByteLength !== REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2) {
+    throw new Error("persisted representative sequence payloadByteLength metadata is invalid");
+  }
+  if (sequence.payloadFormat !== BINARY_PAYLOAD_FORMAT_V2) {
+    throw new Error("persisted representative sequence payloadFormat metadata is invalid");
+  }
+  if (sequence.fixedPointScale !== FIXED_POINT_SCALE_V2) {
+    throw new Error("persisted representative sequence fixedPointScale metadata is invalid");
+  }
+  if (sequence.packingOrder !== REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2) {
+    throw new Error("persisted representative sequence packingOrder metadata is invalid");
+  }
+  if (sequence.uncertaintyModel !== "heuristic_v1") {
+    throw new Error("persisted representative sequence uncertaintyModel metadata is invalid");
+  }
+  return {
+    frameCount: PHASE_SAMPLE_COUNT_V2,
+    framePayloadByteLength: REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2,
+    payloadByteLength: REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+    payloadFormat: BINARY_PAYLOAD_FORMAT_V2,
+    fixedPointScale: FIXED_POINT_SCALE_V2,
+    packingOrder: REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
+    uncertaintyModel: "heuristic_v1",
+    payload: requireBinaryPayload(
+      sequence.payload,
+      REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+      "persisted representative sequence",
+    ),
+  };
+}
+
+export function validatePersistedRepresentativeSequenceV2(
+  value: unknown,
+): SerializedRepresentativeSequenceV2 {
+  const sequence = requireRepresentativeSequenceEnvelopeV2(value);
+  for (let phaseIndex = 0; phaseIndex < PHASE_SAMPLE_COUNT_V2; phaseIndex += 1) {
+    const offset = phaseIndex * REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2;
+    validatePersistedRepresentativeFrameV2({
+      phaseIndex,
+      uncertaintyModel: "heuristic_v1",
+      payload: sequence.payload.slice(offset, offset + REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2),
+    });
+  }
+  return { ...sequence, payload: sequence.payload.slice() };
+}
+
+export function reconstructRepresentativeProfileFromSequencePayloadV2(
+  value: unknown,
+  mode: CaptureProtocolV2,
+): RepresentativePose4DV2 {
+  if (mode !== "basic_1_plus_1" && mode !== "high_accuracy_3_plus_3") {
+    throw new Error("persisted representative sequence mode is invalid");
+  }
+  const sequence = validatePersistedRepresentativeSequenceV2(value);
+  const frames = Array.from({ length: PHASE_SAMPLE_COUNT_V2 }, (_, phaseIndex) => {
+    const offset = phaseIndex * REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2;
+    return reconstructRepresentativeFrameFromPayloadV2({
+      phaseIndex,
+      uncertaintyModel: "heuristic_v1",
+      payload: sequence.payload.slice(offset, offset + REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2),
+    });
+  });
+  const profile = parseRepresentativePose4D({
+    schemaVersion: SHOOTING_PROFILE_SCHEMA_VERSION_V2,
+    boundary: SHOOTING_PROFILE_BOUNDARY_V2,
+    mode,
+    timeBasis: SHOOTING_PROFILE_TIME_BASIS_V2,
+    units: "template_shoulder_breadths",
+    frames,
+    phaseAnchors: CANONICAL_PHASE_SUMMARIES_V2.map(({ id, phase }) => ({ id, phase })),
+    quality: { passed: true, reasons: [] },
+  });
+  validateCanonicalProfile(profile);
+  return profile;
+}
+
 export function chunkOrderedPhaseFramesV2<T extends { phaseIndex: number }>(
   frames: readonly T[],
 ): OrderedFrameChunkV2<T>[] {
@@ -662,7 +941,7 @@ export function buildRepresentativeSequenceChunksV2(
       documentId: String(frame.phaseIndex),
       phaseIndex: frame.phaseIndex,
       payloadFormat: BINARY_PAYLOAD_FORMAT_V2,
-      payloadByteLength: REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2,
+      payloadByteLength: REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2,
       fixedPointScale: FIXED_POINT_SCALE_V2,
       packingOrder: REPRESENTATIVE_PAYLOAD_PACKING_ORDER_V2,
       uncertaintyModel: "heuristic_v1",

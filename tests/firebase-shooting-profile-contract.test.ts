@@ -8,17 +8,27 @@ import {
   FIXED_POINT_SCALE_V2,
   FRAME_CHUNK_COUNT_V2,
   MISSING_VISIBILITY_SENTINEL_V2,
+  OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2,
   OBSERVATION_PAYLOAD_BYTE_LENGTH_V2,
   OBSERVATION_PAYLOAD_PACKING_ORDER_V2,
+  OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+  OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
   PERSISTED_OBSERVATION_JOINTS_V2,
+  REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2,
   REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2,
   REPRESENTATIVE_PAYLOAD_PACKING_ORDER_V2,
+  REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+  REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
   REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2,
   RULE_SAFE_BATCH_MUTATIONS_V2,
   buildRepresentativeSequenceChunksV2,
+  reconstructObservationFramesFromSequencePayloadV2,
   reconstructRepresentativeFrameFromPayloadV2,
+  reconstructRepresentativeProfileFromSequencePayloadV2,
   serializeObservationForCloud,
+  serializeObservationSequenceForCloud,
   serializeRepresentativeProfileForCloud,
+  serializeRepresentativeSequenceForCloud,
   validatePersistedRepresentativeFrameV2,
   validatePersistedObservationFrameV2,
   validateShootingProfileWriteV2,
@@ -51,6 +61,25 @@ import {
 
 const PHASE_IDS = ["ready", "deepestDip", "rise", "releaseProxy", "followThrough"] as const;
 const PHASE_VALUES = [0, 0.25, 0.5, 0.75, 1] as const;
+const EXPECTED_OBSERVATION_LANDMARK_INDEX = {
+  leftShoulder: 11,
+  leftElbow: 13,
+  leftWrist: 15,
+  rightShoulder: 12,
+  rightElbow: 14,
+  rightWrist: 16,
+  leftHip: 23,
+  leftKnee: 25,
+  leftAnkle: 27,
+  rightHip: 24,
+  rightKnee: 26,
+  rightAnkle: 28,
+} as const;
+
+function expectedQuantized(value: number): number {
+  const quantized = Math.round(value * 1_000_000) / 1_000_000;
+  return Object.is(quantized, -0) ? 0 : quantized;
+}
 
 function timestampFixture() {
   const date = new Date("2026-08-22T00:00:00.000Z");
@@ -145,6 +174,212 @@ function readInt32(payload: Uint8Array, index: number): number {
 }
 
 describe("V2 private shooting-profile cloud contract", () => {
+  it("packs one observation attempt into one exact, deterministic 14,544-byte sequence", () => {
+    const attempt = makeAttempt("front", 0);
+    delete attempt.frames[0].sourceLandmarks[11].visibility;
+    const sequence = serializeObservationSequenceForCloud(attempt);
+
+    expect(OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2).toBe(12 * 3 * 4);
+    expect(OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2).toBe(101 * 12 * 3 * 4);
+    expect(sequence).toMatchObject({
+      attemptId: "front-0",
+      view: "front",
+      shootingHand: "right",
+      takeIndex: 0,
+      frameCount: 101,
+      framePayloadByteLength: 144,
+      payloadByteLength: 14_544,
+      payloadFormat: "int32_be_fixed_1e6_v1",
+      fixedPointScale: 1_000_000,
+      packingOrder: "phase_major_joint_major_xy_visibility_v1",
+      missingVisibilitySentinel: -2_147_483_648,
+    });
+    expect(sequence.payload).toBeInstanceOf(Uint8Array);
+    expect(sequence.payload).toHaveLength(14_544);
+    expect(OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2)
+      .toBe("phase_major_joint_major_xy_visibility_v1");
+
+    const slotsPerPhase = 12 * 3;
+    expect(readInt32(sequence.payload, 0 * slotsPerPhase + 0)).toBe(211_000);
+    expect(readInt32(sequence.payload, 0 * slotsPerPhase + 1)).toBe(300_000);
+    expect(readInt32(sequence.payload, 0 * slotsPerPhase + 2)).toBe(MISSING_VISIBILITY_SENTINEL_V2);
+    expect(readInt32(sequence.payload, 37 * slotsPerPhase + 0)).toBe(211_000);
+    expect(readInt32(sequence.payload, 37 * slotsPerPhase + 1)).toBe(337_000);
+    expect(readInt32(sequence.payload, 37 * slotsPerPhase + 2)).toBe(900_000);
+    expect(readInt32(sequence.payload, 100 * slotsPerPhase + 0)).toBe(211_000);
+    expect(readInt32(sequence.payload, 100 * slotsPerPhase + 1)).toBe(400_000);
+    expect(readInt32(sequence.payload, 100 * slotsPerPhase + 2)).toBe(900_000);
+    expect(serializeObservationSequenceForCloud(attempt).payload).toEqual(sequence.payload);
+
+    const roundTrip = reconstructObservationFramesFromSequencePayloadV2(sequence);
+    expect(roundTrip).toHaveLength(101);
+    roundTrip.forEach((frame, frameIndex) => {
+      expect(frame.phaseIndex).toBe(frameIndex);
+      PERSISTED_JOINT_NAMES_V2.forEach((joint) => {
+        const landmarkIndex = EXPECTED_OBSERVATION_LANDMARK_INDEX[joint];
+        const expected = {
+          x: expectedQuantized(0.2 + landmarkIndex * 0.00100000049),
+          y: expectedQuantized(0.3 + frameIndex * 0.001),
+          ...(frameIndex === 0 && joint === "leftShoulder"
+            ? {}
+            : { visibility: expectedQuantized(0.90000049) }),
+        };
+        expect(frame.joints[joint]).toEqual(expected);
+      });
+    });
+    expect(JSON.stringify(sequence)).not.toMatch(/nose|timestampMs|sourceTimestampMs|uri|filename|exif|thumbnail|"phase":/i);
+  });
+
+  it("rejects malformed observation sequences at the first, middle, and last phase", () => {
+    const sequence = serializeObservationSequenceForCloud(makeAttempt("front", 0));
+    const replaceSequenceInt32 = (phaseIndex: number, slot: number, value: number) => ({
+      ...sequence,
+      payload: replaceInt32(sequence.payload, phaseIndex * 12 * 3 + slot, value),
+    });
+
+    expect(() => reconstructObservationFramesFromSequencePayloadV2({
+      ...sequence,
+      payload: sequence.payload.slice(1),
+    })).toThrow(/14.?544|length/i);
+    expect(() => reconstructObservationFramesFromSequencePayloadV2({
+      ...sequence,
+      payload: new Uint8Array(14_545),
+    })).toThrow(/14.?544|length/i);
+    expect(() => reconstructObservationFramesFromSequencePayloadV2({
+      ...sequence,
+      payload: { byteLength: 14_544 },
+    })).toThrow(/Uint8Array|payload/i);
+    const missingPayloadFormat = { ...sequence } as Record<string, unknown>;
+    delete missingPayloadFormat.payloadFormat;
+    const metadataMutations: Array<[string, unknown]> = [
+      ["frameCount", { ...sequence, frameCount: 100 }],
+      ["framePayloadByteLength", { ...sequence, framePayloadByteLength: 145 }],
+      ["payloadByteLength", { ...sequence, payloadByteLength: 144 }],
+      ["payloadFormat", { ...sequence, payloadFormat: "float32_le_v1" }],
+      ["fixedPointScale", { ...sequence, fixedPointScale: 100_000 }],
+      ["packingOrder", { ...sequence, packingOrder: "joint_major_xy_visibility_v1" }],
+      ["missingVisibilitySentinel", { ...sequence, missingVisibilitySentinel: -1 }],
+      ["unknown key", { ...sequence, sourceTimestampMs: 123 }],
+      ["missing key", missingPayloadFormat],
+    ];
+    metadataMutations.forEach(([name, mutated]) => {
+      expect(
+        () => reconstructObservationFramesFromSequencePayloadV2(mutated),
+        `observation sequence must reject ${name}`,
+      ).toThrow(/metadata|key|frameCount|ByteLength|payloadFormat|fixedPointScale|packingOrder|Sentinel/i);
+    });
+    expect(() => reconstructObservationFramesFromSequencePayloadV2(replaceSequenceInt32(0, 0, 2_000_001)))
+      .toThrow(/bound|coordinate/i);
+    expect(() => reconstructObservationFramesFromSequencePayloadV2(replaceSequenceInt32(50, 2, -1)))
+      .toThrow(/visibility|sentinel/i);
+    expect(() => reconstructObservationFramesFromSequencePayloadV2(replaceSequenceInt32(100, 1, -2_000_001)))
+      .toThrow(/bound|coordinate/i);
+  });
+
+  it("packs and decodes the complete representative profile as one exact 48,480-byte sequence", () => {
+    const profile = makeProfile("basic_1_plus_1");
+    const sequence = serializeRepresentativeSequenceForCloud(profile);
+
+    expect(REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2).toBe(12 * 10 * 4);
+    expect(REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2).toBe(101 * 12 * 10 * 4);
+    expect(sequence).toMatchObject({
+      frameCount: 101,
+      framePayloadByteLength: 480,
+      payloadByteLength: 48_480,
+      payloadFormat: "int32_be_fixed_1e6_v1",
+      fixedPointScale: 1_000_000,
+      packingOrder: "phase_major_joint_major_xyz_covariance6_cone_v1",
+      uncertaintyModel: "heuristic_v1",
+    });
+    expect(sequence.payload).toBeInstanceOf(Uint8Array);
+    expect(sequence.payload).toHaveLength(48_480);
+    expect(REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2)
+      .toBe("phase_major_joint_major_xyz_covariance6_cone_v1");
+
+    const slotsPerPhase = 12 * 10;
+    expect(readInt32(sequence.payload, 0 * slotsPerPhase + 1)).toBe(0);
+    expect(readInt32(sequence.payload, 37 * slotsPerPhase + 1)).toBe(370_000);
+    expect(readInt32(sequence.payload, 100 * slotsPerPhase + 1)).toBe(1_000_000);
+    expect(serializeRepresentativeSequenceForCloud(profile).payload).toEqual(sequence.payload);
+
+    const roundTrip = reconstructRepresentativeProfileFromSequencePayloadV2(
+      sequence,
+      "basic_1_plus_1",
+    );
+    expect(roundTrip.frames).toHaveLength(101);
+    roundTrip.frames.forEach((frame, frameIndex) => {
+      expect(frame.phase).toBe(frameIndex / 100);
+      PERSISTED_JOINT_NAMES_V2.forEach((joint, jointIndex) => {
+        expect(frame.joints[joint]).toEqual({
+          x: expectedQuantized(jointIndex / 100 + 0.00000049),
+          y: expectedQuantized(frameIndex / 100),
+          z: expectedQuantized(-jointIndex / 100),
+        });
+        expect(frame.uncertainty[joint]).toEqual({
+          model: "heuristic_v1",
+          covariance: [0.01, 0, 0, 0.01, 0, 0.01],
+          directionalConeDegrees: 8.123456,
+        });
+      });
+    });
+    expect(roundTrip.phaseAnchors).toEqual(profile.phaseAnchors);
+    expect(roundTrip.quality).toEqual({ passed: true, reasons: [] });
+  });
+
+  it("rejects malformed representative sequence metadata, blocks, and non-PSD covariance", () => {
+    const sequence = serializeRepresentativeSequenceForCloud(makeProfile("high_accuracy_3_plus_3"));
+    const replaceSequenceInt32 = (phaseIndex: number, slot: number, value: number) => ({
+      ...sequence,
+      payload: replaceInt32(sequence.payload, phaseIndex * 12 * 10 + slot, value),
+    });
+
+    expect(() => reconstructRepresentativeProfileFromSequencePayloadV2({
+      ...sequence,
+      payload: sequence.payload.slice(1),
+    }, "high_accuracy_3_plus_3")).toThrow(/48.?480|length/i);
+    expect(() => reconstructRepresentativeProfileFromSequencePayloadV2({
+      ...sequence,
+      payload: new Uint8Array(48_481),
+    }, "high_accuracy_3_plus_3")).toThrow(/48.?480|length/i);
+    expect(() => reconstructRepresentativeProfileFromSequencePayloadV2({
+      ...sequence,
+      payload: { byteLength: 48_480 },
+    }, "high_accuracy_3_plus_3")).toThrow(/Uint8Array|payload/i);
+    const missingUncertaintyModel = { ...sequence } as Record<string, unknown>;
+    delete missingUncertaintyModel.uncertaintyModel;
+    const metadataMutations: Array<[string, unknown]> = [
+      ["frameCount", { ...sequence, frameCount: 100 }],
+      ["framePayloadByteLength", { ...sequence, framePayloadByteLength: 479 }],
+      ["payloadByteLength", { ...sequence, payloadByteLength: 480 }],
+      ["payloadFormat", { ...sequence, payloadFormat: "float32_le_v1" }],
+      ["fixedPointScale", { ...sequence, fixedPointScale: 100_000 }],
+      ["packingOrder", { ...sequence, packingOrder: "joint_major_xyz_covariance6_cone_v1" }],
+      ["uncertaintyModel", { ...sequence, uncertaintyModel: "statistical_v1" }],
+      ["unknown key", { ...sequence, phaseSummaries: [] }],
+      ["missing key", missingUncertaintyModel],
+    ];
+    metadataMutations.forEach(([name, mutated]) => {
+      expect(
+        () => reconstructRepresentativeProfileFromSequencePayloadV2(mutated, "high_accuracy_3_plus_3"),
+        `representative sequence must reject ${name}`,
+      ).toThrow(/metadata|key|frameCount|ByteLength|payloadFormat|fixedPointScale|packingOrder|uncertaintyModel/i);
+    });
+    expect(() => reconstructRepresentativeProfileFromSequencePayloadV2(replaceSequenceInt32(0, 0, -10_000_001), "high_accuracy_3_plus_3"))
+      .toThrow(/bound|coordinate/i);
+    expect(() => reconstructRepresentativeProfileFromSequencePayloadV2(replaceSequenceInt32(50, 9, 180_000_001), "high_accuracy_3_plus_3"))
+      .toThrow(/bound|slot/i);
+    expect(() => reconstructRepresentativeProfileFromSequencePayloadV2(replaceSequenceInt32(100, 3, -1), "high_accuracy_3_plus_3"))
+      .toThrow(/bound|covariance/i);
+
+    let nonPsd = replaceInt32(sequence.payload, 37 * 12 * 10 + 3, 10_000);
+    nonPsd = replaceInt32(nonPsd, 37 * 12 * 10 + 4, 20_000);
+    nonPsd = replaceInt32(nonPsd, 37 * 12 * 10 + 6, 10_000);
+    expect(() => reconstructRepresentativeProfileFromSequencePayloadV2({
+      ...sequence,
+      payload: nonPsd,
+    }, "high_accuracy_3_plus_3")).toThrow(/semidefinite|covariance/i);
+  });
+
   it("packs each observation phase into one deterministic 144-byte big-endian payload", () => {
     const attempt = makeAttempt("front", 0);
     delete attempt.frames[0].sourceLandmarks[11].visibility;
