@@ -6,11 +6,14 @@ Last updated: 2026-08-31 UTC
 
 - Repository: `Rudwpahs/shooting-profile-coach-ios`
 - Integration target: `main`
-- Latest remote parent incorporated before this checkpoint: `1e781ebfd68423c6e481822aa78367635f84f2fc`
-- Intended commit message: `fix: restore reproducible app build and sync status`
+- Latest remote parent incorporated before this handoff-only commit: `e7c5921d0bdd5e2f1481a8ee83d22f8846d25ee0`
+- Intended handoff commit message: `docs: update repository handoff after main sync`
 - Integration policy: update `main` only with `force: false`; re-read remote `main` immediately before and after the update.
-- A GitHub candidate commit was created for diff review before this handoff file was added. It is intentionally not referenced by a branch and must not be used as the final target. Rebuild the candidate tree with this file included.
-- Candidate `8f895ecff260f49c9a510fd3ed91a3d05b819418` is also intentionally unreferenced: a turn-boundary reset left only `.gitignore` and `HANDOFF.md` in its temporary blob map. The complete 42-file blob map was reconstructed before the final candidate. Never move a branch to `8f895ec...`.
+- Primary implementation commit is now on `main`: `4c700da9fd30f4484b718225119227a6c5eba674`.
+- The non-force `main` update succeeded, and an immediate `main` re-read returned the same SHA with an identical comparison.
+- Remote `main` subsequently advanced to `e7c5921...` with `docs: add meta-study on deep research methodology`; it is a direct child of the primary implementation commit, so the implementation remains fully included. This handoff update is based on that newer tree.
+- Immediate combined-status and workflow-run queries returned empty arrays. Local verification passed, but GitHub Actions success is not claimed until GitHub reports a run.
+- Earlier review candidates remain intentionally unreferenced. In particular, never move a branch to incomplete candidate `8f895ecff260f49c9a510fd3ed91a3d05b819418`.
 
 ## Completed in this checkpoint
 
@@ -22,7 +25,7 @@ Last updated: 2026-08-31 UTC
 - Removed the route-render theme debug log and added a release-readiness regression assertion.
 - Removed previously tracked `web-dist/` from the candidate Git tree and added `/web-dist/` to `.gitignore` while preserving the newer remote `graphify-out/` rule.
 - Added `docs/IMPLEMENTATION_STATUS.md`, updated `README.md` and `docs/PROJECT_MAP.md`, and saved the execution plan at `docs/superpowers/plans/2026-08-31-repository-sync-and-error-fixes.md`.
-- Preserved the newer remote toolchain/agent/research-skill changes through `1e781eb...`. Only `.gitignore` overlapped; `/web-dist/`, `graphify-out/`, and `.research/` are all retained.
+- Preserved the newer remote toolchain/agent/research-skill changes through `1e781eb...`, plus the later meta-study commit `e7c5921...`. Only `.gitignore` overlapped during implementation; `/web-dist/`, `graphify-out/`, and `.research/` are all retained.
 
 ## Independent review
 
@@ -31,7 +34,7 @@ The pre-merge reviewer reported no Critical issues and two Important issues:
 1. `web-dist/` was already tracked, so ignore-only cleanup was insufficient.
 2. Status wording incorrectly said assets/fonts were absent even though the remote base tracked them.
 
-Both are resolved in the reviewed candidate: tracked web output and obsolete TTFs are deleted, and the status document now describes replacement/migration accurately. The remote compare must still be checked before moving `main`.
+Both are resolved in the merged implementation: tracked web output and obsolete TTFs are deleted, and the status document now describes replacement/migration accurately. The complete remote comparison was checked before moving `main`, and the branch update used `force: false`.
 
 ## Latest verification evidence
 
@@ -59,11 +62,10 @@ The Vitest CJS API deprecation notice and Expo worker `NO_COLOR` notice are upst
 
 ## Immediate continuation steps
 
-1. Upload this `HANDOFF.md` blob.
-2. Create a replacement candidate tree based on the reviewed candidate tree, then create one commit whose parent is the latest unchanged remote `main`.
-3. Compare latest remote `main` to the replacement candidate. Require only the expected source/config/docs/assets changes, four obsolete font deletions, and tracked `web-dist/` deletion.
-4. If remote `main` still equals the recorded parent, update `main` with `force: false`.
-5. Re-read `main`, fetch the final commit, inspect combined status/workflow runs, and report exact evidence. Do not claim GitHub Actions passed unless the connector reports a successful run.
+1. Recheck the `Representative 4D CI` push run when GitHub exposes it. Do not substitute the empty immediate query for a passing run.
+2. Start P0 release-gate work in this order: Firebase Emulator → clean macOS/Xcode → model checksum/license/bundle → physical-iPhone smoke matrix.
+3. Keep the three V2 flags off until the external and scientific gates below are recorded and reviewed.
+4. Update this file after every meaningful checkpoint so a new session can continue from the exact current state.
 
 ## External release gates still pending
 
