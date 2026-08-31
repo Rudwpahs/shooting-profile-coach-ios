@@ -6,10 +6,13 @@ Last updated: 2026-08-31 UTC
 
 - Repository: `Rudwpahs/shooting-profile-coach-ios`
 - Integration target: `main`
-- Remote `main` inspected for this repair: `208e7e63073abd5f56862b08c02ad0277df134cc` (`Add verifier ensemble and novelty research routing`).
+- Remote `main` before the second repair: `05f2e115f6962b81ef953df99cbbe2f33b499a50` (`fix: restore representative 4D CI typecheck`).
 - `Representative 4D CI` run `33391227022` / run number 42 failed only at `Typecheck`; lint, unit tests, and web export were skipped by the workflow after that failure.
-- Root cause: `LandmarkSequenceV2.metadata` gained mandatory native evidence fields, but the two synthetic metadata fixtures in `tests/shooting-profile-phase-normalization.test.ts` still used the older shape.
-- Repair: mirror the complete native evidence structure in both synthetic fixtures and append matching attempt evidence when a duplicate frame is added. No production runtime or representative-4D algorithm behavior is changed.
+- Typecheck root cause: `LandmarkSequenceV2.metadata` gained mandatory native evidence fields, but the two synthetic metadata fixtures in `tests/shooting-profile-phase-normalization.test.ts` still used the older shape.
+- Typecheck repair: mirror the complete native evidence structure in both synthetic fixtures and append matching attempt evidence when a duplicate frame is added. No production runtime or representative-4D algorithm behavior is changed.
+- Run `33393395643` / run number 43 then passed Typecheck, lint, and all 381 hermetic unit tests, but failed during Expo web export because clean CI had no pre-existing `react-native-css-interop/.cache/web.css` for Metro to hash.
+- Export root cause: `forceWriteFileSystem: true` disabled React Native CSS Interop's virtual-module/Metro SHA-1 patch while creating `web.css` only after Metro's initial clean file crawl.
+- Export repair: keep the existing filesystem-write workaround for local iOS development, but enable NativeWind's virtual-module patch when `CI=true`.
 - Integration policy: update `main` only with `force: false`; re-read remote `main` immediately before and after the update.
 - Primary implementation commit `4c700da9fd30f4484b718225119227a6c5eba674` and handoff commit `a84ea9f65f333d61000fed13f10cccdb73071204` remain ancestors of current `main`.
 - The eight commits from `a84ea9f...` through `208e7e6...` changed only agent/research documentation. This repair is based directly on the `208e7e6...` tree so all newer work remains preserved.
@@ -49,7 +52,7 @@ Run after the final code and test changes:
 | `corepack pnpm test:unit` | 381 passed, 1 intentional auth skip; 24 files passed, 1 skipped |
 | `corepack pnpm exec expo export --platform web --output-dir web-dist` | passed; 18 static routes exported |
 
-CI-repair verification on the `208e7e6...` runtime tree plus the fixture patch:
+CI-repair verification on the current runtime tree plus the fixture and Metro patches:
 
 | Command | Result |
 | --- | --- |
@@ -57,6 +60,7 @@ CI-repair verification on the `208e7e6...` runtime tree plus the fixture patch:
 | `corepack pnpm lint` | passed with 0 warnings/errors |
 | `corepack pnpm test:unit` | 381 passed, 1 intentional auth skip; 24 files passed, 1 skipped |
 | `corepack pnpm exec expo export --platform web --output-dir <temporary-directory>` | passed; 18 static routes exported |
+| clean-cache `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir <temporary-directory>` | failed with the same `web.css` SHA-1 error before the Metro fix, then passed with 18 static routes after it |
 
 The Vitest CJS API deprecation notice and Expo worker `NO_COLOR` notice are upstream non-failing notices. They are not product test failures.
 

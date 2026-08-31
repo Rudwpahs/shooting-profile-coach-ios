@@ -5,7 +5,7 @@ const config = getDefaultConfig(__dirname);
 
 module.exports = withNativeWind(config, {
   input: "./global.css",
-  // Force write CSS to file system instead of virtual modules
-  // This fixes iOS styling issues in development mode
-  forceWriteFileSystem: true,
+  // Preserve the iOS development workaround locally, but let clean CI use
+  // NativeWind's virtual-module patch so generated web.css has a Metro SHA-1.
+  forceWriteFileSystem: process.env.CI !== "true",
 });
