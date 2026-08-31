@@ -12,23 +12,52 @@ These are agent workflow tools, not runtime application dependencies. Do not add
 
 ## Project-local skills
 
-Project-local Agent Skills live under `.agents/skills/` and are opt-in by task intent.
+Project-local Agent Skills live under `.agents/skills/` and are selected by task intent.
+
+### Research stack
+
+- **Research** — `.agents/skills/research/`. Default multi-source investigation for substantive technical/current questions. Requires decomposition, source triangulation, validation, a contrarian pass, synthesis, and reusable research storage.
+- **Deep Dive** — `.agents/skills/deep-dive/`. Use for thorough audits, rigorous algorithm/strategy/design evaluation, and high-stakes research. Runs specialist lanes, synthesis, focused re-verification, and adversarial red-team review.
+- **Literature Review** — `.agents/skills/literature-review/`. Use for systematic/scoping/rapid literature review, citation snowballing, evidence tables, and meta-analysis planning.
+- **Citation Management** — `.agents/skills/citation-management/`. Use to verify DOI/source metadata, deduplicate references, and audit claim-to-source support.
+- **Experimental Design** — `.agents/skills/experimental-design/`. Use before benchmarks, ablations, capture experiments, validation studies, or product experiments.
+- **Reproducible Research** — `.agents/skills/reproducible-research/`. Use to preserve seeds, exact code/config/input provenance, run manifests, and regenerable outputs.
+- **Scientific Writing** — `.agents/skills/scientific-writing/`. Use after research/experimentation to produce rigorous technical reports with results/interpretation separation and limitations.
+- **Deep Market Research** — `.agents/skills/deep-market-research/`. Use for market size, competitors, pricing, GTM, demand, trend, and commercial due diligence with evidence tiers and stale-data checks.
+
+Research routing and upstream/license provenance are documented in `docs/RESEARCH_SKILL_STACK.md`. Validated durable findings belong in `docs/research/`; local scratch/cache belongs in `.research/` and stays untracked.
+
+### Other task skills
 
 - **Humanize** — `.agents/skills/humanize/`. Use only when the user explicitly asks to humanize, naturalize, or rewrite prose with the HumanizerAI workflow. It requires network access and a valid `HUMANIZERAI_API_KEY` for API execution. Do not make it a default code, research, or product-copy step.
-- **Algorithmic Art** — `.agents/skills/algorithmic-art/`. Use for generative/code art requests such as p5.js, seeded randomness, flow fields, particle systems, and interactive parameter exploration. Start from its required `templates/viewer.html`; create original work rather than imitating a living artist or copying an existing artwork.
-- **Nothing Design v3.0.0** — `.agents/skills/nothing-design/`. This is an explicit aesthetic mode. Use it only when the user asks for Nothing style, Nothing design, `/nothing-design`, or otherwise directly requests this design system. Generic UI work continues to use UI UX Pro Max as the default quality gate.
+- **Algorithmic Art** — `.agents/skills/algorithmic-art/`. Use for generative/code art requests such as p5.js, seeded randomness, flow fields, particle systems, and interactive parameter exploration. Start from its required `templates/viewer.html`; create original work rather than copying an existing artwork.
+- **Nothing Design v3.0.0** — `.agents/skills/nothing-design/`. Explicit aesthetic mode only. Generic UI work continues to use UI UX Pro Max as the default quality gate.
 
 When a project-local skill conflicts with repository safety, provenance, accessibility, validation, or explicit acceptance criteria, the repository/project gate wins.
 
 ## Order of operation
 
-1. **Understand the repository.** For broad or unfamiliar work, consult an existing `GRAPH_REPORT.md`/Graphify graph first. If the graph is missing or stale and Graphify is available, refresh it before architectural conclusions.
-2. **Define the change.** Use Superpowers-style problem classification and acceptance criteria. Keep small bounded work lightweight; use a written spec/plan for architectural or multi-step work.
-3. **Select any explicit task skill.** Load a project-local skill only when its trigger matches the request. Nothing Design does not replace UI UX Pro Max's accessibility/interaction quality checks; it supplies an aesthetic system on top of them.
-4. **Design user-facing changes.** Before implementing visible UI, apply UI UX Pro Max guidance for the current React Native stack and derive a coherent page-level design system rather than styling components ad hoc.
-5. **Implement narrowly.** Keep tasks independently reviewable. Do not mix unrelated refactors with product changes.
-6. **Verify.** Run the relevant tests/type checks and inspect mobile behavior. UI changes require accessibility and interaction-state review, not just compilation.
-7. **Review against intent.** Compare the diff with the acceptance criteria/spec, then report evidence, remaining uncertainty, and any gated follow-up.
+1. **Understand the repository.** For broad or unfamiliar work, consult an existing Graphify result first when fresh, then verify claims against source.
+2. **Define the change or research question.** Use Superpowers-style problem classification and acceptance criteria. Keep small bounded work lightweight; use a written spec/plan for architectural or multi-step work.
+3. **Select task skills.** Research questions route through the research stack; visible UI through UI UX Pro Max; explicit Nothing style adds Nothing Design; generative-art requests use Algorithmic Art.
+4. **Research before implementation when the design depends on uncertain external facts.** For substantial questions, prefer `research`; escalate to `deep-dive` when the decision is broad/high-stakes. Paper-heavy questions compose with `literature-review`; experiments with `experimental-design` + `reproducible-research`.
+5. **Design user-facing changes.** Apply UI UX Pro Max guidance for the current React Native stack before implementation.
+6. **Implement narrowly.** Keep tasks independently reviewable. Do not mix unrelated refactors with product changes.
+7. **Verify.** Run relevant tests/type checks and inspect mobile behavior. Research claims need source/evidence verification; UI changes need accessibility and interaction-state review.
+8. **Review against intent.** Compare the diff or research verdict with acceptance criteria, then report evidence, uncertainty, and the next falsifiable step.
+
+## Research quality gate
+
+For decision-relevant research:
+
+- prioritize primary/official evidence and exact versions/dates;
+- seek independent corroboration for load-bearing claims;
+- preserve contradictory or negative evidence;
+- perform a contrarian/failure-mode pass;
+- distinguish measured fact, sourced fact, inference, and model judgment;
+- do not treat mirrors/reposts as independent sources;
+- record reproducibility/provenance for experimental numbers;
+- end implementation-guiding research with a falsifiable next test.
 
 ## UI quality gate
 
