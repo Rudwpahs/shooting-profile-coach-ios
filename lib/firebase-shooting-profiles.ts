@@ -19,14 +19,14 @@ import {
   BINARY_PAYLOAD_FORMAT_V2,
   CANONICAL_PHASE_SUMMARIES_V2,
   FIXED_POINT_SCALE_V2,
-  FRAME_CHUNK_COUNT_V2,
   MISSING_VISIBILITY_SENTINEL_V2,
-  OBSERVATION_PAYLOAD_BYTE_LENGTH_V2,
-  OBSERVATION_PAYLOAD_PACKING_ORDER_V2,
+  OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2,
+  OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+  OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
   PHASE_SAMPLE_COUNT_V2,
-  REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2,
-  REPRESENTATIVE_PAYLOAD_PACKING_ORDER_V2,
-  REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2,
+  REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2,
+  REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+  REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
   RULE_SAFE_BATCH_MUTATIONS_V2,
   SHOOTING_PROFILE_ALGORITHM_VERSION_V2,
   SHOOTING_PROFILE_BOUNDARY_V2,
@@ -36,24 +36,19 @@ import {
   SHOOTING_PROFILE_RETENTION_CLASS_V2,
   SHOOTING_PROFILE_SCHEMA_VERSION_V2,
   SHOOTING_PROFILE_TIME_BASIS_V2,
-  buildRepresentativeSequenceChunksV2,
-  chunkOrderedPhaseFramesV2,
   isOpaqueShootingProfileIdV2,
   quantizeShootingProfileNumberV2,
-  reconstructRepresentativeFrameFromPayloadV2,
-  serializeObservationForCloud,
-  serializeRepresentativeProfileForCloud,
-  validatePersistedObservationFrameV2,
-  validatePersistedRepresentativeFrameV2,
+  reconstructRepresentativeProfileFromSequencePayloadV2,
+  serializeObservationSequenceForCloud,
+  serializeRepresentativeSequenceForCloud,
+  validatePersistedObservationSequenceV2,
   validateShootingProfileWriteV2,
   type SaveShootingProfileInputV2,
   type ShootingProfileViewerRecordV2,
 } from "@/lib/firebase-shooting-profile-contract";
-import { parseRepresentativePose4D } from "@/lib/shooting-profile/codec";
 import type {
   CaptureProtocolV2,
   ReconstructionQualityV2,
-  RepresentativePose4DV2,
   ShootingHandV2,
 } from "@/lib/shooting-profile/types";
 
@@ -91,6 +86,16 @@ export type ShootingProfileDeletePlanV2 = {
   deleteBatches: string[][];
 };
 
+export type ShootingProfileWritePortV2 = {
+  setWrite: (write: PlannedFirestoreWriteV2) => Promise<void>;
+  readDocumentFromServer: (path: string) => Promise<PersistedDocumentV2 | null>;
+  deletePath: (path: string) => Promise<void>;
+};
+
+export type ShootingProfileReaderPortV2 = {
+  readDocument: (path: string) => Promise<PersistedDocumentV2 | null>;
+};
+
 type UnknownRecord = Record<string, unknown>;
 
 type CommonMetadataInputV2 = {
@@ -98,6 +103,8 @@ type CommonMetadataInputV2 = {
   recordType: string;
   timestamp: unknown;
 };
+
+export const SHOOTING_PROFILE_STORAGE_LAYOUT_V2 = "phase_sequence_payloads_v1" as const;
 
 const COMMON_METADATA_KEYS_V2 = [
   "ownerUid",
@@ -116,6 +123,7 @@ const COMMON_METADATA_KEYS_V2 = [
 const PROFILE_HEAD_KEYS_V2 = [
   ...COMMON_METADATA_KEYS_V2,
   "recordType",
+  "storageLayout",
   "profileId",
   "captureSessionId",
   "revisionId",
@@ -127,7 +135,7 @@ const PROFILE_HEAD_KEYS_V2 = [
   "attemptIds",
   "attemptCount",
   "frameCount",
-  "sequenceChunkCount",
+  "representativePayloadByteLength",
   "phaseSummaryCount",
   "units",
 ] as const;
@@ -135,6 +143,7 @@ const PROFILE_HEAD_KEYS_V2 = [
 const REVISION_HEAD_KEYS_V2 = [
   ...COMMON_METADATA_KEYS_V2,
   "recordType",
+  "storageLayout",
   "profileId",
   "captureSessionId",
   "revisionId",
@@ -144,41 +153,22 @@ const REVISION_HEAD_KEYS_V2 = [
   "confidence",
   "attemptCount",
   "frameCount",
-  "sequenceChunkCount",
   "phaseSummaryCount",
   "units",
+  "framePayloadByteLength",
+  "payloadByteLength",
+  "payloadFormat",
+  "fixedPointScale",
+  "packingOrder",
+  "uncertaintyModel",
+  "payload",
   "quality",
 ] as const;
 
-const SEQUENCE_CHUNK_KEYS_V2 = [
+const OBSERVATION_KEYS_V2 = [
   ...COMMON_METADATA_KEYS_V2,
   "recordType",
-  "profileId",
-  "captureSessionId",
-  "revisionId",
-  "phaseIndex",
-  "payloadFormat",
-  "payloadByteLength",
-  "fixedPointScale",
-  "packingOrder",
-  "units",
-  "uncertaintyModel",
-  "payload",
-] as const;
-
-const PHASE_SUMMARY_KEYS_V2 = [
-  ...COMMON_METADATA_KEYS_V2,
-  "recordType",
-  "profileId",
-  "captureSessionId",
-  "revisionId",
-  "phaseId",
-  "phaseIndex",
-] as const;
-
-const OBSERVATION_HEAD_KEYS_V2 = [
-  ...COMMON_METADATA_KEYS_V2,
-  "recordType",
+  "storageLayout",
   "captureSessionId",
   "profileId",
   "revisionId",
@@ -188,26 +178,27 @@ const OBSERVATION_HEAD_KEYS_V2 = [
   "shootingHand",
   "takeIndex",
   "frameCount",
-  "frameChunkCount",
-] as const;
-
-const OBSERVATION_CHUNK_KEYS_V2 = [
-  ...COMMON_METADATA_KEYS_V2,
-  "recordType",
-  "captureSessionId",
-  "profileId",
-  "revisionId",
-  "attemptId",
-  "view",
-  "shootingHand",
-  "takeIndex",
-  "phaseIndex",
-  "payloadFormat",
+  "framePayloadByteLength",
   "payloadByteLength",
+  "payloadFormat",
   "fixedPointScale",
   "packingOrder",
   "missingVisibilitySentinel",
   "payload",
+] as const;
+
+const CAPTURE_SESSION_KEYS_V2 = [
+  ...COMMON_METADATA_KEYS_V2,
+  "recordType",
+  "storageLayout",
+  "captureSessionId",
+  "profileId",
+  "revisionId",
+  "status",
+  "mode",
+  "shootingHand",
+  "attemptIds",
+  "attemptCount",
 ] as const;
 
 const PUBLICATION_IDENTITY_KEYS_V2 = [
@@ -221,6 +212,7 @@ const PUBLICATION_IDENTITY_KEYS_V2 = [
   "algorithmVersion",
   "modelVersion",
   "recordType",
+  "storageLayout",
   "profileId",
   "captureSessionId",
   "revisionId",
@@ -231,7 +223,7 @@ const PUBLICATION_IDENTITY_KEYS_V2 = [
   "confidence",
   "attemptCount",
   "frameCount",
-  "sequenceChunkCount",
+  "representativePayloadByteLength",
   "phaseSummaryCount",
   "units",
 ] as const;
@@ -279,6 +271,17 @@ function requirePathSegment(value: unknown, name: string): string {
 function requireOpaqueId(value: unknown, name: string): string {
   if (!isOpaqueShootingProfileIdV2(value)) throw new Error(`${name} must be a valid opaque ID`);
   return value;
+}
+
+function requireCanonicalChainId(
+  captureSessionId: string,
+  profileId: string,
+  revisionId: string,
+): string {
+  if (captureSessionId !== profileId || revisionId !== profileId) {
+    throw new Error("profile, capture, and revision must use one canonical chain ID");
+  }
+  return profileId;
 }
 
 function requireInteger(value: unknown, expected: number, name: string): void {
@@ -344,6 +347,37 @@ function validateCommonMetadata(value: UnknownRecord, uid: string, recordType: s
   requireTimestamp(value.updatedAt, `${name}.updatedAt`);
 }
 
+function validatePlannedCommonMetadata(value: UnknownRecord, uid: string, recordType: string, name: string): void {
+  if (
+    value.ownerUid !== uid
+    || value.schemaVersion !== SHOOTING_PROFILE_SCHEMA_VERSION_V2
+    || value.boundary !== SHOOTING_PROFILE_BOUNDARY_V2
+    || value.timeBasis !== SHOOTING_PROFILE_TIME_BASIS_V2
+    || value.dataClass !== SHOOTING_PROFILE_DATA_CLASS_V2
+    || value.retentionClass !== SHOOTING_PROFILE_RETENTION_CLASS_V2
+    || value.consentReference !== SHOOTING_PROFILE_CONSENT_REFERENCE_V2
+    || value.algorithmVersion !== SHOOTING_PROFILE_ALGORITHM_VERSION_V2
+    || value.modelVersion !== SHOOTING_PROFILE_MODEL_VERSION_V2
+    || value.recordType !== recordType
+  ) {
+    throw new Error(`${name} immutable owner metadata is invalid`);
+  }
+  const serverTimestampValue = serverTimestamp();
+  const expectedPrototype = Object.getPrototypeOf(serverTimestampValue);
+  for (const [key, timestamp] of [["createdAt", value.createdAt], ["updatedAt", value.updatedAt]] as const) {
+    if (
+      !isRecord(timestamp)
+      || Object.getPrototypeOf(timestamp) !== expectedPrototype
+      || Object.keys(timestamp).length !== 1
+      || timestamp._methodName !== "serverTimestamp"
+      || typeof timestamp.isEqual !== "function"
+      || timestamp.isEqual(serverTimestampValue) !== true
+    ) {
+      throw new Error(`${name}.${key} must be a Firestore serverTimestamp FieldValue`);
+    }
+  }
+}
+
 function canonicalAttemptOrder(input: SaveShootingProfileInputV2) {
   return [...input.normalizedAttempts].sort((left, right) => {
     const leftFrame = left.frames[0];
@@ -378,10 +412,11 @@ export function buildShootingProfileWritePlanV2(args: {
   const captureSessionId = requireOpaqueId(args.captureSessionId, "capture session ID");
   const profileId = requireOpaqueId(args.profileId, "profile ID");
   const revisionId = requireOpaqueId(args.revisionId, "revision ID");
+  requireCanonicalChainId(captureSessionId, profileId, revisionId);
   const input = validateShootingProfileWriteV2(args.input);
   const timestamp = args.timestamp;
-  const representative = serializeRepresentativeProfileForCloud(input.profile);
-  const attempts = canonicalAttemptOrder(input).map(serializeObservationForCloud);
+  const representative = serializeRepresentativeSequenceForCloud(input.profile);
+  const attempts = canonicalAttemptOrder(input).map(serializeObservationSequenceForCloud);
   const attemptIds = attempts.map((attempt) => attempt.attemptId);
   const confidence = quantizeShootingProfileNumberV2(input.confidence, 0, 1, "confidence");
   const capturePath = captureBasePath(uid, captureSessionId);
@@ -391,35 +426,11 @@ export function buildShootingProfileWritePlanV2(args: {
 
   for (const attempt of attempts) {
     const observationPath = `${capturePath}/observations/${attempt.attemptId}`;
-    for (const chunk of chunkOrderedPhaseFramesV2(attempt.frames)) {
-      stagingWrites.push({
-        path: `${observationPath}/frameChunks/${chunk.documentId}`,
-        data: {
-          ...commonMetadata({ uid, recordType: "observation_frame_chunk_v2", timestamp }),
-          captureSessionId,
-          profileId,
-          revisionId,
-          attemptId: attempt.attemptId,
-          view: attempt.view,
-          shootingHand: attempt.shootingHand,
-          takeIndex: attempt.takeIndex,
-          phaseIndex: chunk.phaseIndex,
-          payloadFormat: BINARY_PAYLOAD_FORMAT_V2,
-          payloadByteLength: OBSERVATION_PAYLOAD_BYTE_LENGTH_V2,
-          fixedPointScale: FIXED_POINT_SCALE_V2,
-          packingOrder: OBSERVATION_PAYLOAD_PACKING_ORDER_V2,
-          missingVisibilitySentinel: MISSING_VISIBILITY_SENTINEL_V2,
-          payload: Bytes.fromUint8Array(chunk.frame.payload),
-        },
-      });
-    }
-  }
-
-  for (const attempt of attempts) {
     stagingWrites.push({
-      path: `${capturePath}/observations/${attempt.attemptId}`,
+      path: observationPath,
       data: {
         ...commonMetadata({ uid, recordType: "normalized_observation_v2", timestamp }),
+        storageLayout: SHOOTING_PROFILE_STORAGE_LAYOUT_V2,
         captureSessionId,
         profileId,
         revisionId,
@@ -428,8 +439,14 @@ export function buildShootingProfileWritePlanV2(args: {
         view: attempt.view,
         shootingHand: attempt.shootingHand,
         takeIndex: attempt.takeIndex,
-        frameCount: PHASE_SAMPLE_COUNT_V2,
-        frameChunkCount: FRAME_CHUNK_COUNT_V2,
+        frameCount: attempt.frameCount,
+        framePayloadByteLength: attempt.framePayloadByteLength,
+        payloadByteLength: attempt.payloadByteLength,
+        payloadFormat: attempt.payloadFormat,
+        fixedPointScale: attempt.fixedPointScale,
+        packingOrder: attempt.packingOrder,
+        missingVisibilitySentinel: attempt.missingVisibilitySentinel,
+        payload: Bytes.fromUint8Array(attempt.payload),
       },
     });
   }
@@ -438,6 +455,7 @@ export function buildShootingProfileWritePlanV2(args: {
     path: capturePath,
     data: {
       ...commonMetadata({ uid, recordType: "capture_session_v2", timestamp }),
+      storageLayout: SHOOTING_PROFILE_STORAGE_LAYOUT_V2,
       captureSessionId,
       profileId,
       revisionId,
@@ -449,44 +467,11 @@ export function buildShootingProfileWritePlanV2(args: {
     },
   });
 
-  for (const chunk of buildRepresentativeSequenceChunksV2(representative.frames)) {
-    stagingWrites.push({
-      path: `${revisionPath}/sequenceChunks/${chunk.documentId}`,
-      data: {
-        ...commonMetadata({ uid, recordType: "representative_phase_chunk_v2", timestamp }),
-        profileId,
-        captureSessionId,
-        revisionId,
-        phaseIndex: chunk.phaseIndex,
-        payloadFormat: chunk.payloadFormat,
-        payloadByteLength: chunk.payloadByteLength,
-        fixedPointScale: chunk.fixedPointScale,
-        packingOrder: chunk.packingOrder,
-        units: "template_shoulder_breadths",
-        uncertaintyModel: chunk.uncertaintyModel,
-        payload: Bytes.fromUint8Array(chunk.payload),
-      },
-    });
-  }
-
-  for (const summary of representative.phaseSummaries) {
-    stagingWrites.push({
-      path: `${revisionPath}/phaseSummaries/${summary.id}`,
-      data: {
-        ...commonMetadata({ uid, recordType: "representative_phase_summary_v2", timestamp }),
-        profileId,
-        captureSessionId,
-        revisionId,
-        phaseId: summary.id,
-        phaseIndex: summary.phaseIndex,
-      },
-    });
-  }
-
   stagingWrites.push({
     path: revisionPath,
     data: {
       ...commonMetadata({ uid, recordType: "representative_revision_v2", timestamp }),
+      storageLayout: SHOOTING_PROFILE_STORAGE_LAYOUT_V2,
       profileId,
       captureSessionId,
       revisionId,
@@ -495,11 +480,17 @@ export function buildShootingProfileWritePlanV2(args: {
       shootingHand: input.shootingHand,
       confidence,
       attemptCount: attemptIds.length,
-      frameCount: PHASE_SAMPLE_COUNT_V2,
-      sequenceChunkCount: REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2,
+      frameCount: representative.frameCount,
       phaseSummaryCount: CANONICAL_PHASE_SUMMARIES_V2.length,
       units: "template_shoulder_breadths",
-      quality: representative.quality,
+      framePayloadByteLength: representative.framePayloadByteLength,
+      payloadByteLength: representative.payloadByteLength,
+      payloadFormat: representative.payloadFormat,
+      fixedPointScale: representative.fixedPointScale,
+      packingOrder: representative.packingOrder,
+      uncertaintyModel: representative.uncertaintyModel,
+      payload: Bytes.fromUint8Array(representative.payload),
+      quality: { passed: true, reasons: [] },
     },
   });
 
@@ -507,6 +498,7 @@ export function buildShootingProfileWritePlanV2(args: {
     path: profilePath,
     data: {
       ...commonMetadata({ uid, recordType: "motion_profile_v2", timestamp }),
+      storageLayout: SHOOTING_PROFILE_STORAGE_LAYOUT_V2,
       profileId,
       captureSessionId,
       revisionId,
@@ -518,7 +510,7 @@ export function buildShootingProfileWritePlanV2(args: {
       attemptIds,
       attemptCount: attemptIds.length,
       frameCount: PHASE_SAMPLE_COUNT_V2,
-      sequenceChunkCount: REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2,
+      representativePayloadByteLength: REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
       phaseSummaryCount: CANONICAL_PHASE_SUMMARIES_V2.length,
       units: "template_shoulder_breadths",
     },
@@ -529,7 +521,7 @@ export function buildShootingProfileWritePlanV2(args: {
 
 export function partitionShootingProfileWritesV2<T>(
   writes: readonly T[],
-  maximum = RULE_SAFE_BATCH_MUTATIONS_V2,
+  maximum: number = RULE_SAFE_BATCH_MUTATIONS_V2,
 ): T[][] {
   if (!Number.isInteger(maximum) || maximum !== RULE_SAFE_BATCH_MUTATIONS_V2) {
     throw new Error("V2 Firestore rule-safe batches must contain exactly one mutation");
@@ -603,6 +595,10 @@ export async function attemptKnownSinglePathCleanupV2(
   return { attemptedPaths: uniquePaths, failures };
 }
 
+export function buildFailedStagingCleanupPathsV2(paths: readonly string[]): string[] {
+  return [...new Set(paths)].reverse();
+}
+
 export async function deleteSubordinateWithAmbiguityCheckV2(args: {
   commitDelete: () => Promise<void>;
   readExistsFromServer: () => Promise<boolean>;
@@ -650,13 +646,6 @@ function validateHand(value: unknown, name: string): ShootingHandV2 {
   return value;
 }
 
-function requireBoundedInteger(value: unknown, minimum: number, maximum: number, name: string): number {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < minimum || value > maximum) {
-    throw new Error(`${name} must be a bounded integer`);
-  }
-  return value;
-}
-
 function expectedAttemptIdentity(attemptId: string): {
   view: "front" | "shooting_side";
   takeIndex: 0 | 1 | 2;
@@ -687,6 +676,7 @@ function validateObservationDocumentContext(
   const captureSessionId = requireOpaqueId(args.captureSessionId, "capture session ID");
   const profileId = requireOpaqueId(args.profileId, "profile ID");
   const revisionId = requireOpaqueId(args.revisionId, "revision ID");
+  requireCanonicalChainId(captureSessionId, profileId, revisionId);
   const attemptId = requireOpaqueId(args.attemptId, "attempt ID");
   const identity = expectedAttemptIdentity(attemptId);
   if (
@@ -704,41 +694,41 @@ function validateObservationDocumentContext(
   return identity;
 }
 
-export function validateObservationHeadDocumentV2(args: ObservationDocumentContextV2): void {
-  const document = requireDocument(args.document, "observation head document");
+export function validateObservationDocumentV2(args: ObservationDocumentContextV2): void {
+  const document = requireDocument(args.document, "observation document");
   if (document.id !== args.attemptId) throw new Error("observation attempt document ID must equal attemptId");
-  const data = requireRecord(document.data, "observation head");
-  assertExactKeys(data, OBSERVATION_HEAD_KEYS_V2, "observation head");
-  validateCommonMetadata(data, args.uid, "normalized_observation_v2", "observation head");
-  validateObservationDocumentContext(data, args, "observation head");
-  if (data.status !== "complete") throw new Error("observation head must be complete");
+  const data = requireRecord(document.data, "observation");
+  assertExactKeys(data, OBSERVATION_KEYS_V2, "observation");
+  validateCommonMetadata(data, args.uid, "normalized_observation_v2", "observation");
+  validateObservationDocumentContext(data, args, "observation");
+  if (data.status !== "complete") throw new Error("observation must be complete");
   requireInteger(data.frameCount, PHASE_SAMPLE_COUNT_V2, "observation frame count");
-  requireInteger(data.frameChunkCount, FRAME_CHUNK_COUNT_V2, "observation chunk count");
-}
-
-export function validateObservationChunkDocumentV2(args: ObservationDocumentContextV2): void {
-  const document = requireDocument(args.document, "observation chunk document");
-  const data = requireRecord(document.data, "observation chunk");
-  assertExactKeys(data, OBSERVATION_CHUNK_KEYS_V2, "observation chunk");
-  validateCommonMetadata(data, args.uid, "observation_frame_chunk_v2", "observation chunk");
-  validateObservationDocumentContext(data, args, "observation chunk");
   if (
-    data.payloadFormat !== BINARY_PAYLOAD_FORMAT_V2
-    || data.payloadByteLength !== OBSERVATION_PAYLOAD_BYTE_LENGTH_V2
+    data.storageLayout !== SHOOTING_PROFILE_STORAGE_LAYOUT_V2
+    || data.framePayloadByteLength !== OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2
+    || data.payloadByteLength !== OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2
+    || data.payloadFormat !== BINARY_PAYLOAD_FORMAT_V2
     || data.fixedPointScale !== FIXED_POINT_SCALE_V2
-    || data.packingOrder !== OBSERVATION_PAYLOAD_PACKING_ORDER_V2
+    || data.packingOrder !== OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2
     || data.missingVisibilitySentinel !== MISSING_VISIBILITY_SENTINEL_V2
     || !(data.payload instanceof Bytes)
   ) {
-    throw new Error("observation chunk Firestore Bytes payload metadata is invalid");
+    throw new Error("observation compact layout or Firestore Bytes payload metadata is invalid");
   }
-  const frame = validatePersistedObservationFrameV2({
-    phaseIndex: data.phaseIndex,
+  validatePersistedObservationSequenceV2({
+    attemptId: data.attemptId,
+    view: data.view,
+    shootingHand: data.shootingHand,
+    takeIndex: data.takeIndex,
+    frameCount: data.frameCount,
+    framePayloadByteLength: data.framePayloadByteLength,
+    payloadByteLength: data.payloadByteLength,
+    payloadFormat: data.payloadFormat,
+    fixedPointScale: data.fixedPointScale,
+    packingOrder: data.packingOrder,
+    missingVisibilitySentinel: data.missingVisibilitySentinel,
     payload: data.payload.toUint8Array(),
   });
-  if (document.id !== String(frame.phaseIndex)) {
-    throw new Error("observation chunk document ID must equal its canonical nonpadded phase index");
-  }
 }
 
 function validateModeConfidence(mode: CaptureProtocolV2, value: unknown, name: string): number {
@@ -770,11 +760,15 @@ function validateProfileHead(
   const head = requireRecord(value, "motion profile head");
   assertExactKeys(head, PROFILE_HEAD_KEYS_V2, "motion profile head");
   validateCommonMetadata(head, uid, "motion_profile_v2", "motion profile head");
+  const captureSessionId = requireOpaqueId(head.captureSessionId, "capture session ID");
+  const revisionId = requireOpaqueId(head.revisionId, "revision ID");
+  requireCanonicalChainId(captureSessionId, profileId, revisionId);
   if (
     head.profileId !== profileId
-    || head.captureSessionId !== requireOpaqueId(head.captureSessionId, "capture session ID")
-    || head.revisionId !== requireOpaqueId(head.revisionId, "revision ID")
+    || head.captureSessionId !== captureSessionId
+    || head.revisionId !== revisionId
     || head.status !== "complete"
+    || head.storageLayout !== SHOOTING_PROFILE_STORAGE_LAYOUT_V2
     || head.units !== "template_shoulder_breadths"
   ) {
     throw new Error("motion profile head path IDs or immutable fields are invalid");
@@ -792,9 +786,9 @@ function validateProfileHead(
   requireInteger(head.attemptCount, attemptIds.length, "motion profile head attempt count");
   requireInteger(head.frameCount, PHASE_SAMPLE_COUNT_V2, "motion profile head frame count");
   requireInteger(
-    head.sequenceChunkCount,
-    REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2,
-    "motion profile head sequence chunk count",
+    head.representativePayloadByteLength,
+    REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+    "motion profile head representative payload byte length",
   );
   requireInteger(head.phaseSummaryCount, CANONICAL_PHASE_SUMMARIES_V2.length, "motion profile head phase summary count");
   return head;
@@ -820,13 +814,307 @@ export function validateShootingProfilePublicationIdentityV2(
   if (PUBLICATION_IDENTITY_KEYS_V2.some((key) => persisted[key] !== planned[key])) {
     throw new Error("persisted publication identity does not match this write plan");
   }
+  const persistedAttemptIds = persisted.attemptIds;
+  const plannedAttemptIds = planned.attemptIds;
   if (
-    !Array.isArray(persisted.attemptIds)
-    || !Array.isArray(planned.attemptIds)
-    || persisted.attemptIds.length !== planned.attemptIds.length
-    || persisted.attemptIds.some((attemptId, index) => attemptId !== planned.attemptIds[index])
+    !Array.isArray(persistedAttemptIds)
+    || !Array.isArray(plannedAttemptIds)
+    || persistedAttemptIds.length !== plannedAttemptIds.length
+    || persistedAttemptIds.some((attemptId, index) => attemptId !== plannedAttemptIds[index])
   ) {
     throw new Error("persisted publication identity does not match this write plan");
+  }
+}
+
+export type FailedPublicationResolutionV2 = "published" | "not_published" | "unknown";
+
+export async function resolveFailedShootingProfilePublicationV2(args: {
+  readHeadFromServer: () => Promise<PersistedDocumentV2 | null>;
+  validateMatchingHead: (document: PersistedDocumentV2) => void;
+  cleanupStaging: () => Promise<void>;
+}): Promise<FailedPublicationResolutionV2> {
+  let document: PersistedDocumentV2 | null;
+  try {
+    document = await args.readHeadFromServer();
+  } catch {
+    return "unknown";
+  }
+  if (document !== null) {
+    try {
+      args.validateMatchingHead(document);
+    } catch {
+      return "unknown";
+    }
+    return "published";
+  }
+  try {
+    await args.cleanupStaging();
+  } catch {
+    return "unknown";
+  }
+  return "not_published";
+}
+
+function requirePlannedFirestoreWrite(value: unknown, name: string): PlannedFirestoreWriteV2 {
+  const write = requireRecord(value, name);
+  assertExactKeys(write, ["path", "data"], name);
+  if (typeof write.path !== "string") throw new Error(`${name} path is invalid`);
+  requireRecord(write.data, `${name} data`);
+  return write as PlannedFirestoreWriteV2;
+}
+
+function requireMatchingAttemptIds(
+  value: unknown,
+  expected: readonly string[],
+  mode: CaptureProtocolV2,
+  name: string,
+): void {
+  const attemptIds = validateAttemptIds(value, mode, name);
+  if (attemptIds.some((attemptId, index) => attemptId !== expected[index])) {
+    throw new Error(`${name} attempt IDs do not match the publication`);
+  }
+}
+
+function validateCanonicalShootingProfileWritePlanV2(args: {
+  uid: string;
+  plan: ShootingProfileWritePlanV2;
+}): {
+  uid: string;
+  profileId: string;
+  stagingWrites: PlannedFirestoreWriteV2[];
+  publicationWrite: PlannedFirestoreWriteV2;
+} {
+  const uid = requirePathSegment(args.uid, "owner UID");
+  const plan = requireRecord(args.plan, "shooting profile write plan");
+  assertExactKeys(
+    plan,
+    ["captureSessionId", "profileId", "revisionId", "stagingWrites", "publicationWrite"],
+    "shooting profile write plan",
+  );
+  const captureSessionId = requireOpaqueId(plan.captureSessionId, "capture session ID");
+  const profileId = requireOpaqueId(plan.profileId, "profile ID");
+  const revisionId = requireOpaqueId(plan.revisionId, "revision ID");
+  requireCanonicalChainId(captureSessionId, profileId, revisionId);
+  if (!Array.isArray(plan.stagingWrites)) throw new Error("shooting profile write plan staging writes are invalid");
+  const stagingWrites = plan.stagingWrites.map((write, index) =>
+    requirePlannedFirestoreWrite(write, `staging write ${index}`));
+  const publicationWrite = requirePlannedFirestoreWrite(plan.publicationWrite, "publication write");
+
+  if (publicationWrite.path !== profileBasePath(uid, profileId)) {
+    throw new Error("publication write path does not match the owner profile identity");
+  }
+  const publication = publicationWrite.data;
+  assertExactKeys(publication, PROFILE_HEAD_KEYS_V2, "publication write");
+  validatePlannedCommonMetadata(publication, uid, "motion_profile_v2", "publication write");
+  if (
+    publication.storageLayout !== SHOOTING_PROFILE_STORAGE_LAYOUT_V2
+    || publication.profileId !== profileId
+    || publication.captureSessionId !== captureSessionId
+    || publication.revisionId !== revisionId
+    || publication.status !== "complete"
+    || publication.deletionState !== "active"
+    || publication.units !== "template_shoulder_breadths"
+  ) {
+    throw new Error("publication write immutable identity is invalid");
+  }
+  const mode = validateMode(publication.mode, "publication write");
+  const shootingHand = validateHand(publication.shootingHand, "publication write");
+  validateModeConfidence(mode, publication.confidence, "publication write");
+  const attemptIds = validateAttemptIds(publication.attemptIds, mode, "publication write");
+  requireInteger(publication.attemptCount, attemptIds.length, "publication write attempt count");
+  requireInteger(publication.frameCount, PHASE_SAMPLE_COUNT_V2, "publication write frame count");
+  requireInteger(
+    publication.representativePayloadByteLength,
+    REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+    "publication write representative payload byte length",
+  );
+  requireInteger(
+    publication.phaseSummaryCount,
+    CANONICAL_PHASE_SUMMARIES_V2.length,
+    "publication write phase summary count",
+  );
+
+  const capturePath = captureBasePath(uid, captureSessionId);
+  const expectedStagingPaths = [
+    ...attemptIds.map((attemptId) => `${capturePath}/observations/${attemptId}`),
+    capturePath,
+    revisionBasePath(uid, profileId, revisionId),
+  ];
+  if (
+    stagingWrites.length !== expectedStagingPaths.length
+    || stagingWrites.some((write, index) => write.path !== expectedStagingPaths[index])
+  ) {
+    throw new Error("staging write paths must be canonical and ordered");
+  }
+
+  attemptIds.forEach((attemptId, index) => {
+    const observation = stagingWrites[index].data;
+    assertExactKeys(observation, OBSERVATION_KEYS_V2, `observation staging write ${index}`);
+    validatePlannedCommonMetadata(
+      observation,
+      uid,
+      "normalized_observation_v2",
+      `observation staging write ${index}`,
+    );
+    const identity = expectedAttemptIdentity(attemptId);
+    if (
+      observation.storageLayout !== SHOOTING_PROFILE_STORAGE_LAYOUT_V2
+      || observation.captureSessionId !== captureSessionId
+      || observation.profileId !== profileId
+      || observation.revisionId !== revisionId
+      || observation.attemptId !== attemptId
+      || observation.status !== "complete"
+      || observation.view !== identity.view
+      || observation.takeIndex !== identity.takeIndex
+      || observation.shootingHand !== shootingHand
+    ) {
+      throw new Error(`observation staging write ${index} immutable identity is invalid`);
+    }
+    if (!(observation.payload instanceof Bytes)) {
+      throw new Error(`observation staging write ${index} payload must be Firestore Bytes`);
+    }
+    validatePersistedObservationSequenceV2({
+      attemptId: observation.attemptId,
+      view: observation.view,
+      shootingHand: observation.shootingHand,
+      takeIndex: observation.takeIndex,
+      frameCount: observation.frameCount,
+      framePayloadByteLength: observation.framePayloadByteLength,
+      payloadByteLength: observation.payloadByteLength,
+      payloadFormat: observation.payloadFormat,
+      fixedPointScale: observation.fixedPointScale,
+      packingOrder: observation.packingOrder,
+      missingVisibilitySentinel: observation.missingVisibilitySentinel,
+      payload: observation.payload.toUint8Array(),
+    });
+  });
+
+  const capture = stagingWrites[attemptIds.length].data;
+  assertExactKeys(capture, CAPTURE_SESSION_KEYS_V2, "capture staging write");
+  validatePlannedCommonMetadata(capture, uid, "capture_session_v2", "capture staging write");
+  if (
+    capture.storageLayout !== SHOOTING_PROFILE_STORAGE_LAYOUT_V2
+    || capture.captureSessionId !== captureSessionId
+    || capture.profileId !== profileId
+    || capture.revisionId !== revisionId
+    || capture.status !== "complete"
+    || capture.mode !== mode
+    || capture.shootingHand !== shootingHand
+  ) {
+    throw new Error("capture staging write immutable identity is invalid");
+  }
+  requireMatchingAttemptIds(capture.attemptIds, attemptIds, mode, "capture staging write");
+  requireInteger(capture.attemptCount, attemptIds.length, "capture staging write attempt count");
+
+  const revision = stagingWrites.at(-1)!.data;
+  assertExactKeys(revision, REVISION_HEAD_KEYS_V2, "revision staging write");
+  validatePlannedCommonMetadata(revision, uid, "representative_revision_v2", "revision staging write");
+  if (
+    revision.storageLayout !== SHOOTING_PROFILE_STORAGE_LAYOUT_V2
+    || revision.profileId !== profileId
+    || revision.captureSessionId !== captureSessionId
+    || revision.revisionId !== revisionId
+    || revision.status !== "complete"
+    || revision.mode !== mode
+    || revision.shootingHand !== shootingHand
+  ) {
+    throw new Error("revision staging write immutable identity is invalid");
+  }
+  validateModeConfidence(mode, revision.confidence, "revision staging write");
+  if (
+    revision.confidence !== publication.confidence
+    || revision.units !== "template_shoulder_breadths"
+  ) {
+    throw new Error("revision staging write does not match the publication");
+  }
+  requireInteger(revision.attemptCount, attemptIds.length, "revision staging write attempt count");
+  requireInteger(revision.frameCount, PHASE_SAMPLE_COUNT_V2, "revision staging write frame count");
+  requireInteger(
+    revision.phaseSummaryCount,
+    CANONICAL_PHASE_SUMMARIES_V2.length,
+    "revision staging write phase summary count",
+  );
+  if (
+    revision.framePayloadByteLength !== REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2
+    || revision.payloadByteLength !== REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2
+    || revision.payloadFormat !== BINARY_PAYLOAD_FORMAT_V2
+    || revision.fixedPointScale !== FIXED_POINT_SCALE_V2
+    || revision.packingOrder !== REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2
+    || revision.uncertaintyModel !== "heuristic_v1"
+    || !(revision.payload instanceof Bytes)
+  ) {
+    throw new Error("revision staging write compact layout or Firestore Bytes payload metadata is invalid");
+  }
+  validateQuality(revision.quality);
+  reconstructRepresentativeProfileFromSequencePayloadV2({
+    frameCount: revision.frameCount,
+    framePayloadByteLength: revision.framePayloadByteLength,
+    payloadByteLength: revision.payloadByteLength,
+    payloadFormat: revision.payloadFormat,
+    fixedPointScale: revision.fixedPointScale,
+    packingOrder: revision.packingOrder,
+    uncertaintyModel: revision.uncertaintyModel,
+    payload: revision.payload.toUint8Array(),
+  }, mode);
+
+  return { uid, profileId, stagingWrites, publicationWrite };
+}
+
+export async function executeShootingProfileWritePlanV2(args: {
+  uid: string;
+  plan: ShootingProfileWritePlanV2;
+  port: ShootingProfileWritePortV2;
+}): Promise<void> {
+  const { uid, profileId, stagingWrites, publicationWrite } = validateCanonicalShootingProfileWritePlanV2(args);
+
+  const acknowledgedStagingPaths: string[] = [];
+  for (const write of stagingWrites) {
+    try {
+      await args.port.setWrite(write);
+      acknowledgedStagingPaths.push(write.path);
+    } catch (error) {
+      try {
+        const observed = await args.port.readDocumentFromServer(write.path);
+        if (
+          observed !== null
+          && observed.id === write.path.split("/").at(-1)
+          && matchesPlannedStagingWriteV2(observed.data, write.data)
+        ) {
+          acknowledgedStagingPaths.push(write.path);
+        }
+      } catch {
+        // The failed write remains unknown and is deliberately not a cleanup candidate.
+      }
+      await attemptKnownSinglePathCleanupV2(
+        buildFailedStagingCleanupPathsV2(acknowledgedStagingPaths),
+        args.port.deletePath,
+      );
+      throw error;
+    }
+  }
+
+  try {
+    await args.port.setWrite(publicationWrite);
+  } catch (error) {
+    const resolution = await resolveFailedShootingProfilePublicationV2({
+      readHeadFromServer: () => args.port.readDocumentFromServer(publicationWrite.path),
+      validateMatchingHead: (document) => {
+        const persistedHead = validateProfileHeadDocument(document, uid, profileId, "active");
+        validateShootingProfilePublicationIdentityV2(
+          persistedHead,
+          publicationWrite.data,
+        );
+      },
+      cleanupStaging: async () => {
+        const cleanup = await attemptKnownSinglePathCleanupV2(
+          buildFailedStagingCleanupPathsV2(stagingWrites.map((write) => write.path)),
+          args.port.deletePath,
+        );
+        if (cleanup.failures.length > 0) throw cleanup.failures[0].error;
+      },
+    });
+    if (resolution === "published") return;
+    throw error;
   }
 }
 
@@ -839,7 +1127,7 @@ function validateQuality(value: unknown): ReconstructionQualityV2 {
   return { passed: true, reasons: [] };
 }
 
-function validateRevisionHead(value: unknown, uid: string, profileHead: UnknownRecord): UnknownRecord {
+function validateRevisionDocument(value: unknown, uid: string, profileHead: UnknownRecord): UnknownRecord {
   const document = requireDocument(value, "representative revision document");
   if (document.id !== profileHead.revisionId) {
     throw new Error("representative revision document ID must equal revisionId");
@@ -865,101 +1153,29 @@ function validateRevisionHead(value: unknown, uid: string, profileHead: UnknownR
   requireInteger(revision.attemptCount, profileHead.attemptCount as number, "revision attempt count");
   requireInteger(revision.frameCount, PHASE_SAMPLE_COUNT_V2, "revision frame count");
   requireInteger(
-    revision.sequenceChunkCount,
-    REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2,
-    "revision sequence chunk count",
+    revision.framePayloadByteLength,
+    REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2,
+    "revision frame payload byte length",
+  );
+  requireInteger(
+    revision.payloadByteLength,
+    REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
+    "revision payload byte length",
   );
   requireInteger(revision.phaseSummaryCount, CANONICAL_PHASE_SUMMARIES_V2.length, "revision phase summary count");
+  if (
+    revision.storageLayout !== SHOOTING_PROFILE_STORAGE_LAYOUT_V2
+    || revision.payloadByteLength !== profileHead.representativePayloadByteLength
+    || revision.payloadFormat !== BINARY_PAYLOAD_FORMAT_V2
+    || revision.fixedPointScale !== FIXED_POINT_SCALE_V2
+    || revision.packingOrder !== REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2
+    || revision.uncertaintyModel !== "heuristic_v1"
+    || !(revision.payload instanceof Bytes)
+  ) {
+    throw new Error("representative revision compact layout or Firestore Bytes payload metadata is invalid");
+  }
   validateQuality(revision.quality);
   return revision;
-}
-
-function validateSequenceChunks(
-  values: readonly unknown[],
-  uid: string,
-  profileHead: UnknownRecord,
-): RepresentativePose4DV2["frames"] {
-  if (values.length !== REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2) {
-    throw new Error("representative sequence chunk count is incomplete or extra");
-  }
-  const frames = new Map<number, RepresentativePose4DV2["frames"][number]>();
-  values.forEach((value) => {
-    const document = requireDocument(value, "representative sequence chunk document");
-    const chunk = requireRecord(document.data, "representative sequence chunk");
-    assertExactKeys(chunk, SEQUENCE_CHUNK_KEYS_V2, "representative sequence chunk");
-    validateCommonMetadata(
-      chunk,
-      uid,
-      "representative_phase_chunk_v2",
-      "representative sequence chunk",
-    );
-    if (
-      chunk.profileId !== profileHead.profileId
-      || chunk.captureSessionId !== profileHead.captureSessionId
-      || chunk.revisionId !== profileHead.revisionId
-      || chunk.units !== "template_shoulder_breadths"
-      || chunk.payloadFormat !== BINARY_PAYLOAD_FORMAT_V2
-      || chunk.payloadByteLength !== REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2
-      || chunk.fixedPointScale !== FIXED_POINT_SCALE_V2
-      || chunk.packingOrder !== REPRESENTATIVE_PAYLOAD_PACKING_ORDER_V2
-      || chunk.uncertaintyModel !== "heuristic_v1"
-      || !(chunk.payload instanceof Bytes)
-    ) {
-      throw new Error("representative sequence Firestore Bytes payload metadata or path IDs are invalid");
-    }
-    const phaseIndex = requireBoundedInteger(chunk.phaseIndex, 0, 100, "representative phase index");
-    if (document.id !== String(phaseIndex)) {
-      throw new Error("representative chunk document ID is not canonical");
-    }
-    const packedFrame = validatePersistedRepresentativeFrameV2({
-      phaseIndex,
-      uncertaintyModel: chunk.uncertaintyModel,
-      payload: chunk.payload.toUint8Array(),
-    });
-    if (frames.has(phaseIndex)) throw new Error("representative sequence contains a duplicate phase chunk");
-    frames.set(phaseIndex, reconstructRepresentativeFrameFromPayloadV2(packedFrame));
-  });
-  return Array.from({ length: PHASE_SAMPLE_COUNT_V2 }, (_, phaseIndex) => {
-    const frame = frames.get(phaseIndex);
-    if (!frame) throw new Error("representative sequence phase chunk is missing");
-    return frame;
-  });
-}
-
-function validatePhaseSummaries(values: readonly unknown[], uid: string, profileHead: UnknownRecord) {
-  if (values.length !== CANONICAL_PHASE_SUMMARIES_V2.length) {
-    throw new Error("representative phase summaries are incomplete or extra");
-  }
-  const summaries = values.map((value) => {
-    const document = requireDocument(value, "representative phase summary document");
-    const summary = requireRecord(document.data, "representative phase summary");
-    assertExactKeys(summary, PHASE_SUMMARY_KEYS_V2, "representative phase summary");
-    validateCommonMetadata(summary, uid, "representative_phase_summary_v2", "representative phase summary");
-    if (
-      summary.profileId !== profileHead.profileId
-      || summary.captureSessionId !== profileHead.captureSessionId
-      || summary.revisionId !== profileHead.revisionId
-    ) {
-      throw new Error("representative phase summary path IDs are invalid");
-    }
-    const canonical = CANONICAL_PHASE_SUMMARIES_V2.find((entry) => entry.id === summary.phaseId);
-    if (document.id !== summary.phaseId) {
-      throw new Error("representative summary document ID must equal phaseId");
-    }
-    if (!canonical || summary.phaseIndex !== canonical.phaseIndex) {
-      throw new Error("representative phase summary is not canonical");
-    }
-    return canonical;
-  });
-  if (new Set(summaries.map((summary) => summary.id)).size !== CANONICAL_PHASE_SUMMARIES_V2.length) {
-    throw new Error("representative phase summaries contain duplicates");
-  }
-  return CANONICAL_PHASE_SUMMARIES_V2.map((canonical) => {
-    if (!summaries.some((summary) => summary.id === canonical.id)) {
-      throw new Error("representative phase summary is missing");
-    }
-    return { id: canonical.id, phase: canonical.phase };
-  });
 }
 
 export function reconstructShootingProfileViewerRecordV2(args: {
@@ -967,66 +1183,88 @@ export function reconstructShootingProfileViewerRecordV2(args: {
   profileId: string;
   head: PersistedDocumentV2;
   revision: PersistedDocumentV2;
-  sequenceChunks: readonly PersistedDocumentV2[];
-  phaseSummaries: readonly PersistedDocumentV2[];
 }): ShootingProfileViewerRecordV2 {
   const uid = requirePathSegment(args.uid, "owner UID");
   const profileId = requireOpaqueId(args.profileId, "profile ID");
   const head = validateProfileHeadDocument(args.head, uid, profileId, "active");
-  const revision = validateRevisionHead(args.revision, uid, head);
-  const frames = validateSequenceChunks(args.sequenceChunks, uid, head);
-  if (frames.length !== PHASE_SAMPLE_COUNT_V2) throw new Error("representative sequence must contain exactly 101 frames");
-  const phaseAnchors = validatePhaseSummaries(args.phaseSummaries, uid, head);
-  const profile = parseRepresentativePose4D({
-    schemaVersion: SHOOTING_PROFILE_SCHEMA_VERSION_V2,
-    boundary: SHOOTING_PROFILE_BOUNDARY_V2,
-    mode: head.mode,
-    timeBasis: SHOOTING_PROFILE_TIME_BASIS_V2,
-    units: "template_shoulder_breadths",
-    frames: frames.map((frame) => ({
-      phase: frame.phase,
-      joints: frame.joints,
-      uncertainty: frame.uncertainty,
-    })),
-    phaseAnchors,
-    quality: validateQuality(revision.quality),
-  });
-  serializeRepresentativeProfileForCloud(profile);
+  const revision = validateRevisionDocument(args.revision, uid, head);
+  const mode = validateMode(head.mode, "motion profile head");
+  const profile = reconstructRepresentativeProfileFromSequencePayloadV2({
+    frameCount: revision.frameCount,
+    framePayloadByteLength: revision.framePayloadByteLength,
+    payloadByteLength: revision.payloadByteLength,
+    payloadFormat: revision.payloadFormat,
+    fixedPointScale: revision.fixedPointScale,
+    packingOrder: revision.packingOrder,
+    uncertaintyModel: revision.uncertaintyModel,
+    payload: (revision.payload as Bytes).toUint8Array(),
+  }, mode);
   return {
     profile,
     shootingHand: validateHand(head.shootingHand, "motion profile head"),
     confidence: validateModeConfidence(
-      validateMode(head.mode, "motion profile head"),
+      mode,
       head.confidence,
       "motion profile head",
     ),
   };
 }
 
+export async function loadShootingProfileViewerRecordV2(args: {
+  uid: string;
+  profileId: string;
+  reader: ShootingProfileReaderPortV2;
+}): Promise<ShootingProfileViewerRecordV2 | null> {
+  const uid = requirePathSegment(args.uid, "owner UID");
+  const profileId = requireOpaqueId(args.profileId, "profile ID");
+  const headPath = profileBasePath(uid, profileId);
+  const headDocument = await args.reader.readDocument(headPath);
+  if (headDocument === null) return null;
+
+  const head = validateProfileHeadDocument(headDocument, uid, profileId, "active");
+  const revisionId = requireOpaqueId(head.revisionId, "revision ID");
+  const revisionPath = revisionBasePath(uid, profileId, revisionId);
+  const revisionDocument = await args.reader.readDocument(revisionPath);
+  if (revisionDocument === null) throw new Error("completed representative revision is missing");
+
+  return reconstructShootingProfileViewerRecordV2({
+    uid,
+    profileId,
+    head: headDocument,
+    revision: revisionDocument,
+  });
+}
+
 export function buildShootingProfileDeletePlanV2(args: {
+  uid: string;
+  profileId: string;
+  captureSessionId: string;
+  revisionId: string;
+  attemptIds: readonly string[];
   deletionState: "active" | "in_progress";
-  headPath: string;
-  subordinatePaths: readonly string[];
 }): ShootingProfileDeletePlanV2 {
   if (args.deletionState !== "active" && args.deletionState !== "in_progress") {
     throw new Error("deletion state must be active or in_progress");
   }
-  if (!args.headPath || args.headPath.startsWith("/") || args.headPath.endsWith("/")) {
-    throw new Error("profile head path is invalid");
-  }
-  const seen = new Set<string>();
-  const subordinatePaths = args.subordinatePaths.map((path) => {
-    if (!path || path === args.headPath || path.startsWith("/") || path.endsWith("/") || seen.has(path)) {
-      throw new Error("subordinate deletion paths must be unique and exclude the head");
-    }
-    seen.add(path);
-    return path;
-  });
+  const uid = requirePathSegment(args.uid, "owner UID");
+  const profileId = requireOpaqueId(args.profileId, "profile ID");
+  const captureSessionId = requireOpaqueId(args.captureSessionId, "capture session ID");
+  const revisionId = requireOpaqueId(args.revisionId, "revision ID");
+  requireCanonicalChainId(captureSessionId, profileId, revisionId);
+  const mode = args.attemptIds.length === 2 ? "basic_1_plus_1" : "high_accuracy_3_plus_3";
+  const attemptIds = validateAttemptIds([...args.attemptIds], mode, "deletion plan");
+  const headPath = profileBasePath(uid, profileId);
+  const capturePath = captureBasePath(uid, captureSessionId);
+  const subordinatePaths = [
+    revisionBasePath(uid, profileId, revisionId),
+    capturePath,
+    ...attemptIds.map((attemptId) => `${capturePath}/observations/${attemptId}`),
+  ];
   const subordinateBatches = partitionShootingProfileWritesV2(subordinatePaths);
   return {
     transitionRequired: args.deletionState === "active",
-    deletePaths: [...subordinatePaths, args.headPath],
-    deleteBatches: [...subordinateBatches, [args.headPath]],
+    deletePaths: [...subordinatePaths, headPath],
+    deleteBatches: [...subordinateBatches, [headPath]],
   };
 }
 
@@ -1051,31 +1289,32 @@ function requireFirestore(): Firestore {
   return firestore;
 }
 
-async function commitSetBatches(db: Firestore, batches: readonly PlannedFirestoreWriteV2[][]): Promise<void> {
-  for (const writes of batches) {
-    const batch = writeBatch(db);
-    writes.forEach((write) => batch.set(doc(db, write.path), write.data));
-    await batch.commit();
-  }
-}
-
-async function bestEffortDeleteKnownPaths(db: Firestore, paths: readonly string[]): Promise<void> {
-  await attemptKnownSinglePathCleanupV2([...new Set(paths)].reverse(), async (path) => {
-    const batch = writeBatch(db);
-    batch.delete(doc(db, path));
-    await batch.commit();
-  });
+function firestoreWritePort(db: Firestore): ShootingProfileWritePortV2 {
+  return {
+    setWrite: async (write) => {
+      const batch = writeBatch(db);
+      batch.set(doc(db, write.path), write.data);
+      await batch.commit();
+    },
+    readDocumentFromServer: async (path) => {
+      const published = await getDocFromServer(doc(db, path));
+      return published.exists() ? { id: published.id, data: published.data() } : null;
+    },
+    deletePath: async (path) => {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, path));
+      await batch.commit();
+    },
+  };
 }
 
 export async function saveShootingProfileV2(user: User, input: SaveShootingProfileInputV2): Promise<string> {
   const db = requireFirestore();
   const uid = requirePathSegment(user.uid, "owner UID");
-  const captureSessionId = doc(collection(db, "users", uid, "captureSessions")).id;
   const profileId = doc(collection(db, "users", uid, "motionProfiles")).id;
-  const revisionId = doc(collection(db, "users", uid, "motionProfiles", profileId, "revisions")).id;
-  requireOpaqueId(captureSessionId, "generated capture session ID");
   requireOpaqueId(profileId, "generated profile ID");
-  requireOpaqueId(revisionId, "generated revision ID");
+  const captureSessionId = profileId;
+  const revisionId = profileId;
 
   const plan = buildShootingProfileWritePlanV2({
     uid,
@@ -1085,52 +1324,7 @@ export async function saveShootingProfileV2(user: User, input: SaveShootingProfi
     input,
     timestamp: serverTimestamp(),
   });
-  const stagingBatches = partitionShootingProfileWritesV2(plan.stagingWrites);
-  const acknowledgedStagingPaths: string[] = [];
-  for (const batchWrites of stagingBatches) {
-    const write = batchWrites[0];
-    if (!write) {
-      throw new Error("V2 staging batch must contain exactly one write");
-    }
-    try {
-      await commitSetBatches(db, [batchWrites]);
-      acknowledgedStagingPaths.push(write.path);
-    } catch (error) {
-      try {
-        const observed = await getDocFromServer(doc(db, write.path));
-        if (observed.exists() && matchesPlannedStagingWriteV2(observed.data(), write.data)) {
-          acknowledgedStagingPaths.push(write.path);
-        }
-      } catch {
-        // Only acknowledged or server-observed staging paths are cleanup candidates.
-      }
-      await bestEffortDeleteKnownPaths(db, acknowledgedStagingPaths);
-      throw error;
-    }
-  }
-
-  try {
-    await commitSetBatches(db, [[plan.publicationWrite]]);
-  } catch (error) {
-    try {
-      const published = await getDocFromServer(doc(db, plan.publicationWrite.path));
-      if (published.exists()) {
-        const publishedHead = validateProfileHeadDocument(
-          { id: published.id, data: published.data() },
-          uid,
-          profileId,
-          "active",
-        );
-        validateShootingProfilePublicationIdentityV2(publishedHead, plan.publicationWrite.data);
-        return profileId;
-      }
-      await bestEffortDeleteKnownPaths(db, plan.stagingWrites.map((write) => write.path));
-    } catch {
-      // Publication state is unknown. Do not delete subordinate evidence that
-      // a possibly-published owner head may reference.
-    }
-    throw error;
-  }
+  await executeShootingProfileWritePlanV2({ uid, plan, port: firestoreWritePort(db) });
   return profileId;
 }
 
@@ -1172,58 +1366,16 @@ export async function getShootingProfileV2(
 ): Promise<ShootingProfileViewerRecordV2 | null> {
   const db = requireFirestore();
   const uid = requirePathSegment(user.uid, "owner UID");
-  requireOpaqueId(profileId, "profile ID");
-  const profilePath = profileBasePath(uid, profileId);
-  const headSnapshot = await getDoc(doc(db, profilePath));
-  if (!headSnapshot.exists()) return null;
-  const headDocument = { id: headSnapshot.id, data: headSnapshot.data() };
-  const head = validateProfileHeadDocument(headDocument, uid, profileId, "active");
-  const revisionId = head.revisionId as string;
-  const revisionPath = revisionBasePath(uid, profileId, revisionId);
-  const [revisionSnapshot, sequenceResult, phaseResult] = await Promise.all([
-    getDoc(doc(db, revisionPath)),
-    getDocs(collection(db, revisionPath, "sequenceChunks")),
-    getDocs(collection(db, revisionPath, "phaseSummaries")),
-  ]);
-  if (!revisionSnapshot.exists()) throw new Error("completed representative revision is missing");
-  return reconstructShootingProfileViewerRecordV2({
+  return loadShootingProfileViewerRecordV2({
     uid,
     profileId,
-    head: headDocument,
-    revision: { id: revisionSnapshot.id, data: revisionSnapshot.data() },
-    sequenceChunks: sequenceResult.docs.map((snapshot) => ({ id: snapshot.id, data: snapshot.data() })),
-    phaseSummaries: phaseResult.docs.map((snapshot) => ({ id: snapshot.id, data: snapshot.data() })),
+    reader: {
+      readDocument: async (path) => {
+        const snapshot = await getDoc(doc(db, path));
+        return snapshot.exists() ? { id: snapshot.id, data: snapshot.data() } : null;
+      },
+    },
   });
-}
-
-async function enumerateDeletionSubordinatePaths(
-  db: Firestore,
-  uid: string,
-  profileId: string,
-  head: UnknownRecord,
-): Promise<string[]> {
-  const revisionId = head.revisionId as string;
-  const captureSessionId = head.captureSessionId as string;
-  const revisionPath = revisionBasePath(uid, profileId, revisionId);
-  const capturePath = captureBasePath(uid, captureSessionId);
-  const [sequenceResult, phaseResult] = await Promise.all([
-    getDocsFromServer(collection(db, revisionPath, "sequenceChunks")),
-    getDocsFromServer(collection(db, revisionPath, "phaseSummaries")),
-  ]);
-  const paths = [
-    ...sequenceResult.docs.map((snapshot) => `${revisionPath}/sequenceChunks/${snapshot.id}`),
-    ...phaseResult.docs.map((snapshot) => `${revisionPath}/phaseSummaries/${snapshot.id}`),
-    revisionPath,
-  ];
-  const attemptIds = validateAttemptIds(head.attemptIds, validateMode(head.mode, "motion profile head"), "motion profile head");
-  for (const attemptId of attemptIds) {
-    const observationPath = `${capturePath}/observations/${attemptId}`;
-    const frameChunks = await getDocsFromServer(collection(db, observationPath, "frameChunks"));
-    paths.push(...frameChunks.docs.map((snapshot) => `${observationPath}/frameChunks/${snapshot.id}`));
-    paths.push(observationPath);
-  }
-  paths.push(capturePath);
-  return paths;
 }
 
 async function commitDeleteBatch(db: Firestore, paths: readonly string[]): Promise<void> {
@@ -1249,8 +1401,14 @@ export async function deleteShootingProfileV2(user: User, profileId: string): Pr
   if (deletionState === "active") {
     await updateDoc(headReference, { deletionState: "in_progress", updatedAt: serverTimestamp() });
   }
-  const subordinatePaths = await enumerateDeletionSubordinatePaths(db, uid, profileId, initialHead);
-  const plan = buildShootingProfileDeletePlanV2({ deletionState, headPath, subordinatePaths });
+  const plan = buildShootingProfileDeletePlanV2({
+    uid,
+    profileId,
+    captureSessionId: initialHead.captureSessionId as string,
+    revisionId: initialHead.revisionId as string,
+    attemptIds: initialHead.attemptIds as string[],
+    deletionState,
+  });
   const subordinateResult = await attemptKnownSinglePathCleanupV2(
     plan.deletePaths.slice(0, -1),
     async (path) => deleteSubordinateWithAmbiguityCheckV2({

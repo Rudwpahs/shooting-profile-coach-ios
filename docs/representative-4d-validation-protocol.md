@@ -2,7 +2,7 @@
 
 ## Status and claim boundary
 
-This is the required pre-release protocol for `representative_phase_fused_4d_estimate_not_actual_3d`. The algorithm fuses separately recorded front and shooting-side attempts by normalized shot phase. It is not synchronized/camera-calibrated triangulation, metric anatomy, medical analysis, or an actual 3D measurement. Current thresholds and `heuristic_v1` uncertainty are unvalidated engineering defaults. All V2 flags remain off until the release owner records every required result and approves the target thresholds.
+This is the required pre-release protocol for `representative_phase_fused_4d_estimate_not_actual_3d`. The algorithm fuses separate, non-simultaneous front and shooting-side takes after normalizing each accepted take to the same 101-point shot-phase grid. The result is a representative estimate across repeated motion, not synchronized/camera-calibrated triangulation, metric anatomy, medical analysis, or an actual 3D measurement. Current thresholds and `heuristic_v1` uncertainty are unvalidated engineering defaults. `EXPO_PUBLIC_FORMPATH_CAPTURE_V2`, `EXPO_PUBLIC_FORMPATH_PROFILE_V2`, and `EXPO_PUBLIC_FORMPATH_REPRESENTATIVE_4D` remain absent or `0` until the release owner records every required result and a separate reviewed rollout approves activation.
 
 ## Frozen algorithm under test
 
@@ -16,6 +16,25 @@ This is the required pre-release protocol for `representative_phase_fused_4d_est
 - failed shot admission, consensus, conditioning, uncertainty, or skeleton closure returns recapture without partial profile frames.
 
 Any algorithm, model, landmark layout, coordinate transform, template ratio, smoothing, threshold, codec, or native detector change creates a new validation version and requires rerunning affected sections.
+
+## Frozen compact persistence contract
+
+The only accepted V2 storage layout is `phase_sequence_payloads_v1`. It stores one normalized 101-phase payload per accepted observation and one normalized 101-phase representative payload in the immutable revision. It has no V2 `frameChunks`, `sequenceChunks`, or `phaseSummaries` subcollections.
+
+| Mode | Observation documents | Other documents | Total |
+| --- | ---: | --- | ---: |
+| Basic 1+1 | 2 | capture session + revision + publication head | **5** |
+| High 3+3 | 6 | capture session + revision + publication head | **9** |
+
+- Each observation payload is exactly **14,544 bytes** (`101 × 12 × 3 × 4`).
+- Each representative revision payload is exactly **48,480 bytes** (`101 × 12 × 10 × 4`).
+- One generated opaque chain ID is reused as `profileId`, `captureSessionId`, and `revisionId`, including all three path segments. This makes the staged capture and revision paths unique for a profile and prevents a second valid unpublished chain from being stranded behind the same publication head without adding documents.
+- Publication order is canonical observation document(s) → capture session → revision → publication head. The head is the only visibility boundary and is written last.
+- Every network request mutates exactly one Firestore document. An ambiguous write is read back and compared with the exact planned immutable fields and `Bytes` before it may be treated as acknowledged or cleaned up.
+- The viewer performs exactly two document reads: the active publication head, then its referenced revision. It does not read the capture session or observation documents.
+- Deletion transitions the head from `active` to `in_progress`, then removes revision → capture session → the two or six canonical observations → head. Each request performs one mutation, and the operation must be resumable after interruption.
+
+Unknown, missing, or hybrid layouts fail closed. Any change to document counts, payload lengths, packing metadata, publication order, read count, or deletion order creates a new storage version and requires contract, Rules, Emulator, network-failure, and deletion-resumption validation.
 
 ## Datasets and minimum sample sizes
 
@@ -58,15 +77,29 @@ Until then, UI copy may only say that larger cones/covariance indicate greater e
 
 ## Native, privacy, persistence, and UX gates
 
-- clean TypeScript, Vitest, lint, Expo export, CocoaPods, Xcode, and physical-device runs;
+- clean Ubuntu dependency installation, TypeScript, lint, hermetic Vitest, and Expo web export;
 - exact model resource SHA-256/license record and built-bundle verification;
 - actual decoded/detected presentation timestamps, 80% final detection, critical-joint coverage, and ≤150 ms release-proxy detection gap;
 - robust one-person ROI under edge entry, camera motion, outlier landmarks, and a second person;
 - airplane-mode local detection, cancellation, background interruption, retake, and 101-phase playback;
 - Firebase Rules compiler/emulator owner allow/cross-owner deny tests, strict readback, missing/duplicate/extra document rejection, deletion resumption, and ambiguous network outcomes;
 - explicit Camera and Photos permission denial/recovery, Basic 1+1 and High 3+3, left/right hand, portrait/landscape, HEVC/VFR/slow motion, 2-second/20-second clips, progress/cancellation, background interruption, retake, 101-phase playback, airplane-mode local processing, force-quit/reopen, other-account denial, deletion, and deletion resumption;
-- Basic and High save latency on Wi-Fi/cellular. The current High plan has 720 staging writes at one mutation per request; unacceptable duration, timeout, battery, or retry behavior blocks rollout;
+- Basic and High save latency on Wi-Fi/cellular using the exact five- and nine-document plans, including head-last publication, strict two-read viewer reconstruction, ambiguous-write recovery, and direct resumable deletion. Unacceptable duration, timeout, battery, or retry behavior blocks rollout;
 - raw video, filename, URI, EXIF, thumbnail, source timestamp, nonallowlisted joints, and native z absent from every cloud document and log.
+
+The clean Ubuntu gate runs from a fresh checkout with Node 22 and pnpm 9.12.0:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm check
+pnpm lint
+pnpm test:unit
+pnpm exec expo export --platform web --output-dir web-dist
+```
+
+These commands are only the hermetic Linux gate. The Firebase Rules compiler/Emulator suite is a separate mandatory gate. CocoaPods, macOS/Xcode compilation, exact model artifact and SHA-256, license/redistribution approval, built-bundle inspection, and physical-iPhone testing are also separate mandatory gates; success in one category does not satisfy another.
+
+Firestore Security Rules can enforce owner isolation, exact schemas, `Bytes` type and length, immutable identities, and the observation → capture → revision → head proof chain, but they cannot decode the packed payload or prove its biomechanical meaning. Firebase Admin SDK and other server SDK writes bypass Security Rules. Every trusted backend must therefore be restricted with least-privilege IAM and must independently run the same schema, payload metadata/length, identity, and proof-chain validation before writing. Emulator success does not validate an Admin/server path that omits those checks.
 
 ## Release record
 

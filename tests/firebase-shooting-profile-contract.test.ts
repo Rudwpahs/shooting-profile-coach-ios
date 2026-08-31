@@ -1,54 +1,47 @@
 import { readFileSync } from "node:fs";
 
-import { Bytes } from "firebase/firestore";
+import { Bytes, serverTimestamp } from "firebase/firestore";
 import { describe, expect, it } from "vitest";
 
 import {
   BINARY_PAYLOAD_FORMAT_V2,
   FIXED_POINT_SCALE_V2,
-  FRAME_CHUNK_COUNT_V2,
   MISSING_VISIBILITY_SENTINEL_V2,
   OBSERVATION_FRAME_PAYLOAD_BYTE_LENGTH_V2,
-  OBSERVATION_PAYLOAD_BYTE_LENGTH_V2,
-  OBSERVATION_PAYLOAD_PACKING_ORDER_V2,
   OBSERVATION_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
   OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
   PERSISTED_OBSERVATION_JOINTS_V2,
   REPRESENTATIVE_FRAME_PAYLOAD_BYTE_LENGTH_V2,
-  REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2,
-  REPRESENTATIVE_PAYLOAD_PACKING_ORDER_V2,
   REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2,
   REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
-  REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2,
   RULE_SAFE_BATCH_MUTATIONS_V2,
-  buildRepresentativeSequenceChunksV2,
   reconstructObservationFramesFromSequencePayloadV2,
-  reconstructRepresentativeFrameFromPayloadV2,
   reconstructRepresentativeProfileFromSequencePayloadV2,
-  serializeObservationForCloud,
   serializeObservationSequenceForCloud,
-  serializeRepresentativeProfileForCloud,
   serializeRepresentativeSequenceForCloud,
-  validatePersistedRepresentativeFrameV2,
-  validatePersistedObservationFrameV2,
   validateShootingProfileWriteV2,
   type SaveShootingProfileInputV2,
 } from "@/lib/firebase-shooting-profile-contract";
 import {
   attemptKnownSinglePathCleanupV2,
+  buildFailedStagingCleanupPathsV2,
   buildShootingProfileDeletePlanV2,
   buildShootingProfileWritePlanV2,
   deleteHeadWithPostconditionV2,
   deleteSubordinateWithAmbiguityCheckV2,
+  executeShootingProfileWritePlanV2,
+  loadShootingProfileViewerRecordV2,
   matchesPlannedStagingWriteV2,
   partitionShootingProfileWritesV2,
   reconstructShootingProfileViewerRecordV2,
+  resolveFailedShootingProfilePublicationV2,
   selectPendingDeletionProfileIdsV2,
-  validateObservationChunkDocumentV2,
-  validateObservationHeadDocumentV2,
+  validateObservationDocumentV2,
   validateShootingProfilePublicationIdentityV2,
   type PersistedDocumentV2,
   type PlannedFirestoreWriteV2,
+  type ShootingProfileReaderPortV2,
+  type ShootingProfileWritePortV2,
 } from "@/lib/firebase-shooting-profiles";
 import type { NormalizedViewAttemptV2 } from "@/lib/shooting-profile/repeated-shot";
 import {
@@ -87,7 +80,10 @@ function timestampFixture() {
 }
 
 function plannedDocument(write: PlannedFirestoreWriteV2): PersistedDocumentV2 {
-  return { id: write.path.split("/").at(-1)!, data: write.data };
+  return {
+    id: write.path.split("/").at(-1)!,
+    data: { ...write.data, createdAt: timestampFixture(), updatedAt: timestampFixture() },
+  };
 }
 
 function makeProfile(mode: CaptureProtocolV2): RepresentativePose4DV2 {
@@ -171,6 +167,17 @@ function replaceInt32(payload: Uint8Array, index: number, value: number): Uint8A
 
 function readInt32(payload: Uint8Array, index: number): number {
   return new DataView(payload.buffer, payload.byteOffset, payload.byteLength).getInt32(index * 4, false);
+}
+
+function makeWritePlan(mode: CaptureProtocolV2 = "basic_1_plus_1") {
+  return buildShootingProfileWritePlanV2({
+    uid: "owner_1",
+    captureSessionId: "profile_1",
+    profileId: "profile_1",
+    revisionId: "profile_1",
+    input: makeInput(mode),
+    timestamp: serverTimestamp(),
+  });
 }
 
 describe("V2 private shooting-profile cloud contract", () => {
@@ -380,50 +387,6 @@ describe("V2 private shooting-profile cloud contract", () => {
     }, "high_accuracy_3_plus_3")).toThrow(/semidefinite|covariance/i);
   });
 
-  it("packs each observation phase into one deterministic 144-byte big-endian payload", () => {
-    const attempt = makeAttempt("front", 0);
-    delete attempt.frames[0].sourceLandmarks[11].visibility;
-    const serialized = serializeObservationForCloud(attempt);
-    expect(serialized.frames).toHaveLength(FRAME_CHUNK_COUNT_V2);
-    expect(serialized.frames[37]).toMatchObject({ phaseIndex: 37 });
-    expect(serialized.frames[37]).not.toHaveProperty("phase");
-    expect(serialized.frames[37].payload).toBeInstanceOf(Uint8Array);
-    expect(serialized.frames[37].payload).toHaveLength(OBSERVATION_PAYLOAD_BYTE_LENGTH_V2);
-    expect(readInt32(serialized.frames[37].payload, 0)).toBe(211_000);
-    expect(readInt32(serialized.frames[37].payload, 1)).toBe(337_000);
-    expect(readInt32(serialized.frames[37].payload, 2)).toBe(900_000);
-    expect([...serialized.frames[37].payload.slice(0, 4)]).toEqual([0, 3, 56, 56]);
-
-    const missingVisibility = validatePersistedObservationFrameV2(serialized.frames[0]);
-    expect(Object.keys(missingVisibility.joints)).toEqual([...PERSISTED_OBSERVATION_JOINTS_V2]);
-    expect(missingVisibility.joints.leftShoulder).toEqual({ x: 0.211, y: 0.3 });
-    expect(readInt32(serialized.frames[0].payload, 2)).toBe(MISSING_VISIBILITY_SENTINEL_V2);
-    expect(serializeObservationForCloud(attempt).frames[37].payload).toEqual(serialized.frames[37].payload);
-    expect(JSON.stringify(serialized)).not.toMatch(/nose|timestampMs|sourceTimestampMs|uri|filename|exif|thumbnail|"phase":/i);
-  });
-
-  it("strictly rejects malformed observation binary slots, arbitrary byte lookalikes, and phase floats", () => {
-    const base = serializeObservationForCloud(makeAttempt("front", 0)).frames[0];
-    expect(() => validatePersistedObservationFrameV2({ ...base, phase: 0 })).toThrow(/key/i);
-    expect(() => validatePersistedObservationFrameV2({ ...base, phaseIndex: 12.5 })).toThrow(/phaseIndex|integer/i);
-    expect(() => validatePersistedObservationFrameV2({
-      ...base,
-      payload: base.payload.slice(1),
-    })).toThrow(/144|length/i);
-    expect(() => validatePersistedObservationFrameV2({
-      ...base,
-      payload: { byteLength: OBSERVATION_PAYLOAD_BYTE_LENGTH_V2 },
-    })).toThrow(/Uint8Array|payload/i);
-    expect(() => validatePersistedObservationFrameV2({
-      ...base,
-      payload: replaceInt32(base.payload, 0, 2_000_001),
-    })).toThrow(/bound|coordinate/i);
-    expect(() => validatePersistedObservationFrameV2({
-      ...base,
-      payload: replaceInt32(base.payload, 2, -1),
-    })).toThrow(/visibility|sentinel/i);
-  });
-
   it("rejects raw metadata, native source z, noncanonical attempts, nonempty completed reasons, and Basic overconfidence", () => {
     const input = makeInput("basic_1_plus_1") as unknown as Record<string, unknown>;
     expect(() => validateShootingProfileWriteV2({ ...input, filename: "shot.mov" })).toThrow(/key/i);
@@ -481,166 +444,574 @@ describe("V2 private shooting-profile cloud contract", () => {
     })).toThrow(/unique|attempt/i);
   });
 
-  it("packs every representative phase into one exact 480-byte big-endian payload", () => {
-    const serialized = serializeRepresentativeProfileForCloud(makeProfile("basic_1_plus_1"));
-    expect(serialized.frames).toHaveLength(101);
-    expect(serialized.quality).toEqual({ passed: true, reasons: [] });
-    const phase37 = serialized.frames[37];
-    expect(phase37).toMatchObject({ phaseIndex: 37, uncertaintyModel: "heuristic_v1" });
-    expect(phase37).not.toHaveProperty("phase");
-    expect(phase37.payload).toBeInstanceOf(Uint8Array);
-    expect(phase37.payload).toHaveLength(REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2);
-    expect(Array.from({ length: 10 }, (_, index) => readInt32(phase37.payload, index))).toEqual([
-      0, 370_000, 0,
-      10_000, 0, 0, 10_000, 0, 10_000,
-      8_123_456,
-    ]);
-    expect([...phase37.payload.slice(4, 8)]).toEqual([0, 5, 165, 80]);
-    expect(serializeRepresentativeProfileForCloud(makeProfile("basic_1_plus_1")).frames[37].payload)
-      .toEqual(phase37.payload);
-
-    const chunks = buildRepresentativeSequenceChunksV2(serialized.frames);
-    expect(BINARY_PAYLOAD_FORMAT_V2).toBe("int32_be_fixed_1e6_v1");
-    expect(FIXED_POINT_SCALE_V2).toBe(1_000_000);
-    expect(REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2).toBe(101);
-    expect(chunks).toHaveLength(101);
-    expect(chunks[0]).toMatchObject({ documentId: "0", phaseIndex: 0 });
-    expect(chunks[100]).toMatchObject({ documentId: "100", phaseIndex: 100 });
-    expect(chunks[0].payloadFormat).toBe(BINARY_PAYLOAD_FORMAT_V2);
-    expect(chunks[0].payloadByteLength).toBe(REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2);
-    expect(chunks[0].packingOrder).toBe(REPRESENTATIVE_PAYLOAD_PACKING_ORDER_V2);
-    expect(JSON.stringify(chunks)).not.toMatch(/"phase":/);
-    expect(() => buildRepresentativeSequenceChunksV2([
-      serialized.frames[1],
-      serialized.frames[0],
-      ...serialized.frames.slice(2),
-    ])).toThrow(/ordered|phase/i);
-
-    const reconstructed = reconstructRepresentativeFrameFromPayloadV2(phase37);
-    expect(reconstructed.phase).toBe(0.37);
-    expect(reconstructed.joints.leftElbow).toEqual({ x: 0.01, y: 0.37, z: -0.01 });
-    expect(reconstructed.uncertainty.leftShoulder.directionalConeDegrees).toBe(8.123456);
-
-    for (const diagonalIndex of [3, 6, 8, 13, 16, 18, 23, 26, 28]) {
-      expect(() => validatePersistedRepresentativeFrameV2({
-        ...phase37,
-        payload: replaceInt32(phase37.payload, diagonalIndex, -1),
-      })).toThrow(/bound|covariance|diagonal/i);
-    }
-    expect(() => validatePersistedRepresentativeFrameV2({
-      ...phase37,
-      payload: replaceInt32(phase37.payload, 4, -1),
-    })).not.toThrow();
-    expect(() => validatePersistedRepresentativeFrameV2({
-      ...phase37,
-      payload: replaceInt32(phase37.payload, 0, -10_000_001),
-    })).toThrow(/bound|coordinate/i);
-    expect(() => validatePersistedRepresentativeFrameV2({
-      ...phase37,
-      payload: phase37.payload.slice(1),
-    })).toThrow(/480|length/i);
-    expect(() => validatePersistedRepresentativeFrameV2({
-      ...phase37,
-      payload: { byteLength: REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2 },
-    })).toThrow(/Uint8Array|payload/i);
+  it("requires one canonical opaque ID for the profile, capture, and revision chain", () => {
+    expect(() => buildShootingProfileWritePlanV2({
+      uid: "owner_1",
+      captureSessionId: "capture_other",
+      profileId: "profile_1",
+      revisionId: "revision_other",
+      input: makeInput("basic_1_plus_1"),
+      timestamp: timestampFixture(),
+    })).toThrow(/canonical chain ID/i);
   });
 
-  it("builds exact 101 binary documents per stream and publishes the profile head last", () => {
+  it.each([
+    ["basic_1_plus_1", 4, 5, ["front-0", "shooting_side-0"]],
+    ["high_accuracy_3_plus_3", 8, 9, [
+      "front-0", "front-1", "front-2", "shooting_side-0", "shooting_side-1", "shooting_side-2",
+    ]],
+  ] as const)("builds the compact %s persistence plan in dependency order", (mode, stagingCount, totalCount, attemptIds) => {
+    const input = makeInput(mode);
     const plan = buildShootingProfileWritePlanV2({
       uid: "owner_1",
-      captureSessionId: "capture_1",
+      captureSessionId: "profile_1",
       profileId: "profile_1",
-      revisionId: "revision_1",
-      input: makeInput("high_accuracy_3_plus_3"),
+      revisionId: "profile_1",
+      input,
       timestamp: timestampFixture(),
     });
+    const capturePath = "users/owner_1/captureSessions/profile_1";
+    const revisionPath = "users/owner_1/motionProfiles/profile_1/revisions/profile_1";
+    const expectedPaths = [
+      ...attemptIds.map((attemptId) => `${capturePath}/observations/${attemptId}`),
+      capturePath,
+      revisionPath,
+    ];
+    expect(plan.stagingWrites).toHaveLength(stagingCount);
+    expect([...plan.stagingWrites, plan.publicationWrite]).toHaveLength(totalCount);
+    expect(plan.stagingWrites.map((write) => write.path)).toEqual(expectedPaths);
     expect(plan.publicationWrite.path).toBe("users/owner_1/motionProfiles/profile_1");
-    expect(plan.stagingWrites.every((write) => write.path !== plan.publicationWrite.path)).toBe(true);
-    expect(plan.stagingWrites).toHaveLength(720);
+    expect([...plan.stagingWrites, plan.publicationWrite].at(-1)).toBe(plan.publicationWrite);
+    expect([...plan.stagingWrites, plan.publicationWrite].every(
+      (write) => write.data.storageLayout === "phase_sequence_payloads_v1",
+    )).toBe(true);
+    expect([...plan.stagingWrites, plan.publicationWrite].map((write) => write.path).join("\n"))
+      .not.toMatch(/\/(frameChunks|sequenceChunks|phaseSummaries)\//);
 
-    const observation = plan.stagingWrites.find((write) => write.path.endsWith("/observations/front-0/frameChunks/0"))!;
-    expect(observation.data).toMatchObject({ phaseIndex: 0, attemptId: "front-0", view: "front" });
-    expect(observation.data.payloadFormat).toBe(BINARY_PAYLOAD_FORMAT_V2);
-    expect(observation.data.payloadByteLength).toBe(OBSERVATION_PAYLOAD_BYTE_LENGTH_V2);
-    expect(observation.data.fixedPointScale).toBe(FIXED_POINT_SCALE_V2);
-    expect(observation.data.packingOrder).toBe(OBSERVATION_PAYLOAD_PACKING_ORDER_V2);
-    expect(observation.data.missingVisibilitySentinel).toBe(MISSING_VISIBILITY_SENTINEL_V2);
-    expect(observation.data.payload).toBeInstanceOf(Bytes);
-    expect((observation.data.payload as Bytes).toUint8Array()).toHaveLength(OBSERVATION_PAYLOAD_BYTE_LENGTH_V2);
-    expect(observation.data).not.toHaveProperty("phase");
-    expect(observation.data).not.toHaveProperty("joints");
-    expect(observation.data).not.toHaveProperty("frames");
+    const orderedAttempts = [...input.normalizedAttempts].sort((left, right) =>
+      (left.frames[0].view === "front" ? 0 : 1) - (right.frames[0].view === "front" ? 0 : 1)
+      || left.frames[0].takeIndex - right.frames[0].takeIndex);
+    orderedAttempts.forEach((attempt, index) => {
+      const expected = serializeObservationSequenceForCloud(attempt);
+      const observation = plan.stagingWrites[index];
+      expect(observation.data).toMatchObject({
+        recordType: "normalized_observation_v2",
+        storageLayout: "phase_sequence_payloads_v1",
+        attemptId: expected.attemptId,
+        frameCount: 101,
+        framePayloadByteLength: 144,
+        payloadByteLength: 14_544,
+        payloadFormat: BINARY_PAYLOAD_FORMAT_V2,
+        fixedPointScale: FIXED_POINT_SCALE_V2,
+        packingOrder: OBSERVATION_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
+        missingVisibilitySentinel: MISSING_VISIBILITY_SENTINEL_V2,
+      });
+      expect(observation.data.payload).toBeInstanceOf(Bytes);
+      expect((observation.data.payload as Bytes).toUint8Array()).toEqual(expected.payload);
+    });
 
-    const sequence = plan.stagingWrites.filter((write) => write.path.includes("/sequenceChunks/"));
-    expect(sequence).toHaveLength(REPRESENTATIVE_SEQUENCE_CHUNK_COUNT_V2);
-    expect(sequence.some((write) => write.path.endsWith("/0"))).toBe(true);
-    expect(sequence.some((write) => write.path.endsWith("/100"))).toBe(true);
-    expect(sequence.some((write) => write.path.endsWith("/000"))).toBe(false);
-    expect(sequence.every((write) => !Object.prototype.hasOwnProperty.call(write.data, "phase"))).toBe(true);
-    expect(sequence.every((write) => write.data.payload instanceof Bytes)).toBe(true);
-    expect(sequence.every((write) => (write.data.payload as Bytes).toUint8Array().length === REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2)).toBe(true);
-    expect(sequence[0].data).toMatchObject({
+    const expectedRepresentative = serializeRepresentativeSequenceForCloud(input.profile);
+    const revision = plan.stagingWrites.at(-1)!;
+    expect(revision.data).toMatchObject({
+      recordType: "representative_revision_v2",
+      storageLayout: "phase_sequence_payloads_v1",
+      frameCount: 101,
+      framePayloadByteLength: 480,
+      payloadByteLength: 48_480,
       payloadFormat: BINARY_PAYLOAD_FORMAT_V2,
-      payloadByteLength: REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2,
       fixedPointScale: FIXED_POINT_SCALE_V2,
-      packingOrder: REPRESENTATIVE_PAYLOAD_PACKING_ORDER_V2,
+      packingOrder: REPRESENTATIVE_SEQUENCE_PAYLOAD_PACKING_ORDER_V2,
       uncertaintyModel: "heuristic_v1",
     });
-    expect(plan.publicationWrite.data.sequenceChunkCount).toBe(101);
-    expect(JSON.stringify([...plan.stagingWrites, plan.publicationWrite])).not.toMatch(/file:\/\/|thumbnail|filename|exif|rawMedia|sourceTimestampMs/i);
+    expect(revision.data.payload).toBeInstanceOf(Bytes);
+    expect((revision.data.payload as Bytes).toUint8Array()).toEqual(expectedRepresentative.payload);
+    expect(plan.publicationWrite.data.representativePayloadByteLength).toBe(48_480);
+    expect(JSON.stringify([...plan.stagingWrites, plan.publicationWrite]))
+      .not.toMatch(/file:\/\/|thumbnail|filename|exif|rawMedia|sourceTimestampMs/i);
     expect(RULE_SAFE_BATCH_MUTATIONS_V2).toBe(1);
     expect(partitionShootingProfileWritesV2(plan.stagingWrites).every((batch) => batch.length === 1)).toBe(true);
   });
 
-  it("strictly binds observation head and phase-document IDs to their path context", () => {
+  it("strictly validates one compact observation document against its path identity", () => {
     const plan = buildShootingProfileWritePlanV2({
-      uid: "owner_1",
-      captureSessionId: "capture_1",
-      profileId: "profile_1",
-      revisionId: "revision_1",
-      input: makeInput("basic_1_plus_1"),
-      timestamp: timestampFixture(),
+      uid: "owner_1", captureSessionId: "profile_1", profileId: "profile_1", revisionId: "profile_1",
+      input: makeInput("basic_1_plus_1"), timestamp: timestampFixture(),
     });
-    const head = plan.stagingWrites.find((write) => write.path.endsWith("/observations/front-0"))!;
-    const chunk = plan.stagingWrites.find((write) => write.path.endsWith("/observations/front-0/frameChunks/0"))!;
+    const observation = plan.stagingWrites[0];
     const context = {
-      uid: "owner_1",
-      captureSessionId: "capture_1",
-      profileId: "profile_1",
-      revisionId: "revision_1",
-      attemptId: "front-0",
+      uid: "owner_1", captureSessionId: "profile_1", profileId: "profile_1", revisionId: "profile_1",
+      attemptId: "front-0", document: plannedDocument(observation),
     };
-    expect(() => validateObservationHeadDocumentV2({ ...context, document: plannedDocument(head) })).not.toThrow();
-    expect(() => validateObservationChunkDocumentV2({ ...context, document: plannedDocument(chunk) })).not.toThrow();
-    expect(() => validateObservationHeadDocumentV2({
-      ...context,
-      document: { ...plannedDocument(head), id: "shooting_side-0" },
+    expect(() => validateObservationDocumentV2(context)).not.toThrow();
+    expect(() => validateObservationDocumentV2({
+      ...context, document: { ...context.document, id: "shooting_side-0" },
     })).toThrow(/attempt document ID/i);
-    expect(() => validateObservationChunkDocumentV2({
+    expect(() => validateObservationDocumentV2({
       ...context,
-      document: { ...plannedDocument(chunk), id: "00" },
-    })).toThrow(/chunk document ID/i);
-    expect(() => validateObservationChunkDocumentV2({
+      document: { ...context.document, data: { ...asRecord(context.document.data), storageLayout: "legacy" } },
+    })).toThrow(/layout|metadata/i);
+    expect(() => validateObservationDocumentV2({
       ...context,
       document: {
-        ...plannedDocument(chunk),
-        data: {
-          ...asRecord(chunk.data),
-          payload: (asRecord(chunk.data).payload as Bytes).toUint8Array(),
-        },
+        ...context.document,
+        data: { ...asRecord(context.document.data), payload: (asRecord(context.document.data).payload as Bytes).toUint8Array() },
       },
     })).toThrow(/Firestore Bytes|payload/i);
-    expect(() => validateObservationChunkDocumentV2({
+    expect(() => validateObservationDocumentV2({
       ...context,
       document: {
-        ...plannedDocument(chunk),
-        data: { ...asRecord(chunk.data), payloadByteLength: 145 },
+        ...context.document,
+        data: { ...asRecord(context.document.data), payload: Bytes.fromUint8Array(new Uint8Array(14_543)) },
       },
-    })).toThrow(/payload|length|metadata/i);
+    })).toThrow(/14544|length|payload/i);
+    expect(() => validateObservationDocumentV2({
+      ...context,
+      document: {
+        ...context.document,
+        data: { ...asRecord(context.document.data), payload: Bytes.fromUint8Array(new Uint8Array(14_545)) },
+      },
+    })).toThrow(/14544|length|payload/i);
+    expect(() => validateObservationDocumentV2({
+      ...context,
+      document: { ...context.document, data: { ...asRecord(context.document.data), unexpected: true } },
+    })).toThrow(/unknown|missing/i);
+  });
+
+  it.each([
+    ["basic_1_plus_1", [
+      "users/owner_1/captureSessions/profile_1/observations/front-0",
+      "users/owner_1/captureSessions/profile_1/observations/shooting_side-0",
+      "users/owner_1/captureSessions/profile_1",
+      "users/owner_1/motionProfiles/profile_1/revisions/profile_1",
+      "users/owner_1/motionProfiles/profile_1",
+    ]],
+    ["high_accuracy_3_plus_3", [
+      "users/owner_1/captureSessions/profile_1/observations/front-0",
+      "users/owner_1/captureSessions/profile_1/observations/front-1",
+      "users/owner_1/captureSessions/profile_1/observations/front-2",
+      "users/owner_1/captureSessions/profile_1/observations/shooting_side-0",
+      "users/owner_1/captureSessions/profile_1/observations/shooting_side-1",
+      "users/owner_1/captureSessions/profile_1/observations/shooting_side-2",
+      "users/owner_1/captureSessions/profile_1",
+      "users/owner_1/motionProfiles/profile_1/revisions/profile_1",
+      "users/owner_1/motionProfiles/profile_1",
+    ]],
+  ] as const)("executes the compact %s plan as exact single mutations in dependency order", async (mode, expectedPaths) => {
+    const calls: string[] = [];
+    const port: ShootingProfileWritePortV2 = {
+      setWrite: async (write) => { calls.push(`set:${write.path}`); },
+      readDocumentFromServer: async (path) => {
+        calls.push(`read:${path}`);
+        throw new Error("successful writes must not be read back");
+      },
+      deletePath: async (path) => { calls.push(`delete:${path}`); },
+    };
+
+    await expect(executeShootingProfileWritePlanV2({
+      uid: "owner_1",
+      plan: makeWritePlan(mode),
+      port,
+    })).resolves.toBeUndefined();
+    expect(calls).toEqual(expectedPaths.map((path) => `set:${path}`));
+  });
+
+  it.each([
+    ["non-canonical top-level capture ID", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.captureSessionId = "capture_other";
+    }],
+    ["non-canonical top-level revision ID", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.revisionId = "revision_other";
+    }],
+    ["forged staging path", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0] = {
+        ...plan.stagingWrites[0],
+        path: "users/owner_1/motionProfiles/colliding_profile",
+      };
+    }],
+    ["mismatched immutable staging identity", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0] = {
+        ...plan.stagingWrites[0],
+        data: { ...plan.stagingWrites[0].data, profileId: "colliding_profile" },
+      };
+    }],
+  ] as const)("rejects a %s write plan before any port call", async (_caseName, forgePlan) => {
+    const plan = makeWritePlan();
+    forgePlan(plan);
+    const calls: string[] = [];
+    const port: ShootingProfileWritePortV2 = {
+      setWrite: async (write) => { calls.push(`set:${write.path}`); },
+      readDocumentFromServer: async (path) => { calls.push(`read:${path}`); return null; },
+      deletePath: async (path) => { calls.push(`delete:${path}`); },
+    };
+
+    await expect(executeShootingProfileWritePlanV2({ uid: "owner_1", plan, port }))
+      .rejects.toThrow(/write plan|staging|canonical|immutable/i);
+    expect(calls).toEqual([]);
+  });
+
+  it.each([
+    ["an unexpected observation key", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, forged: true };
+    }],
+    ["an observation owner mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, ownerUid: "other_owner" };
+    }],
+    ["an observation frame count mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, frameCount: 100 };
+    }],
+    ["an observation non-Bytes payload", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, payload: "payload" };
+    }],
+    ["an observation short Bytes payload", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, payload: Bytes.fromUint8Array(new Uint8Array([0])) };
+    }],
+    ["an observation invalid encoded payload", (plan: ReturnType<typeof makeWritePlan>) => {
+      const payload = plan.stagingWrites[0].data.payload as Bytes;
+      plan.stagingWrites[0].data = {
+        ...plan.stagingWrites[0].data,
+        payload: Bytes.fromUint8Array(replaceInt32(payload.toUint8Array(), 0, 2_000_001)),
+      };
+    }],
+    ["an observation payload format mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, payloadFormat: "float32_le_v1" };
+    }],
+    ["an observation frame payload length mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, framePayloadByteLength: 143 };
+    }],
+    ["an observation fixed-point scale mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, fixedPointScale: 100_000 };
+    }],
+    ["an observation packing order mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, packingOrder: "joint_major_v1" };
+    }],
+    ["an observation missing-visibility sentinel mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.stagingWrites[0].data = { ...plan.stagingWrites[0].data, missingVisibilitySentinel: -1 };
+    }],
+    ["an unexpected capture key", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 2;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, forged: true };
+    }],
+    ["a capture attempt count mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 2;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, attemptCount: 1 };
+    }],
+    ["a capture attempt identity mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 2;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, attemptIds: ["shooting_side-0", "front-0"] };
+    }],
+    ["a capture mode mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 2;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, mode: "high_accuracy_3_plus_3" };
+    }],
+    ["an unexpected revision key", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, forged: true };
+    }],
+    ["a Basic revision overconfidence", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, confidence: 1 };
+    }],
+    ["a revision units mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, units: "meters" };
+    }],
+    ["a revision count mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, attemptCount: 1 };
+    }],
+    ["a revision frame count mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, frameCount: 100 };
+    }],
+    ["a revision payload format mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, payloadFormat: "float32_le_v1" };
+    }],
+    ["a revision fixed-point scale mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, fixedPointScale: 100_000 };
+    }],
+    ["a revision packing mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, packingOrder: "joint_major_v1" };
+    }],
+    ["a revision uncertainty model mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, uncertaintyModel: "statistical_v1" };
+    }],
+    ["a revision quality mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, quality: { passed: true, reasons: ["forged"] } };
+    }],
+    ["a revision non-Bytes payload", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, payload: "payload" };
+    }],
+    ["a revision short Bytes payload", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      plan.stagingWrites[index].data = { ...plan.stagingWrites[index].data, payload: Bytes.fromUint8Array(new Uint8Array([0])) };
+    }],
+    ["an invalid encoded revision payload", (plan: ReturnType<typeof makeWritePlan>) => {
+      const index = plan.stagingWrites.length - 1;
+      const payload = plan.stagingWrites[index].data.payload as Bytes;
+      plan.stagingWrites[index].data = {
+        ...plan.stagingWrites[index].data,
+        payload: Bytes.fromUint8Array(replaceInt32(payload.toUint8Array(), 0, 10_000_001)),
+      };
+    }],
+    ["an unexpected publication key", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.publicationWrite.data = { ...plan.publicationWrite.data, forged: true };
+    }],
+    ["a publication attempt count mismatch", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.publicationWrite.data = { ...plan.publicationWrite.data, attemptCount: 1 };
+    }],
+    ["a publication non-sentinel created timestamp", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.publicationWrite.data = { ...plan.publicationWrite.data, createdAt: "server-time" };
+    }],
+    ["a publication non-sentinel updated timestamp", (plan: ReturnType<typeof makeWritePlan>) => {
+      plan.publicationWrite.data = { ...plan.publicationWrite.data, updatedAt: "server-time" };
+    }],
+  ] as const)("rejects %s before any port call", async (_caseName, forgePlan) => {
+    const plan = makeWritePlan();
+    forgePlan(plan);
+    const calls: string[] = [];
+    const port: ShootingProfileWritePortV2 = {
+      setWrite: async (write) => { calls.push(`set:${write.path}`); },
+      readDocumentFromServer: async (path) => { calls.push(`read:${path}`); return null; },
+      deletePath: async (path) => { calls.push(`delete:${path}`); },
+    };
+
+    await expect(executeShootingProfileWritePlanV2({ uid: "owner_1", plan, port })).rejects.toThrow();
+    expect(calls).toEqual([]);
+  });
+
+  it.each([
+    ["exact", [
+      "delete:users/owner_1/captureSessions/profile_1/observations/shooting_side-0",
+      "delete:users/owner_1/captureSessions/profile_1/observations/front-0",
+    ]],
+    ["mismatch", [
+      "delete:users/owner_1/captureSessions/profile_1/observations/front-0",
+    ]],
+    ["unknown", [
+      "delete:users/owner_1/captureSessions/profile_1/observations/front-0",
+    ]],
+  ] as const)("cleans only acknowledged or server-observed %s staging writes in reverse order", async (observation, expectedDeletes) => {
+    const plan = makeWritePlan();
+    const failedWrite = plan.stagingWrites[1];
+    const failure = new Error("injected staging write failure");
+    const calls: string[] = [];
+    const port: ShootingProfileWritePortV2 = {
+      setWrite: async (write) => {
+        calls.push(`set:${write.path}`);
+        if (write.path === failedWrite.path) throw failure;
+      },
+      readDocumentFromServer: async (path) => {
+        calls.push(`read:${path}`);
+        if (observation === "unknown") throw new Error("server read unavailable");
+        const persistedFailedWrite = asRecord(plannedDocument(failedWrite).data);
+        const originalPayload = persistedFailedWrite.payload as Bytes;
+        return {
+          id: "shooting_side-0",
+          data: {
+            ...persistedFailedWrite,
+            payload: Bytes.fromUint8Array(originalPayload.toUint8Array()),
+            ...(observation === "mismatch" ? { revisionId: "colliding_revision" } : {}),
+          },
+        };
+      },
+      deletePath: async (path) => { calls.push(`delete:${path}`); },
+    };
+
+    await expect(executeShootingProfileWritePlanV2({ uid: "owner_1", plan, port })).rejects.toBe(failure);
+    expect(calls).toEqual([
+      "set:users/owner_1/captureSessions/profile_1/observations/front-0",
+      "set:users/owner_1/captureSessions/profile_1/observations/shooting_side-0",
+      "read:users/owner_1/captureSessions/profile_1/observations/shooting_side-0",
+      ...expectedDeletes,
+    ]);
+  });
+
+  it.each(["malformed", "mismatch", "unreadable"] as const)(
+    "preserves all staging data when a failed publication is %s",
+    async (observation) => {
+      const plan = makeWritePlan();
+      const failure = new Error("injected publication write failure");
+      const calls: string[] = [];
+      const port: ShootingProfileWritePortV2 = {
+        setWrite: async (write) => {
+          calls.push(`set:${write.path}`);
+          if (write.path === plan.publicationWrite.path) throw failure;
+        },
+        readDocumentFromServer: async (path) => {
+          calls.push(`read:${path}`);
+          if (observation === "unreadable") throw new Error("server read unavailable");
+          if (observation === "malformed") return { id: "profile_1", data: {} };
+          return {
+            id: "profile_1",
+            data: { ...plan.publicationWrite.data, revisionId: "colliding_revision" },
+          };
+        },
+        deletePath: async (path) => { calls.push(`delete:${path}`); },
+      };
+
+      await expect(executeShootingProfileWritePlanV2({ uid: "owner_1", plan, port })).rejects.toBe(failure);
+      expect(calls).toEqual([
+        "set:users/owner_1/captureSessions/profile_1/observations/front-0",
+        "set:users/owner_1/captureSessions/profile_1/observations/shooting_side-0",
+        "set:users/owner_1/captureSessions/profile_1",
+        "set:users/owner_1/motionProfiles/profile_1/revisions/profile_1",
+        "set:users/owner_1/motionProfiles/profile_1",
+        "read:users/owner_1/motionProfiles/profile_1",
+      ]);
+    },
+  );
+
+  it("accepts a strictly valid matching active head after an ambiguous publication failure", async () => {
+    const plan = makeWritePlan();
+    const publicationFailure = new Error("ambiguous publication write");
+    const calls: string[] = [];
+    const port: ShootingProfileWritePortV2 = {
+      setWrite: async (write) => {
+        calls.push(`set:${write.path}`);
+        if (write.path === plan.publicationWrite.path) throw publicationFailure;
+      },
+      readDocumentFromServer: async (path) => {
+        calls.push(`read:${path}`);
+        return plannedDocument(plan.publicationWrite);
+      },
+      deletePath: async (path) => { calls.push(`delete:${path}`); },
+    };
+
+    await expect(executeShootingProfileWritePlanV2({ uid: "owner_1", plan, port })).resolves.toBeUndefined();
+    expect(calls).toEqual([
+      "set:users/owner_1/captureSessions/profile_1/observations/front-0",
+      "set:users/owner_1/captureSessions/profile_1/observations/shooting_side-0",
+      "set:users/owner_1/captureSessions/profile_1",
+      "set:users/owner_1/motionProfiles/profile_1/revisions/profile_1",
+      "set:users/owner_1/motionProfiles/profile_1",
+      "read:users/owner_1/motionProfiles/profile_1",
+    ]);
+  });
+
+  it("cleans every staging write in reverse when publication absence is confirmed and preserves the publication error", async () => {
+    const plan = makeWritePlan();
+    const publicationFailure = new Error("confirmed absent publication");
+    const cleanupFailure = new Error("injected cleanup failure");
+    const calls: string[] = [];
+    const port: ShootingProfileWritePortV2 = {
+      setWrite: async (write) => {
+        calls.push(`set:${write.path}`);
+        if (write.path === plan.publicationWrite.path) throw publicationFailure;
+      },
+      readDocumentFromServer: async (path) => {
+        calls.push(`read:${path}`);
+        return null;
+      },
+      deletePath: async (path) => {
+        calls.push(`delete:${path}`);
+        if (path.endsWith("/revisions/profile_1")) throw cleanupFailure;
+      },
+    };
+
+    await expect(executeShootingProfileWritePlanV2({ uid: "owner_1", plan, port }))
+      .rejects.toBe(publicationFailure);
+    expect(calls.slice(-4)).toEqual([
+      "delete:users/owner_1/motionProfiles/profile_1/revisions/profile_1",
+      "delete:users/owner_1/captureSessions/profile_1",
+      "delete:users/owner_1/captureSessions/profile_1/observations/shooting_side-0",
+      "delete:users/owner_1/captureSessions/profile_1/observations/front-0",
+    ]);
+  });
+
+  it("loads a viewer record through exactly the active head and its referenced compact revision", async () => {
+    const plan = makeWritePlan();
+    const revision = plan.stagingWrites.at(-1)!;
+    const calls: string[] = [];
+    const reader: ShootingProfileReaderPortV2 = {
+      readDocument: async (path) => {
+        calls.push(path);
+        if (path === "users/owner_1/motionProfiles/profile_1") return plannedDocument(plan.publicationWrite);
+        if (path === "users/owner_1/motionProfiles/profile_1/revisions/profile_1") {
+          return plannedDocument(revision);
+        }
+        throw new Error(`unexpected read: ${path}`);
+      },
+    };
+
+    const record = await loadShootingProfileViewerRecordV2({ uid: "owner_1", profileId: "profile_1", reader });
+    expect(record?.profile.frames).toHaveLength(101);
+    expect(calls).toEqual([
+      "users/owner_1/motionProfiles/profile_1",
+      "users/owner_1/motionProfiles/profile_1/revisions/profile_1",
+    ]);
+  });
+
+  it.each(["missing", "malformed"] as const)("fails closed when the referenced revision is %s", async (observation) => {
+    const plan = makeWritePlan();
+    const reader: ShootingProfileReaderPortV2 = {
+      readDocument: async (path) => {
+        if (path === "users/owner_1/motionProfiles/profile_1") return plannedDocument(plan.publicationWrite);
+        return observation === "missing" ? null : { id: "profile_1", data: {} };
+      },
+    };
+    await expect(loadShootingProfileViewerRecordV2({ uid: "owner_1", profileId: "profile_1", reader }))
+      .rejects.toThrow(observation === "missing" ? /revision.*missing/i : /unknown|missing/i);
+  });
+
+  it("rejects the same non-PSD representative payload through every public viewer read path", async () => {
+    const plan = makeWritePlan();
+    const revision = plan.stagingWrites.at(-1)!;
+    const revisionData = asRecord(plannedDocument(revision).data);
+    let nonPsdPayload = (revisionData.payload as Bytes).toUint8Array();
+    nonPsdPayload = replaceInt32(nonPsdPayload, 37 * 12 * 10 + 3, 10_000);
+    nonPsdPayload = replaceInt32(nonPsdPayload, 37 * 12 * 10 + 4, 20_000);
+    nonPsdPayload = replaceInt32(nonPsdPayload, 37 * 12 * 10 + 6, 10_000);
+    const nonPsdRevision = {
+      id: "profile_1",
+      data: { ...revisionData, payload: Bytes.fromUint8Array(nonPsdPayload) },
+    };
+    const representativeSequence = {
+      frameCount: revisionData.frameCount,
+      framePayloadByteLength: revisionData.framePayloadByteLength,
+      payloadByteLength: revisionData.payloadByteLength,
+      payloadFormat: revisionData.payloadFormat,
+      fixedPointScale: revisionData.fixedPointScale,
+      packingOrder: revisionData.packingOrder,
+      uncertaintyModel: revisionData.uncertaintyModel,
+      payload: nonPsdPayload,
+    };
+
+    expect(() => reconstructRepresentativeProfileFromSequencePayloadV2(
+      representativeSequence,
+      "basic_1_plus_1",
+    )).toThrow(/semidefinite|covariance/i);
+    expect(() => reconstructShootingProfileViewerRecordV2({
+      uid: "owner_1",
+      profileId: "profile_1",
+      head: plannedDocument(plan.publicationWrite),
+      revision: nonPsdRevision,
+    })).toThrow(/semidefinite|covariance/i);
+    await expect(loadShootingProfileViewerRecordV2({
+      uid: "owner_1",
+      profileId: "profile_1",
+      reader: {
+        readDocument: async (path) => {
+          if (path === "users/owner_1/motionProfiles/profile_1") {
+            return plannedDocument(plan.publicationWrite);
+          }
+          if (path === "users/owner_1/motionProfiles/profile_1/revisions/profile_1") {
+            return nonPsdRevision;
+          }
+          throw new Error(`unexpected read: ${path}`);
+        },
+      },
+    })).rejects.toThrow(/semidefinite|covariance/i);
   });
 
   it("uses server reads for safety paths and exact identity for uncertain publication", () => {
     const source = readFileSync("lib/firebase-shooting-profiles.ts", "utf8");
+    const contractSource = readFileSync("lib/firebase-shooting-profile-contract.ts", "utf8");
     expect(source).toContain("Bytes.fromUint8Array");
     expect(source).toContain("instanceof Bytes");
     expect(source).toContain("toUint8Array()");
@@ -648,16 +1019,18 @@ describe("V2 private shooting-profile cloud contract", () => {
     expect(source).toMatch(/initialSnapshot = await getDocFromServer/);
     expect(source).toMatch(/getDocFromServer\(headReference\)/);
     expect(source).toMatch(/resumePendingShootingProfileDeletionsV2[\s\S]*getDocsFromServer/);
-    expect(source).toMatch(/enumerateDeletionSubordinatePaths[\s\S]*getDocsFromServer/);
+    expect(source).not.toContain("enumerateDeletionSubordinatePaths");
+    expect(source).not.toMatch(/collection\(db, revisionPath, "(sequenceChunks|phaseSummaries)"\)/);
+    expect(contractSource).not.toContain("PERSISTED_PHASE_SUMMARIES_V2");
     expect(source).toMatch(/deleteSubordinateWithAmbiguityCheckV2[\s\S]*getDocFromServer\(doc\(db, path\)\)/);
     expect(source).toMatch(/listShootingProfilesV2[\s\S]*getDocs\(/);
     expect(source).toMatch(/getShootingProfileV2[\s\S]*getDoc\(/);
 
     const plan = buildShootingProfileWritePlanV2({
       uid: "owner_1",
-      captureSessionId: "capture_1",
+      captureSessionId: "profile_1",
       profileId: "profile_1",
-      revisionId: "revision_1",
+      revisionId: "profile_1",
       input: makeInput("basic_1_plus_1"),
       timestamp: timestampFixture(),
     });
@@ -669,33 +1042,87 @@ describe("V2 private shooting-profile cloud contract", () => {
       { ...plan.publicationWrite.data, revisionId: "colliding_revision" },
       plan.publicationWrite.data,
     )).toThrow(/publication identity/i);
-    expect(matchesPlannedStagingWriteV2(plan.stagingWrites[0].data, plan.stagingWrites[0].data)).toBe(true);
+    const persistedObservation = asRecord(plannedDocument(plan.stagingWrites[0]).data);
+    expect(matchesPlannedStagingWriteV2(persistedObservation, plan.stagingWrites[0].data)).toBe(true);
+    const originalPayload = plan.stagingWrites[0].data.payload as Bytes;
     expect(matchesPlannedStagingWriteV2(
-      { ...plan.stagingWrites[0].data, phaseIndex: 99 },
+      { ...persistedObservation, payload: Bytes.fromUint8Array(originalPayload.toUint8Array()) },
+      plan.stagingWrites[0].data,
+    )).toBe(true);
+    const changedPayload = originalPayload.toUint8Array();
+    changedPayload[0] ^= 1;
+    expect(matchesPlannedStagingWriteV2(
+      { ...persistedObservation, payload: Bytes.fromUint8Array(changedPayload) },
       plan.stagingWrites[0].data,
     )).toBe(false);
     expect(matchesPlannedStagingWriteV2(
-      { ...plan.stagingWrites[0].data, createdAt: "server-time" },
+      { ...persistedObservation, createdAt: "server-time" },
       plan.stagingWrites[0].data,
     )).toBe(false);
   });
 
-  it("reconstructs only 101 complete binary phases and enforces public PSD quality", () => {
+  it("resolves every failed-publication observation without deleting uncertain evidence", async () => {
+    const matchingHead: PersistedDocumentV2 = { id: "profile_1", data: { revisionId: "profile_1" } };
+    const run = async (overrides: Partial<{
+      readHeadFromServer: () => Promise<PersistedDocumentV2 | null>;
+      validateMatchingHead: (document: PersistedDocumentV2) => void;
+      cleanupStaging: () => Promise<void>;
+    }> = {}) => {
+      let cleanupCalls = 0;
+      let validationCalls = 0;
+      const outcome = await resolveFailedShootingProfilePublicationV2({
+        readHeadFromServer: async () => matchingHead,
+        validateMatchingHead: (document) => {
+          validationCalls += 1;
+          if (document.id !== "profile_1" || asRecord(document.data).revisionId !== "profile_1") {
+            throw new Error("malformed or mismatched publication head");
+          }
+        },
+        cleanupStaging: async () => {
+          cleanupCalls += 1;
+        },
+        ...overrides,
+      });
+      return { outcome, cleanupCalls, validationCalls };
+    };
+
+    await expect(run()).resolves.toEqual({
+      outcome: "published", cleanupCalls: 0, validationCalls: 1,
+    });
+    await expect(run({ readHeadFromServer: async () => null })).resolves.toEqual({
+      outcome: "not_published", cleanupCalls: 1, validationCalls: 0,
+    });
+    await expect(run({
+      readHeadFromServer: async () => { throw new Error("server read unavailable"); },
+    })).resolves.toEqual({ outcome: "unknown", cleanupCalls: 0, validationCalls: 0 });
+    await expect(run({
+      readHeadFromServer: async () => ({ id: "profile_1", data: {} }),
+    })).resolves.toEqual({ outcome: "unknown", cleanupCalls: 0, validationCalls: 1 });
+    await expect(run({
+      readHeadFromServer: async () => ({ id: "profile_1", data: { revisionId: "wrong_revision" } }),
+    })).resolves.toEqual({ outcome: "unknown", cleanupCalls: 0, validationCalls: 1 });
+    let failedCleanupCalls = 0;
+    await expect(resolveFailedShootingProfilePublicationV2({
+      readHeadFromServer: async () => null,
+      validateMatchingHead: () => { throw new Error("absent heads must not be validated"); },
+      cleanupStaging: async () => {
+        failedCleanupCalls += 1;
+        throw new Error("cleanup failed");
+      },
+    })).resolves.toBe("unknown");
+    expect(failedCleanupCalls).toBe(1);
+  });
+
+  it("reconstructs 101 phases from only the head and compact revision and fails closed", () => {
     const plan = buildShootingProfileWritePlanV2({
       uid: "owner_1",
-      captureSessionId: "capture_1",
+      captureSessionId: "profile_1",
       profileId: "profile_1",
-      revisionId: "revision_1",
+      revisionId: "profile_1",
       input: makeInput("basic_1_plus_1"),
       timestamp: timestampFixture(),
     });
-    const revision = plan.stagingWrites.find((write) => write.path.endsWith("/revisions/revision_1"))!;
-    const sequenceDocuments = plan.stagingWrites
-      .filter((write) => write.path.includes("/sequenceChunks/"))
-      .map(plannedDocument);
-    const phaseDocuments = plan.stagingWrites
-      .filter((write) => write.path.includes("/phaseSummaries/"))
-      .map(plannedDocument);
+    const revision = plan.stagingWrites.find((write) => write.path.endsWith("/revisions/profile_1"))!;
     const headDocument = plannedDocument(plan.publicationWrite);
     const revisionDocument = plannedDocument(revision);
     const args = {
@@ -703,8 +1130,6 @@ describe("V2 private shooting-profile cloud contract", () => {
       profileId: "profile_1",
       head: headDocument,
       revision: revisionDocument,
-      sequenceChunks: sequenceDocuments,
-      phaseSummaries: phaseDocuments,
     };
     const record = reconstructShootingProfileViewerRecordV2(args);
     expect(Object.keys(record)).toEqual(["profile", "shootingHand", "confidence"]);
@@ -723,42 +1148,23 @@ describe("V2 private shooting-profile cloud contract", () => {
     })).toThrow(/document ID/i);
     expect(() => reconstructShootingProfileViewerRecordV2({
       ...args,
+      head: { ...headDocument, data: { ...asRecord(headDocument.data), storageLayout: "legacy" } },
+    })).toThrow(/layout|immutable/i);
+    expect(() => reconstructShootingProfileViewerRecordV2({
+      ...args,
       revision: { ...revisionDocument, id: "different_revision" },
     })).toThrow(/revision document ID/i);
     expect(() => reconstructShootingProfileViewerRecordV2({
       ...args,
-      sequenceChunks: sequenceDocuments.slice(1),
-    })).toThrow(/chunk|pair/i);
+      revision: { ...revisionDocument, data: { ...asRecord(revisionDocument.data), storageLayout: "legacy" } },
+    })).toThrow(/layout|metadata/i);
     expect(() => reconstructShootingProfileViewerRecordV2({
       ...args,
-      sequenceChunks: [sequenceDocuments[0], ...sequenceDocuments.slice(0, -1)],
-    })).toThrow(/chunk|duplicate/i);
-    expect(() => reconstructShootingProfileViewerRecordV2({
-      ...args,
-      sequenceChunks: [...sequenceDocuments, sequenceDocuments[0]],
-    })).toThrow(/chunk|extra/i);
-    expect(() => reconstructShootingProfileViewerRecordV2({
-      ...args,
-      sequenceChunks: [{ ...sequenceDocuments[0], id: "00" }, ...sequenceDocuments.slice(1)],
-    })).toThrow(/document ID|canonical/i);
-    expect(() => reconstructShootingProfileViewerRecordV2({
-      ...args,
-      sequenceChunks: [
-        {
-          ...sequenceDocuments[0],
-          data: { ...asRecord(sequenceDocuments[0].data), phaseIndex: 1 },
-        },
-        ...sequenceDocuments.slice(1),
-      ],
-    })).toThrow(/document ID|canonical|phase/i);
-    expect(() => reconstructShootingProfileViewerRecordV2({
-      ...args,
-      phaseSummaries: phaseDocuments.slice(1),
-    })).toThrow(/phase summaries/i);
-    expect(() => reconstructShootingProfileViewerRecordV2({
-      ...args,
-      phaseSummaries: [{ ...phaseDocuments[0], id: "rise" }, ...phaseDocuments.slice(1)],
-    })).toThrow(/summary document ID/i);
+      revision: {
+        ...revisionDocument,
+        data: { ...asRecord(revisionDocument.data), captureSessionId: "different_capture" },
+      },
+    })).toThrow(/does not match/i);
     expect(() => reconstructShootingProfileViewerRecordV2({
       ...args,
       head: { ...headDocument, data: { ...asRecord(headDocument.data), createdAt: "server-time" } },
@@ -777,50 +1183,51 @@ describe("V2 private shooting-profile cloud contract", () => {
 
     expect(() => reconstructShootingProfileViewerRecordV2({
       ...args,
-      sequenceChunks: [{
-        ...sequenceDocuments[0],
+      revision: {
+        ...revisionDocument,
         data: {
-          ...asRecord(sequenceDocuments[0].data),
-          payload: (asRecord(sequenceDocuments[0].data).payload as Bytes).toUint8Array(),
+          ...asRecord(revisionDocument.data),
+          payload: (asRecord(revisionDocument.data).payload as Bytes).toUint8Array(),
         },
-      }, ...sequenceDocuments.slice(1)],
+      },
     })).toThrow(/Firestore Bytes|payload/i);
     expect(() => reconstructShootingProfileViewerRecordV2({
       ...args,
-      sequenceChunks: [{
-        ...sequenceDocuments[0],
+      revision: {
+        ...revisionDocument,
         data: {
-          ...asRecord(sequenceDocuments[0].data),
-          payload: Bytes.fromUint8Array(new Uint8Array(REPRESENTATIVE_PAYLOAD_BYTE_LENGTH_V2 - 1)),
+          ...asRecord(revisionDocument.data),
+          payload: Bytes.fromUint8Array(new Uint8Array(REPRESENTATIVE_SEQUENCE_PAYLOAD_BYTE_LENGTH_V2 - 1)),
         },
-      }, ...sequenceDocuments.slice(1)],
-    })).toThrow(/480|length/i);
+      },
+    })).toThrow(/48480|length/i);
     expect(() => reconstructShootingProfileViewerRecordV2({
       ...args,
-      sequenceChunks: [{
-        ...sequenceDocuments[0],
-        data: { ...asRecord(sequenceDocuments[0].data), payloadFormat: "unknown" },
-      }, ...sequenceDocuments.slice(1)],
+      revision: {
+        ...revisionDocument,
+        data: { ...asRecord(revisionDocument.data), payloadFormat: "unknown" },
+      },
     })).toThrow(/packing|payload|metadata/i);
+    expect(() => reconstructShootingProfileViewerRecordV2({
+      ...args,
+      revision: {
+        ...revisionDocument,
+        data: { ...asRecord(revisionDocument.data), unexpected: true },
+      },
+    })).toThrow(/unknown|missing/i);
 
-    const phaseIndex = sequenceDocuments.findIndex((document) => document.id === "0");
-    const phaseDocument = sequenceDocuments[phaseIndex];
-    const phaseData = asRecord(phaseDocument.data);
-    let indefinitePayload = (phaseData.payload as Bytes).toUint8Array();
+    const revisionData = asRecord(revisionDocument.data);
+    let indefinitePayload = (revisionData.payload as Bytes).toUint8Array();
     indefinitePayload = replaceInt32(indefinitePayload, 3, 10_000);
     indefinitePayload = replaceInt32(indefinitePayload, 4, 20_000);
     indefinitePayload = replaceInt32(indefinitePayload, 6, 10_000);
-    expect(() => validatePersistedRepresentativeFrameV2({
-      phaseIndex: phaseData.phaseIndex,
-      uncertaintyModel: phaseData.uncertaintyModel,
-      payload: indefinitePayload,
-    })).not.toThrow();
-    const invalidPsd = [...sequenceDocuments];
-    invalidPsd[phaseIndex] = {
-      ...phaseDocument,
-      data: { ...phaseData, payload: Bytes.fromUint8Array(indefinitePayload) },
-    };
-    expect(() => reconstructShootingProfileViewerRecordV2({ ...args, sequenceChunks: invalidPsd })).toThrow(/semidefinite|covariance/i);
+    expect(() => reconstructShootingProfileViewerRecordV2({
+      ...args,
+      revision: {
+        ...revisionDocument,
+        data: { ...revisionData, payload: Bytes.fromUint8Array(indefinitePayload) },
+      },
+    })).toThrow(/semidefinite|covariance/i);
   });
 
   it("continues every known single-path cleanup after failures and reports failures without stopping", async () => {
@@ -833,6 +1240,8 @@ describe("V2 private shooting-profile cloud contract", () => {
     expect(attempted).toEqual(["a", "b", "c"]);
     expect(result.attemptedPaths).toEqual(["a", "b", "c"]);
     expect(result.failures).toEqual([{ path: "b", error: failure }]);
+    expect(buildFailedStagingCleanupPathsV2(["observation-a", "observation-b", "capture", "revision", "capture"]))
+      .toEqual(["revision", "capture", "observation-b", "observation-a"]);
   });
 
   it("treats already-missing and server-confirmed ambiguous subordinate deletes as success", async () => {
@@ -863,23 +1272,33 @@ describe("V2 private shooting-profile cloud contract", () => {
 
   it("keeps deletion head-last, one mutation per request, and handles uncertain head-delete acknowledgement", async () => {
     const headPath = "users/owner_1/motionProfiles/profile_1";
-    const subordinatePaths = [
-      `${headPath}/revisions/revision_1/sequenceChunks/0`,
-      `${headPath}/revisions/revision_1/sequenceChunks/1`,
-      `${headPath}/revisions/revision_1/phaseSummaries/ready`,
-      `${headPath}/revisions/revision_1`,
-      "users/owner_1/captureSessions/capture_1/observations/front-0/frameChunks/0",
-      "users/owner_1/captureSessions/capture_1/observations/front-0",
-      "users/owner_1/captureSessions/capture_1",
-    ];
     const plan = buildShootingProfileDeletePlanV2({
+      uid: "owner_1",
+      profileId: "profile_1",
+      captureSessionId: "profile_1",
+      revisionId: "profile_1",
+      attemptIds: ["front-0", "shooting_side-0"],
       deletionState: "in_progress",
-      headPath,
-      subordinatePaths,
     });
+    expect(plan.deletePaths).toEqual([
+      `${headPath}/revisions/profile_1`,
+      "users/owner_1/captureSessions/profile_1",
+      "users/owner_1/captureSessions/profile_1/observations/front-0",
+      "users/owner_1/captureSessions/profile_1/observations/shooting_side-0",
+      headPath,
+    ]);
+    expect(plan.deletePaths.join("\n")).not.toMatch(/frameChunks|sequenceChunks|phaseSummaries/);
     expect(plan.deletePaths.at(-1)).toBe(headPath);
     expect(plan.transitionRequired).toBe(false);
     expect(plan.deleteBatches.every((batch) => batch.length === 1)).toBe(true);
+    expect(buildShootingProfileDeletePlanV2({
+      uid: "owner_1",
+      profileId: "profile_1",
+      captureSessionId: "profile_1",
+      revisionId: "profile_1",
+      attemptIds: ["front-0", "shooting_side-0"],
+      deletionState: "active",
+    }).transitionRequired).toBe(true);
     expect(() => partitionShootingProfileWritesV2([1], 2)).toThrow(/one|1/);
 
     const ambiguous = new Error("ambiguous head commit");
@@ -908,9 +1327,9 @@ describe("V2 private shooting-profile cloud contract", () => {
   it("selects only strict owner in-progress heads for restart-time deletion resumption", () => {
     const plan = buildShootingProfileWritePlanV2({
       uid: "owner_1",
-      captureSessionId: "capture_1",
+      captureSessionId: "profile_1",
       profileId: "profile_1",
-      revisionId: "revision_1",
+      revisionId: "profile_1",
       input: makeInput("basic_1_plus_1"),
       timestamp: timestampFixture(),
     });

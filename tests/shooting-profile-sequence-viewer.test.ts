@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   advanceRepresentativeFrameIndex,
@@ -20,6 +20,11 @@ import type {
   PersistedJointNameV2,
   RepresentativePose4DV2,
 } from "@/lib/shooting-profile/types";
+
+vi.mock("react-native", () => ({
+  StyleSheet: { create: <T>(styles: T) => styles },
+}));
+vi.mock("react-native-svg", () => ({ default: () => null, Circle: () => null, Line: () => null }));
 
 const PERSISTED_JOINTS = [
   "leftShoulder", "leftElbow", "leftWrist",

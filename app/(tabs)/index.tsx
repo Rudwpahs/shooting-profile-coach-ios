@@ -25,7 +25,7 @@ export default function HomeScreen() {
 
       <View style={styles.heroCard}>
         <View style={styles.heroGrid} />
-        <View style={styles.heroTop}><View style={styles.focusTag}><View style={styles.signalDot} /><Text style={styles.focusTagText}>TODAY'S FOCUS</Text></View><Text style={styles.goalNumber}>01</Text></View>
+        <View style={styles.heroTop}><View style={styles.focusTag}><View style={styles.signalDot} /><Text style={styles.focusTagText}>TODAY&apos;S FOCUS</Text></View><Text style={styles.goalNumber}>01</Text></View>
         <Text style={styles.heroTitle}>{focus.title}</Text>
         <Text style={styles.heroCopy}>{focus.detail}</Text>
         <View style={styles.drillRow}><MaterialIcons name="sports-basketball" size={18} color="#F97316" /><Text style={styles.drillText}>{focus.drill}</Text></View>

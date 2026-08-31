@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   admitCaptureSaveOperationV2,
@@ -31,6 +31,8 @@ import {
   type ShootingHandV2,
 } from "@/lib/shooting-profile/types";
 import type { NormalizedViewAttemptV2 } from "@/lib/shooting-profile/repeated-shot";
+
+vi.mock("@/modules/formpath-pose/src/FormpathPoseModule", () => ({ default: null }));
 
 function landmarkSequence(
   slotId: string,
@@ -335,6 +337,7 @@ describe("captureSessionReducer", () => {
     let resolveSave!: (profileId: string) => void;
     const deferredSave = new Promise<string>((resolve) => { resolveSave = resolve; });
     let serviceInput: SaveShootingProfileInputV2 | null = null;
+    let receivedNormalizedAttempts: SaveShootingProfileInputV2["normalizedAttempts"] | undefined;
     let active: CaptureSaveOperationTokenV2 | null = null;
     const operation = { token: "save_opaque_11", sessionGeneration: 11 };
     active = admitCaptureSaveOperationV2(active, operation);
@@ -346,6 +349,7 @@ describe("captureSessionReducer", () => {
       retained,
       saveProfile: (input) => {
         serviceInput = input;
+        receivedNormalizedAttempts = input.normalizedAttempts;
         return deferredSave;
       },
       isCurrent: () => captureSaveOperationMatches(active, operation, state.sessionGeneration),
@@ -361,7 +365,7 @@ describe("captureSessionReducer", () => {
 
     expect(state.status).toBe("saving");
     expect(serviceInput).toMatchObject({ profile: state.profile, shootingHand: "right", confidence: 0.62 });
-    expect(serviceInput?.normalizedAttempts).toBe(attempts);
+    expect(receivedNormalizedAttempts).toBe(attempts);
     resolveSave("profile_valid_11");
     await expect(completion).resolves.toBe("succeeded");
     expect(state).toMatchObject({ status: "complete", savedProfileId: "profile_valid_11" });

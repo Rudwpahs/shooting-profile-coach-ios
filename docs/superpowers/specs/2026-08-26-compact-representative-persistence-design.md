@@ -38,6 +38,8 @@ users/{uid}/motionProfiles/{profileId}/revisions/{revisionId}
 users/{uid}/motionProfiles/{profileId}
 ```
 
+For this unreleased V2 layout, one generated opaque value is intentionally reused for `captureSessionId`, `profileId`, and `revisionId`. The explicit fields remain in every schema, but the three values and their path segments must be equal. Consequently, a profile has only one valid staging capture path and one valid revision path; create-only Rules cannot admit a second chain that could later be orphaned by publication of the first.
+
 There are no V2 `frameChunks`, `sequenceChunks`, or `phaseSummaries` subcollections in the compact layout.
 
 Every compact document carries:
@@ -151,7 +153,7 @@ All staging writes remain single-mutation commits. A failed or ambiguous write i
 
 Firestore rules establish an immutable evidence chain:
 
-- each observation create validates its exact schema, path identity, byte type, and byte length and requires that no publication head exists;
+- each observation create validates its exact schema, path identity, canonical shared chain ID, byte type, and byte length and requires that no publication head exists;
 - capture-session create reads the exact two or six canonical observation documents and validates their identities against the session;
 - revision create reads the completed capture session and validates the shared IDs, mode, hand, attempt count, and storage layout;
 - publication-head create reads the completed revision, invokes the full packed-revision validator (including the 48,480-byte `Bytes` payload), and validates all immutable publication identities.

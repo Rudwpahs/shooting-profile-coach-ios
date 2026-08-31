@@ -4,9 +4,23 @@
 
 The repository snapshot can validate the TypeScript parser, event lifecycle, Expo module configuration, podspec text, and Swift source contracts on Linux. It cannot compile iOS code, run CocoaPods, inspect a built resource bundle, execute MediaPipe, or run a physical iPhone. Those Apple/device gates remain **PENDING** until the steps below are completed and recorded by an owner.
 
-The representative V2 flags must remain off until this checklist and the Firebase emulator/network gates in `representative-4d-validation-protocol.md` pass. A successful TypeScript/static check is not permission to enable capture in production.
+The three representative V2 flags—`EXPO_PUBLIC_FORMPATH_CAPTURE_V2`, `EXPO_PUBLIC_FORMPATH_PROFILE_V2`, and `EXPO_PUBLIC_FORMPATH_REPRESENTATIVE_4D`—must remain absent or `0` until this checklist and the Firebase Emulator/network gates in `representative-4d-validation-protocol.md` pass. A successful TypeScript/static check is not permission to enable capture in production; activation requires a separate reviewed rollout.
 
 The existing `ios/Resources/pose_landmarker_full.task` binary is intentionally not duplicated here. It is present in the source repository but omitted from this audit snapshot.
+
+## Compact cloud contract checked on device
+
+The device flow records separate, non-simultaneous front and shooting-side takes and normalizes accepted motion to 101 shot phases. Its output is a representative estimate, not synchronized, camera-calibrated, metric, or actual 3D.
+
+- Basic 1+1 persists two observations, one capture session, one revision, and one publication head: **5 documents total**.
+- High 3+3 persists six observations, one capture session, one revision, and one publication head: **9 documents total**.
+- Every observation payload is exactly **14,544 bytes** and the representative revision payload is exactly **48,480 bytes**.
+- The generated `profileId`, `captureSessionId`, and `revisionId` values are identical, so one profile cannot accumulate parallel staged chains.
+- Publication is observation document(s) → capture session → revision → head, with one mutation per request and the head last.
+- Reopen/view reads exactly the head and referenced revision: **2 document reads**.
+- Delete changes the head from `active` to `in_progress`, then deletes revision → capture session → the two or six canonical observations → head, one mutation per request, with interruption-safe resumption.
+
+Device/network evidence must confirm these exact counts and orders. V2 `frameChunks`, `sequenceChunks`, and `phaseSummaries` are not part of this compact layout.
 
 ## Fail-closed model integrity gate
 
@@ -48,8 +62,8 @@ Use a clean checkout and an Xcode/macOS combination supported by the project’s
 - [ ] Build the generated iOS workspace with Xcode for a physical-device destination.
 - [ ] Confirm Swift compilation for the Expo `Record`, async AVFoundation loading, MediaPipe video API, event emission, and cancellation actor.
 - [ ] Inspect the built app and confirm `FormpathPose.bundle/pose_landmarker_full.task` exists and `FormpathPoseResources.poseLandmarkerModelPath()` resolves it.
-- [ ] Measure end-to-end owner-private save time and failure cleanup for Basic and High on normal Wi-Fi and cellular; High currently stages 720 one-mutation requests and is release-blocking if the UX cannot complete reliably.
-- [ ] Verify every V2 environment flag is absent or `0` before the acceptance run, then enable only the specific test build with all three values exactly `1`.
+- [ ] Measure end-to-end owner-private save time and failure cleanup for Basic and High on normal Wi-Fi and cellular; verify the exact five- and nine-document plans, one mutation per request, observation(s) → capture → revision → head publication, and no partially published profile.
+- [ ] Verify every V2 environment flag is absent or `0` in the default and production configurations. Any isolated acceptance build that exercises the gated path requires written test authorization and must not alter the default-off production configuration.
 
 ## End-to-end physical acceptance matrix
 
@@ -64,9 +78,9 @@ Use a clean checkout and an Xcode/macOS combination supported by the project’s
 - [ ] Use retake for every capture slot and confirm stale attempts never enter the representative subset.
 - [ ] Play all 101-phase playback samples, including exact phase 0 and phase 1 endpoints.
 - [ ] Run airplane mode local detection and reconstruction; cloud save must wait/fail clearly without losing the local result.
-- [ ] Force-quit and reopen after save, then strictly reconstruct the same 101-phase owner profile.
+- [ ] Force-quit and reopen after save, then strictly reconstruct the same 101-phase owner profile using exactly the active head and referenced revision (two reads).
 - [ ] Sign in as a second account and verify other-account denial for list, read, delete, and resume paths.
-- [ ] Verify deletion and deletion resumption after interruption, with subordinate documents removed before the head.
+- [ ] Verify deletion and deletion resumption after interruption: head `active` → `in_progress`, then revision → capture session → two or six canonical observations → head, with exactly one mutation per request.
 - [ ] Confirm the missing-model case returns stable `model_missing` and does not expose a local path.
 
 Status in this Linux run: **PENDING — not executed.**
@@ -100,14 +114,18 @@ Status in this Linux run: **PENDING — physical iPhone and device network/log i
 
 ## Linux checks available now
 
+Run these in a clean Ubuntu checkout using Node 22 and pnpm 9.12.0:
+
 ```sh
-./node_modules/.bin/vitest run tests/pose-detection-v2-contract.test.ts tests/pose-detection-contract.test.ts
-./node_modules/.bin/vitest run tests/shooting-profile-*.test.ts
-./node_modules/.bin/tsc --noEmit
-./node_modules/.bin/eslint lib/pose-detection-v2.ts lib/pose-detection.native.ts \
-  modules/formpath-pose/src/FormpathPoseModule.ts tests/pose-detection-v2-contract.test.ts
+pnpm install --frozen-lockfile
+pnpm check
+pnpm lint
+pnpm test:unit
+pnpm exec expo export --platform web --output-dir web-dist
 ```
 
-Passing Linux checks do not satisfy any Apple-toolchain or device gate above.
+Passing these clean Linux checks does not satisfy the separate Firebase Rules compiler/Emulator gate or any Apple-toolchain/device gate above. The live Firebase configuration test is also separate and secret-gated.
+
+Firebase Admin SDK and other server SDK writes bypass Firestore Security Rules. If device QA exercises a trusted backend, access must be constrained with least-privilege IAM and the backend must independently enforce the same exact schema, packed-payload metadata/length, immutable identity, and observation → capture → revision → head proof-chain validation before every write. Emulator results alone do not cover that bypass path.
 
 Task 5B status in this Linux run: **PENDING — Xcode compilation, CocoaPods resolution, physical-iPhone ROI overlays, cancellation timing, and codec matrix were not executed.**

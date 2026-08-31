@@ -7,9 +7,13 @@ service cloud.firestore {
 
     function validOpaqueId(value) {
       return value is string
-        && value.size() >= 1
-        && value.size() <= 128
-        && value.matches('^[A-Za-z0-9_-]+$');
+        && value.matches('^[A-Za-z0-9_-]{1,128}$');
+    }
+
+    function validChainIds(profileId, captureSessionId, revisionId) {
+      return validOpaqueId(profileId)
+        && captureSessionId == profileId
+        && revisionId == profileId;
     }
 
     function validExactKeys(data, keys) {
@@ -31,16 +35,17 @@ service cloud.firestore {
     }
 
     function validCommonV2(data, userId, recordType) {
-      return data.ownerUid == userId
-        && data.schemaVersion == 2
-        && data.boundary == 'representative_phase_fused_4d_estimate_not_actual_3d'
-        && data.timeBasis == 'normalized_shot_phase'
-        && data.dataClass == 'owner_private_derived_biomechanics_v2'
-        && data.retentionClass == 'owner_deleted_v2'
-        && data.consentReference == 'owner_capture_consent_v2'
-        && data.algorithmVersion == 'representative_phase_fusion_v1'
-        && data.modelVersion == 'mediapipe_pose_landmarker_v2'
-        && data.recordType == recordType
+      return [
+          data.ownerUid, data.schemaVersion, data.boundary, data.timeBasis,
+          data.dataClass, data.retentionClass, data.consentReference,
+          data.algorithmVersion, data.modelVersion, data.recordType
+        ] == [
+          userId, 2, 'representative_phase_fused_4d_estimate_not_actual_3d',
+          'normalized_shot_phase', 'owner_private_derived_biomechanics_v2',
+          'owner_deleted_v2', 'owner_capture_consent_v2',
+          'representative_phase_fusion_v1', 'mediapipe_pose_landmarker_v2',
+          recordType
+        ]
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -64,17 +69,12 @@ service cloud.firestore {
     function validAttemptIds(ids, mode) {
       return ids is list
         && ((mode == 'basic_1_plus_1'
-            && ids.size() == 2
-            && ids[0] == 'front-0'
-            && ids[1] == 'shooting_side-0')
+            && ids == ['front-0', 'shooting_side-0'])
           || (mode == 'high_accuracy_3_plus_3'
-            && ids.size() == 6
-            && ids[0] == 'front-0'
-            && ids[1] == 'front-1'
-            && ids[2] == 'front-2'
-            && ids[3] == 'shooting_side-0'
-            && ids[4] == 'shooting_side-1'
-            && ids[5] == 'shooting_side-2'));
+            && ids == [
+              'front-0', 'front-1', 'front-2',
+              'shooting_side-0', 'shooting_side-1', 'shooting_side-2'
+            ]));
     }
 
     function validQuality(quality) {
@@ -88,201 +88,171 @@ service cloud.firestore {
       return validExactKeys(data, [
           'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
           'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
-          'createdAt', 'updatedAt', 'recordType', 'captureSessionId', 'profileId',
-          'revisionId', 'status', 'mode', 'shootingHand', 'attemptIds', 'attemptCount'
+          'createdAt', 'updatedAt', 'recordType', 'storageLayout', 'captureSessionId',
+          'profileId', 'revisionId', 'status', 'mode', 'shootingHand', 'attemptIds',
+          'attemptCount'
         ])
         && validCommonV2(data, userId, 'capture_session_v2')
-        && data.captureSessionId == captureSessionId
-        && validOpaqueId(captureSessionId)
-        && validOpaqueId(data.profileId)
-        && validOpaqueId(data.revisionId)
-        && data.status == 'complete'
-        && validMode(data.mode)
+        && [data.storageLayout, data.captureSessionId, data.status, data.attemptCount]
+          == [
+            'phase_sequence_payloads_v1', captureSessionId, 'complete',
+            data.mode == 'basic_1_plus_1' ? 2 : 6
+        ]
+        && validChainIds(data.profileId, data.captureSessionId, data.revisionId)
         && validShootingHand(data.shootingHand)
-        && data.attemptCount == (data.mode == 'basic_1_plus_1' ? 2 : 6)
         && validAttemptIds(data.attemptIds, data.mode);
     }
 
-    function validObservationHead(data, userId, captureSessionId, attemptId) {
+    function validObservation(data, userId, captureSessionId, attemptId) {
       return validExactKeys(data, [
           'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
           'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
-          'createdAt', 'updatedAt', 'recordType', 'captureSessionId', 'profileId',
-          'revisionId', 'attemptId', 'status', 'view', 'shootingHand', 'takeIndex',
-          'frameCount', 'frameChunkCount'
+          'createdAt', 'updatedAt', 'recordType', 'storageLayout', 'captureSessionId',
+          'profileId', 'revisionId', 'attemptId', 'status', 'view', 'shootingHand',
+          'takeIndex', 'frameCount', 'framePayloadByteLength', 'payloadByteLength',
+          'payloadFormat', 'fixedPointScale', 'packingOrder',
+          'missingVisibilitySentinel', 'payload'
         ])
         && validCommonV2(data, userId, 'normalized_observation_v2')
+        && data.storageLayout == 'phase_sequence_payloads_v1'
         && data.captureSessionId == captureSessionId
         && data.attemptId == attemptId
-        && validOpaqueId(captureSessionId)
-        && validOpaqueId(attemptId)
-        && validOpaqueId(data.profileId)
-        && validOpaqueId(data.revisionId)
+        && validChainIds(data.profileId, data.captureSessionId, data.revisionId)
         && data.status == 'complete'
         && validView(data.view)
         && validShootingHand(data.shootingHand)
         && boundedInteger(data.takeIndex, 0, 2)
         && data.attemptId == data.view + '-' + string(data.takeIndex)
         && data.frameCount == 101
-        && data.frameChunkCount == 101;
-    }
-
-    function validObservationChunk(data, userId, captureSessionId, attemptId, chunkId) {
-      return validExactKeys(data, [
-          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
-          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
-          'createdAt', 'updatedAt', 'recordType', 'captureSessionId', 'profileId',
-          'revisionId', 'attemptId', 'view', 'shootingHand', 'takeIndex',
-          'phaseIndex', 'payloadFormat', 'payloadByteLength', 'fixedPointScale',
-          'packingOrder', 'missingVisibilitySentinel', 'payload'
-        ])
-        && validCommonV2(data, userId, 'observation_frame_chunk_v2')
-        && data.captureSessionId == captureSessionId
-        && data.attemptId == attemptId
-        && validOpaqueId(captureSessionId)
-        && validOpaqueId(attemptId)
-        && validOpaqueId(data.profileId)
-        && validOpaqueId(data.revisionId)
-        && validView(data.view)
-        && validShootingHand(data.shootingHand)
-        && boundedInteger(data.takeIndex, 0, 2)
-        && data.attemptId == data.view + '-' + string(data.takeIndex)
-        && boundedInteger(data.phaseIndex, 0, 100)
-        && chunkId == string(data.phaseIndex)
+        && data.framePayloadByteLength == 144
+        && data.payloadByteLength == 14544
         && data.payloadFormat == 'int32_be_fixed_1e6_v1'
-        && data.payloadByteLength == 144
         && data.fixedPointScale == 1000000
-        && data.packingOrder == 'joint_major_xy_visibility_v1'
+        && data.packingOrder == 'phase_major_joint_major_xy_visibility_v1'
         && data.missingVisibilitySentinel == -2147483648
         && data.payload is bytes
-        && data.payload.size() == 144;
-    }
-
-    function validRepresentativePhaseChunk(data, userId, profileId, revisionId, chunkId) {
-      return validExactKeys(data, [
-          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
-          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
-          'createdAt', 'updatedAt', 'recordType', 'profileId', 'captureSessionId',
-          'revisionId', 'phaseIndex', 'payloadFormat', 'payloadByteLength',
-          'fixedPointScale', 'packingOrder', 'units', 'uncertaintyModel', 'payload'
-        ])
-        && validCommonV2(data, userId, 'representative_phase_chunk_v2')
-        && data.profileId == profileId
-        && data.revisionId == revisionId
-        && validOpaqueId(profileId)
-        && validOpaqueId(revisionId)
-        && validOpaqueId(data.captureSessionId)
-        && boundedInteger(data.phaseIndex, 0, 100)
-        && chunkId == string(data.phaseIndex)
-        && data.payloadFormat == 'int32_be_fixed_1e6_v1'
-        && data.payloadByteLength == 480
-        && data.fixedPointScale == 1000000
-        && data.packingOrder == 'joint_major_xyz_covariance6_cone_v1'
-        && data.units == 'template_shoulder_breadths'
-        && data.uncertaintyModel == 'heuristic_v1'
-        && data.payload is bytes
-        && data.payload.size() == 480;
+        && data.payload.size() == 14544;
     }
 
     function validRevision(data, userId, profileId, revisionId) {
       return validExactKeys(data, [
           'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
           'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
-          'createdAt', 'updatedAt', 'recordType', 'profileId', 'captureSessionId',
-          'revisionId', 'status', 'mode', 'shootingHand', 'confidence', 'attemptCount',
-          'frameCount', 'sequenceChunkCount', 'phaseSummaryCount', 'units', 'quality'
+          'createdAt', 'updatedAt', 'recordType', 'storageLayout', 'profileId',
+          'captureSessionId', 'revisionId', 'status', 'mode', 'shootingHand',
+          'confidence', 'attemptCount', 'frameCount', 'phaseSummaryCount', 'units',
+          'framePayloadByteLength', 'payloadByteLength', 'payloadFormat',
+          'fixedPointScale', 'packingOrder', 'uncertaintyModel', 'payload', 'quality'
         ])
         && validCommonV2(data, userId, 'representative_revision_v2')
-        && data.profileId == profileId
-        && data.revisionId == revisionId
-        && validOpaqueId(profileId)
-        && validOpaqueId(revisionId)
-        && validOpaqueId(data.captureSessionId)
-        && data.status == 'complete'
+        && validChainIds(data.profileId, data.captureSessionId, data.revisionId)
         && validMode(data.mode)
         && validShootingHand(data.shootingHand)
         && boundedNumber(data.confidence, 0, 1)
         && (data.mode != 'basic_1_plus_1' || data.confidence <= 0.65)
-        && data.attemptCount == (data.mode == 'basic_1_plus_1' ? 2 : 6)
-        && data.frameCount == 101
-        && data.sequenceChunkCount == 101
-        && data.phaseSummaryCount == 5
-        && data.units == 'template_shoulder_breadths'
+        && [
+          data.storageLayout, data.profileId, data.revisionId, data.status,
+          data.attemptCount, data.frameCount, data.framePayloadByteLength,
+          data.payloadByteLength, data.phaseSummaryCount, data.units,
+          data.payloadFormat, data.fixedPointScale, data.packingOrder,
+          data.uncertaintyModel
+        ] == [
+          'phase_sequence_payloads_v1', profileId, revisionId, 'complete',
+          data.mode == 'basic_1_plus_1' ? 2 : 6, 101, 480, 48480, 5,
+          'template_shoulder_breadths', 'int32_be_fixed_1e6_v1', 1000000,
+          'phase_major_joint_major_xyz_covariance6_cone_v1', 'heuristic_v1'
+        ]
+        && data.payload is bytes
+        && data.payload.size() == 48480
         && validQuality(data.quality);
-    }
-
-    function validCanonicalPhase(phaseId, phaseIndex) {
-      return (phaseId == 'ready' && phaseIndex == 0)
-        || (phaseId == 'deepestDip' && phaseIndex == 25)
-        || (phaseId == 'rise' && phaseIndex == 50)
-        || (phaseId == 'releaseProxy' && phaseIndex == 75)
-        || (phaseId == 'followThrough' && phaseIndex == 100);
-    }
-
-    function validPhaseSummary(data, userId, profileId, revisionId, phaseId) {
-      return validExactKeys(data, [
-          'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
-          'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
-          'createdAt', 'updatedAt', 'recordType', 'profileId', 'captureSessionId',
-          'revisionId', 'phaseId', 'phaseIndex'
-        ])
-        && validCommonV2(data, userId, 'representative_phase_summary_v2')
-        && data.profileId == profileId
-        && data.revisionId == revisionId
-        && data.phaseId == phaseId
-        && validOpaqueId(profileId)
-        && validOpaqueId(revisionId)
-        && validOpaqueId(data.captureSessionId)
-        && validCanonicalPhase(data.phaseId, data.phaseIndex);
     }
 
     function validMotionProfileHead(data, userId, profileId) {
       return validExactKeys(data, [
           'ownerUid', 'schemaVersion', 'boundary', 'timeBasis', 'dataClass',
           'retentionClass', 'consentReference', 'algorithmVersion', 'modelVersion',
-          'createdAt', 'updatedAt', 'recordType', 'profileId', 'captureSessionId',
-          'revisionId', 'status', 'deletionState', 'mode', 'shootingHand', 'confidence',
-          'attemptIds', 'attemptCount', 'frameCount', 'sequenceChunkCount',
-          'phaseSummaryCount', 'units'
+          'createdAt', 'updatedAt', 'recordType', 'storageLayout', 'profileId',
+          'captureSessionId', 'revisionId', 'status', 'deletionState', 'mode',
+          'shootingHand', 'confidence', 'attemptIds', 'attemptCount', 'frameCount',
+          'representativePayloadByteLength', 'phaseSummaryCount', 'units'
         ])
         && validCommonV2(data, userId, 'motion_profile_v2')
-        && data.profileId == profileId
-        && validOpaqueId(profileId)
-        && validOpaqueId(data.captureSessionId)
-        && validOpaqueId(data.revisionId)
-        && data.status == 'complete'
+        && validChainIds(data.profileId, data.captureSessionId, data.revisionId)
         && (data.deletionState == 'active' || data.deletionState == 'in_progress')
-        && validMode(data.mode)
-        && validShootingHand(data.shootingHand)
-        && boundedNumber(data.confidence, 0, 1)
-        && (data.mode != 'basic_1_plus_1' || data.confidence <= 0.65)
-        && data.attemptCount == (data.mode == 'basic_1_plus_1' ? 2 : 6)
         && validAttemptIds(data.attemptIds, data.mode)
-        && data.frameCount == 101
-        && data.sequenceChunkCount == 101
-        && data.phaseSummaryCount == 5
-        && data.units == 'template_shoulder_breadths';
+        && [data.profileId, data.status] == [profileId, 'complete'];
     }
 
-    function completedRevisionExists(userId, profileId, head) {
+    function noProfileHead(userId, profileId) {
+      let profilePath = /databases/$(database)/documents/users/$(userId)/motionProfiles/$(profileId);
+      return !exists(profilePath);
+    }
+
+    function noCaptureSession(userId, captureSessionId) {
+      let capturePath = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId);
+      return !exists(capturePath);
+    }
+
+    function validStoredObservationProof(userId, captureSessionId, capture, attemptId) {
+      let observationPath = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/$(attemptId);
+      let observation = get(observationPath).data;
+      // The immutable observation-create rule validates the full envelope and
+      // binds its canonical chain IDs, view, takeIndex, and attemptId to this path.
+      return [
+          observation.ownerUid, observation.shootingHand
+        ] == [
+          userId, capture.shootingHand
+        ]
+        && observation.payload is bytes
+        && observation.payload.size() == 14544;
+    }
+
+    function allStoredObservationsValid(userId, captureSessionId, capture) {
+      let front1Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/front-1;
+      let front2Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/front-2;
+      let side1Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/shooting_side-1;
+      let side2Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/shooting_side-2;
+      return validStoredObservationProof(userId, captureSessionId, capture, 'front-0')
+        && validStoredObservationProof(userId, captureSessionId, capture, 'shooting_side-0')
+        && (capture.mode == 'basic_1_plus_1'
+          ? (!exists(front1Path)
+            && !exists(front2Path)
+            && !exists(side1Path)
+            && !exists(side2Path))
+          : (validStoredObservationProof(userId, captureSessionId, capture, 'front-1')
+            && validStoredObservationProof(userId, captureSessionId, capture, 'front-2')
+            && validStoredObservationProof(userId, captureSessionId, capture, 'shooting_side-1')
+            && validStoredObservationProof(userId, captureSessionId, capture, 'shooting_side-2')));
+    }
+
+    function validStoredCapture(userId, revision) {
+      let capturePath = /databases/$(database)/documents/users/$(userId)/captureSessions/$(revision.captureSessionId);
+      let capture = get(capturePath).data;
+      return validCaptureSession(capture, userId, revision.captureSessionId)
+        && [
+          capture.mode, capture.shootingHand,
+          capture.attemptCount, capture.storageLayout
+        ] == [
+          revision.mode, revision.shootingHand,
+          revision.attemptCount, revision.storageLayout
+        ];
+    }
+
+    function validStoredRevision(userId, profileId, head) {
       let revisionPath = /databases/$(database)/documents/users/$(userId)/motionProfiles/$(profileId)/revisions/$(head.revisionId);
       let revision = get(revisionPath).data;
-      return revision.status == 'complete'
-        && revision.ownerUid == userId
-        && revision.profileId == profileId
-        && revision.revisionId == head.revisionId
-        && revision.captureSessionId == head.captureSessionId
-        && revision.mode == head.mode
-        && revision.shootingHand == head.shootingHand
-        && revision.confidence == head.confidence
-        && revision.attemptCount == head.attemptCount
-        && revision.frameCount == head.frameCount
-        && revision.sequenceChunkCount == head.sequenceChunkCount
-        && revision.phaseSummaryCount == head.phaseSummaryCount
-        && revision.units == head.units
-        && revision.timeBasis == head.timeBasis
-        && revision.schemaVersion == head.schemaVersion
-        && revision.algorithmVersion == head.algorithmVersion;
+      return validRevision(revision, userId, profileId, head.revisionId)
+        && [
+          revision.mode, revision.shootingHand,
+          revision.confidence, revision.attemptCount,
+          revision.frameCount, revision.phaseSummaryCount, revision.units,
+          revision.storageLayout, revision.payloadByteLength
+        ] == [
+          head.mode, head.shootingHand, head.confidence,
+          head.attemptCount, head.frameCount,
+          head.phaseSummaryCount, head.units, head.storageLayout,
+          head.representativePayloadByteLength
+        ];
     }
 
     function validDeletionTransition(userId, profileId) {
@@ -295,13 +265,65 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletionState', 'updatedAt']);
     }
 
-    function canDeleteV2(userId, profileId) {
+    function canDeleteObservation(userId, captureSessionId, observation) {
+      let profilePath = /databases/$(database)/documents/users/$(userId)/motionProfiles/$(observation.profileId);
+      let capturePath = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId);
+      return signedInOwner(userId)
+        && validChainIds(
+          observation.profileId, observation.captureSessionId, observation.revisionId
+        )
+        && observation.captureSessionId == captureSessionId
+        && ((!exists(profilePath) && !exists(capturePath))
+          || get(profilePath).data.deletionState == 'in_progress');
+    }
+
+    function canDeleteCapture(userId, captureSessionId, capture) {
+      let profilePath = /databases/$(database)/documents/users/$(userId)/motionProfiles/$(capture.profileId);
+      let revisionPath = /databases/$(database)/documents/users/$(userId)/motionProfiles/$(capture.profileId)/revisions/$(capture.revisionId);
+      return signedInOwner(userId)
+        && capture.captureSessionId == captureSessionId
+        && validChainIds(capture.profileId, capture.captureSessionId, capture.revisionId)
+        && ((!exists(profilePath) && !exists(revisionPath))
+          || get(profilePath).data.deletionState == 'in_progress');
+    }
+
+    function canDeleteRevision(userId, profileId, revisionId) {
       let profilePath = /databases/$(database)/documents/users/$(userId)/motionProfiles/$(profileId);
       return signedInOwner(userId)
-        && validOpaqueId(profileId)
+        && validChainIds(profileId, profileId, revisionId)
         && (!exists(profilePath)
           || get(profilePath).data.deletionState == 'in_progress');
     }
+
+    function allObservationDocumentsAbsent(userId, captureSessionId, mode) {
+      let front0Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/front-0;
+      let front1Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/front-1;
+      let front2Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/front-2;
+      let side0Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/shooting_side-0;
+      let side1Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/shooting_side-1;
+      let side2Path = /databases/$(database)/documents/users/$(userId)/captureSessions/$(captureSessionId)/observations/shooting_side-2;
+      return !exists(front0Path)
+        && !exists(side0Path)
+        && (mode == 'basic_1_plus_1'
+          || (!exists(front1Path)
+            && !exists(front2Path)
+            && !exists(side1Path)
+            && !exists(side2Path)));
+    }
+
+    function canDeleteProfileHead(userId, profileId, head) {
+      let revisionPath = /databases/$(database)/documents/users/$(userId)/motionProfiles/$(profileId)/revisions/$(head.revisionId);
+      let capturePath = /databases/$(database)/documents/users/$(userId)/captureSessions/$(head.captureSessionId);
+      return signedInOwner(userId)
+        && head.deletionState == 'in_progress'
+        && !exists(revisionPath)
+        && !exists(capturePath)
+        && allObservationDocumentsAbsent(userId, head.captureSessionId, head.mode);
+    }
+
+    // Access-call maxima: observation create 2; capture create Basic 7 / High 7;
+    // revision create 2; publication create 1; subordinate delete 3 or fewer;
+    // profile-head delete Basic 4 / High 8.
 
     match /users/{userId} {
       allow read: if signedInOwner(userId);
@@ -340,28 +362,23 @@ service cloud.firestore {
 
       match /captureSessions/{captureSessionId} {
         allow read: if signedInOwner(userId);
-        allow delete: if canDeleteV2(userId, resource.data.profileId);
+        allow delete: if canDeleteCapture(userId, captureSessionId, resource.data);
         allow create: if signedInOwner(userId)
           && validCaptureSession(request.resource.data, userId, captureSessionId)
-          && validCreateTimestamps(request.resource.data);
+          && validCreateTimestamps(request.resource.data)
+          && noProfileHead(userId, request.resource.data.profileId)
+          && allStoredObservationsValid(userId, captureSessionId, request.resource.data);
         allow update: if false;
 
         match /observations/{attemptId} {
           allow read: if signedInOwner(userId);
-          allow delete: if canDeleteV2(userId, resource.data.profileId);
+          allow delete: if canDeleteObservation(userId, captureSessionId, resource.data);
           allow create: if signedInOwner(userId)
-            && validObservationHead(request.resource.data, userId, captureSessionId, attemptId)
-            && validCreateTimestamps(request.resource.data);
+            && validObservation(request.resource.data, userId, captureSessionId, attemptId)
+            && validCreateTimestamps(request.resource.data)
+            && noCaptureSession(userId, captureSessionId)
+            && noProfileHead(userId, request.resource.data.profileId);
           allow update: if false;
-
-          match /frameChunks/{chunkId} {
-            allow read: if signedInOwner(userId);
-            allow delete: if canDeleteV2(userId, resource.data.profileId);
-            allow create: if signedInOwner(userId)
-              && validObservationChunk(request.resource.data, userId, captureSessionId, attemptId, chunkId)
-              && validCreateTimestamps(request.resource.data);
-            allow update: if false;
-          }
         }
       }
 
@@ -371,35 +388,19 @@ service cloud.firestore {
           && validMotionProfileHead(request.resource.data, userId, profileId)
           && request.resource.data.deletionState == 'active'
           && validCreateTimestamps(request.resource.data)
-          && completedRevisionExists(userId, profileId, request.resource.data);
+          && validStoredRevision(userId, profileId, request.resource.data);
         allow update: if validDeletionTransition(userId, profileId);
-        allow delete: if signedInOwner(userId) && resource.data.deletionState == 'in_progress';
+        allow delete: if canDeleteProfileHead(userId, profileId, resource.data);
 
         match /revisions/{revisionId} {
           allow read: if signedInOwner(userId);
-          allow delete: if canDeleteV2(userId, resource.data.profileId);
+          allow delete: if canDeleteRevision(userId, profileId, revisionId);
           allow create: if signedInOwner(userId)
             && validRevision(request.resource.data, userId, profileId, revisionId)
-            && validCreateTimestamps(request.resource.data);
+            && validCreateTimestamps(request.resource.data)
+            && noProfileHead(userId, profileId)
+            && validStoredCapture(userId, request.resource.data);
           allow update: if false;
-
-          match /sequenceChunks/{chunkId} {
-            allow read: if signedInOwner(userId);
-            allow delete: if canDeleteV2(userId, resource.data.profileId);
-            allow create: if signedInOwner(userId)
-              && validRepresentativePhaseChunk(request.resource.data, userId, profileId, revisionId, chunkId)
-              && validCreateTimestamps(request.resource.data);
-            allow update: if false;
-          }
-
-          match /phaseSummaries/{phaseId} {
-            allow read: if signedInOwner(userId);
-            allow delete: if canDeleteV2(userId, resource.data.profileId);
-            allow create: if signedInOwner(userId)
-              && validPhaseSummary(request.resource.data, userId, profileId, revisionId, phaseId)
-              && validCreateTimestamps(request.resource.data);
-            allow update: if false;
-          }
         }
       }
     }

@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   PERSISTED_OBSERVATION_JOINTS_V2,
-  serializeObservationForCloud,
-  validatePersistedObservationFrameV2,
+  reconstructObservationFramesFromSequencePayloadV2,
+  serializeObservationSequenceForCloud,
 } from "@/lib/firebase-shooting-profile-contract";
 import { buildRepresentativeSequence } from "@/lib/shooting-profile/representative-sequence";
 import { syntheticDualViewSession } from "@/tests/fixtures/synthetic-dual-view";
@@ -30,8 +30,18 @@ describe("representative 4D release boundary", () => {
 
   it("persists only the 12 allowlisted source x/y/visibility joints and no raw-media identity", () => {
     const session = syntheticDualViewSession({ mode: "basic_1_plus_1" });
-    const serialized = serializeObservationForCloud(session.frontAttempts[0]);
-    const decoded = validatePersistedObservationFrameV2(serialized.frames[0]);
+    const sourceAttempt = session.frontAttempts[0];
+    const completeSourceAttempt = {
+      ...sourceAttempt,
+      frames: sourceAttempt.frames.map((frame) => ({
+        ...frame,
+        sourceLandmarks: Array.from({ length: 33 }, (_, index) => (
+          frame.sourceLandmarks[index] ?? { x: 0.5, y: 0.5, visibility: 0 }
+        )),
+      })),
+    };
+    const serialized = serializeObservationSequenceForCloud(completeSourceAttempt);
+    const decoded = reconstructObservationFramesFromSequencePayloadV2(serialized)[0];
 
     expect(Object.keys(decoded.joints)).toEqual([...PERSISTED_OBSERVATION_JOINTS_V2]);
     expect(Object.values(decoded.joints).every((joint) => (

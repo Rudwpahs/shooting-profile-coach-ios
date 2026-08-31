@@ -782,10 +782,14 @@ describe("buildRepresentativeSequence", () => {
   });
 
   it("smooths unit bone directions over phase and renormalizes before kinematics", () => {
-    const result = buildRepresentativeSequence(syntheticDualViewSession({
-      mode: "basic_1_plus_1",
-      directionSpikeAtPhaseIndex: 51,
-    }));
+    const session = withProjectedBoneDirections(
+      syntheticDualViewSession({ mode: "basic_1_plus_1" }),
+      51,
+      [{ x: -0.15, y: 0.7, z: Math.sqrt(0.4875) }],
+      11,
+      13,
+    );
+    const result = buildRepresentativeSequence(session);
 
     expect(result.status).toBe("complete");
     if (result.status !== "complete") return;

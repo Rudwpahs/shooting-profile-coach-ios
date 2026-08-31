@@ -6,7 +6,7 @@ const read = (path: string) => readFileSync(path, "utf8");
 describe("private V2 capture persistence wiring", () => {
   it("retains the exact normalized attempts by session generation and saves only the strict envelope", () => {
     const hook = read("hooks/use-shooting-profile-capture.ts");
-    expect(hook).toContain("type SaveShootingProfileInputV2");
+    expect(hook).toMatch(/import type \{\s*SaveShootingProfileInputV2\s*\}/);
     expect(hook).toMatch(/input:\s*SaveShootingProfileInputV2,?\s*\) => Promise<string>/);
     expect(hook).toContain("normalizedAttemptsRef");
     expect(hook).toContain("sessionGeneration");
