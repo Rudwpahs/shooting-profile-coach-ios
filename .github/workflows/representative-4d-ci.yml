@@ -29,6 +29,12 @@ jobs:
           node-version: "22"
           package-manager-cache: false
 
+      - name: Set up Java for the Firestore emulator
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Activate pnpm 9.12.0 with Corepack
         shell: bash
         run: |
@@ -47,6 +53,12 @@ jobs:
 
       - name: Run hermetic unit tests
         run: pnpm test:unit
+
+      # Executes firestore.rules in the Firestore emulator against real requests.
+      # emulators:exec fails the step if the emulator cannot start, so a missing
+      # emulator fails CI instead of silently skipping the authorization suite.
+      - name: Run Firestore Rules tests in the emulator
+        run: pnpm test:rules
 
       - name: Export Expo web bundle
         run: pnpm exec expo export --platform web --output-dir web-dist

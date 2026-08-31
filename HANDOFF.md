@@ -72,6 +72,69 @@ Independent review outcome: the tRPC/SQL bypass, a false V1 empty-state message,
 unanchored rules assertion and an overstated docstring were raised and all fixed. Two
 accepted limitations are recorded under "Follow-up decisions".
 
+### Task 2 - Firestore Rules executed in the emulator (done)
+
+Before this task no test issued a single real Firestore request. `tests/firestore-rules.test.ts`
+and the 886-line `tests/firestore-shooting-profile-rules.test.ts` read `firestore.rules` as text
+and assert on the source string; nothing in the repository imported
+`@firebase/rules-unit-testing`. Those static suites are kept as-is for now and remain a
+follow-up cleanup, exactly as instructed.
+
+Added:
+
+| File | Role |
+| --- | --- |
+| `tests/emulator/firestore-rules.emulator.test.ts` | 31 cases issuing real authorized/unauthorized requests against the emulator with the repository's own `firestore.rules` loaded |
+| `vitest.rules.config.ts` | Emulator-only include, 30s/60s timeouts, single fork and no file parallelism so `clearFirestore()` between tests is not raced |
+| `firebase.json` | `emulators.firestore.port 8080`, `singleProjectMode`, UI disabled |
+
+Changed: `vitest.config.ts` excludes `tests/emulator/**` from the hermetic run;
+`package.json` gains `test:rules`; `.gitignore` gains `.firebase/` and `firebase-export-*/`;
+`.github/workflows/representative-4d-ci.yml` gains a SHA-pinned
+`actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0` step and a
+`pnpm test:rules` step after `pnpm test:unit`.
+
+Pinned dependencies: `@firebase/rules-unit-testing@5.0.2` (peer `firebase ^12.0.0`, matching the
+installed `firebase 12.18.0` / `@firebase/firestore 4.17.1`) and `firebase-tools@14.27.0`.
+`pnpm install --frozen-lockfile` passes with pnpm 9.12.0 and lockfileVersion 9.0.
+
+Project id is the reserved demo id `demo-formpath`, so no external Firebase project or
+credential is involved.
+
+Coverage of the required allow/deny matrix, all as real requests:
+
+- owner publishes a full Basic profile and a full High profile in observation -> capture ->
+  revision -> head order (allow)
+- unauthenticated read and unauthenticated write (deny)
+- second signed-in user reading or writing the owner's documents (deny)
+- document whose `ownerUid` does not match its path (deny)
+- legacy `/poses` create and update (deny); existing legacy document owner read and delete
+  (allow); other user reading it (deny)
+- payload one byte short, declared payload length disagreeing with the contract, extra field,
+  `attemptId` disagreeing with view/takeIndex, wrong attempt path, disagreeing chain ids (deny)
+- capture before observations, High capture with only Basic observations, Basic capture with a
+  stray High observation, wrong attempt count (deny)
+- revision before capture, head before revision, head payload length disagreeing with its
+  revision, Basic confidence above the 0.65 cap (deny)
+- mutation of a published revision or capture (deny)
+- subordinate or head deletion while the head is still `active` (deny); the full resumable
+  head -> in_progress, revision, capture, observations, head deletion sequence (allow);
+  a transition touching more than `deletionState`/`updatedAt` (deny); another user driving the
+  deletion (deny)
+
+Fail-closed evidence, run locally:
+
+- `pnpm exec vitest run --config vitest.rules.config.ts` without `FIRESTORE_EMULATOR_HOST`
+  exits 1 with `Test Files 1 failed`, `31 skipped` and the explicit
+  "FIRESTORE_EMULATOR_HOST is not set" error. It never reports success without an emulator.
+- `pnpm test:rules` exits 1 in the verification environment because the emulator jar download
+  is blocked (`download failed, status 403 ... storage.googleapis.com`).
+
+**Open:** the assertions themselves have never been executed against a running emulator here.
+Their first real execution is the `Representative 4D CI` run on this branch, and that run is the
+only acceptable evidence that the 31 cases pass. Treat a failure there as a defect in this suite
+or in the rules, not as an environment problem.
+
 ## Product boundary that must not change
 
 - Front and shooting-side videos are separate, non-simultaneous shots.

@@ -72,6 +72,8 @@ __pycache__/
 
 # Graphify generated knowledge-graph artifacts
 # Keep generated graph data local unless a specific review explicitly needs an artifact committed.
+.firebase/
+firebase-export-*/
 graphify-out/
 
 # Research skill local cache/scratch. Durable validated findings belong in docs/research/.
