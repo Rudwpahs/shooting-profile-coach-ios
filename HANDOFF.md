@@ -179,6 +179,42 @@ review found were closed by adding cases for `noCaptureSession`, the High deleti
 observation/capture shooting-hand agreement, the `validQuality` gate, the High confidence
 exemption, and the `/users/{userId}` email rule - the emulator suite is now 42 cases.
 
+### Main sync during the branch (done)
+
+`main` moved while this branch was in progress: `dba64d67cc010a62ad37a02079d547021a27f919`
+-> `d521eba0dac5bd6217cd6d6c59fa11487b64ee0f`, adding two commits, both green in CI:
+
+- `6a8ea32` `feat: add cross-view phase alignment gate` - adds `lib/shooting-profile/cross-view-alignment.ts`
+- `d521eba` `feat: add representative profile release gate` - adds `lib/shooting-profile/release-gate.ts`
+
+Each adds exactly one new file and neither touches any of the 26 files this branch changes,
+so `git rebase origin/main` applied all three commits with no conflict. The rebase was
+non-destructive: nothing on `main` was rewritten, no force was used, and the branch is now
+3 ahead / 0 behind `origin/main`. Both upstream files are present in the branch tree.
+
+Full verification was re-run from scratch on the rebased tree, with their two new files
+included:
+
+| Command | Result |
+| --- | --- |
+| `CI=true corepack pnpm install --frozen-lockfile` | passed |
+| `corepack pnpm check` | passed |
+| `corepack pnpm lint` | passed with 0 warnings |
+| `corepack pnpm test:unit` | 411 passed, 1 intentional skip; 28 files passed, 1 skipped |
+| `corepack pnpm test:rules` | exits 1 in the verification environment - emulator jar download blocked (`403 ... storage.googleapis.com`). 42 cases collected, never skipped-and-passed |
+| `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web` | passed, 18 static routes |
+
+Working-tree note: the Windows clone had checked out CRLF while every tracked text blob is
+LF, so the tree was normalised to LF before committing. Blob hashes of all 26 changed files
+match the verified tree exactly and no file mode changed.
+
+### Next single task
+
+Push `fix/p0-privacy-rules-auth` and open a pull request, then read the
+`Representative 4D CI` run for that PR. That run is the first and only execution of the
+42-case emulator suite; do not merge until it is green, and do not count run #45 on `main`
+as rules evidence.
+
 ## Product boundary that must not change
 
 - Front and shooting-side videos are separate, non-simultaneous shots.
