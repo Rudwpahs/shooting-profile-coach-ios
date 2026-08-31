@@ -361,8 +361,8 @@ export default function PersonalProfileTab() {
               {!visibleV1Loading && !visibleV1Error && !poses.length ? (
                 <View style={styles.empty}>
                   <View style={styles.emptyIcon}><MaterialIcons name="add" size={26} color="#F97316" /></View>
-                  <Text accessibilityLiveRegion="polite" style={styles.emptyTitle}>첫 분석을 저장하세요</Text>
-                  <Text style={styles.emptyCopy}>전신 슈팅 영상을 분석하면 보정된 fluid motion을 본인만 볼 수 있는 vault에 저장합니다.</Text>
+                  <Text accessibilityLiveRegion="polite" style={styles.emptyTitle}>저장된 분석이 없습니다</Text>
+                  <Text style={styles.emptyCopy}>기존 분석의 클라우드 저장은 현재 사용할 수 없습니다. 영상 분석은 기기 안에서 계속 실행되며, 이미 저장된 기록은 여기서 확인하고 삭제할 수 있습니다.</Text>
                   <Pressable
                     accessibilityLabel="모션 랩 열기"
                     accessibilityRole="button"

@@ -1,4 +1,5 @@
-import { COOKIE_NAME } from "../shared/const.js";
+import { TRPCError } from "@trpc/server";
+import { COOKIE_NAME, LEGACY_CLOUD_SAVE_DISABLED } from "../shared/const.js";
 import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -27,15 +28,12 @@ export const appRouter = router({
       .input(z.object({ displayName: z.string().trim().min(1).max(80) }))
       .mutation(({ ctx, input }) => db.upsertPersonalProfile(ctx.user.id, input.displayName)),
     poses: protectedProcedure.query(({ ctx }) => db.listPersonalPoseAnalyses(ctx.user.id)),
-    savePose: protectedProcedure
-      .input(z.object({
-        sourceLabel: z.string().trim().min(1).max(160),
-        poseSpace: z.enum(["monocular_relative_pose", "calibrated_multi_view_3d"]),
-        status: z.enum(["candidate", "rejected", "approved_private"]),
-        poseJson: z.string().min(2).max(1_000_000),
-        qualityJson: z.string().min(2).max(100_000),
-      }))
-      .mutation(({ ctx, input }) => db.savePersonalPoseAnalysis({ userId: ctx.user.id, ...input })),
+    // Legacy V1 pose persistence is disabled. This procedure was a second,
+    // unguarded cloud write path for the payload the Firestore rules now
+    // refuse, so it accepts no pose payload and always fails closed.
+    savePose: protectedProcedure.mutation(() => {
+      throw new TRPCError({ code: "FORBIDDEN", message: LEGACY_CLOUD_SAVE_DISABLED });
+    }),
     removePose: protectedProcedure
       .input(z.object({ id: z.number().int().positive() }))
       .mutation(({ ctx, input }) => db.deletePersonalPoseAnalysis(ctx.user.id, input.id)),

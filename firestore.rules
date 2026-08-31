@@ -332,24 +332,15 @@ service cloud.firestore {
         && request.resource.data.email.size() <= 320;
       allow delete: if signedInOwner(userId);
 
+      // Legacy V1 records are read-only history. Their payload predates the V2
+      // minimisation contract and carries face landmarks, native z, per-frame
+      // source timestamps, and a filename-derived label, so new writes are
+      // refused here as well as in the client. An older or modified client
+      // therefore cannot upload around the disabled client boundary. Owner
+      // read and delete stay open so existing data can be inspected and erased.
       match /poses/{poseId} {
         allow read, delete: if signedInOwner(userId);
-        allow create: if signedInOwner(userId)
-          && request.resource.data.sourceLabel is string
-          && request.resource.data.sourceLabel.size() <= 255
-          && request.resource.data.poseJson is string
-          && request.resource.data.poseJson.size() <= 900000
-          && request.resource.data.qualityJson is string
-          && request.resource.data.qualityJson.size() <= 20000
-          && (!('correctedMotionJson' in request.resource.data)
-            || (request.resource.data.correctedMotionJson is string
-              && request.resource.data.correctedMotionJson.size() <= 450000))
-          && (!('correctionJson' in request.resource.data)
-            || (request.resource.data.correctionJson is string
-              && request.resource.data.correctionJson.size() <= 20000))
-          && (('correctedMotionJson' in request.resource.data) == ('correctionJson' in request.resource.data))
-          && request.resource.data.boundary == 'monocular_relative_pose_not_metric_3d';
-        allow update: if false;
+        allow create, update: if false;
       }
 
       match /analyses/{analysisId} {

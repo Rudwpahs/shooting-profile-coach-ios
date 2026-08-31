@@ -534,11 +534,14 @@ function countExpandedAccessCalls(
 const parsedFunctions = parseRuleFunctions(rules);
 
 describe("static compact V2 shooting-profile Firestore Rules contract", () => {
-  it("preserves the existing V1 private poses boundary and operations", () => {
-    expect(rules).toContain("match /poses/{poseId}");
-    expect(rules).toContain("allow read, delete: if signedInOwner(userId)");
-    expect(rules).toContain("boundary == 'monocular_relative_pose_not_metric_3d'");
-    expect(rules).toContain("allow update: if false");
+  it("keeps the V1 private poses path read-and-delete only", () => {
+    const posesBlock = rules.slice(
+      rules.indexOf("match /poses/{poseId}"),
+      rules.indexOf("match /analyses/{analysisId}"),
+    );
+    expect(posesBlock).toContain("allow read, delete: if signedInOwner(userId)");
+    expect(posesBlock).toContain("allow create, update: if false");
+    expect(rules).not.toContain("boundary == 'monocular_relative_pose_not_metric_3d'");
   });
 
   it("keeps only the compact V2 topology and deny-by-default owner paths", () => {

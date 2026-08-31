@@ -7,11 +7,12 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } 
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { saveFirebasePrivatePose } from "@/lib/firebase-private-data";
+import { describeLegacySaveFailure } from "@/lib/legacy-capture-status";
 import { detectPoseFromSelectedVideo } from "@/lib/pose-detection";
 import { personalPoseToCorrectedMotion } from "@/lib/personal-pose";
 import { validateSelectedShootingVideo } from "@/lib/video-intake";
 
-type CaptureState = "idle" | "picking" | "detecting" | "saving" | "complete" | "error";
+type CaptureState = "idle" | "picking" | "detecting" | "saving" | "complete" | "blocked" | "error";
 
 export function PrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | void }) {
   return FORMPATH_FLAGS.captureV2 && FORMPATH_FLAGS.profileV2
@@ -95,27 +96,34 @@ function LegacyPrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | 
         return;
       }
       setState("saving");
-      setDetail("보정된 fluid motion을 개인 보관함에 안전하게 저장하는 중입니다.");
-      await saveFirebasePrivatePose(user, {
-        sourceLabel: asset.fileName?.replace(/\.[^/.]+$/, "") || `개인 슈팅 분석 ${new Date().toLocaleDateString("ko-KR")}`,
+      setDetail("분석 결과를 개인 보관함에 저장할 수 있는지 확인하는 중입니다.");
+      const saveFailure = await saveFirebasePrivatePose(user, {
+        sourceLabel: `개인 슈팅 분석 ${new Date().toLocaleDateString("ko-KR")}`,
         poseJson: JSON.stringify(output.candidate),
         qualityJson: JSON.stringify(output.candidate.quality),
         correctedMotionJson: JSON.stringify(corrected.motion),
         correctionJson: JSON.stringify(corrected.correction),
-      });
+      }).then(() => null).catch((error: unknown) => error);
+      if (saveFailure !== null) {
+        const outcome = describeLegacySaveFailure(saveFailure);
+        setState(outcome.state);
+        setDetail(outcome.detail);
+        return;
+      }
       await onSaved();
       setState("complete");
       setDetail("보정된 fluid motion을 비공개 보관함에 저장했습니다. 원본 영상은 업로드하지 않습니다.");
     } catch (error) {
-      setState("error");
-      setDetail(error instanceof Error ? error.message : "영상 분석을 완료하지 못했습니다. 잠시 후 다시 시도하세요.");
+      const outcome = describeLegacySaveFailure(error);
+      setState(outcome.state);
+      setDetail(outcome.detail);
     }
   };
 
   const working = state === "picking" || state === "detecting" || state === "saving";
   return <View style={styles.card}>
-    <View style={styles.heading}><View><Text style={styles.title}>새 개인 스켈레톤</Text><Text style={styles.subtitle}>통과한 pose는 보수 보정 뒤 fluid motion으로 저장합니다.</Text></View><MaterialIcons name="video-library" size={22} color="#F97316" /></View>
-    <View style={styles.tip}><MaterialIcons name="tips-and-updates" size={17} color="#102C46" /><Text style={styles.tipText}>측면·전신·밝은 조명에서 2–20초 슈팅 영상을 선택하세요. 추출은 iPhone custom development build에서 기기 안에서 실행됩니다.</Text></View>
+    <View style={styles.heading}><View><Text style={styles.title}>새 개인 스켈레톤</Text><Text style={styles.subtitle}>기기 안에서 분석합니다. 기존 분석의 클라우드 저장은 현재 사용할 수 없습니다.</Text></View><MaterialIcons name="video-library" size={22} color="#F97316" /></View>
+    <View style={styles.tip}><MaterialIcons name="tips-and-updates" size={17} color="#102C46" /><Text style={styles.tipText}>측면·전신·밝은 조명에서 2–20초 슈팅 영상을 선택하세요. 추출은 iPhone custom development build에서 기기 안에서 실행됩니다. 결과를 클라우드에 저장하는 기능은 현재 사용할 수 없습니다.</Text></View>
     <Pressable
       accessibilityLabel="기존 단일 시점 슈팅 영상 선택 후 분석"
       accessibilityRole="button"
@@ -129,7 +137,7 @@ function LegacyPrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | 
     >
       {working ? <ActivityIndicator color="#FFFFFF" /> : <MaterialIcons name="add-to-photos" size={18} color="#FFFFFF" />}<Text style={styles.buttonText}>{working ? "분석 중" : "영상 선택 후 분석"}</Text>
     </Pressable>
-    <Text accessibilityLiveRegion={state === "error" ? "assertive" : "polite"} style={[styles.status, state === "error" && styles.error, state === "complete" && styles.complete]}>{detail}</Text>
+    <Text accessibilityLiveRegion={state === "error" || state === "blocked" ? "assertive" : "polite"} style={[styles.status, state === "error" && styles.error, state === "blocked" && styles.blocked, state === "complete" && styles.complete]}>{detail}</Text>
   </View>;
 }
 
@@ -157,5 +165,5 @@ const styles = StyleSheet.create({
   heading: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" }, title: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 20 }, subtitle: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
   tip: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 12 }, tipText: { color: "#102C46", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17 },
   button: { alignItems: "center", backgroundColor: "#9A3412", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, minWidth: 44 }, buttonText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  status: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 10 }, error: { color: "#C24122" }, complete: { color: "#166534" }, disabled: { opacity: 0.62 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
+  status: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 10 }, error: { color: "#C24122" }, blocked: { color: "#8A5A00" }, complete: { color: "#166534" }, disabled: { opacity: 0.62 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });
