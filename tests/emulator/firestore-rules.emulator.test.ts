@@ -206,7 +206,9 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  await testEnv.clearFirestore();
+  // Guarded: when beforeAll throws because no emulator is running, an unguarded
+  // clear would bury that actionable message under one TypeError per test.
+  if (testEnv) await testEnv.clearFirestore();
 });
 
 afterAll(async () => {
@@ -433,6 +435,86 @@ describe("V2 publication order and payload contract", () => {
   });
 });
 
+describe("owner profile document", () => {
+  const profileDocRef = (db: Firestore, uid = OWNER) => doc(db, "users", uid);
+
+  it("allows the owner to upsert a profile carrying a string email", async () => {
+    await assertSucceeds(
+      setDoc(
+        profileDocRef(ownerDb()),
+        { email: "owner@example.com", displayName: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it("denies a profile whose email is null", async () => {
+    await assertFails(
+      setDoc(
+        profileDocRef(ownerDb()),
+        { email: null, displayName: null, updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it("denies a profile whose email exceeds the length bound", async () => {
+    await assertFails(
+      setDoc(
+        profileDocRef(ownerDb()),
+        { email: `${"a".repeat(320)}@example.com`, updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it("denies another user writing the owner's profile document", async () => {
+    await assertFails(
+      setDoc(profileDocRef(intruderDb(), OWNER), { email: "owner@example.com" }, { merge: true }),
+    );
+  });
+
+  it("denies an unauthenticated read of the profile document", async () => {
+    await assertFails(getDoc(profileDocRef(anonymousDb())));
+  });
+});
+
+describe("cross-document consistency", () => {
+  it("denies an observation inserted after its capture session was published", async () => {
+    const db = ownerDb();
+    await publishCapture(db, "basic_1_plus_1");
+    await assertFails(setDoc(observationRef(db, "front-1"), observation("front", 1)));
+  });
+
+  it("denies a capture session whose shooting hand disagrees with a stored observation", async () => {
+    const db = ownerDb();
+    await assertSucceeds(
+      setDoc(observationRef(db, "front-0"), observation("front", 0, { shootingHand: "left" })),
+    );
+    await assertSucceeds(setDoc(observationRef(db, "shooting_side-0"), observation("shooting_side", 0)));
+    await assertFails(setDoc(captureRef(db), captureSession("basic_1_plus_1")));
+  });
+
+  it("denies a revision whose quality gate did not pass", async () => {
+    const db = ownerDb();
+    await publishCapture(db, "basic_1_plus_1");
+    await assertFails(
+      setDoc(
+        revisionRef(db),
+        revision("basic_1_plus_1", { quality: { passed: false, reasons: ["low_visibility"] } }),
+      ),
+    );
+  });
+
+  it("allows a High revision above the Basic-only confidence cap", async () => {
+    const db = ownerDb();
+    await publishCapture(db, "high_accuracy_3_plus_3");
+    await assertSucceeds(
+      setDoc(revisionRef(db), revision("high_accuracy_3_plus_3", { confidence: 0.9 })),
+    );
+  });
+});
+
 describe("owner deletion flow", () => {
   it("denies subordinate deletion while the profile head is still active", async () => {
     const db = ownerDb();
@@ -473,6 +555,35 @@ describe("owner deletion flow", () => {
         confidence: 0.1,
       }),
     );
+  });
+
+  it("allows the High deletion sequence with all six observations", async () => {
+    const db = ownerDb();
+    await publishProfile(db, "high_accuracy_3_plus_3");
+
+    await assertSucceeds(
+      updateDoc(headRef(db), { deletionState: "in_progress", updatedAt: serverTimestamp() }),
+    );
+    await assertSucceeds(deleteDoc(revisionRef(db)));
+    await assertSucceeds(deleteDoc(captureRef(db)));
+    for (const attemptId of HIGH_ATTEMPTS) {
+      await assertSucceeds(deleteDoc(observationRef(db, attemptId)));
+    }
+    await assertSucceeds(deleteDoc(headRef(db)));
+  });
+
+  it("denies deleting the High head while any observation remains", async () => {
+    const db = ownerDb();
+    await publishProfile(db, "high_accuracy_3_plus_3");
+    await assertSucceeds(
+      updateDoc(headRef(db), { deletionState: "in_progress", updatedAt: serverTimestamp() }),
+    );
+    await assertSucceeds(deleteDoc(revisionRef(db)));
+    await assertSucceeds(deleteDoc(captureRef(db)));
+    for (const attemptId of HIGH_ATTEMPTS.slice(0, 5)) {
+      await assertSucceeds(deleteDoc(observationRef(db, attemptId)));
+    }
+    await assertFails(deleteDoc(headRef(db)));
   });
 
   it("denies another user driving the owner's deletion flow", async () => {

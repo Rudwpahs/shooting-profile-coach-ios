@@ -58,7 +58,7 @@ function focusStyle(focused: boolean, dark = false): ViewStyle {
 export default function PersonalProfileTab() {
   const router = useRouter();
   const { profile } = useProfile();
-  const { user, loading, configured, signIn, signUp, logout } = useFirebaseAuth();
+  const { user, loading, configured, profileSync, signIn, signUp, logout } = useFirebaseAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -297,6 +297,16 @@ export default function PersonalProfileTab() {
           <View style={styles.metricRail}><VaultMetric value={goalLabel} label="목표" /><VaultMetric value={user ? String(visibleRecordCount) : "—"} label="저장 모션" /><VaultMetric value={user ? "연결" : "대기"} label="계정" /></View>
         </View>
 
+        {user && profileSync?.status === "failed" ? (
+          <View accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.profileSyncWarning}>
+            <MaterialIcons name="error-outline" size={18} color="#8A5A00" />
+            <View style={styles.profileSyncCopy}>
+              <Text style={styles.profileSyncTitle}>프로필을 완성하지 못했습니다</Text>
+              <Text style={styles.profileSyncDetail}>{profileSync.message}</Text>
+            </View>
+          </View>
+        ) : null}
+
         {FORMPATH_FLAGS.profileV2 ? (
           <>
             <View style={styles.sectionHead}><View><Text style={styles.sectionKicker}>REPRESENTATIVE V2</Text><Text style={styles.sectionTitle}>대표 슛폼</Text></View><Text style={styles.sectionCount}>{user ? `${v2Records.length}개` : "LOCKED"}</Text></View>
@@ -484,6 +494,10 @@ const styles = StyleSheet.create({
   lockChip: { alignItems: "center", backgroundColor: "#102235", borderRadius: 12, flexDirection: "row", gap: 5, paddingHorizontal: 9, paddingVertical: 7 },
   lockChipText: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 1 },
   identityCard: { backgroundColor: "#0B1623", borderRadius: 23, marginTop: 20, overflow: "hidden", padding: 18 },
+  profileSyncWarning: { alignItems: "flex-start", backgroundColor: "#FFF6E5", borderColor: "#E0B84C", borderRadius: 14, borderWidth: 1, flexDirection: "row", gap: 9, marginTop: 12, padding: 13 },
+  profileSyncCopy: { flex: 1 },
+  profileSyncTitle: { color: "#7A4E00", fontFamily: "Barlow-SemiBold", fontSize: 13 },
+  profileSyncDetail: { color: "#7A4E00", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 3 },
   identityTop: { alignItems: "center", flexDirection: "row", gap: 12 },
   avatar: { alignItems: "center", backgroundColor: "#F97316", borderRadius: 17, height: 54, justifyContent: "center", width: 54 },
   avatarText: { color: "#0B1623", fontFamily: "BarlowCondensed-Bold", fontSize: 27 },

@@ -70,10 +70,12 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 
-# Graphify generated knowledge-graph artifacts
-# Keep generated graph data local unless a specific review explicitly needs an artifact committed.
+# Firebase emulator working files. The Rules suite runs against a local emulator.
 .firebase/
 firebase-export-*/
+
+# Graphify generated knowledge-graph artifacts
+# Keep generated graph data local unless a specific review explicitly needs an artifact committed.
 graphify-out/
 
 # Research skill local cache/scratch. Durable validated findings belong in docs/research/.

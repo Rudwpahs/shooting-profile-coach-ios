@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const setDoc = vi.fn(async () => undefined);
 const deleteDoc = vi.fn(async () => undefined);
 const getDocs = vi.fn(async () => ({ docs: [] as { id: string; data: () => unknown }[] }));
+const getDoc = vi.fn(async () => ({ exists: () => false, metadata: { fromCache: false } }));
 const doc = vi.fn(() => ({ id: "generated-id" }));
 const collection = vi.fn(() => ({}));
 const query = vi.fn(() => ({}));
@@ -13,6 +14,7 @@ vi.mock("firebase/firestore", () => ({
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -85,5 +87,6 @@ describe("legacy V1 private pose cloud write boundary", () => {
   it("keeps the owner profile upsert working", async () => {
     await ensureFirebaseProfile(owner);
     expect(setDoc).toHaveBeenCalledTimes(1);
+    expect(getDoc).toHaveBeenCalledTimes(1);
   });
 });

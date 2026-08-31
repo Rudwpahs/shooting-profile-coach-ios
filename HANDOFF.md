@@ -135,6 +135,50 @@ Their first real execution is the `Representative 4D CI` run on this branch, and
 only acceptable evidence that the 31 cases pass. Treat a failure there as a defect in this suite
 or in the rules, not as an environment problem.
 
+### Task 3 - Firebase profile creation repaired (done)
+
+Reproduced defects:
+
+- `signIn` never called `ensureFirebaseProfile`; the only call site was `signUp`
+  (`lib/firebase-auth.tsx`), so an account whose sign-up profile write failed had no
+  `/users/{uid}` document and no way to get one. Retrying sign-up fails with
+  `email-already-in-use`.
+- `signUp` awaited the profile write, so a failed write rejected sign-up *after* the
+  account already existed.
+- `ensureFirebaseProfile` wrote `email: user.email ?? null` while the rule requires
+  `email is string`, so a user without an email produced a guaranteed `permission-denied`
+  round trip.
+- `createdAt: serverTimestamp()` was written on every merge, so a repeated call would have
+  rewritten the original creation time.
+- A session restored from storage never passes through `signIn`, so no repair ran and no
+  failure was visible. Raised by the independent review and fixed in this task.
+
+Fixed files and functions:
+
+| File | Change |
+| --- | --- |
+| `lib/firebase-private-data.ts` | `PROFILE_EMAIL_REQUIRED` / `ProfileEmailRequiredError`; `ensureFirebaseProfile` rejects a missing email before creating any document reference, and stamps `createdAt` only on a server-confirmed miss (a cached or failed existence read is treated as "may exist", so an offline reinstall cannot overwrite it) |
+| `lib/firebase-profile-sync.ts` | New `syncOwnerProfile` returning `{ status: "synced" }` or `{ status: "failed", code, message }` instead of throwing, so an auth success is never rolled back by a profile write failure |
+| `lib/firebase-auth.tsx` | `runProfileSync` runs on sign-in, on sign-up, and on a restored session via `onAuthStateChanged`, keyed by uid; `profileSync` is exposed on the context and cleared on sign-out |
+| `app/(tabs)/profile.tsx` | Signed-in screen renders an alert-role banner when `profileSync.status === "failed"`, so an incomplete session cannot look complete |
+
+`firestore.rules` `/users/{userId}` was **not** loosened; the client now satisfies
+`email is string` instead. The emulator suite exercises that rule directly.
+
+New tests: `tests/firebase-profile-sync.test.ts` (14) - missing-email refusal with no
+Firestore call, `createdAt` stamped only on a server-confirmed miss, no stamp from a cached
+miss, write still happens when the existence read fails, merge semantics preserved, sync
+outcome mapping, and recovery of a profile a failed sign-up never created (second call
+succeeds). Auth wiring is covered by anchor-based structural guards because the repository
+has no React Native render-test setup.
+
+Independent review outcome: a misattached JSDoc block, the restored-session gap, the
+cache-miss `createdAt` hazard, an unreachable Korean failure message, and brittle
+order-dependent structural assertions were raised and fixed. Emulator coverage gaps the same
+review found were closed by adding cases for `noCaptureSession`, the High deletion path,
+observation/capture shooting-hand agreement, the `validQuality` gate, the High confidence
+exemption, and the `/users/{userId}` email rule - the emulator suite is now 42 cases.
+
 ## Product boundary that must not change
 
 - Front and shooting-side videos are separate, non-simultaneous shots.
