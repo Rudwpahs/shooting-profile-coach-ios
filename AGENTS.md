@@ -1,6 +1,6 @@
 # FormPath Agent Rules
 
-This repository uses a three-layer agent workflow. Treat these rules as the default for coding, research, review, and UI work.
+This repository uses a layered agent workflow. Treat these rules as the default for coding, research, review, UI, writing, and generative-art work.
 
 ## Toolchain baseline
 
@@ -10,14 +10,25 @@ This repository uses a three-layer agent workflow. Treat these rules as the defa
 
 These are agent workflow tools, not runtime application dependencies. Do not add them to the production Expo bundle.
 
+## Project-local skills
+
+Project-local Agent Skills live under `.agents/skills/` and are opt-in by task intent.
+
+- **Humanize** — `.agents/skills/humanize/`. Use only when the user explicitly asks to humanize, naturalize, or rewrite prose with the HumanizerAI workflow. It requires network access and a valid `HUMANIZERAI_API_KEY` for API execution. Do not make it a default code, research, or product-copy step.
+- **Algorithmic Art** — `.agents/skills/algorithmic-art/`. Use for generative/code art requests such as p5.js, seeded randomness, flow fields, particle systems, and interactive parameter exploration. Start from its required `templates/viewer.html`; create original work rather than imitating a living artist or copying an existing artwork.
+- **Nothing Design v3.0.0** — `.agents/skills/nothing-design/`. This is an explicit aesthetic mode. Use it only when the user asks for Nothing style, Nothing design, `/nothing-design`, or otherwise directly requests this design system. Generic UI work continues to use UI UX Pro Max as the default quality gate.
+
+When a project-local skill conflicts with repository safety, provenance, accessibility, validation, or explicit acceptance criteria, the repository/project gate wins.
+
 ## Order of operation
 
 1. **Understand the repository.** For broad or unfamiliar work, consult an existing `GRAPH_REPORT.md`/Graphify graph first. If the graph is missing or stale and Graphify is available, refresh it before architectural conclusions.
 2. **Define the change.** Use Superpowers-style problem classification and acceptance criteria. Keep small bounded work lightweight; use a written spec/plan for architectural or multi-step work.
-3. **Design user-facing changes.** Before implementing visible UI, apply UI UX Pro Max guidance for the current React Native stack and derive a coherent page-level design system rather than styling components ad hoc.
-4. **Implement narrowly.** Keep tasks independently reviewable. Do not mix unrelated refactors with product changes.
-5. **Verify.** Run the relevant tests/type checks and inspect mobile behavior. UI changes require accessibility and interaction-state review, not just compilation.
-6. **Review against intent.** Compare the diff with the acceptance criteria/spec, then report evidence, remaining uncertainty, and any gated follow-up.
+3. **Select any explicit task skill.** Load a project-local skill only when its trigger matches the request. Nothing Design does not replace UI UX Pro Max's accessibility/interaction quality checks; it supplies an aesthetic system on top of them.
+4. **Design user-facing changes.** Before implementing visible UI, apply UI UX Pro Max guidance for the current React Native stack and derive a coherent page-level design system rather than styling components ad hoc.
+5. **Implement narrowly.** Keep tasks independently reviewable. Do not mix unrelated refactors with product changes.
+6. **Verify.** Run the relevant tests/type checks and inspect mobile behavior. UI changes require accessibility and interaction-state review, not just compilation.
+7. **Review against intent.** Compare the diff with the acceptance criteria/spec, then report evidence, remaining uncertainty, and any gated follow-up.
 
 ## UI quality gate
 
