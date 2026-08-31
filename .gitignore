@@ -68,3 +68,7 @@ Thumbs.db
 # Python execution cache; scripts are source-controlled, compiled cache is not.
 __pycache__/
 *.py[cod]
+
+# Graphify generated knowledge-graph artifacts
+# Keep generated graph data local unless a specific review explicitly needs an artifact committed.
+graphify-out/
