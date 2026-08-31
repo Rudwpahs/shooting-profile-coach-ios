@@ -576,7 +576,7 @@ export function matchesPlannedStagingWriteV2(observedValue: unknown, plannedValu
 
 export type KnownPathCleanupResultV2 = {
   attemptedPaths: string[];
-  failures: Array<{ path: string; error: unknown }>;
+  failures: { path: string; error: unknown }[];
 };
 
 export async function attemptKnownSinglePathCleanupV2(

@@ -459,11 +459,11 @@ export function selectAgreeingAttemptSubset(
     });
   }
 
-  const candidates: Array<{
+  const candidates: {
     first: NormalizedViewAttemptV2;
     second: NormalizedViewAttemptV2;
     robustScore: number;
-  }> = [];
+  }[] = [];
   for (let firstIndex = 0; firstIndex < validated.attempts.length - 1; firstIndex += 1) {
     for (let secondIndex = firstIndex + 1; secondIndex < validated.attempts.length; secondIndex += 1) {
       const first = validated.attempts[firstIndex];

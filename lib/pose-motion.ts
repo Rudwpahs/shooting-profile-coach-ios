@@ -17,7 +17,7 @@ export type MotionQualityGate = { passed: boolean; failures: string[]; maxJointS
 export type PoseCameraPreset = { id: "front" | "oblique" | "side"; label: "정면" | "사선" | "측면"; yaw: number };
 export type PoseDisplayTransform = { groundY: number; scale: number };
 
-export const BONE_LINKS: Array<[JointName, JointName]> = [
+export const BONE_LINKS: [JointName, JointName][] = [
   ["head", "neck"], ["neck", "spine"], ["spine", "pelvis"],
   ["neck", "leftShoulder"], ["leftShoulder", "leftElbow"], ["leftElbow", "leftWrist"],
   ["neck", "rightShoulder"], ["rightShoulder", "rightElbow"], ["rightElbow", "rightWrist"],
@@ -123,3 +123,4 @@ export function projectPosePoint(point: Vector3, yawDegrees: number, pitchDegree
   const zoom = clampPoseZoom(cameraZoom) / perspective;
   return { x: width / 2 + (rotatedX * 76) * zoom, y: height - 28 - (rotatedY * 82) * zoom, depth };
 }
+

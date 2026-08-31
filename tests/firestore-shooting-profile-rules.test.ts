@@ -362,7 +362,7 @@ function flattenBinaryClauses(expression: RuleExpression, operator: string): Rul
   return [expression];
 }
 
-function collectPairwiseListEqualities(expression: RuleExpression): Array<[string, string]> {
+function collectPairwiseListEqualities(expression: RuleExpression): [string, string][] {
   return flattenBinaryClauses(expression, "&&").flatMap((clause) => {
     if (clause.kind !== "binary" || clause.operator !== "==") return [];
     if (clause.left.kind !== "list" || clause.right.kind !== "list") return [];
@@ -380,7 +380,7 @@ function collectPairwiseListEqualities(expression: RuleExpression): Array<[strin
 
 function expectListEqualityPairs(
   expression: RuleExpression,
-  expectedPairs: ReadonlyArray<readonly [string, string]>,
+  expectedPairs: readonly (readonly [string, string])[],
 ): void {
   const actualPairs = collectPairwiseListEqualities(expression);
   for (const expectedPair of expectedPairs) {

@@ -17,6 +17,7 @@
 | ID / evidence | 상태 | 3D viewer | recommendation |
 | --- | --- | --- | --- |
 | `cmu-shoot-01` | approved `actual_optical_mocap_3d` | 허용 | 허용 |
+| Personal separate-shot V2 | 구현됨, 세 feature flag 기본 OFF, 외부 validation 대기 | 소유자 비공개 대표 4D viewer만 허용 | V2 coaching/reference scoring은 아직 금지 |
 | Curry 정면·사선 single-view records | withdrawn `monocular_relative_pose_not_metric_3d` | 금지 | 금지 |
 | Paul George 제공 clip | gate 미달 audit record | 금지 | 금지 |
 | Shooting Analysis Center Curry series | qualitative mechanism evidence | 금지 | trait 설명만 허용 |

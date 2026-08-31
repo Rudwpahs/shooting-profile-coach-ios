@@ -44,7 +44,7 @@ export type PlayerVideoReviewRecord = {
   withdrawalReason: string;
 };
 
-export type PlayerSourceSkeletonPhase = { label: string; progress: number; sourceFrameIndex: number; sourceTimestampMs: number; landmarks: Array<{ x: number; y: number; visibility: number }> };
+export type PlayerSourceSkeletonPhase = { label: string; progress: number; sourceFrameIndex: number; sourceTimestampMs: number; landmarks: { x: number; y: number; visibility: number }[] };
 export type PlayerSourceSkeletonReview = {
   id: string;
   displayName: string;
@@ -71,7 +71,7 @@ export type PlayerMonocular3DAnalysis = {
   depthTreatment: string;
   motion: PoseMotion;
   autoCorrection?: string;
-  formMatch?: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }>;
+  formMatch?: { id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }[];
 };
 
 const cmuShoot01 = cmuShoot01Raw.motion as PoseMotion;
@@ -124,8 +124,8 @@ export const PLAYER_VIDEO_REVIEW_RECORDS: PlayerVideoReviewRecord[] = [
 
 const currySourceSkeleton = currySourceSkeletonRaw as { id: string; label: string; boundary: "single_view_2d_skeleton_review"; state: "review_only_not_3d"; sourceView: "front" | "side" | "oblique"; phases: PlayerSourceSkeletonPhase[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number } };
 const paulGeorgeSourceSkeleton = paulGeorgeSourceSkeletonRaw as typeof currySourceSkeleton;
-const curryAutoCorrectedAnalysis = curryAutoCorrectedAnalysisRaw as unknown as { state: "image_lifted_pose_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "oblique"; shootingHandEstimate: "left"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; autoCorrection: { meaning: string }; formMatch: { checks: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }> }; motion: PoseMotion };
-const paulGeorgeAutoCorrectedAnalysis = paulGeorgeAutoCorrectedAnalysisRaw as { state: "single_view_auto_corrected_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "side"; shootingHandEstimate: "right"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; autoCorrection: { meaning: string }; formMatch: { checks: Array<{ id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }> }; motion: PoseMotion };
+const curryAutoCorrectedAnalysis = curryAutoCorrectedAnalysisRaw as unknown as { state: "image_lifted_pose_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "oblique"; shootingHandEstimate: "left"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; autoCorrection: { meaning: string }; formMatch: { checks: { id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }[] }; motion: PoseMotion };
+const paulGeorgeAutoCorrectedAnalysis = paulGeorgeAutoCorrectedAnalysisRaw as { state: "single_view_auto_corrected_estimate_not_actual_3d"; boundary: "monocular_relative_pose_not_metric_3d"; sourceView: "side"; shootingHandEstimate: "right"; sourcePhaseTimestampsMs: number[]; inputQuality: { landmarkFrameRatio: number; meanVisibility: number }; autoCorrection: { meaning: string }; formMatch: { checks: { id: string; label: string; status: "match" | "review" | "unavailable"; evidence: string }[] }; motion: PoseMotion };
 
 const sourceViewLabel = (view: "front" | "side" | "oblique"): PlayerSourceSkeletonReview["sourceView"] => {
   if (view === "front") return "정면";
@@ -186,3 +186,4 @@ export const ANONYMOUS_POSE_LIBRARY_STATUS = {
   directSourceSequenceCount: ANONYMOUS_POSE_REFERENCES.length,
   legacyGeneratedReferences: "withdrawn_not_product_eligible",
 } as const;
+

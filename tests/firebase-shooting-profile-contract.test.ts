@@ -258,7 +258,7 @@ describe("V2 private shooting-profile cloud contract", () => {
     })).toThrow(/Uint8Array|payload/i);
     const missingPayloadFormat = { ...sequence } as Record<string, unknown>;
     delete missingPayloadFormat.payloadFormat;
-    const metadataMutations: Array<[string, unknown]> = [
+    const metadataMutations: [string, unknown][] = [
       ["frameCount", { ...sequence, frameCount: 100 }],
       ["framePayloadByteLength", { ...sequence, framePayloadByteLength: 145 }],
       ["payloadByteLength", { ...sequence, payloadByteLength: 144 }],
@@ -354,7 +354,7 @@ describe("V2 private shooting-profile cloud contract", () => {
     }, "high_accuracy_3_plus_3")).toThrow(/Uint8Array|payload/i);
     const missingUncertaintyModel = { ...sequence } as Record<string, unknown>;
     delete missingUncertaintyModel.uncertaintyModel;
-    const metadataMutations: Array<[string, unknown]> = [
+    const metadataMutations: [string, unknown][] = [
       ["frameCount", { ...sequence, frameCount: 100 }],
       ["framePayloadByteLength", { ...sequence, framePayloadByteLength: 479 }],
       ["payloadByteLength", { ...sequence, payloadByteLength: 480 }],
@@ -396,7 +396,7 @@ describe("V2 private shooting-profile cloud contract", () => {
     expect(() => validateShootingProfileWriteV2({ ...input, thumbnail: "base64" })).toThrow(/key/i);
 
     const withZ = makeInput("basic_1_plus_1") as unknown as {
-      normalizedAttempts: Array<{ frames: Array<{ sourceLandmarks: Array<Record<string, unknown>> }> }>;
+      normalizedAttempts: { frames: { sourceLandmarks: Record<string, unknown>[] }[] }[];
     };
     withZ.normalizedAttempts[0].frames[0].sourceLandmarks[11].z = 0.4;
     expect(() => validateShootingProfileWriteV2(withZ)).toThrow(/key/i);

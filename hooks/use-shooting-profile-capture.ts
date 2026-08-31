@@ -294,7 +294,7 @@ export function useShootingProfileCapture(
       // Picker media is not retained here. User-library originals are never deleted,
       // and app-cache deletion is left to the OS unless this app can prove ownership.
     }
-  }, [cancelRequest]);
+  }, []);
 
   const retakeSlot = useCallback((slotId: string) => {
     invalidateDerivedSave();

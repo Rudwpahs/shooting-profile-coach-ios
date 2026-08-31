@@ -231,7 +231,7 @@ export function detectPhaseAnchors(sequence: LandmarkSequenceV2): ShotPhaseAncho
   } catch {
     throw new PhaseDetectionError("invalid_phase_observation");
   }
-  let points: Array<[MotionPoint, MotionPoint, MotionPoint, MotionPoint, MotionPoint]>;
+  let points: [MotionPoint, MotionPoint, MotionPoint, MotionPoint, MotionPoint][];
   try {
     points = sequence.frames.map((frame, index) => (
       trackedPoints(frame, index, sequence.shootingHand, width, height)

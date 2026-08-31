@@ -6,6 +6,7 @@ FormPath Basketball은 iPhone 우선 농구 슈팅 분석 prototype입니다. �
 
 | 목적 | 문서 |
 | --- | --- |
+| 현재 구현 상태·수정 내역·다음 계획 | [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) |
 | 현재 product·data boundary | [`docs/PROJECT_MAP.md`](docs/PROJECT_MAP.md) |
 | 단계별 개발·test·checkpoint 규칙 | [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md) |
 | 3D source admission과 capture 절차 | [`docs/authorized-multiview-capture-kit.md`](docs/authorized-multiview-capture-kit.md) |
@@ -57,8 +58,10 @@ Paul George remains a player-video-derived, auto-corrected analysis motion. It c
 ## Development commands
 
 ```bash
-pnpm test
+pnpm install --frozen-lockfile
 pnpm check
+pnpm lint
+pnpm test:unit
 pnpm exec expo export --platform web --output-dir web-dist
 ```
 

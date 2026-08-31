@@ -6,7 +6,7 @@ import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, getPoseDisplayTransfor
 
 type Camera = { yaw: number; zoom: number };
 
-function touchDistance(touches: ReadonlyArray<{ pageX: number; pageY: number }>) {
+function touchDistance(touches: readonly { pageX: number; pageY: number }[]) {
   if (touches.length < 2) return 0;
   return Math.hypot(touches[0].pageX - touches[1].pageX, touches[0].pageY - touches[1].pageY);
 }
@@ -145,3 +145,4 @@ const styles = StyleSheet.create({
   timeline: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 2 }, marker: { alignItems: "center", flex: 1, minWidth: 0 }, markerLine: { backgroundColor: "#D9E0E4", height: 1, left: 0, position: "absolute", right: 0, top: 5 }, markerDot: { backgroundColor: "#D9E0E4", borderRadius: 99, height: 10, width: 10 }, markerDotActive: { backgroundColor: "#F97316", height: 12, width: 12 }, markerLabel: { color: "#7A8997", fontFamily: "Barlow-SemiBold", fontSize: 9, marginTop: 4 }, markerLabelActive: { color: "#102235", fontFamily: "BarlowCondensed-Bold" }, markerSource: { color: "#9AA8B5", fontFamily: "Barlow", fontSize: 7, marginTop: 1 },
   playButton: { alignItems: "center", backgroundColor: "#F97316", borderRadius: 12, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 40 }, playIcon: { color: "#0B1623", fontSize: 14, fontWeight: "900" }, playText: { color: "#0B1623", fontFamily: "BarlowCondensed-Bold", fontSize: 13, letterSpacing: 0.75 }, boundary: { color: "#667789", fontFamily: "Barlow", fontSize: 10, lineHeight: 15 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });
+

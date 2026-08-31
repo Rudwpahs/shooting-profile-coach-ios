@@ -4,7 +4,7 @@ import Svg, { Circle, Line } from "react-native-svg";
 
 import type { PlayerSourceSkeletonReview } from "@/lib/anonymous-pose-library";
 
-const EDGES: Array<[number, number]> = [
+const EDGES: [number, number][] = [
   [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28],
 ];
 
@@ -64,3 +64,4 @@ const styles = StyleSheet.create({
   boundaryCopy: { color: "#7C5432", fontFamily: "Barlow", fontSize: 11, lineHeight: 15, marginTop: 2 },
   pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });
+

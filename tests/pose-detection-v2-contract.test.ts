@@ -380,7 +380,7 @@ describe("parseLandmarkSequenceV2 raw-to-public boundary", () => {
   it("uses actual detected times when dense requested VFR samples hide a large release gap", () => {
     const sequence = structuredClone(validSequence());
     const requested = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270];
-    const detectedActual: ReadonlyArray<number | null> = [0, 40, 80, 120, 160, null, null, 400, 440, 480];
+    const detectedActual: readonly (number | null)[] = [0, 40, 80, 120, 160, null, null, 400, 440, 480];
     sequence.metadata.attempts = requested.map((requestedTimestampMs, index) => ({
       requestedTimestampMs,
       decodedTimestampMs: detectedActual[index] ?? requestedTimestampMs,

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">FormPath Basketball mark</title>
+  <desc id="description">A basketball crossing an upward motion path.</desc>
+  <path
+    d="M164 728C268 728 316 610 369 492C424 369 493 268 620 235C702 214 784 224 860 257"
+    fill="none"
+    stroke="#1D9B77"
+    stroke-linecap="round"
+    stroke-width="72"
+  />
+  <circle cx="592" cy="504" r="232" fill="#F97316" stroke="#F5F1E8" stroke-width="28" />
+  <path d="M381 411C505 466 655 463 797 391" fill="none" stroke="#0B1623" stroke-width="28" />
+  <path d="M391 615C508 544 673 543 791 613" fill="none" stroke="#0B1623" stroke-width="28" />
+  <path d="M561 277C493 405 493 604 558 728" fill="none" stroke="#0B1623" stroke-width="28" />
+  <path d="M630 278C701 405 702 601 635 727" fill="none" stroke="#0B1623" stroke-width="28" />
+  <circle cx="164" cy="728" r="48" fill="#F5F1E8" stroke="#0B1623" stroke-width="20" />
+  <circle cx="860" cy="257" r="48" fill="#F5F1E8" stroke="#0B1623" stroke-width="20" />
+</svg>

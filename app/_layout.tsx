@@ -1,4 +1,9 @@
 import "@/global.css";
+import { Barlow_400Regular, Barlow_600SemiBold } from "@expo-google-fonts/barlow";
+import {
+  BarlowCondensed_600SemiBold,
+  BarlowCondensed_700Bold,
+} from "@expo-google-fonts/barlow-condensed";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -30,10 +35,10 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Barlow: require("@/assets/fonts/Barlow-Regular.ttf"),
-    "Barlow-SemiBold": require("@/assets/fonts/Barlow-SemiBold.ttf"),
-    "BarlowCondensed-SemiBold": require("@/assets/fonts/BarlowCondensed-SemiBold.ttf"),
-    "BarlowCondensed-Bold": require("@/assets/fonts/BarlowCondensed-Bold.ttf"),
+    Barlow: Barlow_400Regular,
+    "Barlow-SemiBold": Barlow_600SemiBold,
+    "BarlowCondensed-SemiBold": BarlowCondensed_600SemiBold,
+    "BarlowCondensed-Bold": BarlowCondensed_700Bold,
   });
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;

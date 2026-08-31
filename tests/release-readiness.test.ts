@@ -20,6 +20,11 @@ describe("release readiness configuration", () => {
     expect(tabBar).not.toContain("withSpring");
   });
 
+  it("does not print theme state while rendering application routes", () => {
+    const themeProvider = readFileSync("lib/theme-provider.tsx", "utf8");
+    expect(themeProvider).not.toMatch(/console\.log\s*\(/);
+  });
+
   it("keeps representative capture behind three explicit opt-in flags", () => {
     const flags = readFileSync("lib/feature-flags.ts", "utf8");
     const captureRoute = readFileSync("app/private-capture.tsx", "utf8");

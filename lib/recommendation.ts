@@ -69,18 +69,19 @@ export function recommendShotForms(profile: UserShotProfile): RecommendedShotFor
   const target = GOAL_TARGETS[profile.goal];
   const weights = GOAL_WEIGHTS[profile.goal];
   return ANONYMOUS_POSE_REFERENCES.map((reference) => {
-    const weightedDistance = (Object.keys(weights) as Array<keyof PoseTraits>).reduce((total, trait) => total + Math.abs(reference.traits[trait] - target[trait]) * weights[trait], 0);
+    const weightedDistance = (Object.keys(weights) as (keyof PoseTraits)[]).reduce((total, trait) => total + Math.abs(reference.traits[trait] - target[trait]) * weights[trait], 0);
     return { ...reference, matchScore: Math.max(1, Math.round(100 - weightedDistance)), appliedFeature: GOAL_APPLIED_FEATURE[profile.goal] };
   }).sort((left, right) => right.matchScore - left.matchScore);
 }
 
-export const TRAINING_GOALS: Array<{ id: TrainingGoal; title: string; description: string }> = [
+export const TRAINING_GOALS: { id: TrainingGoal; title: string; description: string }[] = [
   { id: "consistency", title: "일관성", description: "매 슛의 준비와 릴리스 리듬을 고정" },
   { id: "range", title: "거리", description: "하체에서 시작하는 힘의 연결" },
   { id: "release", title: "릴리스", description: "안정적이고 편안한 공의 출발점" },
   { id: "rhythm", title: "리듬", description: "캐치부터 팔로우스루까지의 흐름" },
 ];
 
-export const SKILL_LEVELS: Array<{ id: SkillLevel; title: string }> = [
+export const SKILL_LEVELS: { id: SkillLevel; title: string }[] = [
   { id: "beginner", title: "기초" }, { id: "developing", title: "성장 중" }, { id: "advanced", title: "경기 준비" },
 ];
+
