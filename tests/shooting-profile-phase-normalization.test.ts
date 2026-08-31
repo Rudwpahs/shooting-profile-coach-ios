@@ -17,6 +17,21 @@ import type {
 const PHASES = [0, 0.25, 0.5, 0.75, 1] as const;
 const ANCHOR_IDS = ["ready", "deepestDip", "rise", "releaseProxy", "followThrough"] as const;
 
+function exactSyntheticNativeEvidence(timestamps: readonly number[]) {
+  const releaseIndex = Math.floor((timestamps.length - 1) * 0.75);
+  return {
+    locatorAttemptedFrames: timestamps.length,
+    locatorDecodedFrames: timestamps.length,
+    locatorDetectedFrames: timestamps.length,
+    releaseProxyTimestampMs: timestamps[Math.max(0, releaseIndex)] ?? 0,
+    attempts: timestamps.map((requestedTimestampMs) => ({
+      requestedTimestampMs,
+      decodedTimestampMs: requestedTimestampMs,
+      detectedTimestampMs: requestedTimestampMs,
+    })),
+  };
+}
+
 function landmarksForFrame(frameIndex: number, shootingHand: ShootingHandV2): SourceLandmarkV2[] {
   const landmarks: SourceLandmarkV2[] = Array.from(
     { length: 33 },
@@ -58,6 +73,7 @@ function syntheticAttempt(
       displayHeight: 1080,
       nominalFrameRate: 30,
       frameRateMode: "variable",
+      ...exactSyntheticNativeEvidence(timestamps),
       attemptedFrames: timestamps.length,
       decodedFrames: timestamps.length,
       detectedFrames: timestamps.length,
@@ -143,6 +159,7 @@ function motionAttempt(
       displayHeight: 1080,
       nominalFrameRate: 30,
       frameRateMode: "variable",
+      ...exactSyntheticNativeEvidence(timestamps),
       attemptedFrames: timestamps.length,
       decodedFrames: timestamps.length,
       detectedFrames: timestamps.length,
@@ -169,20 +186,29 @@ function cadenceTimestamps(fps: 15 | 30, endTimestampMs = 1_600): number[] {
 
 function appendDuplicateFrame(attempt: LandmarkSequenceV2, elapsedMs: number): LandmarkSequenceV2 {
   const last = attempt.frames.at(-1) as LandmarkSequenceV2["frames"][number];
+  const duplicateTimestampMs = last.timestampMs + elapsedMs;
   return {
     ...attempt,
     metadata: {
       ...attempt.metadata,
-      durationMs: last.timestampMs + elapsedMs,
+      durationMs: duplicateTimestampMs,
       attemptedFrames: attempt.metadata.attemptedFrames + 1,
       decodedFrames: attempt.metadata.decodedFrames + 1,
       detectedFrames: attempt.metadata.detectedFrames + 1,
+      attempts: [
+        ...attempt.metadata.attempts,
+        {
+          requestedTimestampMs: duplicateTimestampMs,
+          decodedTimestampMs: duplicateTimestampMs,
+          detectedTimestampMs: duplicateTimestampMs,
+        },
+      ],
     },
     frames: [
       ...attempt.frames,
       {
         ...last,
-        timestampMs: last.timestampMs + elapsedMs,
+        timestampMs: duplicateTimestampMs,
         sourceLandmarks: last.sourceLandmarks.map((point) => ({ ...point })),
       },
     ],

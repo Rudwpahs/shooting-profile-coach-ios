@@ -6,13 +6,14 @@ Last updated: 2026-08-31 UTC
 
 - Repository: `Rudwpahs/shooting-profile-coach-ios`
 - Integration target: `main`
-- Latest remote parent incorporated before this handoff-only commit: `e7c5921d0bdd5e2f1481a8ee83d22f8846d25ee0`
-- Intended handoff commit message: `docs: update repository handoff after main sync`
+- Remote `main` inspected for this repair: `208e7e63073abd5f56862b08c02ad0277df134cc` (`Add verifier ensemble and novelty research routing`).
+- `Representative 4D CI` run `33391227022` / run number 42 failed only at `Typecheck`; lint, unit tests, and web export were skipped by the workflow after that failure.
+- Root cause: `LandmarkSequenceV2.metadata` gained mandatory native evidence fields, but the two synthetic metadata fixtures in `tests/shooting-profile-phase-normalization.test.ts` still used the older shape.
+- Repair: mirror the complete native evidence structure in both synthetic fixtures and append matching attempt evidence when a duplicate frame is added. No production runtime or representative-4D algorithm behavior is changed.
 - Integration policy: update `main` only with `force: false`; re-read remote `main` immediately before and after the update.
-- Primary implementation commit is now on `main`: `4c700da9fd30f4484b718225119227a6c5eba674`.
-- The non-force `main` update succeeded, and an immediate `main` re-read returned the same SHA with an identical comparison.
-- Remote `main` subsequently advanced to `e7c5921...` with `docs: add meta-study on deep research methodology`; it is a direct child of the primary implementation commit, so the implementation remains fully included. This handoff update is based on that newer tree.
-- Immediate combined-status and workflow-run queries returned empty arrays. Local verification passed, but GitHub Actions success is not claimed until GitHub reports a run.
+- Primary implementation commit `4c700da9fd30f4484b718225119227a6c5eba674` and handoff commit `a84ea9f65f333d61000fed13f10cccdb73071204` remain ancestors of current `main`.
+- The eight commits from `a84ea9f...` through `208e7e6...` changed only agent/research documentation. This repair is based directly on the `208e7e6...` tree so all newer work remains preserved.
+- GitHub Actions success is not claimed until the repair's push run completes successfully.
 - Earlier review candidates remain intentionally unreferenced. In particular, never move a branch to incomplete candidate `8f895ecff260f49c9a510fd3ed91a3d05b819418`.
 
 ## Completed in this checkpoint
@@ -48,6 +49,15 @@ Run after the final code and test changes:
 | `corepack pnpm test:unit` | 381 passed, 1 intentional auth skip; 24 files passed, 1 skipped |
 | `corepack pnpm exec expo export --platform web --output-dir web-dist` | passed; 18 static routes exported |
 
+CI-repair verification on the `208e7e6...` runtime tree plus the fixture patch:
+
+| Command | Result |
+| --- | --- |
+| `corepack pnpm check` | passed; the two `TS2739` errors from run 42 are absent |
+| `corepack pnpm lint` | passed with 0 warnings/errors |
+| `corepack pnpm test:unit` | 381 passed, 1 intentional auth skip; 24 files passed, 1 skipped |
+| `corepack pnpm exec expo export --platform web --output-dir <temporary-directory>` | passed; 18 static routes exported |
+
 The Vitest CJS API deprecation notice and Expo worker `NO_COLOR` notice are upstream non-failing notices. They are not product test failures.
 
 ## Product boundary that must not change
@@ -62,7 +72,7 @@ The Vitest CJS API deprecation notice and Expo worker `NO_COLOR` notice are upst
 
 ## Immediate continuation steps
 
-1. Recheck the `Representative 4D CI` push run when GitHub exposes it. Do not substitute the empty immediate query for a passing run.
+1. Confirm the new `Representative 4D CI` push run for this repair reaches `success`; local verification does not substitute for the GitHub result.
 2. Start P0 release-gate work in this order: Firebase Emulator → clean macOS/Xcode → model checksum/license/bundle → physical-iPhone smoke matrix.
 3. Keep the three V2 flags off until the external and scientific gates below are recorded and reviewed.
 4. Update this file after every meaningful checkpoint so a new session can continue from the exact current state.
