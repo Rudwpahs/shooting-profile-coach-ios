@@ -7,7 +7,7 @@ This matrix describes the fixed model set during the non-expansion closeout. It 
 | `cmu-shoot-01` | Licensed CMU optical-marker motion; validated 16-joint, five-phase segment | `actual_optical_mocap_3d` | The sole approved reference motion and eligible recommendation source | It does not represent a named player. |
 | `curry-front-side-auto-corrected-analysis-01` | Retained front/side semantic phase evidence, pelvis-root and median bone-length display correction | `monocular_relative_pose_not_metric_3d` | Prototype Motion Studio analysis only | No metric depth, actual 3D claim, body measurement, or recommendation. |
 | `paul-george-side-auto-corrected-analysis-01` | Retained 31-frame single-side evidence, right-hand audit, anchors 0·97·355·645·806ms | `monocular_relative_pose_not_metric_3d` | Prototype Motion Studio analysis only | No metric depth, actual 3D claim, body measurement, or recommendation. |
-| User private upload | On-device landmark candidate passing frame/visibility gates, followed by conservative display correction | `monocular_relative_pose_not_metric_3d` | Owner-only fluid analysis record | No recommendation or actual 3D use; raw video is not saved. |
+| User private upload (legacy V1) | On-device landmark candidate passing frame/visibility gates, followed by conservative display correction | `monocular_relative_pose_not_metric_3d` | On-device analysis only. Cloud persistence is disabled at the Firestore and SQL boundaries and refused by Rules; existing records stay owner readable and deletable | No recommendation, no actual 3D use, no new cloud write; raw video is not saved. |
 
 ## Admission enforcement
 

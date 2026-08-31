@@ -10,13 +10,22 @@ describe("Firestore private pose rules", () => {
     expect(rules).not.toContain("allow read, write: if true");
   });
 
-  it("accepts only bounded private relative-pose documents", () => {
-    expect(rules).toContain("match /poses/{poseId}");
-    expect(rules).toContain("request.resource.data.poseJson.size() <= 900000");
-    expect(rules).toContain("request.resource.data.qualityJson.size() <= 20000");
-    expect(rules).toContain("request.resource.data.correctedMotionJson.size() <= 450000");
-    expect(rules).toContain("request.resource.data.correctionJson.size() <= 20000");
-    expect(rules).toContain("monocular_relative_pose_not_metric_3d");
-    expect(rules).toContain("allow update: if false");
+  const posesBlock = rules.slice(
+    rules.indexOf("match /poses/{poseId}"),
+    rules.indexOf("match /analyses/{analysisId}"),
+  );
+
+  it("refuses every new legacy private relative-pose write", () => {
+    expect(posesBlock).toContain("match /poses/{poseId}");
+    expect(posesBlock).toContain("allow create, update: if false");
+    expect(posesBlock).not.toContain("allow create: if signedInOwner");
+    expect(rules).not.toContain("request.resource.data.poseJson");
+    expect(rules).not.toContain("request.resource.data.qualityJson");
+    expect(rules).not.toContain("request.resource.data.correctedMotionJson");
+    expect(rules).not.toContain("request.resource.data.correctionJson");
+  });
+
+  it("keeps existing legacy documents readable and deletable by their owner", () => {
+    expect(posesBlock).toContain("allow read, delete: if signedInOwner(userId)");
   });
 });

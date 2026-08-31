@@ -2,69 +2,218 @@
 
 Last updated: 2026-08-31 UTC
 
-## Current checkpoint
+## Active work: P0 privacy / rules / auth
 
-- Repository: `Rudwpahs/shooting-profile-coach-ios`
-- Integration target: `main`
-- Verified runtime repair on `main`: `0ec9094130cb48c1f3e921ac27d7c9ad07299ca6` (`fix: make clean CI web export deterministic`).
-- `Representative 4D CI` run `33391227022` / run number 42 failed only at `Typecheck`; lint, unit tests, and web export were skipped by the workflow after that failure.
-- Typecheck root cause: `LandmarkSequenceV2.metadata` gained mandatory native evidence fields, but the two synthetic metadata fixtures in `tests/shooting-profile-phase-normalization.test.ts` still used the older shape.
-- Typecheck repair: mirror the complete native evidence structure in both synthetic fixtures and append matching attempt evidence when a duplicate frame is added. No production runtime or representative-4D algorithm behavior is changed.
-- Run `33393395643` / run number 43 then passed Typecheck, lint, and all 381 hermetic unit tests, but failed during Expo web export because clean CI had no pre-existing `react-native-css-interop/.cache/web.css` for Metro to hash.
-- Export root cause: `forceWriteFileSystem: true` disabled React Native CSS Interop's virtual-module/Metro SHA-1 patch while creating `web.css` only after Metro's initial clean file crawl.
-- Export repair: keep the existing filesystem-write workaround for local iOS development, but enable NativeWind's virtual-module patch when `CI=true`.
-- `Representative 4D CI` run `33394217951` / run number 44 completed with `success`: frozen install, Typecheck, lint, all 381 hermetic unit tests, and Expo web export passed on the clean GitHub runner.
-- Integration policy: update `main` only with `force: false`; re-read remote `main` immediately before and after the update.
-- Primary implementation commit `4c700da9fd30f4484b718225119227a6c5eba674` and handoff commit `a84ea9f65f333d61000fed13f10cccdb73071204` remain ancestors of current `main`.
-- The eight commits from `a84ea9f...` through `208e7e6...` changed only agent/research documentation. This repair is based directly on the `208e7e6...` tree so all newer work remains preserved.
-- The successful run 44 is the remote verification record for both repair commits.
-- Earlier review candidates remain intentionally unreferenced. In particular, never move a branch to incomplete candidate `8f895ecff260f49c9a510fd3ed91a3d05b819418`.
+- Branch: `fix/p0-privacy-rules-auth`
+- Remote `main` SHA at start: `dba64d67cc010a62ad37a02079d547021a27f919`
+- Remote `main` unchanged during this work; no force push, no direct push to `main`.
+- Verification environment note: the Firestore Emulator jar cannot be downloaded in the
+  environment used for local verification (`storage.googleapis.com` is blocked by the
+  network policy: `download failed, status 403: request blocked`). The emulator suite is
+  therefore implemented and wired into CI, and its evidence must come from a GitHub
+  Actions run on this branch. Run #45 on `main` predates the suite and is **not** rules
+  evidence.
+- Line endings: the Windows clone checked out CRLF while every tracked text blob is LF
+  (`git ls-files --eol`: 424 `i/lf`, 38 binary, 2 empty). Local verification normalises the
+  working tree to LF so it matches the CI checkout; without this,
+  `tests/pose-detection-v2-contract.test.ts` fails on a `\n` regex against `pnpm-lock.yaml`.
 
-## Completed in this checkpoint
+### Task 1 — legacy V1 cloud writes disabled (done)
 
-- Reproduced the original Expo failure. A clean pnpm 9.12.0 frozen install proved `react-native-css-interop` was already supplied transitively by NativeWind; the original resolution error came from an incomplete local `node_modules`, so no redundant direct dependency was added.
-- Replaced direct tracked Barlow TTF usage with exact `@expo-google-fonts/barlow@0.4.1` and `@expo-google-fonts/barlow-condensed@0.4.1` dependencies.
-- Replaced the six platform images with FormPath SVG-derived assets at the configured exact sizes and added `tests/app-assets.test.ts`.
-- Removed obsolete tracked local Barlow TTF files in the candidate Git tree.
-- Changed `pnpm lint` to deterministic `eslint . --max-warnings 0`, ignored generated output, moved `onlyBuiltDependencies` to `pnpm-workspace.yaml`, converted ESLint config to CommonJS, and resolved all 31 original lint warnings.
-- Removed the route-render theme debug log and added a release-readiness regression assertion.
-- Removed previously tracked `web-dist/` from the candidate Git tree and added `/web-dist/` to `.gitignore` while preserving the newer remote `graphify-out/` rule.
-- Added `docs/IMPLEMENTATION_STATUS.md`, updated `README.md` and `docs/PROJECT_MAP.md`, and saved the execution plan at `docs/superpowers/plans/2026-08-31-repository-sync-and-error-fixes.md`.
-- Preserved the newer remote toolchain/agent/research-skill changes through `1e781eb...`, plus the later meta-study commit `e7c5921...`. Only `.gitignore` overlapped during implementation; `/web-dist/`, `graphify-out/`, and `.research/` are all retained.
+Reproduction of the defect, before the change:
 
-## Independent review
+- `app/(tabs)/profile.tsx` renders `PrivatePoseCapture` unconditionally; with all three V2
+  flags off (the default, `lib/feature-flags.ts`) the rendered branch is
+  `LegacyPrivatePoseCapture`.
+- `components/private-pose-capture.tsx` then called `saveFirebasePrivatePose` with
+  `poseJson: JSON.stringify(output.candidate)` — every sampled frame with all 33 MediaPipe
+  landmarks (face indices 0-10 included), native `z`, and per-frame `timestampMs` — plus
+  `sourceLabel` derived from `asset.fileName`.
+- `firestore.rules` treated `poseJson` as an opaque bounded string, so the rules layer
+  could not constrain the content.
+- A second, unguarded cloud write path existed: tRPC `personalProfile.savePose`
+  (`server/routers.ts`) accepted the same payload (`poseJson` up to 1,000,000 chars,
+  `sourceLabel` up to 160 chars) and inserted it into MySQL through
+  `savePersonalPoseAnalysis` (`server/db.ts`). This was found by the independent review of
+  the first implementation and closed in the same task.
 
-The pre-merge reviewer reported no Critical issues and two Important issues:
+Red evidence: `tests/legacy-private-pose-write-boundary.test.ts` initially failed with
+`promise resolved "'generated-id'" instead of rejecting` — the pre-change code completed the
+Firestore write.
 
-1. `web-dist/` was already tracked, so ignore-only cleanup was insufficient.
-2. Status wording incorrectly said assets/fonts were absent even though the remote base tracked them.
+Fixed files and functions:
 
-Both are resolved in the merged implementation: tracked web output and obsolete TTFs are deleted, and the status document now describes replacement/migration accurately. The complete remote comparison was checked before moving `main`, and the branch update used `force: false`.
+| File | Change |
+| --- | --- |
+| `shared/const.ts` | New shared `LEGACY_CLOUD_SAVE_DISABLED` code |
+| `lib/firebase-private-data.ts` | `LegacyCloudSaveDisabledError`; `saveFirebasePrivatePose` now `Promise<never>` and throws before creating any Firestore reference. `ensureFirebaseProfile`, `listFirebasePrivatePoses`, `removeFirebasePrivatePose` unchanged |
+| `lib/legacy-capture-status.ts` | New pure mapper `describeLegacySaveFailure` → `blocked` / `error` outcome and user copy |
+| `components/private-pose-capture.tsx` | Save failure routed through the mapper with an early return, so `setState("complete")` is unreachable on failure; `asset.fileName` no longer read; subtitle and tip state the limitation before the user grants photo access |
+| `app/(tabs)/profile.tsx` | V1 empty-state copy no longer promises a saved vault record |
+| `server/routers.ts` | `personalProfile.savePose` accepts no pose payload and throws `TRPCError FORBIDDEN` with the shared code |
+| `server/db.ts` | `savePersonalPoseAnalysis` fails closed before any database work; list/delete untouched |
+| `firestore.rules` | `/users/{userId}/poses/{poseId}`: `allow read, delete: if signedInOwner(userId); allow create, update: if false;` |
+| `docs/current-admission-matrix.md` | V1 row now states on-device analysis only, cloud persistence disabled |
+| `tests/firestore-rules.test.ts`, `tests/firestore-shooting-profile-rules.test.ts` | Assertions rewritten for the new policy and anchored to the `poses` block |
 
-## Latest verification evidence
+New tests: `tests/legacy-private-pose-write-boundary.test.ts` (7),
+`tests/legacy-capture-status.test.ts` (3), `tests/legacy-server-pose-write-boundary.test.ts` (5).
+The boundary tests mock the Firestore SDK to resolve successfully and still assert that
+`setDoc` / `doc` / `collection` / `serverTimestamp` are never called, so a reintroduced write
+fails the suite.
 
-Run after the final code and test changes:
+V2 untouched: `git diff --name-only -- lib/shooting-profile lib/firebase-shooting-profiles.ts
+lib/firebase-shooting-profile-contract.ts hooks/ app/private-capture.tsx
+components/shooting-profile` is empty. 101 phases, 12 joints, Basic 0.65 cap, 1+1 / 3+3,
+exact `"1"` flag comparison and `representative_phase_fused_4d_estimate_not_actual_3d` are
+unchanged.
+
+Independent review outcome: the tRPC/SQL bypass, a false V1 empty-state message, an
+unanchored rules assertion and an overstated docstring were raised and all fixed. Two
+accepted limitations are recorded under "Follow-up decisions".
+
+### Task 2 - Firestore Rules executed in the emulator (done)
+
+Before this task no test issued a single real Firestore request. `tests/firestore-rules.test.ts`
+and the 886-line `tests/firestore-shooting-profile-rules.test.ts` read `firestore.rules` as text
+and assert on the source string; nothing in the repository imported
+`@firebase/rules-unit-testing`. Those static suites are kept as-is for now and remain a
+follow-up cleanup, exactly as instructed.
+
+Added:
+
+| File | Role |
+| --- | --- |
+| `tests/emulator/firestore-rules.emulator.test.ts` | 31 cases issuing real authorized/unauthorized requests against the emulator with the repository's own `firestore.rules` loaded |
+| `vitest.rules.config.ts` | Emulator-only include, 30s/60s timeouts, single fork and no file parallelism so `clearFirestore()` between tests is not raced |
+| `firebase.json` | `emulators.firestore.port 8080`, `singleProjectMode`, UI disabled |
+
+Changed: `vitest.config.ts` excludes `tests/emulator/**` from the hermetic run;
+`package.json` gains `test:rules`; `.gitignore` gains `.firebase/` and `firebase-export-*/`;
+`.github/workflows/representative-4d-ci.yml` gains a SHA-pinned
+`actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0` step and a
+`pnpm test:rules` step after `pnpm test:unit`.
+
+Pinned dependencies: `@firebase/rules-unit-testing@5.0.2` (peer `firebase ^12.0.0`, matching the
+installed `firebase 12.18.0` / `@firebase/firestore 4.17.1`) and `firebase-tools@14.27.0`.
+`pnpm install --frozen-lockfile` passes with pnpm 9.12.0 and lockfileVersion 9.0.
+
+Project id is the reserved demo id `demo-formpath`, so no external Firebase project or
+credential is involved.
+
+Coverage of the required allow/deny matrix, all as real requests:
+
+- owner publishes a full Basic profile and a full High profile in observation -> capture ->
+  revision -> head order (allow)
+- unauthenticated read and unauthenticated write (deny)
+- second signed-in user reading or writing the owner's documents (deny)
+- document whose `ownerUid` does not match its path (deny)
+- legacy `/poses` create and update (deny); existing legacy document owner read and delete
+  (allow); other user reading it (deny)
+- payload one byte short, declared payload length disagreeing with the contract, extra field,
+  `attemptId` disagreeing with view/takeIndex, wrong attempt path, disagreeing chain ids (deny)
+- capture before observations, High capture with only Basic observations, Basic capture with a
+  stray High observation, wrong attempt count (deny)
+- revision before capture, head before revision, head payload length disagreeing with its
+  revision, Basic confidence above the 0.65 cap (deny)
+- mutation of a published revision or capture (deny)
+- subordinate or head deletion while the head is still `active` (deny); the full resumable
+  head -> in_progress, revision, capture, observations, head deletion sequence (allow);
+  a transition touching more than `deletionState`/`updatedAt` (deny); another user driving the
+  deletion (deny)
+
+Fail-closed evidence, run locally:
+
+- `pnpm exec vitest run --config vitest.rules.config.ts` without `FIRESTORE_EMULATOR_HOST`
+  exits 1 with `Test Files 1 failed`, `31 skipped` and the explicit
+  "FIRESTORE_EMULATOR_HOST is not set" error. It never reports success without an emulator.
+- `pnpm test:rules` exits 1 in the verification environment because the emulator jar download
+  is blocked (`download failed, status 403 ... storage.googleapis.com`).
+
+**Open:** the assertions themselves have never been executed against a running emulator here.
+Their first real execution is the `Representative 4D CI` run on this branch, and that run is the
+only acceptable evidence that the 31 cases pass. Treat a failure there as a defect in this suite
+or in the rules, not as an environment problem.
+
+### Task 3 - Firebase profile creation repaired (done)
+
+Reproduced defects:
+
+- `signIn` never called `ensureFirebaseProfile`; the only call site was `signUp`
+  (`lib/firebase-auth.tsx`), so an account whose sign-up profile write failed had no
+  `/users/{uid}` document and no way to get one. Retrying sign-up fails with
+  `email-already-in-use`.
+- `signUp` awaited the profile write, so a failed write rejected sign-up *after* the
+  account already existed.
+- `ensureFirebaseProfile` wrote `email: user.email ?? null` while the rule requires
+  `email is string`, so a user without an email produced a guaranteed `permission-denied`
+  round trip.
+- `createdAt: serverTimestamp()` was written on every merge, so a repeated call would have
+  rewritten the original creation time.
+- A session restored from storage never passes through `signIn`, so no repair ran and no
+  failure was visible. Raised by the independent review and fixed in this task.
+
+Fixed files and functions:
+
+| File | Change |
+| --- | --- |
+| `lib/firebase-private-data.ts` | `PROFILE_EMAIL_REQUIRED` / `ProfileEmailRequiredError`; `ensureFirebaseProfile` rejects a missing email before creating any document reference, and stamps `createdAt` only on a server-confirmed miss (a cached or failed existence read is treated as "may exist", so an offline reinstall cannot overwrite it) |
+| `lib/firebase-profile-sync.ts` | New `syncOwnerProfile` returning `{ status: "synced" }` or `{ status: "failed", code, message }` instead of throwing, so an auth success is never rolled back by a profile write failure |
+| `lib/firebase-auth.tsx` | `runProfileSync` runs on sign-in, on sign-up, and on a restored session via `onAuthStateChanged`, keyed by uid; `profileSync` is exposed on the context and cleared on sign-out |
+| `app/(tabs)/profile.tsx` | Signed-in screen renders an alert-role banner when `profileSync.status === "failed"`, so an incomplete session cannot look complete |
+
+`firestore.rules` `/users/{userId}` was **not** loosened; the client now satisfies
+`email is string` instead. The emulator suite exercises that rule directly.
+
+New tests: `tests/firebase-profile-sync.test.ts` (14) - missing-email refusal with no
+Firestore call, `createdAt` stamped only on a server-confirmed miss, no stamp from a cached
+miss, write still happens when the existence read fails, merge semantics preserved, sync
+outcome mapping, and recovery of a profile a failed sign-up never created (second call
+succeeds). Auth wiring is covered by anchor-based structural guards because the repository
+has no React Native render-test setup.
+
+Independent review outcome: a misattached JSDoc block, the restored-session gap, the
+cache-miss `createdAt` hazard, an unreachable Korean failure message, and brittle
+order-dependent structural assertions were raised and fixed. Emulator coverage gaps the same
+review found were closed by adding cases for `noCaptureSession`, the High deletion path,
+observation/capture shooting-hand agreement, the `validQuality` gate, the High confidence
+exemption, and the `/users/{userId}` email rule - the emulator suite is now 42 cases.
+
+### Main sync during the branch (done)
+
+`main` moved while this branch was in progress: `dba64d67cc010a62ad37a02079d547021a27f919`
+-> `d521eba0dac5bd6217cd6d6c59fa11487b64ee0f`, adding two commits, both green in CI:
+
+- `6a8ea32` `feat: add cross-view phase alignment gate` - adds `lib/shooting-profile/cross-view-alignment.ts`
+- `d521eba` `feat: add representative profile release gate` - adds `lib/shooting-profile/release-gate.ts`
+
+Each adds exactly one new file and neither touches any of the 26 files this branch changes,
+so `git rebase origin/main` applied all three commits with no conflict. The rebase was
+non-destructive: nothing on `main` was rewritten, no force was used, and the branch is now
+3 ahead / 0 behind `origin/main`. Both upstream files are present in the branch tree.
+
+Full verification was re-run from scratch on the rebased tree, with their two new files
+included:
 
 | Command | Result |
 | --- | --- |
-| `CI=true corepack pnpm install --frozen-lockfile` | passed; lockfile up to date |
+| `CI=true corepack pnpm install --frozen-lockfile` | passed |
 | `corepack pnpm check` | passed |
-| `corepack pnpm lint` | passed with 0 warnings/errors |
-| `corepack pnpm test:unit` | 381 passed, 1 intentional auth skip; 24 files passed, 1 skipped |
-| `corepack pnpm exec expo export --platform web --output-dir web-dist` | passed; 18 static routes exported |
+| `corepack pnpm lint` | passed with 0 warnings |
+| `corepack pnpm test:unit` | 411 passed, 1 intentional skip; 28 files passed, 1 skipped |
+| `corepack pnpm test:rules` | exits 1 in the verification environment - emulator jar download blocked (`403 ... storage.googleapis.com`). 42 cases collected, never skipped-and-passed |
+| `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web` | passed, 18 static routes |
 
-CI-repair verification on the current runtime tree plus the fixture and Metro patches:
+Working-tree note: the Windows clone had checked out CRLF while every tracked text blob is
+LF, so the tree was normalised to LF before committing. Blob hashes of all 26 changed files
+match the verified tree exactly and no file mode changed.
 
-| Command | Result |
-| --- | --- |
-| `corepack pnpm check` | passed; the two `TS2739` errors from run 42 are absent |
-| `corepack pnpm lint` | passed with 0 warnings/errors |
-| `corepack pnpm test:unit` | 381 passed, 1 intentional auth skip; 24 files passed, 1 skipped |
-| `corepack pnpm exec expo export --platform web --output-dir <temporary-directory>` | passed; 18 static routes exported |
-| clean-cache `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir <temporary-directory>` | failed with the same `web.css` SHA-1 error before the Metro fix, then passed with 18 static routes after it |
-| GitHub Actions `Representative 4D CI` run 44 | passed on commit `0ec9094130cb48c1f3e921ac27d7c9ad07299ca6` |
+### Next single task
 
-The Vitest CJS API deprecation notice and Expo worker `NO_COLOR` notice are upstream non-failing notices. They are not product test failures.
+Push `fix/p0-privacy-rules-auth` and open a pull request, then read the
+`Representative 4D CI` run for that PR. That run is the first and only execution of the
+42-case emulator suite; do not merge until it is green, and do not count run #45 on `main`
+as rules evidence.
 
 ## Product boundary that must not change
 
@@ -76,11 +225,17 @@ The Vitest CJS API deprecation notice and Expo worker `NO_COLOR` notice are upst
 - All three V2 flags require the exact value `"1"` and remain default-off.
 - Compact persistence remains Basic 5 documents / High 9 documents, one mutation per request, head last, exact payload lengths 14,544 and 48,480 bytes, two-read viewer, and resumable revision → capture → observations → head deletion.
 
-## Immediate continuation steps
+## Follow-up decisions (investigated, deliberately not implemented here)
 
-1. Start P0 release-gate work in this order: Firebase Emulator → clean macOS/Xcode → model checksum/license/bundle → physical-iPhone smoke matrix.
-2. Keep the three V2 flags off until the external and scientific gates below are recorded and reviewed.
-3. Update this file after every meaningful checkpoint so a new session can continue from the exact current state.
+| Item | In use? | Files affected if changed | Recommendation | Why separate |
+| --- | --- | --- | --- | --- |
+| Manus / tRPC / server / drizzle / oauth | Partly. `lib/trpc.ts` is wired in `app/_layout.tsx` but no `useQuery`/`useMutation` consumer exists; `server/` reaches the app only as a type import; `hooks/use-auth.ts` has zero importers; `app/oauth/callback.tsx` is a registered route with no in-app entry point. Only `@trpc/client`, `@trpc/react-query`, `superjson`, `@tanstack/react-query` reach the bundle. `lib/_core/{nativewind-pressable,manus-runtime,theme}.ts` are required and must stay | `app/_layout.tsx`, `lib/trpc.ts`, `lib/_core/{api,auth}.ts`, `constants/oauth.ts`, `hooks/use-auth.ts`, `server/**`, `drizzle/**`, `shared/types.ts`, `tests/auth.logout.test.ts`, `package.json` scripts | Remove in stages, starting with `hooks/use-auth.ts` (zero risk) | Deleting a whole subsystem in a P0 privacy commit would make the security diff unreviewable |
+| V1 left-handed support | Not supported. `lib/personal-pose.ts` `selectShotPhaseIndexes` hardcodes `landmarks[16]`; `lib/pose-motion.ts` `validatePoseMotion` hardcodes right-side joints | `lib/personal-pose.ts`, `lib/pose-motion.ts`, `tests/personal-pose.test.ts` | Decide first whether V1 is retired rather than fixed — now that its cloud path is closed, V2 may be the only path worth left-hand work | It is a product decision, not a privacy fix |
+| Web pose CDN | Live. `lib/pose-detection.web.ts` loads `vision_bundle.js` and the `.task` model from `cdn.jsdelivr.net` / `storage.googleapis.com` at runtime. `lib/pose-detection.ts` is dead code on every platform (`.web.ts` and `.native.ts` both win Metro resolution) | `lib/pose-detection.ts` (delete), `lib/pose-detection.web.ts` | Delete the dead `pose-detection.ts`; decide separately whether web detection should exist at all | Touching platform resolution needs its own verification pass |
+| Player-derived assets and names | Live. Motion Studio displays "Stephen Curry" and "Paul George" from `PLAYER_MONOCULAR_3D_ANALYSES`, derived from user-supplied clips with no licence record | `lib/anonymous-pose-library.ts`, `lib/motions/*.json`, `app/(tabs)/motion.tsx`, `tests/product-boundary-regression.test.ts` | Obtain a licence record or replace with anonymous assets before any public release | Rights question, not a code defect |
+| iOS live-region announcements | `accessibilityLiveRegion` is Android-only; VoiceOver announces nothing on state change (pre-existing, affects the existing error path too) | `components/private-pose-capture.tsx` and other status text | Use `AccessibilityInfo.announceForAccessibility` | Accessibility pass across screens, not a privacy change |
+| `validateFirebasePrivatePoseInput` | Now unreachable from production; only its own test exercises it | `lib/firebase-private-pose-contract.ts`, `tests/firebase-private-pose-contract.test.ts` | Keep until a minimised V1 record format is decided, then delete or reuse | Removing it now would delete the contract a future V1 redesign needs |
+| React Native render tests | Absent. No `@testing-library/react-native`, no `react-test-renderer`; component behaviour is verified only by source-text guards | `package.json`, `vitest.config.ts`, all UI tests | Adopt before the next UI-heavy change | Explicitly out of scope for this P0 branch |
 
 ## External release gates still pending
 
@@ -90,3 +245,12 @@ The Vitest CJS API deprecation notice and Expo worker `NO_COLOR` notice are upst
 - physical iPhone matrix including HEVC/VFR/slow motion, permission denial, cancellation/background/retake, airplane mode, force-quit/reopen, deletion resumption
 - synthetic, rig/optical-mocap, negative-clip, repeated-user, subgroup, and held-out scientific validation
 - V2 own-history comparison/coaching, licensed/pseudonymous style comparison, and opt-in peer sharing remain future Projects 2-4
+
+## Previous checkpoint (CI repair, retained)
+
+- Verified runtime repair on `main`: `0ec9094130cb48c1f3e921ac27d7c9ad07299ca6` (`fix: make clean CI web export deterministic`).
+- Run 42 failed at `Typecheck`: `LandmarkSequenceV2.metadata` gained mandatory native evidence fields while two synthetic fixtures in `tests/shooting-profile-phase-normalization.test.ts` still used the older shape. Repair mirrored the complete native evidence structure in both fixtures; no runtime or representative-4D behaviour changed.
+- Run 43 passed typecheck, lint and all hermetic unit tests but failed the Expo web export: clean CI had no pre-existing `react-native-css-interop/.cache/web.css` for Metro to hash. Repair enables NativeWind's virtual-module patch when `CI=true` while keeping the filesystem-write workaround for local iOS development.
+- Run 44 (`0ec9094`) and run 45 (`dba64d6`) completed with `success`.
+- Integration policy: update `main` only with `force: false`; re-read remote `main` immediately before and after the update.
+- Never move a branch to incomplete candidate `8f895ecff260f49c9a510fd3ed91a3d05b819418`.

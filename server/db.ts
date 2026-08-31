@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, personalPoseAnalyses, personalProfiles, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { LEGACY_CLOUD_SAVE_DISABLED } from "../shared/const.js";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -109,18 +110,21 @@ export async function listPersonalPoseAnalyses(userId: number) {
   return db.select().from(personalPoseAnalyses).where(eq(personalPoseAnalyses.userId, userId)).orderBy(desc(personalPoseAnalyses.createdAt)).limit(12);
 }
 
-export async function savePersonalPoseAnalysis(input: {
+/**
+ * Disabled alongside the Firestore boundary. This SQL path accepted the same
+ * legacy V1 payload (all 33 landmarks including the face, native z, per-frame
+ * timestamps, and a free-form source label), so it fails closed before any
+ * database work. Listing and deleting existing rows stay available.
+ */
+export async function savePersonalPoseAnalysis(_input: {
   userId: number;
   sourceLabel: string;
   poseSpace: "monocular_relative_pose" | "calibrated_multi_view_3d";
   status: "candidate" | "rejected" | "approved_private";
   poseJson: string;
   qualityJson: string;
-}) {
-  const db = await getDb();
-  if (!db) throw new Error("Personal pose storage is unavailable.");
-  const result = await db.insert(personalPoseAnalyses).values({ ...input, privacy: "private" });
-  return result[0].insertId;
+}): Promise<never> {
+  throw new Error(LEGACY_CLOUD_SAVE_DISABLED);
 }
 
 export async function deletePersonalPoseAnalysis(userId: number, id: number) {
