@@ -6,17 +6,18 @@ Last updated: 2026-08-31 UTC
 
 - Repository: `Rudwpahs/shooting-profile-coach-ios`
 - Integration target: `main`
-- Remote `main` before the second repair: `05f2e115f6962b81ef953df99cbbe2f33b499a50` (`fix: restore representative 4D CI typecheck`).
+- Verified runtime repair on `main`: `0ec9094130cb48c1f3e921ac27d7c9ad07299ca6` (`fix: make clean CI web export deterministic`).
 - `Representative 4D CI` run `33391227022` / run number 42 failed only at `Typecheck`; lint, unit tests, and web export were skipped by the workflow after that failure.
 - Typecheck root cause: `LandmarkSequenceV2.metadata` gained mandatory native evidence fields, but the two synthetic metadata fixtures in `tests/shooting-profile-phase-normalization.test.ts` still used the older shape.
 - Typecheck repair: mirror the complete native evidence structure in both synthetic fixtures and append matching attempt evidence when a duplicate frame is added. No production runtime or representative-4D algorithm behavior is changed.
 - Run `33393395643` / run number 43 then passed Typecheck, lint, and all 381 hermetic unit tests, but failed during Expo web export because clean CI had no pre-existing `react-native-css-interop/.cache/web.css` for Metro to hash.
 - Export root cause: `forceWriteFileSystem: true` disabled React Native CSS Interop's virtual-module/Metro SHA-1 patch while creating `web.css` only after Metro's initial clean file crawl.
 - Export repair: keep the existing filesystem-write workaround for local iOS development, but enable NativeWind's virtual-module patch when `CI=true`.
+- `Representative 4D CI` run `33394217951` / run number 44 completed with `success`: frozen install, Typecheck, lint, all 381 hermetic unit tests, and Expo web export passed on the clean GitHub runner.
 - Integration policy: update `main` only with `force: false`; re-read remote `main` immediately before and after the update.
 - Primary implementation commit `4c700da9fd30f4484b718225119227a6c5eba674` and handoff commit `a84ea9f65f333d61000fed13f10cccdb73071204` remain ancestors of current `main`.
 - The eight commits from `a84ea9f...` through `208e7e6...` changed only agent/research documentation. This repair is based directly on the `208e7e6...` tree so all newer work remains preserved.
-- GitHub Actions success is not claimed until the repair's push run completes successfully.
+- The successful run 44 is the remote verification record for both repair commits.
 - Earlier review candidates remain intentionally unreferenced. In particular, never move a branch to incomplete candidate `8f895ecff260f49c9a510fd3ed91a3d05b819418`.
 
 ## Completed in this checkpoint
@@ -61,6 +62,7 @@ CI-repair verification on the current runtime tree plus the fixture and Metro pa
 | `corepack pnpm test:unit` | 381 passed, 1 intentional auth skip; 24 files passed, 1 skipped |
 | `corepack pnpm exec expo export --platform web --output-dir <temporary-directory>` | passed; 18 static routes exported |
 | clean-cache `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir <temporary-directory>` | failed with the same `web.css` SHA-1 error before the Metro fix, then passed with 18 static routes after it |
+| GitHub Actions `Representative 4D CI` run 44 | passed on commit `0ec9094130cb48c1f3e921ac27d7c9ad07299ca6` |
 
 The Vitest CJS API deprecation notice and Expo worker `NO_COLOR` notice are upstream non-failing notices. They are not product test failures.
 
@@ -76,10 +78,9 @@ The Vitest CJS API deprecation notice and Expo worker `NO_COLOR` notice are upst
 
 ## Immediate continuation steps
 
-1. Confirm the new `Representative 4D CI` push run for this repair reaches `success`; local verification does not substitute for the GitHub result.
-2. Start P0 release-gate work in this order: Firebase Emulator → clean macOS/Xcode → model checksum/license/bundle → physical-iPhone smoke matrix.
-3. Keep the three V2 flags off until the external and scientific gates below are recorded and reviewed.
-4. Update this file after every meaningful checkpoint so a new session can continue from the exact current state.
+1. Start P0 release-gate work in this order: Firebase Emulator → clean macOS/Xcode → model checksum/license/bundle → physical-iPhone smoke matrix.
+2. Keep the three V2 flags off until the external and scientific gates below are recorded and reviewed.
+3. Update this file after every meaningful checkpoint so a new session can continue from the exact current state.
 
 ## External release gates still pending
 
