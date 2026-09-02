@@ -2,6 +2,46 @@
 
 Last updated: 2026-09-02 UTC
 
+## P1.1 Real-video validation handoff - 2026-09-02
+
+### Repository State
+- Start `main` SHA: `075efaa860c6d0aadb403b697abdec2f5a94c5b6` (matches the work order; re-fetched
+  before branching, clean tree).
+- Branch: `feat/p1-real-video-validation` from `origin/main`. No direct `main` push, no force push.
+- Status: **`code_complete_but_real_video_validation_blocked`** / `real_video_fixture_unavailable`
+  (unchanged until a consented pair runs on a physical iPhone).
+- Repository visibility: public for the duration of this work; **not changed here**. Nothing
+  identifying is committed (see the privacy scan in Verification).
+- Plan: `docs/superpowers/plans/2026-09-02-p1-1-real-video-validation.md`.
+
+### Task 0 - environment and feasibility (no code changed)
+- Machine: Windows 11 (MINGW64). Node v24.18.0, pnpm 9.12.0 via `corepack pnpm`, Expo CLI in
+  `node_modules/.bin`. **No** Xcode, `xcodebuild`, CocoaPods `pod`, Java, or EAS CLI on PATH.
+  Consequence: Expo prebuild/iOS compile, CocoaPods, the Firestore emulator, and any physical
+  iPhone run are impossible on this machine; they are owner steps on macOS (runbook Task 3).
+- Native module: `modules/formpath-pose` is an Expo module (`expo-module.config.json`, platform
+  `apple`, `FormpathPose.podspec` depending on `ExpoModulesCore` and `MediaPipeTasksVision = 0.10.21`,
+  resource bundle with `pose_landmarker_full.task`, Swift sources `FormpathPoseModule.swift` 1128
+  lines). Expo autolinking includes it in an iOS custom development build after `expo prebuild` +
+  `pod install`; the JS binding uses `requireOptionalNativeModule("FormpathPose")`, so Expo Go and
+  simulators without the module return `native_build_required`.
+- Existing export path for real `LandmarkSequenceV2` or reports: **none in the app.** The only
+  consumer is the Node CLI `pnpm eval:two-view` (`scripts/evaluate-two-view-landmark-pair.ts`),
+  which reads local JSON files; the app never writes a sequence or a report anywhere.
+- `buildTwoViewEvaluationReport` React Native safety: imports only `zod` and `lib/shooting-profile/*`
+  (no `node:` modules, no Firebase); uses `performance.now()` (available in Hermes/RN 0.81) and
+  `process.memoryUsage` only behind a `typeof` guard (RN's `process` shim lacks it -> `peakHeapBytes`
+  omitted). Runnable on device; the timing call is additionally guarded in this branch.
+- Where front and side sequences coexist in memory: reducer state `state.slots[].sequence`
+  (`CaptureSessionSlot`, set by `SLOT_ACCEPTED`), retained through `ready_to_aggregate` ->
+  `aggregating` -> `result_review` / `saving` / `complete` and through the recapture `error` state
+  (`clearDerivedSession` keeps `slots`). The hook's aggregation effect reads them once for
+  `buildTwoViewRepresentativeProfile`; nothing else copies them.
+- Automatable without an iPhone: everything from `LandmarkSequenceV2` onward (phase detection,
+  alignment, 101x12 estimate, gates, report schema, share-state machine) via the contract-valid
+  synthetic fixture. Physical device required: native MediaPipe output on a real clip, the iOS build,
+  the share sheet, and the consented video itself.
+
 ## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC
 
 ### Repository State
