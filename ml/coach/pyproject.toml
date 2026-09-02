@@ -1,0 +1,28 @@
+[project]
+name = "formpath-coach"
+version = "0.1.0"
+description = "Self-hosted PyTorch basketball coaching reasoner for FormPath"
+requires-python = ">=3.10"
+dependencies = [
+  "torch>=2.13,<2.14",
+  "transformers>=4.56",
+  "datasets>=4.0",
+  "accelerate>=1.10",
+  "peft>=0.17",
+  "bitsandbytes>=0.47; platform_system == 'Linux'",
+  "pydantic>=2.11",
+  "fastapi>=0.116",
+  "uvicorn[standard]>=0.35",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4",
+  "ruff>=0.12",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
