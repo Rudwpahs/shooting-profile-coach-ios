@@ -955,6 +955,7 @@ describe("buildRepresentativeSequence", () => {
       status: "recapture_required",
       reason: "inconsistent_skeleton_closure",
       affectedBones: ["shoulder_line"],
+      crossViewAlignment: expect.objectContaining({ status: "accepted" }),
     });
   });
 
@@ -968,6 +969,7 @@ describe("buildRepresentativeSequence", () => {
       status: "recapture_required",
       reason: "inconsistent_skeleton_closure",
       affectedBones: ["shoulder_line"],
+      crossViewAlignment: expect.objectContaining({ status: "accepted" }),
     });
   });
 

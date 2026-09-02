@@ -1,6 +1,279 @@
 # FormPath repository handoff
 
-Last updated: 2026-08-31 UTC
+Last updated: 2026-09-02 UTC
+
+## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC
+
+### Repository State
+- Branch: `feat/p1-two-view-4d-e2e` (created from `origin/main`, tracks `origin/main`)
+- HEAD SHA: `7223b34aefab2f414a0fac695c3153b7b4833a25` (branch point; no code commits yet)
+- origin/main SHA: `7223b34aefab2f414a0fac695c3153b7b4833a25` (`Merge pull request #1`), re-fetched
+  2026-09-02 before any edit. It equals the historical checkpoint in the work order; `main` has
+  not advanced.
+- Working tree status: clean; `web-dist/` is a gitignored export output.
+- PR: https://github.com/Rudwpahs/shooting-profile-coach-ios/pull/2 (`feat/p1-two-view-4d-e2e` -> `main`,
+  head `99126e488433c01c75f286165c4407b1319f5d81` at PR creation; this docs commit follows it).
+- Latest CI: PR run https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33612978713
+  on `99126e4` = **success** (2026-09-02T09:14Z): typecheck, lint, hermetic unit 32 files passed +
+  1 skipped / 463 tests passed + 1 skipped, Firestore Rules in the emulator **42 passed (42)** in
+  6.51 s with Temurin 21, Expo web export `Exported: web-dist`. Baseline `main` run `33415439562`
+  on `7223b34` = success (2026-08-31).
+
+### Completed
+- Task IDs completed: P1-00 (synchronize and trace), P1-01 (reconstruction mathematics),
+  P1-02 (alignment and uncertainty gates).
+- Behavioral changes:
+  - P1-01: none. The 11 new cases in `tests/shooting-profile-direction.test.ts` (golden 0/45/45/60/90
+    degree pairs, the documented 60-degree vectors, a 2x(11^2+9^2) tangent-ratio equivalence sweep
+    with `conditioning = sqrt(cos^2 a + cos^2 b - cos^2 a cos^2 b)`, mirror invariance, typed
+    degenerate rejections, a 24x24x2x2x5 singular/wrapped sweep with no NaN/Infinity) all passed on
+    first run, so the projection-constraint solver was left untouched.
+  - P1-02: `buildRepresentativeSequence` now calls `assessCrossViewPhaseAlignment` on the retained
+    front/side takes right after per-view consensus and returns
+    `recapture_required { reason: "cross_view_phase_mismatch" | "invalid_phase_anchors" | ... }`
+    with the alignment result attached; an accepted alignment's `1 - confidence` penalty is added
+    linearly to every observed bone's evidence cone (+3 deg at the limit, inspected by the 25-degree
+    admission gate), evidence variance (+0.015), and multiplies confidence by `1 - 0.5 * penalty`
+    before the Basic 0.65 cap; retained anchor dispersion now pools takes across both views so
+    front/side timing disagreement widens the deterministic phase-perturbation radius; every
+    complete result carries `crossViewAlignment` and a non-identifying `evidenceSummary`
+    (mean/min conditioning, mean/min availability, retained spread, anchor dispersion, sensitivity,
+    max cone). Gains live in `CROSS_VIEW_PHASE_ALIGNMENT_V1.uncertaintyPropagation` and are
+    provisional engineering defaults.
+  - P1-03: new `lib/shooting-profile/two-view-pipeline.ts` `buildTwoViewRepresentativeProfile`
+    is the single application boundary: validated front/side `LandmarkSequenceV2` (1+1 or 3+3,
+    hand/take/quality checked -> `attempt_set_invalid`) -> `detectPhaseAnchors`
+    (`PhaseDetectionError` -> `phase_detection_failed` + `detail`) -> `resampleAttemptToPhaseGrid`
+    -> `buildRepresentativeSequence` (alignment gate, reconstruction, kinematics, uncertainty) ->
+    `validateShootingProfileWriteV2` -> `{ status: "complete", saveInput, profile, confidence,
+    normalizedAttempts, selectedAttemptsByView, crossViewAlignment, evidenceSummary,
+    normalizedAnchorPositionsByAttempt }` or `{ status: "recapture_required", reason, detail?,
+    affectedAttemptIds, affectedBones, crossViewAlignment? }` with no partial payload.
+    `hooks/use-shooting-profile-capture.ts` now calls it instead of normalizing inline, maps the
+    stable code to user copy (new copy for `cross_view_phase_mismatch`, `phase_detection_failed`,
+    `uncertainty_exceeds_limit`) and forwards `reasonCode`; the reducer stores it as
+    `recaptureReasonCode` next to `errorMessage`. No UI component changed.
+  - P1-04 (tool only; real-video run blocked): `lib/shooting-profile/evaluation-report.ts`
+    (`buildTwoViewEvaluationReport`, strict zod `twoViewEvaluationReportSchema`,
+    `assertReportContainsNoRawEvidence`) and `scripts/evaluate-two-view-landmark-pair.ts`
+    (`pnpm eval:two-view`, exit 0 complete / 3 recapture / 2 invalid input / 1 other) run the real
+    entry point on local `LandmarkSequenceV2` JSON and emit only derived metrics: per-attempt
+    accepted-frame ratio, required-joint visibility median/lower decile, anchor detection outcome
+    and normalized anchor positions; cross-view alignment; pipeline outcome with stable reason;
+    evidence summary; bone-length drift, joint-angle velocity distribution, discontinuity count,
+    cone/trace distributions; runtime. The strict public sequence codec was moved out of
+    `lib/pose-detection-v2.ts` (which binds the native Expo module and cannot load under Node)
+    into pure `lib/shooting-profile/landmark-sequence-contract.ts`; `pose-detection-v2.ts`
+    re-exports it unchanged. The raw fixture now satisfies that public contract exactly
+    (integer ms timestamps, 9-element crop transform, duration beyond the last frame), asserted in
+    the pipeline test. `docs/evaluation/two-view-evaluation-report.synthetic-example.json` is a
+    committed example generated from the synthetic fixture (`sourceClass: "synthetic_fixture"`);
+    it documents the shape and is not real-video evidence.
+- Commits: `b1fe0af` docs baseline, `f7913bb` direction proof tests, `d5613e7` cross-view gates,
+  `1c60eef` two-view pipeline, then `test: add private real-video reconstruction evaluation`
+  (this commit).
+
+### Actual Call Path (traced from source, default V2 flags)
+1. Video/capture entry: `app/private-capture.tsx` renders `<CaptureSession>` only when
+   `FORMPATH_FLAGS.captureV2 && profileV2` (both default-off, exact `"1"` compare in
+   `lib/feature-flags.ts`). `hooks/use-shooting-profile-capture.ts` `acquireSlot` -> `expo-image-picker`
+   (camera or library, videos only, 20 s max) -> `lib/video-intake.ts` `validateSelectedShootingVideo`.
+2. Crop/person/pose extraction: `lib/pose-detection-v2.ts` `detectPoseClipV2` -> native
+   `modules/formpath-pose` `analyzeClipAsync` (MediaPipe on device; JS returns
+   `native_build_required` without the custom build) -> `parseNativeLandmarkSequenceV2` ->
+   `LandmarkSequenceV2` (`upright_source_top_left_v1`, 33 landmarks incl. face indices, native `z`,
+   frame `timestampMs`; all of this stays on device). `sequence.quality.passed` gates `SLOT_ACCEPTED`.
+3. Attempt construction: the hook's `ready_to_aggregate` effect maps each accepted slot to
+   `NormalizedViewAttemptV2 { id: slot.id, phaseAnchors, frames }`.
+4. Phase normalization/alignment: `lib/shooting-profile/phase-normalization.ts`
+   `detectPhaseAnchors` (ready/deepestDip/rise/releaseProxy/followThrough from shooting-arm
+   wrist/elbow + pelvis/knee/ankle motion; throws `PhaseDetectionError`) ->
+   `resampleAttemptToPhaseGrid` (101 samples, isotropic source-height units, visibility-weighted
+   2D smoothing). Per-view take consensus: `lib/shooting-profile/repeated-shot.ts`
+   `aggregateViewAttempts` (1-of-1 Basic, deterministic >=2-of-3 High).
+   **DISCONNECTED:** `lib/shooting-profile/cross-view-alignment.ts` `assessCrossViewPhaseAlignment`
+   (front-vs-side anchor delta <= 0.10, interval RMSE <= 0.08) has no caller outside its own
+   module; neither the hook nor `buildRepresentativeSequence` invokes it. Cross-view anchor
+   disagreement therefore reaches neither the recapture decision nor uncertainty today:
+   `maximumRetainedAnchorDispersion` in `representative-sequence.ts` only compares takes within
+   one view, so Basic (1+1) always has dispersion 0.
+5. Direction reconstruction: `lib/shooting-profile/representative-sequence.ts`
+   `buildRepresentativeSequence` -> `reconstructObservedBone` per frame x 12 observed bones ->
+   `lib/shooting-profile/direction-reconstruction.ts` `reconstructBoneDirection`
+   (`alpha = atan2(front.x, -front.y)`, `beta = atan2(side.x, -side.y)`, `sideAxisSign = +1` right /
+   `-1` left, projection-constraint cross product; typed rejections; `conditioning` = sine of the
+   angle between the two constraint normals, minimum 0.1).
+6. Forward kinematics: `lib/shooting-profile/kinematics.ts` `forwardKinematicsFrame` from a
+   non-persisted pelvis root with `ENGINEERING_THRESHOLDS_V1.templateBoneLengths`
+   (tolerance 1e-5) after unit-direction smoothing (radius 2) -> 12 persisted joints.
+7. Uncertainty/release gate: deterministic 9-pattern perturbation scenarios
+   (`lib/shooting-profile/uncertainty.ts`) -> sample covariance + floors -> 25-degree cone gate ->
+   `representativeConfidence` (dispersion/conditioning/availability weights, sensitivity penalty,
+   Basic cap 0.65). Result is `complete` or `recapture_required { reason, affectedBones }`.
+   `lib/shooting-profile/release-gate.ts` `assessRepresentativeReleaseGate` is the
+   feature-flag-rollout gate (certificate based) and is **not called by any production module**;
+   it is only reachable from tests.
+8. Codec/persistence boundary: `parseRepresentativePose4D` (`codec.ts`, strict zod, 101 frames,
+   canonical anchors, PSD covariance, boundary literal) inside `buildRepresentativeSequence` ->
+   reducer `AGGREGATE_COMPLETED { profile, confidence }` -> `matchingShootingProfileSaveInputV2`
+   (`capture-session-reducer.ts`, returns `SaveShootingProfileInputV2 | null`) ->
+   `runCaptureSaveOperationV2` -> `lib/firebase-shooting-profiles.ts` `saveShootingProfileV2` ->
+   `buildShootingProfileWritePlanV2` / `executeShootingProfileWritePlanV2` (Basic 5 docs / High 9,
+   observation payload 14,544 B, representative payload 48,480 B, head last). Recapture dispatches
+   `AGGREGATE_RECAPTURE_REQUIRED { reason: <Korean user copy> }`; the stable reason code is
+   dropped at the hook (`recaptureReason()` collapses everything except
+   `no_complete_agreeing_subset` into one generic sentence).
+
+Coordinate convention actually used (documented here because no doc declares it):
+source landmarks are upright-source top-left normalized (`x` right, `y` down);
+`uprightSourceNormalizedToIsotropic` keeps `y` down; `reconstructObservedBone` negates `y` so
+canonical 3D `+y` is image-up; canonical `+x` is front-view image right; canonical `z` is the
+shooting-side-view image-right axis multiplied by `sideAxisSign` (`+1` right-handed, `-1`
+left-handed). Angles are radians, `atan2(horizontal, vertical)` measured from `+y`, unbounded.
+Left/right anatomical identity comes from MediaPipe landmark indices and is never swapped;
+handedness only mirrors depth.
+
+### Existing coverage per stage (baseline, hermetic)
+- Stage 2 contract: `tests/pose-detection-v2-contract.test.ts` (56), `tests/pose-detection-contract.test.ts` (3)
+- Stage 3/4 phase normalization: `tests/shooting-profile-phase-normalization.test.ts` (23);
+  consensus: `tests/shooting-profile-repeated-shot.test.ts` (22)
+- Stage 4 cross-view gate: **no test file imports `assessCrossViewPhaseAlignment`**
+- Stage 5 direction: `tests/shooting-profile-direction.test.ts` (15) - signed quadrants, side-axis
+  sign, sign disagreement, non-finite, collapsed, both-horizontal, ill-conditioned; **no golden 3D
+  angle cases (0/45/60/90), no tangent-ratio equivalence, no mirror-preserves-angle case**
+- Stage 6/7: `tests/shooting-profile-representative-sequence.test.ts` (52) - 101-frame golden,
+  determinism, Basic cap, visibility/jitter monotonicity within a view, cone gate, closure,
+  left/right depth mirroring, vertical-sign rejection; `tests/representative-4d-integration.test.ts` (3)
+- Stage 7 release gate: **no test file imports `assessRepresentativeReleaseGate`**
+- Stage 8: `tests/firebase-shooting-profile-contract.test.ts` (66), `tests/shooting-profile-contract.test.ts` (13),
+  `tests/shooting-profile-capture-reducer.test.ts` (42), `tests/firestore-shooting-profile-rules.test.ts` (12),
+  emulator `tests/emulator/firestore-rules.emulator.test.ts` (42, CI only)
+- **No test starts from front/side `LandmarkSequenceV2` and reaches a persistence-ready payload**;
+  `tests/fixtures/synthetic-dual-view.ts` produces already-normalized `NormalizedViewAttemptV2`.
+
+### Verification Evidence (baseline on `7223b34`, this machine)
+- `corepack pnpm --version` = 9.12.0; `CI=true corepack pnpm install --frozen-lockfile` passed
+- Typecheck: `corepack pnpm check` exit 0
+- Lint: `corepack pnpm lint` exit 0, 0 warnings
+- Full unit tests: `corepack pnpm test:unit` = 28 files passed, 1 skipped; 411 tests passed, 1 skipped
+- Firestore Emulator: `corepack pnpm test:rules` exit 1 - `Could not spawn java -version` (no Java
+  on this Windows machine). Same blocker class as the P0 handoff; rules evidence must come from
+  PR CI, which installs Temurin 21.
+- Expo export: `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir web-dist`
+  exit 0, 18 HTML routes in `web-dist/`
+- Real-video evaluation: **not run - `real_video_fixture_unavailable`.** No lawful video exists in
+  the repository or on this machine; `git ls-files` has no media; Node 24 has no pose detector
+  (detection is a native iOS module); Python 3.13 has OpenCV 5.0.0 but **no `mediapipe`**; the
+  `python`/`py` launchers on PATH are a broken `graphify-out` shim. The evaluation tool exists and
+  was smoke-tested only on synthetic sequences (see P1-04). Final status therefore stays
+  `code_complete_but_real_video_validation_blocked`.
+- Environment: Node v24.18.0 (CI uses 22), pnpm 9.12.0 via Corepack, ripgrep 14.1.1, `gh` logged in
+  as `Rudwpahs` with `repo`+`workflow` scopes, `core.autocrlf=true` but the working tree is LF
+  (`git ls-files --eol`: 434 `i/lf w/lf`).
+
+### Changed Files
+- `HANDOFF.md`: this section.
+- `tests/shooting-profile-direction.test.ts`: +11 proof cases (15 -> 26), no production change.
+- `lib/shooting-profile/cross-view-alignment.ts`: `uncertaintyPropagation` gains,
+  `CrossViewPhaseAlignmentAcceptedV1`, `crossViewAlignmentPenalty` (sub-1e-9 rounding snapped to 0).
+- `lib/shooting-profile/representative-sequence.ts`: alignment gate after consensus, penalty into
+  `uncertaintyFor`/`representativeConfidence`, cross-view anchor pooling in
+  `maximumRetainedAnchorDispersion` (with a 1e-9 noise floor so re-timed takes stay byte-identical),
+  `crossViewAlignment` + `evidenceSummary` on results, alignment attached to every later recapture.
+- `tests/fixtures/synthetic-dual-view.ts`: `sideAnchorShiftNormalized` option (moves only the side
+  view's intermediate anchors, frames unchanged).
+- `tests/shooting-profile-cross-view-alignment.test.ts`: new, 14 cases - gate unit tests, re-timed
+  side view yields an identical profile, mismatch -> stable recapture reason, monotone uncertainty /
+  confidence in Basic and High, corrupted anchor, missing landmark, low visibility, mirrored images
+  and left-handed depth mirroring without anatomical swap.
+- `tests/shooting-profile-representative-sequence.test.ts`: two exact-shape recapture assertions
+  now expect the attached accepted `crossViewAlignment`.
+
+Verification after P1-02: focused 3 files 69/69; full `vitest run --exclude tests/firebase-configuration.test.ts`
+29 files passed + 1 skipped, 436 tests passed + 1 skipped; `eslint --max-warnings 0` on the six
+changed files clean; `tsc --noEmit` clean.
+
+P1-03 files:
+- `lib/shooting-profile/two-view-pipeline.ts`: new orchestrator (see Completed).
+- `hooks/use-shooting-profile-capture.ts`: aggregation effect routed through the orchestrator;
+  imports of `detectPhaseAnchors`/`resampleAttemptToPhaseGrid`/`buildRepresentativeSequence` removed;
+  `normalizedAttempts: attempts`, save-envelope and cancellation guard strings unchanged.
+- `lib/shooting-profile/capture-session-reducer.ts`: `recaptureReasonCode?` on state,
+  `reasonCode?` on `AGGREGATE_RECAPTURE_REQUIRED`.
+- `tests/fixtures/synthetic-landmark-sequence.ts` + `tests/shooting-profile-synthetic-landmark-sequence.test.ts`
+  (8): deterministic raw `LandmarkSequenceV2` front/side generator (1080x1920, 30 fps, ~2 s, 33
+  landmarks, native-evidence metadata) whose anchors the production detector finds; generated by
+  Codex under a read-only-elsewhere brief and reviewed here.
+- `tests/shooting-profile-two-view-pipeline.test.ts` (11): raw sequences -> complete Basic/High
+  profile (101 x 12, finite, canonical phases, boundary literal, bone lengths within 1e-5,
+  `saveInput` accepted by `validateShootingProfileWriteV2`, 48,480 B representative and 14,544 B
+  observation payloads, no timestamp/URI/face fields); determinism; left-handed; slower-dip side
+  clip -> `cross_view_phase_mismatch` (delta > 0.10) with no payload; frozen shooting arm ->
+  `phase_detection_failed`; protocol/hand/quality set failures -> `attempt_set_invalid`; whole-clip
+  re-timing still fuses; reducer keeps recapture out of the save envelope and stores the code;
+  hook source guard.
+
+Verification after P1-03: `corepack pnpm test:unit` = 31 files passed + 1 skipped, 457 tests passed
++ 1 skipped; `corepack pnpm lint` clean; `corepack pnpm check` clean.
+
+P1-04 files:
+- `lib/shooting-profile/landmark-sequence-contract.ts`: pure move of `POSE_V2_ENGINEERING_DEFAULTS`,
+  both zod sequence schemas, `parseNativeLandmarkSequenceV2`, `parseLandmarkSequenceV2` (no logic change).
+- `lib/pose-detection-v2.ts`: imports and re-exports them; keeps request/progress schemas and the detector.
+- `lib/shooting-profile/evaluation-report.ts`, `scripts/evaluate-two-view-landmark-pair.ts`,
+  `tests/shooting-profile-evaluation-report.test.ts` (5): drafted by Codex under a three-file brief,
+  then fixed here (raw-evidence guard used `filename` which matched the report's own
+  `privacy.containsFilenames` key; now word-bounded) and reviewed.
+- `tests/fixtures/synthetic-landmark-sequence.ts`: contract-valid timestamps/transform/duration.
+- `tests/shooting-profile-two-view-pipeline.test.ts` (12): + "starts from sequences that satisfy
+  the exact public on-device contract".
+- `package.json`: `eval:two-view` script. `docs/two-view-evaluation-tool.md`,
+  `docs/evaluation/two-view-evaluation-report.synthetic-example.json`.
+
+Verification after P1-04: `corepack pnpm test:unit` = 32 files passed + 1 skipped, 463 tests passed
++ 1 skipped; `corepack pnpm lint` clean; `corepack pnpm check` clean. CLI smoke on synthetic JSON
+written to the OS temp directory (never in the repo): complete -> exit 0
+`pipeline=complete reason=none confidence=0.65 alignmentDelta=0`; frozen shooting arm -> exit 3
+`reason=phase_detection_failed` detail `missing_release_proxy`, no reconstruction block; a non-sequence
+JSON -> exit 2 naming only the argument position.
+
+### Open Blockers
+- Blocker: `real_video_fixture_unavailable` for Task 4. Evidence: no consented front/side pair on
+  disk or in git; no on-machine pose extractor (no MediaPipe in Python, no native module in Node).
+  Required resolution: owner supplies a self-captured, consented front+side pair on the local
+  workstation (never committed), exports each clip's on-device `LandmarkSequenceV2` JSON from the
+  iOS custom build (or adds a MediaPipe-to-`LandmarkSequenceV2` exporter that reproduces the native
+  evidence block), then runs:
+  `corepack pnpm eval:two-view --mode basic_1_plus_1 --hand right --front C:\local\front.json --side C:\local\side.json --source consented_self_capture --consent-record <id> --output C:\local\report.json`
+  and records the report's derived metrics in this file. Do not commit the JSON inputs.
+- Blocker: local Firestore emulator (no Java). Evidence above. Resolution: rely on PR CI.
+
+### Residual Risks
+- Risk: the synthetic shoulder line is deliberately near-horizontal (evidence cone ~20-22 deg),
+  so it reaches the 25-degree admission gate before other bones when cross-view timing disagrees;
+  real shoulder lines are near-horizontal too, which makes the shoulder line the most likely
+  `uncertainty_exceeds_limit` bone in practice. Current mitigation: the gate fails closed and names
+  the bone; the alignment cone gain is kept small (3 deg) and provisional.
+- Risk: a single corrupted phase anchor in any take (even a High take that consensus would
+  exclude) fails the whole session with `invalid_attempt` because attempt validation runs before
+  take selection. Current mitigation: fail-closed, typed; documented, not changed in P1.
+- Risk: `reconstructBoneDirection` never checks supplied front/side projected lengths against the
+  solved direction, so a bone lying along `x` with a non-collapsed side projection is accepted.
+  Current mitigation: cone/closure gates downstream; recorded as a follow-up, not fixed in P1.
+
+### Task 5 record
+- `origin/main` re-fetched before push: still `7223b34`; branch 5 ahead / 0 behind, no rebase needed,
+  no force push. Final-HEAD Expo export (`99126e4`): exit 0, 18 HTML routes. Diff scan: no media,
+  credential, cache, or unrelated paths (21 files, +3,478 / -422).
+- PR #2 opened with the acceptance checklist; its CI run (above) executed the 42-case emulator
+  suite for real and passed. `gh pr view 2` = `MERGEABLE` / `CLEAN`.
+
+### Exact Next Action
+1. After this docs commit's CI run is green, merge PR #2 non-forcefully (`gh pr merge 2 --merge`),
+   then verify the `main` run with `gh run list --branch main --limit 1`.
+2. Real-video evaluation remains the only open gate; see Open Blockers for the exact resume command.
+3. Final status until then: `code_complete_but_real_video_validation_blocked`.
+
 
 ## Active work: P0 privacy / rules / auth
 
