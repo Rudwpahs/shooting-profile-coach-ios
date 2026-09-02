@@ -64,6 +64,15 @@ generated from the deterministic synthetic fixture
 (`tests/fixtures/synthetic-landmark-sequence.ts`) with `sourceClass:
 "synthetic_fixture"`. It documents the shape only; it is not real-video evidence.
 
+## On-device path (P1.1)
+
+A development build with `EXPO_PUBLIC_FORMPATH_REAL_VIDEO_EVAL=1` (exactly `1`,
+plus the three V2 flags) shows an internal panel on the capture review and
+recapture screens that builds the same `TwoViewEvaluationReportV1` from the
+sequences already held in memory and hands the JSON to the system share sheet
+only when the user presses the button. Raw clips and landmarks never leave the
+app; see `docs/real-video-validation-runbook.md`.
+
 ## Status
 
 No lawful real front/side pair has been evaluated yet. Until one is, the P1

@@ -41,6 +41,89 @@ Last updated: 2026-09-02 UTC
   alignment, 101x12 estimate, gates, report schema, share-state machine) via the contract-valid
   synthetic fixture. Physical device required: native MediaPipe output on a real clip, the iOS build,
   the share sheet, and the consented video itself.
+- Physical iPhone available to this agent: **no.** Consented real front/side pair available: **no.**
+  Real video used in this work: **none** (synthetic fixture only, never counted as real evidence).
+
+### Tasks 1-3 - changed files and functions
+- `lib/feature-flags.ts`: `realVideoEvaluation: process.env.EXPO_PUBLIC_FORMPATH_REAL_VIDEO_EVAL === "1"`
+  (default off; the three V2 flags are unchanged).
+- `lib/shooting-profile/real-video-evaluation.ts` (new, pure): `isDevelopmentBuild` (reads
+  `globalThis.__DEV__ === true`; absent = release), `isRealVideoEvaluationEnabled(flags, dev)`,
+  `collectEvaluationAttempts(state)` (accepted `state.slots[].sequence` only in `result_review` /
+  `saving` / `complete` / `error`), `buildRealVideoEvaluation(state, { sourceClass, consentRecordId?,
+  evaluatedCommitSha? })` -> `{ status: "ready", report, json }` or `build_failed` with
+  `session_not_ready | report_build_failed | raw_evidence_detected | schema_invalid`
+  (`assertReportContainsNoRawEvidence` and the strict zod schema run again after the builder),
+  `shareRealVideoEvaluation(json, share)` -> `shared | share_dismissed | share_failed`,
+  `describeRealVideoEvaluationState`. No network, Firebase, file-system, or clipboard import.
+- `hooks/use-shooting-profile-capture.ts`: `evaluationEnabled = isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild())`,
+  `evaluation` state (reset on session-generation change and by `invalidateDerivedSave`),
+  `buildEvaluationReport()` (guarded `if (!evaluationEnabled) return;`),
+  `shareEvaluationReport()` (React Native `Share.share({ message: json, title })`, user-initiated),
+  `evaluationAvailable`. The aggregation effect, `save`, `matchingShootingProfileSaveInputV2`,
+  `runCaptureSaveOperationV2`, and every cancellation guard are unchanged.
+- `components/shooting-profile/real-video-evaluation-panel.tsx` (new): two accessible buttons
+  ("파생 리포트 생성", "리포트 공유 · 저장"), polite live status, no effects.
+  `components/shooting-profile/capture-session.tsx`: renders the panel only under
+  `capture.evaluationEnabled ? (` in the review and recapture states. No other UI change.
+- `lib/shooting-profile/evaluation-report.ts`: `performance.now()` -> guarded `nowMs()`; no
+  behavior change. Codec, thresholds, solver, `CROSS_VIEW_PHASE_ALIGNMENT_V1`, Firestore contract:
+  untouched (asserted by the new contract test).
+- Docs: `docs/real-video-validation-runbook.md`, `docs/superpowers/plans/2026-09-02-p1-1-real-video-validation.md`,
+  `docs/two-view-evaluation-tool.md` (cross-reference).
+- Tests: `tests/shooting-profile-real-video-evaluation.test.ts` (10),
+  `tests/shooting-profile-real-video-evaluation-reasons.test.ts` (1, stubs the pipeline boundary to
+  prove `uncertainty_exceeds_limit` is copied verbatim), `tests/shooting-profile-contract.test.ts`
+  (flag shape now includes `realVideoEvaluation`).
+
+### Red/green evidence
+- Red: both new test files failed with `Cannot find module '@/lib/shooting-profile/real-video-evaluation'`
+  before any implementation (commit `463f5f4` holds the tests alone).
+- Green after `3a3b7eb`: 87/87 in the seven affected files, then full suite 34 files passed + 1
+  skipped, 474 tests passed + 1 skipped (baseline on `main` was 463 + 1 skipped). Two intermediate
+  reds were comment wording only (the source guards forbid the words "clipboard"/"analytics"/
+  "Firebase" even in comments); no production logic changed to satisfy a test.
+
+### Evidence that nothing raw is stored or uploaded
+- Source guards (tests): `lib/shooting-profile/real-video-evaluation.ts`, the panel, and the hook's
+  evaluation section contain none of `firebase|firestore|fetch(|axios|XMLHttpRequest|WebSocket|trpc|Clipboard|analytics|saveProfile|runCaptureSaveOperationV2`;
+  the hook's share call has no `url:`; runtime `fetch` spy never called during a build.
+- Report guard: reports with injected `sourceLandmarks`, `z`, `timestampMs`, `file://...mp4`,
+  `IMG_0001.mov`, `filename`, or a bare `uri` are rejected; the strict schema rejects extra keys.
+- The evaluation result exposes exactly `{ status, report, json }`; no `saveInput`,
+  `normalizedAttempts`, or `profile`; `matchingShootingProfileSaveInputV2` stays `null` for a recapture
+  session before and after building.
+- Repository scan on the branch diff: no media, raw JSON, `.env`, credentials, absolute paths, or user
+  names (`git ls-files` media hits are only pre-existing `artifacts/**` audit PNGs from earlier work);
+  `git diff --check` clean.
+
+### Verification (final tree, this machine)
+| Command | Result |
+| --- | --- |
+| `CI=true corepack pnpm install --frozen-lockfile` | exit 0 |
+| `corepack pnpm check` | exit 0 |
+| `corepack pnpm lint` | exit 0, 0 warnings |
+| `corepack pnpm test:unit` | 34 files passed + 1 skipped; 474 tests passed + 1 skipped |
+| `corepack pnpm test:rules` | exit 1: `Could not spawn java -version` (no Java on this machine) - evidence comes from PR CI |
+| `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir <temp>` | exit 0, 18 HTML routes, output outside the repository |
+
+### Real-video evaluation result
+- **Blocked: `real_video_fixture_unavailable`.** No physical iPhone, no macOS/Xcode, no consented
+  pair. The synthetic example report remains shape-only evidence. Status:
+  `code_complete_but_real_video_validation_blocked`.
+
+### PR, CI, merge
+- PR: (filled below after creation). Merge: **not merged** - the work order forbids merging before
+  one Basic 1+1 pair runs on a physical iPhone.
+- Repository can return to private: **now** - nothing in this branch or on `main` depends on public
+  visibility; CI runs on private repositories, and `gh` is authenticated as the owner.
+
+### Exact next single action (owner)
+On a Mac with Xcode and the registered iPhone, follow `docs/real-video-validation-runbook.md`
+sections 2, 4, 5: create the gitignored `.env.local` with the four flags, run
+`pnpm exec expo prebuild --platform ios --clean && (cd ios && pod install) && pnpm exec expo run:ios --device`,
+capture one consented Basic 1+1 pair, press "파생 리포트 생성" then "리포트 공유 · 저장", and record
+the derived metrics from section 7 in this file via a PR.
 
 ## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC
 
