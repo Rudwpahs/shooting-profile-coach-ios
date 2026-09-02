@@ -1,6 +1,145 @@
 # FormPath repository handoff
 
-Last updated: 2026-08-31 UTC
+Last updated: 2026-09-02 UTC
+
+## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC
+
+### Repository State
+- Branch: `feat/p1-two-view-4d-e2e` (created from `origin/main`, tracks `origin/main`)
+- HEAD SHA: `7223b34aefab2f414a0fac695c3153b7b4833a25` (branch point; no code commits yet)
+- origin/main SHA: `7223b34aefab2f414a0fac695c3153b7b4833a25` (`Merge pull request #1`), re-fetched
+  2026-09-02 before any edit. It equals the historical checkpoint in the work order; `main` has
+  not advanced.
+- Working tree status: clean before this file was edited; `web-dist/` is a gitignored export output.
+- PR: none yet.
+- Latest CI: `Representative 4D CI` run `33415439562` on `main` @ `7223b34` = success
+  (2026-08-31T16:40:50Z). All five previous `main` runs were also successful.
+
+### Completed
+- Task IDs completed: P1-00 (synchronize and trace).
+- Behavioral changes: none.
+- Commits: this `HANDOFF.md` baseline only.
+
+### Actual Call Path (traced from source, default V2 flags)
+1. Video/capture entry: `app/private-capture.tsx` renders `<CaptureSession>` only when
+   `FORMPATH_FLAGS.captureV2 && profileV2` (both default-off, exact `"1"` compare in
+   `lib/feature-flags.ts`). `hooks/use-shooting-profile-capture.ts` `acquireSlot` -> `expo-image-picker`
+   (camera or library, videos only, 20 s max) -> `lib/video-intake.ts` `validateSelectedShootingVideo`.
+2. Crop/person/pose extraction: `lib/pose-detection-v2.ts` `detectPoseClipV2` -> native
+   `modules/formpath-pose` `analyzeClipAsync` (MediaPipe on device; JS returns
+   `native_build_required` without the custom build) -> `parseNativeLandmarkSequenceV2` ->
+   `LandmarkSequenceV2` (`upright_source_top_left_v1`, 33 landmarks incl. face indices, native `z`,
+   frame `timestampMs`; all of this stays on device). `sequence.quality.passed` gates `SLOT_ACCEPTED`.
+3. Attempt construction: the hook's `ready_to_aggregate` effect maps each accepted slot to
+   `NormalizedViewAttemptV2 { id: slot.id, phaseAnchors, frames }`.
+4. Phase normalization/alignment: `lib/shooting-profile/phase-normalization.ts`
+   `detectPhaseAnchors` (ready/deepestDip/rise/releaseProxy/followThrough from shooting-arm
+   wrist/elbow + pelvis/knee/ankle motion; throws `PhaseDetectionError`) ->
+   `resampleAttemptToPhaseGrid` (101 samples, isotropic source-height units, visibility-weighted
+   2D smoothing). Per-view take consensus: `lib/shooting-profile/repeated-shot.ts`
+   `aggregateViewAttempts` (1-of-1 Basic, deterministic >=2-of-3 High).
+   **DISCONNECTED:** `lib/shooting-profile/cross-view-alignment.ts` `assessCrossViewPhaseAlignment`
+   (front-vs-side anchor delta <= 0.10, interval RMSE <= 0.08) has no caller outside its own
+   module; neither the hook nor `buildRepresentativeSequence` invokes it. Cross-view anchor
+   disagreement therefore reaches neither the recapture decision nor uncertainty today:
+   `maximumRetainedAnchorDispersion` in `representative-sequence.ts` only compares takes within
+   one view, so Basic (1+1) always has dispersion 0.
+5. Direction reconstruction: `lib/shooting-profile/representative-sequence.ts`
+   `buildRepresentativeSequence` -> `reconstructObservedBone` per frame x 12 observed bones ->
+   `lib/shooting-profile/direction-reconstruction.ts` `reconstructBoneDirection`
+   (`alpha = atan2(front.x, -front.y)`, `beta = atan2(side.x, -side.y)`, `sideAxisSign = +1` right /
+   `-1` left, projection-constraint cross product; typed rejections; `conditioning` = sine of the
+   angle between the two constraint normals, minimum 0.1).
+6. Forward kinematics: `lib/shooting-profile/kinematics.ts` `forwardKinematicsFrame` from a
+   non-persisted pelvis root with `ENGINEERING_THRESHOLDS_V1.templateBoneLengths`
+   (tolerance 1e-5) after unit-direction smoothing (radius 2) -> 12 persisted joints.
+7. Uncertainty/release gate: deterministic 9-pattern perturbation scenarios
+   (`lib/shooting-profile/uncertainty.ts`) -> sample covariance + floors -> 25-degree cone gate ->
+   `representativeConfidence` (dispersion/conditioning/availability weights, sensitivity penalty,
+   Basic cap 0.65). Result is `complete` or `recapture_required { reason, affectedBones }`.
+   `lib/shooting-profile/release-gate.ts` `assessRepresentativeReleaseGate` is the
+   feature-flag-rollout gate (certificate based) and is **not called by any production module**;
+   it is only reachable from tests.
+8. Codec/persistence boundary: `parseRepresentativePose4D` (`codec.ts`, strict zod, 101 frames,
+   canonical anchors, PSD covariance, boundary literal) inside `buildRepresentativeSequence` ->
+   reducer `AGGREGATE_COMPLETED { profile, confidence }` -> `matchingShootingProfileSaveInputV2`
+   (`capture-session-reducer.ts`, returns `SaveShootingProfileInputV2 | null`) ->
+   `runCaptureSaveOperationV2` -> `lib/firebase-shooting-profiles.ts` `saveShootingProfileV2` ->
+   `buildShootingProfileWritePlanV2` / `executeShootingProfileWritePlanV2` (Basic 5 docs / High 9,
+   observation payload 14,544 B, representative payload 48,480 B, head last). Recapture dispatches
+   `AGGREGATE_RECAPTURE_REQUIRED { reason: <Korean user copy> }`; the stable reason code is
+   dropped at the hook (`recaptureReason()` collapses everything except
+   `no_complete_agreeing_subset` into one generic sentence).
+
+Coordinate convention actually used (documented here because no doc declares it):
+source landmarks are upright-source top-left normalized (`x` right, `y` down);
+`uprightSourceNormalizedToIsotropic` keeps `y` down; `reconstructObservedBone` negates `y` so
+canonical 3D `+y` is image-up; canonical `+x` is front-view image right; canonical `z` is the
+shooting-side-view image-right axis multiplied by `sideAxisSign` (`+1` right-handed, `-1`
+left-handed). Angles are radians, `atan2(horizontal, vertical)` measured from `+y`, unbounded.
+Left/right anatomical identity comes from MediaPipe landmark indices and is never swapped;
+handedness only mirrors depth.
+
+### Existing coverage per stage (baseline, hermetic)
+- Stage 2 contract: `tests/pose-detection-v2-contract.test.ts` (56), `tests/pose-detection-contract.test.ts` (3)
+- Stage 3/4 phase normalization: `tests/shooting-profile-phase-normalization.test.ts` (23);
+  consensus: `tests/shooting-profile-repeated-shot.test.ts` (22)
+- Stage 4 cross-view gate: **no test file imports `assessCrossViewPhaseAlignment`**
+- Stage 5 direction: `tests/shooting-profile-direction.test.ts` (15) - signed quadrants, side-axis
+  sign, sign disagreement, non-finite, collapsed, both-horizontal, ill-conditioned; **no golden 3D
+  angle cases (0/45/60/90), no tangent-ratio equivalence, no mirror-preserves-angle case**
+- Stage 6/7: `tests/shooting-profile-representative-sequence.test.ts` (52) - 101-frame golden,
+  determinism, Basic cap, visibility/jitter monotonicity within a view, cone gate, closure,
+  left/right depth mirroring, vertical-sign rejection; `tests/representative-4d-integration.test.ts` (3)
+- Stage 7 release gate: **no test file imports `assessRepresentativeReleaseGate`**
+- Stage 8: `tests/firebase-shooting-profile-contract.test.ts` (66), `tests/shooting-profile-contract.test.ts` (13),
+  `tests/shooting-profile-capture-reducer.test.ts` (42), `tests/firestore-shooting-profile-rules.test.ts` (12),
+  emulator `tests/emulator/firestore-rules.emulator.test.ts` (42, CI only)
+- **No test starts from front/side `LandmarkSequenceV2` and reaches a persistence-ready payload**;
+  `tests/fixtures/synthetic-dual-view.ts` produces already-normalized `NormalizedViewAttemptV2`.
+
+### Verification Evidence (baseline on `7223b34`, this machine)
+- `corepack pnpm --version` = 9.12.0; `CI=true corepack pnpm install --frozen-lockfile` passed
+- Typecheck: `corepack pnpm check` exit 0
+- Lint: `corepack pnpm lint` exit 0, 0 warnings
+- Full unit tests: `corepack pnpm test:unit` = 28 files passed, 1 skipped; 411 tests passed, 1 skipped
+- Firestore Emulator: `corepack pnpm test:rules` exit 1 - `Could not spawn java -version` (no Java
+  on this Windows machine). Same blocker class as the P0 handoff; rules evidence must come from
+  PR CI, which installs Temurin 21.
+- Expo export: `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir web-dist`
+  exit 0, 18 HTML routes in `web-dist/`
+- Real-video evaluation: not run. No lawful video exists in the repository or on this machine;
+  `git ls-files` has no media; Node 24 has no pose detector (detection is a native iOS module);
+  Python 3.13 has OpenCV 5.0.0 but **no `mediapipe`**; the `python`/`py` launchers on PATH are a
+  broken `graphify-out` shim.
+- Environment: Node v24.18.0 (CI uses 22), pnpm 9.12.0 via Corepack, ripgrep 14.1.1, `gh` logged in
+  as `Rudwpahs` with `repo`+`workflow` scopes, `core.autocrlf=true` but the working tree is LF
+  (`git ls-files --eol`: 434 `i/lf w/lf`).
+
+### Changed Files
+- `HANDOFF.md`: this baseline section.
+
+### Open Blockers
+- Blocker: `real_video_fixture_unavailable` for Task 4. Evidence: no consented front/side pair on
+  disk or in git; no on-machine pose extractor (no MediaPipe in Python, no native module in Node).
+  Required resolution: owner supplies a self-captured, consented front+side pair on the local
+  workstation (never committed) and either installs `mediapipe` for Python 3.13 or runs the iOS
+  custom build; then run the evaluation tool from Task 4.
+- Blocker: local Firestore emulator (no Java). Evidence above. Resolution: rely on PR CI.
+
+### Residual Risks
+- Risk: cross-view phase disagreement is invisible to the fusion (see stage 4).
+  Current mitigation: none in production; Task 2/3 wire the existing gate in.
+- Risk: `reconstructBoneDirection` never checks supplied front/side projected lengths against the
+  solved direction, so a bone lying along `x` with a non-collapsed side projection is accepted.
+  Current mitigation: cone/closure gates downstream; recorded as a follow-up, not fixed in P1.
+
+### Exact Next Action
+1. Task 1: add golden/equivalence/degenerate cases to `tests/shooting-profile-direction.test.ts`.
+2. Run `corepack pnpm exec vitest run tests/shooting-profile-direction.test.ts`.
+3. Expected: new golden cases pass without implementation change (math is equivalent); any failure
+   identifies a real defect to fix minimally.
+
 
 ## Active work: P0 privacy / rules / auth
 
