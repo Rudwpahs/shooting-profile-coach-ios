@@ -113,8 +113,12 @@ Last updated: 2026-09-02 UTC
   `code_complete_but_real_video_validation_blocked`.
 
 ### PR, CI, merge
-- PR: (filled below after creation). Merge: **not merged** - the work order forbids merging before
-  one Basic 1+1 pair runs on a physical iPhone.
+- PR: https://github.com/Rudwpahs/shooting-profile-coach-ios/pull/4 (`feat/p1-real-video-validation`
+  -> `main`; commits `f89a501`, `463f5f4`, `3a3b7eb`, `ae40643`, `a668df9` plus this docs commit).
+  CI: `Representative 4D CI` on the PR head; read the run with `gh run list --branch feat/p1-real-video-validation`
+  and confirm the emulator step reports `42 passed (42)`.
+- Merge: **not merged** - the work order forbids merging before one Basic 1+1 pair runs on a
+  physical iPhone. After that run is recorded here, merge non-forcefully with `gh pr merge 4 --merge`.
 - Repository can return to private: **now** - nothing in this branch or on `main` depends on public
   visibility; CI runs on private repositories, and `gh` is authenticated as the owner.
 
