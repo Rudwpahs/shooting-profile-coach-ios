@@ -10,10 +10,14 @@ Last updated: 2026-09-02 UTC
 - origin/main SHA: `7223b34aefab2f414a0fac695c3153b7b4833a25` (`Merge pull request #1`), re-fetched
   2026-09-02 before any edit. It equals the historical checkpoint in the work order; `main` has
   not advanced.
-- Working tree status: clean before this file was edited; `web-dist/` is a gitignored export output.
-- PR: none yet.
-- Latest CI: `Representative 4D CI` run `33415439562` on `main` @ `7223b34` = success
-  (2026-08-31T16:40:50Z). All five previous `main` runs were also successful.
+- Working tree status: clean; `web-dist/` is a gitignored export output.
+- PR: https://github.com/Rudwpahs/shooting-profile-coach-ios/pull/2 (`feat/p1-two-view-4d-e2e` -> `main`,
+  head `99126e488433c01c75f286165c4407b1319f5d81` at PR creation; this docs commit follows it).
+- Latest CI: PR run https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33612978713
+  on `99126e4` = **success** (2026-09-02T09:14Z): typecheck, lint, hermetic unit 32 files passed +
+  1 skipped / 463 tests passed + 1 skipped, Firestore Rules in the emulator **42 passed (42)** in
+  6.51 s with Temurin 21, Expo web export `Exported: web-dist`. Baseline `main` run `33415439562`
+  on `7223b34` = success (2026-08-31).
 
 ### Completed
 - Task IDs completed: P1-00 (synchronize and trace), P1-01 (reconstruction mathematics),
@@ -257,14 +261,18 @@ JSON -> exit 2 naming only the argument position.
   solved direction, so a bone lying along `x` with a non-collapsed side projection is accepted.
   Current mitigation: cone/closure gates downstream; recorded as a follow-up, not fixed in P1.
 
+### Task 5 record
+- `origin/main` re-fetched before push: still `7223b34`; branch 5 ahead / 0 behind, no rebase needed,
+  no force push. Final-HEAD Expo export (`99126e4`): exit 0, 18 HTML routes. Diff scan: no media,
+  credential, cache, or unrelated paths (21 files, +3,478 / -422).
+- PR #2 opened with the acceptance checklist; its CI run (above) executed the 42-case emulator
+  suite for real and passed. `gh pr view 2` = `MERGEABLE` / `CLEAN`.
+
 ### Exact Next Action
-1. Task 5: `git fetch origin && git rebase origin/main` (no force), re-run `corepack pnpm check`,
-   `corepack pnpm lint`, `corepack pnpm test:unit`, the Expo export, then
-   `git push -u origin feat/p1-two-view-4d-e2e` and `gh pr create` with the acceptance checklist.
-2. Read the PR `Representative 4D CI` run with `gh run view <id> --log` and confirm the
-   `pnpm test:rules` step executed 42 emulator cases; fix on the branch if red.
-3. Merge non-forcefully after green CI, then verify the `main` run. Final status:
-   `code_complete_but_real_video_validation_blocked` unless a lawful pair is evaluated first.
+1. After this docs commit's CI run is green, merge PR #2 non-forcefully (`gh pr merge 2 --merge`),
+   then verify the `main` run with `gh run list --branch main --limit 1`.
+2. Real-video evaluation remains the only open gate; see Open Blockers for the exact resume command.
+3. Final status until then: `code_complete_but_real_video_validation_blocked`.
 
 
 ## Active work: P0 privacy / rules / auth
