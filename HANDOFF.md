@@ -115,8 +115,10 @@ Last updated: 2026-09-02 UTC
 ### PR, CI, merge
 - PR: https://github.com/Rudwpahs/shooting-profile-coach-ios/pull/4 (`feat/p1-real-video-validation`
   -> `main`; commits `f89a501`, `463f5f4`, `3a3b7eb`, `ae40643`, `a668df9` plus this docs commit).
-  CI: `Representative 4D CI` on the PR head; read the run with `gh run list --branch feat/p1-real-video-validation`
-  and confirm the emulator step reports `42 passed (42)`.
+  CI: `Representative 4D CI` run https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33637978414
+  on head `f07eee3` = **success**: typecheck, lint, unit 34 files passed + 1 skipped / 474 tests passed
+  + 1 skipped, Firestore Rules in the emulator **42 passed (42)** (executed, Temurin 21), Expo web
+  export. `gh pr view 4` = `OPEN` / `CLEAN`. This docs commit follows that head.
 - Merge: **not merged** - the work order forbids merging before one Basic 1+1 pair runs on a
   physical iPhone. After that run is recorded here, merge non-forcefully with `gh pr merge 4 --merge`.
 - Repository can return to private: **now** - nothing in this branch or on `main` depends on public
