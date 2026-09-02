@@ -1,6 +1,14 @@
 import type { Vector3 } from "@/lib/pose-motion";
 import { parseRepresentativePose4D } from "@/lib/shooting-profile/codec";
 import {
+  assessCrossViewPhaseAlignment,
+  CROSS_VIEW_PHASE_ALIGNMENT_V1,
+  crossViewAlignmentPenalty,
+  type CrossViewPhaseAlignmentAcceptedV1,
+  type CrossViewPhaseAlignmentReasonV1,
+  type CrossViewPhaseAlignmentResultV1,
+} from "@/lib/shooting-profile/cross-view-alignment";
+import {
   angleBetweenDirections,
   reconstructBoneDirection,
   type DirectionRejectionReason,
@@ -99,8 +107,27 @@ export type RepresentativeSequenceRecaptureReasonV1 =
   | "uncertainty_exceeds_limit"
   | "perturbation_scenario_shortfall"
   | "inconsistent_skeleton_closure"
+  | CrossViewPhaseAlignmentReasonV1
   | DirectionRejectionReason
   | ReconstructionErrorReasonV1;
+
+/**
+ * Derived, non-identifying evidence quality summary for one fused estimate.
+ * It exposes two-view conditioning, landmark availability, retained-take
+ * angular spread, anchor-timing dispersion (within and across views), and the
+ * final uncertainty envelope so callers can surface non-simultaneous capture
+ * error instead of hiding it behind a single confidence number.
+ */
+export type RepresentativeEvidenceSummaryV1 = Readonly<{
+  meanConditioning: number;
+  minimumConditioning: number;
+  meanAvailability: number;
+  minimumAvailability: number;
+  maximumRetainedSpreadDegrees: number;
+  retainedAnchorDispersion: number;
+  maximumDirectionalSensitivityDegrees: number;
+  maximumDirectionalConeDegrees: number;
+}>;
 
 export type RepresentativeSequenceResultV1 =
   | {
@@ -109,11 +136,14 @@ export type RepresentativeSequenceResultV1 =
     confidence: number;
     selectedAttemptsByView: SelectedAttemptsByViewV1;
     rootMotion: RootMotionStatusV1;
+    crossViewAlignment: CrossViewPhaseAlignmentAcceptedV1;
+    evidenceSummary: RepresentativeEvidenceSummaryV1;
   }
   | {
     status: "recapture_required";
     reason: RepresentativeSequenceRecaptureReasonV1;
     affectedBones: readonly string[];
+    crossViewAlignment?: CrossViewPhaseAlignmentResultV1;
   };
 
 function clamp(value: number, minimum: number, maximum: number): number {
@@ -316,11 +346,13 @@ function smoothObservedDirections(
 function recapture(
   reason: RepresentativeSequenceRecaptureReasonV1,
   affectedBones: readonly string[] = [],
+  crossViewAlignment?: CrossViewPhaseAlignmentResultV1,
 ): RepresentativeSequenceResultV1 {
   return {
     status: "recapture_required",
     reason,
     affectedBones: Object.freeze([...affectedBones]),
+    ...(crossViewAlignment === undefined ? {} : { crossViewAlignment }),
   };
 }
 
@@ -408,21 +440,27 @@ function normalizedAnchorPositions(attempt: NormalizedViewAttemptV2): number[] {
   return attempt.phaseAnchors.map((anchor) => (anchor.timestampMs - first) / duration);
 }
 
+/** Anchor timing differences below this fraction of a shot are numerical noise. */
+const ANCHOR_DISPERSION_TOLERANCE = 1e-9;
+
+/**
+ * Pools every retained take across both views: within-view take timing
+ * dispersion and front/side anchor disagreement are both phase evidence the
+ * fused estimate depends on, so either one widens the perturbation radius.
+ */
 function maximumRetainedAnchorDispersion(
   attemptsByView: readonly (readonly NormalizedViewAttemptV2[])[],
 ): number {
+  const positions = attemptsByView.flatMap((attempts) => attempts.map(normalizedAnchorPositions));
   let maximum = 0;
-  attemptsByView.forEach((attempts) => {
-    const positions = attempts.map(normalizedAnchorPositions);
-    for (let first = 0; first < positions.length - 1; first += 1) {
-      for (let second = first + 1; second < positions.length; second += 1) {
-        positions[first].forEach((position, anchorIndex) => {
-          maximum = Math.max(maximum, Math.abs(position - positions[second][anchorIndex]));
-        });
-      }
+  for (let first = 0; first < positions.length - 1; first += 1) {
+    for (let second = first + 1; second < positions.length; second += 1) {
+      positions[first].forEach((position, anchorIndex) => {
+        maximum = Math.max(maximum, Math.abs(position - positions[second][anchorIndex]));
+      });
     }
-  });
-  return maximum;
+  }
+  return maximum < ANCHOR_DISPERSION_TOLERANCE ? 0 : maximum;
 }
 
 function phaseIndexRadiusFor(
@@ -683,8 +721,10 @@ const JOINT_PARENT_V1: Readonly<Partial<Record<PersistedJointNameV2, PersistedJo
 
 function uncertaintyFor(
   evidence: DirectionEvidenceV1,
+  alignmentPenalty: number,
 ): JointUncertaintyV2 {
   const config = ENGINEERING_THRESHOLDS_V1.uncertainty;
+  const alignment = CROSS_VIEW_PHASE_ALIGNMENT_V1.uncertaintyPropagation;
   const normalizedDispersion = clamp(
     evidence.retainedSpreadRadians / CONSENSUS_V1.maxAngularDistanceRadians,
     0,
@@ -692,11 +732,13 @@ function uncertaintyFor(
   );
   const conditioningPenalty = 1 - clamp(evidence.conditioning, 0, 1);
   const availabilityPenalty = 1 - clamp(evidence.availability, 0, 1);
+  const crossViewPenalty = clamp(alignmentPenalty, 0, 1);
   const directionalConeDegrees = clamp(
     config.minimumDirectionalConeDegrees
       + normalizedDispersion * config.dispersionConeDegrees
       + conditioningPenalty * config.conditioningConeDegrees
-      + availabilityPenalty * config.availabilityConeDegrees,
+      + availabilityPenalty * config.availabilityConeDegrees
+      + crossViewPenalty * alignment.coneDegreesAtLimit,
     config.minimumDirectionalConeDegrees,
     config.maximumDirectionalConeDegrees,
   );
@@ -704,7 +746,8 @@ function uncertaintyFor(
     config.minimumVariance
       + normalizedDispersion * config.dispersionVariance
       + conditioningPenalty * config.conditioningVariance
-      + availabilityPenalty * config.availabilityVariance,
+      + availabilityPenalty * config.availabilityVariance
+      + crossViewPenalty * alignment.varianceAtLimit,
     config.minimumVariance,
     config.maximumVariance,
   );
@@ -741,10 +784,11 @@ function buildPerturbationUncertaintyFrames(
   scenarios: readonly AcceptedScenarioTrajectoryV1[],
   roughnessSquaredByBone: Record<ObservedBoneIdV1, number>,
   retainedAnchorDispersion: number,
+  alignmentPenalty: number,
 ): UncertaintyFramesResultV1 {
   const config = ENGINEERING_THRESHOLDS_V1.uncertaintyPerturbation;
   const evidenceUncertaintyByFrame = evidenceFrames.map((evidence) => Object.fromEntries(
-    OBSERVED_BONES_V1.map((bone) => [bone.id, uncertaintyFor(evidence[bone.id])]),
+    OBSERVED_BONES_V1.map((bone) => [bone.id, uncertaintyFor(evidence[bone.id], alignmentPenalty)]),
   ) as Record<ObservedBoneIdV1, JointUncertaintyV2>);
   const overLimitBones = new Set<ObservedBoneIdV1>();
   let maximumDirectionalSensitivityDegrees = 0;
@@ -824,6 +868,7 @@ function representativeConfidence(
   mode: CaptureProtocolV2,
   evidenceFrames: readonly DirectionEvidenceMapV1[],
   maximumDirectionalSensitivityDegrees: number,
+  alignmentPenalty: number,
 ): number {
   const allEvidence = evidenceFrames.flatMap((frame) => Object.values(frame));
   const normalizedDispersion = allEvidence.reduce((sum, evidence) => (
@@ -846,10 +891,38 @@ function representativeConfidence(
       0,
       1,
     );
-  const raw = Math.min(evidenceOnly, evidenceOnly * (1 - sensitivityPenalty));
+  // Front/side timing disagreement can only lower confidence, never raise it.
+  const alignmentMultiplier = 1
+    - CROSS_VIEW_PHASE_ALIGNMENT_V1.uncertaintyPropagation.confidencePenaltyAtLimit
+    * clamp(alignmentPenalty, 0, 1);
+  const raw = Math.min(evidenceOnly, evidenceOnly * (1 - sensitivityPenalty)) * alignmentMultiplier;
   return mode === "basic_1_plus_1"
     ? Math.min(raw, ENGINEERING_THRESHOLDS_V1.basicConfidenceCap)
     : raw;
+}
+
+function evidenceSummaryFor(
+  evidenceFrames: readonly DirectionEvidenceMapV1[],
+  uncertaintyFrames: readonly Record<PersistedJointNameV2, JointUncertaintyV2>[],
+  retainedAnchorDispersion: number,
+  maximumDirectionalSensitivityDegrees: number,
+): RepresentativeEvidenceSummaryV1 {
+  const allEvidence = evidenceFrames.flatMap((frame) => Object.values(frame));
+  const mean = (values: readonly number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  return Object.freeze({
+    meanConditioning: mean(allEvidence.map((evidence) => evidence.conditioning)),
+    minimumConditioning: Math.min(...allEvidence.map((evidence) => evidence.conditioning)),
+    meanAvailability: mean(allEvidence.map((evidence) => evidence.availability)),
+    minimumAvailability: Math.min(...allEvidence.map((evidence) => evidence.availability)),
+    maximumRetainedSpreadDegrees: Math.max(
+      ...allEvidence.map((evidence) => evidence.retainedSpreadRadians),
+    ) * 180 / Math.PI,
+    retainedAnchorDispersion,
+    maximumDirectionalSensitivityDegrees,
+    maximumDirectionalConeDegrees: Math.max(...uncertaintyFrames.flatMap((frame) => (
+      Object.values(frame).map((uncertainty) => uncertainty.directionalConeDegrees)
+    ))),
+  });
 }
 
 export function buildRepresentativeSequence(
@@ -859,6 +932,27 @@ export function buildRepresentativeSequence(
   if ("status" in input) return input;
   const aggregated = aggregateSessionViews(input);
   if ("status" in aggregated) return aggregated;
+
+  const retainedFrontAttempts = selectedAttempts(input.frontAttempts, aggregated.front.attemptIds);
+  const retainedSideAttempts = selectedAttempts(
+    input.shootingSideAttempts,
+    aggregated.side.attemptIds,
+  );
+  if (
+    retainedFrontAttempts.length !== aggregated.front.attemptIds.length
+    || retainedSideAttempts.length !== aggregated.side.attemptIds.length
+  ) {
+    return recapture("invalid_attempt", OBSERVED_BONES_V1.map((bone) => bone.id));
+  }
+
+  // Separately recorded views are only fused when their canonical phase timing
+  // is compatible; the remaining disagreement is carried into uncertainty and
+  // confidence below rather than hidden.
+  const crossViewAlignment = assessCrossViewPhaseAlignment(retainedFrontAttempts, retainedSideAttempts);
+  if (crossViewAlignment.status !== "accepted") {
+    return recapture(crossViewAlignment.reason, [], crossViewAlignment);
+  }
+  const alignmentPenalty = crossViewAlignmentPenalty(crossViewAlignment);
 
   const evidenceFrames: DirectionEvidenceMapV1[] = [];
   const rawDirections: BoneDirectionMapV1[] = [];
@@ -871,7 +965,7 @@ export function buildRepresentativeSequence(
         bone,
         aggregated.front.shootingHand,
       );
-      if ("rejected" in result) return recapture(result.rejected, [bone.id]);
+      if ("rejected" in result) return recapture(result.rejected, [bone.id], crossViewAlignment);
       evidence[bone.id] = result;
     }
     evidenceFrames.push(evidence);
@@ -884,25 +978,29 @@ export function buildRepresentativeSequence(
   try {
     smoothedDirections = smoothDirections(rawDirections);
     const smoothedObserved = smoothObservedDirections(evidenceFrames);
-    if (!smoothedObserved) return recapture("inconsistent_skeleton_closure", ["shoulder_line"]);
+    if (!smoothedObserved) {
+      return recapture("inconsistent_skeleton_closure", ["shoulder_line"], crossViewAlignment);
+    }
     baselineObservedDirections = smoothedObserved;
     baselineJoints = smoothedDirections.map((directions) => forwardKinematicsFrame(
       directions,
       ENGINEERING_THRESHOLDS_V1.templateBoneLengths,
     ));
   } catch (error) {
-    if (error instanceof ReconstructionError) return recapture(error.reason, error.boneId ? [error.boneId] : []);
-    return recapture("missing_critical_bone");
+    if (error instanceof ReconstructionError) {
+      return recapture(error.reason, error.boneId ? [error.boneId] : [], crossViewAlignment);
+    }
+    return recapture("missing_critical_bone", [], crossViewAlignment);
   }
 
   if (!shoulderClosureIsValid(baselineJoints, baselineObservedDirections)) {
-    return recapture("inconsistent_skeleton_closure", ["shoulder_line"]);
+    return recapture("inconsistent_skeleton_closure", ["shoulder_line"], crossViewAlignment);
   }
 
   const evidenceUncertaintyByFrame = evidenceFrames.map((evidence) => Object.fromEntries(
     OBSERVED_BONES_V1.map((bone) => [
       bone.id,
-      uncertaintyFor(evidence[bone.id]),
+      uncertaintyFor(evidence[bone.id], alignmentPenalty),
     ]),
   ) as Record<ObservedBoneIdV1, JointUncertaintyV2>);
   const evidenceOverLimitBones = new Set<ObservedBoneIdV1>();
@@ -915,19 +1013,7 @@ export function buildRepresentativeSequence(
     });
   });
   if (evidenceOverLimitBones.size > 0) {
-    return recapture("uncertainty_exceeds_limit", [...evidenceOverLimitBones]);
-  }
-
-  const retainedFrontAttempts = selectedAttempts(input.frontAttempts, aggregated.front.attemptIds);
-  const retainedSideAttempts = selectedAttempts(
-    input.shootingSideAttempts,
-    aggregated.side.attemptIds,
-  );
-  if (
-    retainedFrontAttempts.length !== aggregated.front.attemptIds.length
-    || retainedSideAttempts.length !== aggregated.side.attemptIds.length
-  ) {
-    return recapture("invalid_attempt", OBSERVED_BONES_V1.map((bone) => bone.id));
+    return recapture("uncertainty_exceeds_limit", [...evidenceOverLimitBones], crossViewAlignment);
   }
 
   try {
@@ -949,7 +1035,7 @@ export function buildRepresentativeSequence(
       const frontAttempt = frontById.get(scenario.frontAttemptId);
       const sideAttempt = sideById.get(scenario.shootingSideAttemptId);
       if (!frontAttempt || !sideAttempt) {
-        return recapture("invalid_attempt", OBSERVED_BONES_V1.map((bone) => bone.id));
+        return recapture("invalid_attempt", OBSERVED_BONES_V1.map((bone) => bone.id), crossViewAlignment);
       }
       const result = reconstructScenarioTrajectory(
         frontAttempt,
@@ -960,7 +1046,7 @@ export function buildRepresentativeSequence(
         aggregated.front.shootingHand,
       );
       if (result.status === "closure_rejected") {
-        return recapture("inconsistent_skeleton_closure", ["shoulder_line"]);
+        return recapture("inconsistent_skeleton_closure", ["shoulder_line"], crossViewAlignment);
       }
       if (result.status === "rejected") {
         rejectedScenarioBones.add(result.affectedBone);
@@ -977,6 +1063,7 @@ export function buildRepresentativeSequence(
       return recapture(
         "perturbation_scenario_shortfall",
         [...rejectedScenarioBones].sort(),
+        crossViewAlignment,
       );
     }
     const roughnessSquaredByBone = coordinateRoughnessSquaredByBone([
@@ -989,9 +1076,14 @@ export function buildRepresentativeSequence(
       acceptedScenarios,
       roughnessSquaredByBone,
       retainedAnchorDispersion,
+      alignmentPenalty,
     );
     if (perturbationUncertainty.overLimitBones.length > 0) {
-      return recapture("uncertainty_exceeds_limit", perturbationUncertainty.overLimitBones);
+      return recapture(
+        "uncertainty_exceeds_limit",
+        perturbationUncertainty.overLimitBones,
+        crossViewAlignment,
+      );
     }
     const frames = baselineJoints.map((joints, frameIndex) => ({
       phase: frameIndex / (PRODUCTION_PHASE_SAMPLE_COUNT - 1),
@@ -1019,12 +1111,22 @@ export function buildRepresentativeSequence(
         input.mode,
         evidenceFrames,
         perturbationUncertainty.maximumDirectionalSensitivityDegrees,
+        alignmentPenalty,
       ),
       selectedAttemptsByView,
       rootMotion: { status: "unavailable" },
+      crossViewAlignment,
+      evidenceSummary: evidenceSummaryFor(
+        evidenceFrames,
+        perturbationUncertainty.frames,
+        retainedAnchorDispersion,
+        perturbationUncertainty.maximumDirectionalSensitivityDegrees,
+      ),
     };
   } catch (error) {
-    if (error instanceof ReconstructionError) return recapture(error.reason, error.boneId ? [error.boneId] : []);
-    return recapture("invalid_profile");
+    if (error instanceof ReconstructionError) {
+      return recapture(error.reason, error.boneId ? [error.boneId] : [], crossViewAlignment);
+    }
+    return recapture("invalid_profile", [], crossViewAlignment);
   }
 }

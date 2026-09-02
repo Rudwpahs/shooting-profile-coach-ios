@@ -16,9 +16,28 @@ Last updated: 2026-09-02 UTC
   (2026-08-31T16:40:50Z). All five previous `main` runs were also successful.
 
 ### Completed
-- Task IDs completed: P1-00 (synchronize and trace).
-- Behavioral changes: none.
-- Commits: this `HANDOFF.md` baseline only.
+- Task IDs completed: P1-00 (synchronize and trace), P1-01 (reconstruction mathematics),
+  P1-02 (alignment and uncertainty gates).
+- Behavioral changes:
+  - P1-01: none. The 11 new cases in `tests/shooting-profile-direction.test.ts` (golden 0/45/45/60/90
+    degree pairs, the documented 60-degree vectors, a 2x(11^2+9^2) tangent-ratio equivalence sweep
+    with `conditioning = sqrt(cos^2 a + cos^2 b - cos^2 a cos^2 b)`, mirror invariance, typed
+    degenerate rejections, a 24x24x2x2x5 singular/wrapped sweep with no NaN/Infinity) all passed on
+    first run, so the projection-constraint solver was left untouched.
+  - P1-02: `buildRepresentativeSequence` now calls `assessCrossViewPhaseAlignment` on the retained
+    front/side takes right after per-view consensus and returns
+    `recapture_required { reason: "cross_view_phase_mismatch" | "invalid_phase_anchors" | ... }`
+    with the alignment result attached; an accepted alignment's `1 - confidence` penalty is added
+    linearly to every observed bone's evidence cone (+3 deg at the limit, inspected by the 25-degree
+    admission gate), evidence variance (+0.015), and multiplies confidence by `1 - 0.5 * penalty`
+    before the Basic 0.65 cap; retained anchor dispersion now pools takes across both views so
+    front/side timing disagreement widens the deterministic phase-perturbation radius; every
+    complete result carries `crossViewAlignment` and a non-identifying `evidenceSummary`
+    (mean/min conditioning, mean/min availability, retained spread, anchor dispersion, sensitivity,
+    max cone). Gains live in `CROSS_VIEW_PHASE_ALIGNMENT_V1.uncertaintyPropagation` and are
+    provisional engineering defaults.
+- Commits: `b1fe0af` docs baseline, `f7913bb` direction proof tests, then
+  `feat: enforce cross-view reconstruction confidence gates` (this commit).
 
 ### Actual Call Path (traced from source, default V2 flags)
 1. Video/capture entry: `app/private-capture.tsx` renders `<CaptureSession>` only when
@@ -117,7 +136,27 @@ handedness only mirrors depth.
   (`git ls-files --eol`: 434 `i/lf w/lf`).
 
 ### Changed Files
-- `HANDOFF.md`: this baseline section.
+- `HANDOFF.md`: this section.
+- `tests/shooting-profile-direction.test.ts`: +11 proof cases (15 -> 26), no production change.
+- `lib/shooting-profile/cross-view-alignment.ts`: `uncertaintyPropagation` gains,
+  `CrossViewPhaseAlignmentAcceptedV1`, `crossViewAlignmentPenalty` (sub-1e-9 rounding snapped to 0).
+- `lib/shooting-profile/representative-sequence.ts`: alignment gate after consensus, penalty into
+  `uncertaintyFor`/`representativeConfidence`, cross-view anchor pooling in
+  `maximumRetainedAnchorDispersion` (with a 1e-9 noise floor so re-timed takes stay byte-identical),
+  `crossViewAlignment` + `evidenceSummary` on results, alignment attached to every later recapture.
+- `tests/fixtures/synthetic-dual-view.ts`: `sideAnchorShiftNormalized` option (moves only the side
+  view's intermediate anchors, frames unchanged).
+- `tests/shooting-profile-cross-view-alignment.test.ts`: new, 14 cases - gate unit tests, re-timed
+  side view yields an identical profile, mismatch -> stable recapture reason, monotone uncertainty /
+  confidence in Basic and High, corrupted anchor, missing landmark, low visibility, mirrored images
+  and left-handed depth mirroring without anatomical swap.
+- `tests/shooting-profile-representative-sequence.test.ts`: two exact-shape recapture assertions
+  now expect the attached accepted `crossViewAlignment`.
+
+Verification after P1-02: focused 3 files 69/69; full `vitest run --exclude tests/firebase-configuration.test.ts`
+29 files passed + 1 skipped, 436 tests passed + 1 skipped; `eslint --max-warnings 0` on the six
+changed files clean; `tsc --noEmit` clean for all committed files (an in-progress, uncommitted Codex
+fixture test file is excluded from that statement).
 
 ### Open Blockers
 - Blocker: `real_video_fixture_unavailable` for Task 4. Evidence: no consented front/side pair on
@@ -128,17 +167,29 @@ handedness only mirrors depth.
 - Blocker: local Firestore emulator (no Java). Evidence above. Resolution: rely on PR CI.
 
 ### Residual Risks
-- Risk: cross-view phase disagreement is invisible to the fusion (see stage 4).
-  Current mitigation: none in production; Task 2/3 wire the existing gate in.
+- Risk: the synthetic shoulder line is deliberately near-horizontal (evidence cone ~20-22 deg),
+  so it reaches the 25-degree admission gate before other bones when cross-view timing disagrees;
+  real shoulder lines are near-horizontal too, which makes the shoulder line the most likely
+  `uncertainty_exceeds_limit` bone in practice. Current mitigation: the gate fails closed and names
+  the bone; the alignment cone gain is kept small (3 deg) and provisional.
+- Risk: a single corrupted phase anchor in any take (even a High take that consensus would
+  exclude) fails the whole session with `invalid_attempt` because attempt validation runs before
+  take selection. Current mitigation: fail-closed, typed; documented, not changed in P1.
 - Risk: `reconstructBoneDirection` never checks supplied front/side projected lengths against the
   solved direction, so a bone lying along `x` with a non-collapsed side projection is accepted.
   Current mitigation: cone/closure gates downstream; recorded as a follow-up, not fixed in P1.
 
 ### Exact Next Action
-1. Task 1: add golden/equivalence/degenerate cases to `tests/shooting-profile-direction.test.ts`.
-2. Run `corepack pnpm exec vitest run tests/shooting-profile-direction.test.ts`.
-3. Expected: new golden cases pass without implementation change (math is equivalent); any failure
-   identifies a real defect to fix minimally.
+1. Task 3: create `lib/shooting-profile/two-view-pipeline.ts` (thin orchestrator: validated front/side
+   `LandmarkSequenceV2` -> `detectPhaseAnchors`/`resampleAttemptToPhaseGrid` -> `buildRepresentativeSequence`
+   -> `validateShootingProfileWriteV2` -> persistence-ready `SaveShootingProfileInputV2` or typed
+   recapture) and route `hooks/use-shooting-profile-capture.ts` through it; keep the structural
+   guard strings listed in `tests/shooting-profile-persistence-ui.test.ts`,
+   `tests/shooting-profile-capture-reducer.test.ts` and `tests/pose-detection-v2-contract.test.ts`.
+2. Failing test first: `tests/shooting-profile-two-view-pipeline.test.ts` starting from the
+   `LandmarkSequenceV2` fixture in `tests/fixtures/synthetic-landmark-sequence.ts` (being generated).
+3. Expected: 101 frames x 12 joints, finite, boundary literal, 48,480 / 14,544 byte payloads,
+   recapture without any `saveInput`.
 
 
 ## Active work: P0 privacy / rules / auth
