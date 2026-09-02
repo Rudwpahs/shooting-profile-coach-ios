@@ -307,10 +307,17 @@ function heapUsed(): number | undefined {
   return process.memoryUsage().heapUsed;
 }
 
+/** React Native/Hermes exposes `performance.now`; fall back to wall-clock time elsewhere. */
+function nowMs(): number {
+  return typeof performance !== "undefined" && typeof performance.now === "function"
+    ? performance.now()
+    : Date.now();
+}
+
 export function buildTwoViewEvaluationReport(
   input: BuildTwoViewEvaluationReportInput,
 ): TwoViewEvaluationReportV1 {
-  const startedAt = performance.now();
+  const startedAt = nowMs();
   let peakHeapBytes = heapUsed();
   const recordHeapUsage = () => {
     const currentHeapBytes = heapUsed();
@@ -348,7 +355,7 @@ export function buildTwoViewEvaluationReport(
   const reconstruction = result.status === "complete" ? reconstructionMetrics(result.profile) : undefined;
   recordHeapUsage();
   const runtime = {
-    processingMs: performance.now() - startedAt,
+    processingMs: Math.max(0, nowMs() - startedAt),
     ...(peakHeapBytes === undefined ? {} : { peakHeapBytes }),
   };
   const crossViewAlignment = copyCrossViewAlignment(result);

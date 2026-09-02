@@ -1,6 +1,8 @@
 import * as ImagePicker from "expo-image-picker";
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { Share } from "react-native";
 
+import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import type { SaveShootingProfileInputV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
   admitCaptureSaveOperationV2,
@@ -14,6 +16,14 @@ import {
   type CaptureSaveOperationTokenV2,
   type RetainedNormalizedAttemptsV2,
 } from "@/lib/shooting-profile/capture-session-reducer";
+import {
+  buildRealVideoEvaluation,
+  collectEvaluationAttempts,
+  isDevelopmentBuild,
+  isRealVideoEvaluationEnabled,
+  shareRealVideoEvaluation,
+  type RealVideoEvaluationState,
+} from "@/lib/shooting-profile/real-video-evaluation";
 import { buildTwoViewRepresentativeProfile } from "@/lib/shooting-profile/two-view-pipeline";
 import type {
   CaptureProtocolV2,
@@ -108,10 +118,27 @@ export function useShootingProfileCapture(
   const activeRequestsRef = useRef(new Map<string, ActiveRequest>());
   const saveInFlightRef = useRef<CaptureSaveOperationTokenV2 | null>(null);
   const normalizedAttemptsRef = useRef<RetainedNormalizedAttemptsV2 | null>(null);
+  // Development-build-only private evaluation: derived report from the sequences
+  // the reducer already holds; never auto-run, never persisted, never uploaded.
+  const evaluationEnabled = isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild());
+  const [evaluation, setEvaluation] = useState<RealVideoEvaluationState>({ status: "idle" });
+  const evaluationRef = useRef(evaluation);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  useEffect(() => {
+    evaluationRef.current = evaluation;
+  }, [evaluation]);
+
+  useEffect(() => {
+    setEvaluation((current) => (
+      current.status === "idle" || current.sessionGeneration === state.sessionGeneration
+        ? current
+        : { status: "idle" }
+    ));
+  }, [state.sessionGeneration]);
 
   useEffect(() => {
     if (!captureSessionRetainsSaveToken(state.status)) {
@@ -137,6 +164,7 @@ export function useShootingProfileCapture(
   const invalidateDerivedSave = useCallback(() => {
     saveInFlightRef.current = null;
     normalizedAttemptsRef.current = null;
+    setEvaluation({ status: "idle" });
   }, []);
 
   useEffect(() => () => {
@@ -372,6 +400,39 @@ export function useShootingProfileCapture(
     }
   }, [state.mode, state.sessionGeneration, state.shootingHand, state.slots, state.status]);
 
+  const buildEvaluationReport = useCallback(() => {
+    if (!evaluationEnabled) return;
+    const snapshot = stateRef.current;
+    const result = buildRealVideoEvaluation(snapshot, { sourceClass: "consented_self_capture" });
+    setEvaluation(result.status === "ready"
+      ? {
+        status: "ready",
+        sessionGeneration: snapshot.sessionGeneration,
+        report: result.report,
+        json: result.json,
+      }
+      : {
+        status: "build_failed",
+        sessionGeneration: snapshot.sessionGeneration,
+        reason: result.reason,
+      });
+  }, [evaluationEnabled]);
+
+  const shareEvaluationReport = useCallback(async () => {
+    if (!evaluationEnabled) return;
+    const current = evaluationRef.current;
+    if (!("json" in current)) return;
+    // User-initiated system share sheet only; nothing is copied, posted, or tracked.
+    const outcome = await shareRealVideoEvaluation(current.json, (payload) => Share.share({
+      message: payload.message,
+      title: payload.title,
+    }));
+    if (evaluationRef.current !== current) return;
+    setEvaluation({ ...current, status: outcome });
+  }, [evaluationEnabled]);
+
+  const evaluationAvailable = evaluationEnabled && collectEvaluationAttempts(state) !== undefined;
+
   const save = useCallback(async () => {
     const snapshot = stateRef.current;
     const retained = normalizedAttemptsRef.current;
@@ -427,5 +488,10 @@ export function useShootingProfileCapture(
     cancelSession,
     retrySession,
     save,
+    evaluationEnabled,
+    evaluationAvailable,
+    evaluation,
+    buildEvaluationReport,
+    shareEvaluationReport,
   };
 }

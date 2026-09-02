@@ -14,6 +14,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { CaptureModePicker } from "@/components/shooting-profile/capture-mode-picker";
 import { CaptureSlotCard } from "@/components/shooting-profile/capture-slot-card";
 import { QualitySummary } from "@/components/shooting-profile/quality-summary";
+import { RealVideoEvaluationPanel } from "@/components/shooting-profile/real-video-evaluation-panel";
 import {
   type SaveRepresentativeProfile,
   useShootingProfileCapture,
@@ -287,6 +288,14 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
             <Text style={styles.retakeHeading}>클립별 확인</Text>
             <Text style={styles.retakeIntro}>결과가 평소 폼과 다르면 필요한 클립 하나만 다시 선택하세요.</Text>
             {renderSlots()}
+            {capture.evaluationEnabled ? (
+              <RealVideoEvaluationPanel
+                canBuild={capture.evaluationAvailable}
+                evaluation={capture.evaluation}
+                onBuild={capture.buildEvaluationReport}
+                onShare={() => void capture.shareEvaluationReport()}
+              />
+            ) : null}
           </View>
         ) : null}
 
@@ -372,6 +381,14 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
                 {state.recoveryStatus === "result_review" ? "리뷰로 돌아가기" : "클립 확인하기"}
               </Text>
             </Pressable>
+            {capture.evaluationEnabled ? (
+              <RealVideoEvaluationPanel
+                canBuild={capture.evaluationAvailable}
+                evaluation={capture.evaluation}
+                onBuild={capture.buildEvaluationReport}
+                onShare={() => void capture.shareEvaluationReport()}
+              />
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
