@@ -5,19 +5,22 @@ Last updated: 2026-09-02 UTC
 ## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC
 
 ### Repository State
-- Branch: `feat/p1-two-view-4d-e2e` (created from `origin/main`, tracks `origin/main`)
-- HEAD SHA: `7223b34aefab2f414a0fac695c3153b7b4833a25` (branch point; no code commits yet)
-- origin/main SHA: `7223b34aefab2f414a0fac695c3153b7b4833a25` (`Merge pull request #1`), re-fetched
-  2026-09-02 before any edit. It equals the historical checkpoint in the work order; `main` has
-  not advanced.
+- Status: **`code_complete_but_real_video_validation_blocked`** - merged into `main`; only the
+  lawful real-video evaluation gate is open (see Open Blockers).
+- Feature branch: `feat/p1-two-view-4d-e2e`, created from `origin/main`
+  `7223b34aefab2f414a0fac695c3153b7b4833a25` (the work order's historical checkpoint; `main` had
+  not advanced), 6 commits: `b1fe0af`, `f7913bb`, `d5613e7`, `1c60eef`, `99126e4`, `3f7e0c3`.
+- PR: https://github.com/Rudwpahs/shooting-profile-coach-ios/pull/2 - merged non-forcefully
+  (merge commit, no squash/rebase) at 2026-09-02T09:20:48Z.
+- Merge SHA on `main`: `e8cde6b337ca3ffcc288b22638596595c41f0190`.
+- PR CI: run https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33612978713 on
+  `99126e4` = success and run https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33613359757
+  on `3f7e0c3` = success: typecheck, lint, hermetic unit 32 files passed + 1 skipped / 463 tests
+  passed + 1 skipped, Firestore Rules in the emulator **42 passed (42)** with Temurin 21, Expo web
+  export `Exported: web-dist`.
+- Post-merge `main` CI: run https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33613602694
+  on `e8cde6b` = **success** (unit 463 passed + 1 skipped, emulator 42 passed (42)).
 - Working tree status: clean; `web-dist/` is a gitignored export output.
-- PR: https://github.com/Rudwpahs/shooting-profile-coach-ios/pull/2 (`feat/p1-two-view-4d-e2e` -> `main`,
-  head `99126e488433c01c75f286165c4407b1319f5d81` at PR creation; this docs commit follows it).
-- Latest CI: PR run https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33612978713
-  on `99126e4` = **success** (2026-09-02T09:14Z): typecheck, lint, hermetic unit 32 files passed +
-  1 skipped / 463 tests passed + 1 skipped, Firestore Rules in the emulator **42 passed (42)** in
-  6.51 s with Temurin 21, Expo web export `Exported: web-dist`. Baseline `main` run `33415439562`
-  on `7223b34` = success (2026-08-31).
 
 ### Completed
 - Task IDs completed: P1-00 (synchronize and trace), P1-01 (reconstruction mathematics),
@@ -269,10 +272,14 @@ JSON -> exit 2 naming only the argument position.
   suite for real and passed. `gh pr view 2` = `MERGEABLE` / `CLEAN`.
 
 ### Exact Next Action
-1. After this docs commit's CI run is green, merge PR #2 non-forcefully (`gh pr merge 2 --merge`),
-   then verify the `main` run with `gh run list --branch main --limit 1`.
-2. Real-video evaluation remains the only open gate; see Open Blockers for the exact resume command.
-3. Final status until then: `code_complete_but_real_video_validation_blocked`.
+1. Obtain one lawful (self-captured, consented) front + shooting-side pair and its on-device
+   `LandmarkSequenceV2` JSON exports; keep both outside git.
+2. Run the command in Open Blockers (`corepack pnpm eval:two-view ...`), then record the report's
+   derived metrics (accepted frame ratio, alignment score, conditioning, drift, discontinuities,
+   release outcome) in this file through a PR.
+3. Expected: `pipeline=complete` (exit 0) or a typed recapture (exit 3) with a stable reason; either
+   result is evidence. Only after that may the status move beyond
+   `code_complete_but_real_video_validation_blocked`.
 
 
 ## Active work: P0 privacy / rules / auth
