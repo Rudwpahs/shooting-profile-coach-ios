@@ -16,6 +16,7 @@ import {
 } from "@/lib/shooting-profile/capture-session-reducer";
 import { ENGINEERING_THRESHOLDS_V1 } from "@/lib/shooting-profile/engineering-thresholds";
 import { KINEMATIC_TREE_V1 } from "@/lib/shooting-profile/kinematics";
+import { parseLandmarkSequenceV2 } from "@/lib/shooting-profile/landmark-sequence-contract";
 import {
   buildTwoViewRepresentativeProfile,
   type TwoViewPipelineAttemptV1,
@@ -113,6 +114,17 @@ function freezeShootingArm(sequence: LandmarkSequenceV2): LandmarkSequenceV2 {
 }
 
 describe("buildTwoViewRepresentativeProfile", () => {
+  it("starts from sequences that satisfy the exact public on-device contract", () => {
+    for (const mode of ["basic_1_plus_1", "high_accuracy_3_plus_3"] as const) {
+      for (const shootingHand of ["left", "right"] as const) {
+        const session = syntheticLandmarkSession({ mode, shootingHand });
+        [...session.front, ...session.shootingSide].forEach((sequence) => {
+          expect(parseLandmarkSequenceV2(JSON.parse(JSON.stringify(sequence)))).toEqual(sequence);
+        });
+      }
+    }
+  });
+
   it("turns one front and one side landmark sequence into a persistence-ready Basic profile", () => {
     const session = syntheticLandmarkSession({ mode: "basic_1_plus_1" });
     const result = expectComplete(buildTwoViewRepresentativeProfile({

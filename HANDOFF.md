@@ -49,8 +49,25 @@ Last updated: 2026-09-02 UTC
     stable code to user copy (new copy for `cross_view_phase_mismatch`, `phase_detection_failed`,
     `uncertainty_exceeds_limit`) and forwards `reasonCode`; the reducer stores it as
     `recaptureReasonCode` next to `errorMessage`. No UI component changed.
+  - P1-04 (tool only; real-video run blocked): `lib/shooting-profile/evaluation-report.ts`
+    (`buildTwoViewEvaluationReport`, strict zod `twoViewEvaluationReportSchema`,
+    `assertReportContainsNoRawEvidence`) and `scripts/evaluate-two-view-landmark-pair.ts`
+    (`pnpm eval:two-view`, exit 0 complete / 3 recapture / 2 invalid input / 1 other) run the real
+    entry point on local `LandmarkSequenceV2` JSON and emit only derived metrics: per-attempt
+    accepted-frame ratio, required-joint visibility median/lower decile, anchor detection outcome
+    and normalized anchor positions; cross-view alignment; pipeline outcome with stable reason;
+    evidence summary; bone-length drift, joint-angle velocity distribution, discontinuity count,
+    cone/trace distributions; runtime. The strict public sequence codec was moved out of
+    `lib/pose-detection-v2.ts` (which binds the native Expo module and cannot load under Node)
+    into pure `lib/shooting-profile/landmark-sequence-contract.ts`; `pose-detection-v2.ts`
+    re-exports it unchanged. The raw fixture now satisfies that public contract exactly
+    (integer ms timestamps, 9-element crop transform, duration beyond the last frame), asserted in
+    the pipeline test. `docs/evaluation/two-view-evaluation-report.synthetic-example.json` is a
+    committed example generated from the synthetic fixture (`sourceClass: "synthetic_fixture"`);
+    it documents the shape and is not real-video evidence.
 - Commits: `b1fe0af` docs baseline, `f7913bb` direction proof tests, `d5613e7` cross-view gates,
-  then `feat: connect two-view representative 4d pipeline` (this commit).
+  `1c60eef` two-view pipeline, then `test: add private real-video reconstruction evaluation`
+  (this commit).
 
 ### Actual Call Path (traced from source, default V2 flags)
 1. Video/capture entry: `app/private-capture.tsx` renders `<CaptureSession>` only when
@@ -140,10 +157,12 @@ handedness only mirrors depth.
   PR CI, which installs Temurin 21.
 - Expo export: `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir web-dist`
   exit 0, 18 HTML routes in `web-dist/`
-- Real-video evaluation: not run. No lawful video exists in the repository or on this machine;
-  `git ls-files` has no media; Node 24 has no pose detector (detection is a native iOS module);
-  Python 3.13 has OpenCV 5.0.0 but **no `mediapipe`**; the `python`/`py` launchers on PATH are a
-  broken `graphify-out` shim.
+- Real-video evaluation: **not run - `real_video_fixture_unavailable`.** No lawful video exists in
+  the repository or on this machine; `git ls-files` has no media; Node 24 has no pose detector
+  (detection is a native iOS module); Python 3.13 has OpenCV 5.0.0 but **no `mediapipe`**; the
+  `python`/`py` launchers on PATH are a broken `graphify-out` shim. The evaluation tool exists and
+  was smoke-tested only on synthetic sequences (see P1-04). Final status therefore stays
+  `code_complete_but_real_video_validation_blocked`.
 - Environment: Node v24.18.0 (CI uses 22), pnpm 9.12.0 via Corepack, ripgrep 14.1.1, `gh` logged in
   as `Rudwpahs` with `repo`+`workflow` scopes, `core.autocrlf=true` but the working tree is LF
   (`git ls-files --eol`: 434 `i/lf w/lf`).
@@ -193,12 +212,36 @@ P1-03 files:
 Verification after P1-03: `corepack pnpm test:unit` = 31 files passed + 1 skipped, 457 tests passed
 + 1 skipped; `corepack pnpm lint` clean; `corepack pnpm check` clean.
 
+P1-04 files:
+- `lib/shooting-profile/landmark-sequence-contract.ts`: pure move of `POSE_V2_ENGINEERING_DEFAULTS`,
+  both zod sequence schemas, `parseNativeLandmarkSequenceV2`, `parseLandmarkSequenceV2` (no logic change).
+- `lib/pose-detection-v2.ts`: imports and re-exports them; keeps request/progress schemas and the detector.
+- `lib/shooting-profile/evaluation-report.ts`, `scripts/evaluate-two-view-landmark-pair.ts`,
+  `tests/shooting-profile-evaluation-report.test.ts` (5): drafted by Codex under a three-file brief,
+  then fixed here (raw-evidence guard used `filename` which matched the report's own
+  `privacy.containsFilenames` key; now word-bounded) and reviewed.
+- `tests/fixtures/synthetic-landmark-sequence.ts`: contract-valid timestamps/transform/duration.
+- `tests/shooting-profile-two-view-pipeline.test.ts` (12): + "starts from sequences that satisfy
+  the exact public on-device contract".
+- `package.json`: `eval:two-view` script. `docs/two-view-evaluation-tool.md`,
+  `docs/evaluation/two-view-evaluation-report.synthetic-example.json`.
+
+Verification after P1-04: `corepack pnpm test:unit` = 32 files passed + 1 skipped, 463 tests passed
++ 1 skipped; `corepack pnpm lint` clean; `corepack pnpm check` clean. CLI smoke on synthetic JSON
+written to the OS temp directory (never in the repo): complete -> exit 0
+`pipeline=complete reason=none confidence=0.65 alignmentDelta=0`; frozen shooting arm -> exit 3
+`reason=phase_detection_failed` detail `missing_release_proxy`, no reconstruction block; a non-sequence
+JSON -> exit 2 naming only the argument position.
+
 ### Open Blockers
 - Blocker: `real_video_fixture_unavailable` for Task 4. Evidence: no consented front/side pair on
   disk or in git; no on-machine pose extractor (no MediaPipe in Python, no native module in Node).
   Required resolution: owner supplies a self-captured, consented front+side pair on the local
-  workstation (never committed) and either installs `mediapipe` for Python 3.13 or runs the iOS
-  custom build; then run the evaluation tool from Task 4.
+  workstation (never committed), exports each clip's on-device `LandmarkSequenceV2` JSON from the
+  iOS custom build (or adds a MediaPipe-to-`LandmarkSequenceV2` exporter that reproduces the native
+  evidence block), then runs:
+  `corepack pnpm eval:two-view --mode basic_1_plus_1 --hand right --front C:\local\front.json --side C:\local\side.json --source consented_self_capture --consent-record <id> --output C:\local\report.json`
+  and records the report's derived metrics in this file. Do not commit the JSON inputs.
 - Blocker: local Firestore emulator (no Java). Evidence above. Resolution: rely on PR CI.
 
 ### Residual Risks
@@ -215,15 +258,13 @@ Verification after P1-03: `corepack pnpm test:unit` = 31 files passed + 1 skippe
   Current mitigation: cone/closure gates downstream; recorded as a follow-up, not fixed in P1.
 
 ### Exact Next Action
-1. Task 4: add the privacy-safe evaluation tool (`scripts/evaluate-two-view-landmark-pair.ts`, run
-   with `corepack pnpm exec tsx --tsconfig tsconfig.json`), its derived-report schema
-   (`lib/shooting-profile/evaluation-report.ts`) and schema test; input is two local
-   `LandmarkSequenceV2` JSON files validated by `parseLandmarkSequenceV2`, output contains only
-   derived metrics. Real-video status stays `real_video_fixture_unavailable` until a lawful pair exists.
-2. Task 5: rebase on `origin/main`, full verification, push `feat/p1-two-view-4d-e2e`, open PR,
-   read the `Representative 4D CI` run including the 42-case emulator job.
-3. Expected final status: `code_complete_but_real_video_validation_blocked` unless a lawful pair
-   is evaluated.
+1. Task 5: `git fetch origin && git rebase origin/main` (no force), re-run `corepack pnpm check`,
+   `corepack pnpm lint`, `corepack pnpm test:unit`, the Expo export, then
+   `git push -u origin feat/p1-two-view-4d-e2e` and `gh pr create` with the acceptance checklist.
+2. Read the PR `Representative 4D CI` run with `gh run view <id> --log` and confirm the
+   `pnpm test:rules` step executed 42 emulator cases; fix on the branch if red.
+3. Merge non-forcefully after green CI, then verify the `main` run. Final status:
+   `code_complete_but_real_video_validation_blocked` unless a lawful pair is evaluated first.
 
 
 ## Active work: P0 privacy / rules / auth

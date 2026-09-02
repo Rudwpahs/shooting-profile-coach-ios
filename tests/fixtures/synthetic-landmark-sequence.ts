@@ -308,10 +308,12 @@ export function syntheticLandmarkSequence(options: SyntheticLandmarkSequenceOpti
     throw new Error("anchorScheduleShift must keep the canonical schedule ordered");
   }
   const frameCount = Math.round(durationMs / 1_000 * FRAME_RATE) + 1;
+  // The public contract requires integer millisecond timestamps and a clip
+  // duration strictly beyond the last requested frame.
   const timestamps = Array.from({ length: frameCount }, (_, frameIndex) => (
-    timeOffsetMs + frameIndex * 1_000 / FRAME_RATE
+    timeOffsetMs + Math.round(frameIndex * 1_000 / FRAME_RATE)
   ));
-  const actualDurationMs = timestamps.at(-1)! - timestamps[0];
+  const clipDurationMs = timestamps.at(-1)! + Math.round(1_000 / FRAME_RATE);
   const frames = timestamps.map((timestampMs, frameIndex) => {
     const timelinePosition = frameIndex / (frameCount - 1);
     const phase = motionPhaseAtTimelinePosition(timelinePosition, anchorScheduleShift);
@@ -321,7 +323,7 @@ export function syntheticLandmarkSequence(options: SyntheticLandmarkSequenceOpti
         syntheticPose(phase), options.view, shootingHand, takeIndex, frameIndex, noiseAmplitude,
       ),
       cropRectPx: { x: 0, y: 0, width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
-      modelToSourcePx: [1, 0, 0, 0, 1, 0],
+      modelToSourcePx: [DISPLAY_WIDTH, 0, 0, 0, DISPLAY_HEIGHT, 0, 0, 0, 1],
     };
   });
   const releaseTimelinePosition = 0.75 + anchorScheduleShift;
@@ -332,7 +334,7 @@ export function syntheticLandmarkSequence(options: SyntheticLandmarkSequenceOpti
     shootingHand,
     takeIndex,
     metadata: {
-      durationMs: actualDurationMs,
+      durationMs: clipDurationMs,
       displayWidth: DISPLAY_WIDTH,
       displayHeight: DISPLAY_HEIGHT,
       nominalFrameRate: FRAME_RATE,
