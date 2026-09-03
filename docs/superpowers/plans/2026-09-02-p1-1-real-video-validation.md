@@ -28,11 +28,13 @@ test, not a 3D accuracy validation.
      then `assertReportContainsNoRawEvidence` and `twoViewEvaluationReportSchema.safeParse` again,
      and returns `{ status: "ready", report, json }` or a typed `build_failed` reason; it never
      produces a `saveInput`;
-   - `shareRealVideoEvaluation(json, share)` maps an injected share function's outcome to
-     `shared` / `share_dismissed` / `share_failed` so dismissal is never an error.
+   - `shareRealVideoEvaluation(json, prepareFile, share)` creates an opaque temporary `.json`
+     attachment through an injected file boundary, passes only its local URL to an injected share
+     function, maps the outcome to `shared` / `share_dismissed` / `share_failed`, and attempts
+     cleanup after shared, dismissed, and thrown-share outcomes.
 3. `hooks/use-shooting-profile-capture.ts`: evaluation sub-state, `buildEvaluationReport()` and
-   `shareEvaluationReport()` (React Native `Share.share` with the JSON as the message — user-initiated
-   share sheet only; no clipboard, no HTTP, no analytics, no Firestore). The existing save path,
+   `shareEvaluationReport()` (Expo FileSystem cache file plus React Native `Share.share` with a local
+   `.json` URL — user-initiated share sheet only; no HTTP or Firestore). The existing save path,
    `matchingShootingProfileSaveInputV2`, `runCaptureSaveOperationV2`, and all cancellation guards are
    untouched.
 4. `components/shooting-profile/real-video-evaluation-panel.tsx`: minimal internal panel rendered by
@@ -52,7 +54,9 @@ contract, V1, social, player data, server cleanup, viewer UI, repository visibil
 - [ ] sequences never reach Firestore/network (module import guard + runtime fetch spy + no `saveInput`)
 - [ ] derived report passes the strict schema; raw landmark / native `z` / timestamp / URI / filename rejected
 - [ ] `complete` and `recapture_required` reports both build from reducer state
-- [ ] share dismissal is `share_dismissed`, not a failure; share throw is `share_failed`
+- [x] share dismissal is `share_dismissed`, not a failure; share throw is `share_failed`
+- [x] the share item is a local `.json` file, not a text message; its content is exactly the
+      strict-schema derived JSON and cleanup is attempted after shared, dismissed, and failure
 - [ ] `cross_view_phase_mismatch`, `phase_detection_failed`, `uncertainty_exceeds_limit` preserved verbatim
 - [ ] evaluation failure produces no `saveInput`; save envelope logic unchanged
 - [ ] 101 phases, 12 joints, Basic 0.65 cap, 1+1 / 3+3 unchanged

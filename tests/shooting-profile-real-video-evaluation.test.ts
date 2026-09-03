@@ -174,7 +174,7 @@ describe("private real-video evaluation gate", () => {
     expect(panel).not.toMatch(/useEffect|Share\.share|fetch\(|firebase/);
   });
 
-  it("never hands sequences to Firestore, the network, or the clipboard", () => {
+  it("never hands sequences to Firestore or the network", () => {
     const evaluationModule = read("lib/shooting-profile/real-video-evaluation.ts");
     const panel = read("components/shooting-profile/real-video-evaluation-panel.tsx");
     const hook = read("hooks/use-shooting-profile-capture.ts");
@@ -187,7 +187,8 @@ describe("private real-video evaluation gate", () => {
     }
     expect(evaluationSection.length).toBeGreaterThan(0);
     expect(evaluationSection).toContain("Share.share({");
-    expect(evaluationSection).not.toMatch(/url:/);
+    expect(evaluationSection).toContain("url: payload.url");
+    expect(evaluationSection).not.toMatch(/message:/);
 
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
@@ -265,25 +266,63 @@ describe("private real-video evaluation gate", () => {
     expect(() => twoViewEvaluationReportSchema.parse({ ...report, frames: [] })).toThrow();
   });
 
-  it("treats a dismissed share sheet as its own state and a thrown share as a failure", async () => {
+  it("shares the validated report as a temporary JSON file and cleans it after dismissal", async () => {
     const { json } = expectReady(buildRealVideoEvaluation(
       reviewState("basic_1_plus_1", syntheticLandmarkSession({ mode: "basic_1_plus_1" })),
       { sourceClass: "consented_self_capture" },
     ));
-    const payloads: { message: string; title: string }[] = [];
+    const preparedContents: string[] = [];
+    const cleanup = vi.fn(async () => undefined);
+    const payloads: { url: string; title: string }[] = [];
 
-    await expect(shareRealVideoEvaluation(json, async (payload) => {
+    await expect(shareRealVideoEvaluation(json, async (contents) => {
+      preparedContents.push(contents);
+      return { uri: "file:///cache/formpath-derived-report-test.json", cleanup };
+    }, async (payload) => {
       payloads.push(payload);
       return { action: "dismissedAction" };
     })).resolves.toBe("share_dismissed");
-    await expect(shareRealVideoEvaluation(json, async () => ({ action: "sharedAction" }))).resolves.toBe("shared");
-    await expect(shareRealVideoEvaluation(json, async () => {
-      throw new Error("share sheet unavailable");
-    })).resolves.toBe("share_failed");
 
+    expect(preparedContents).toEqual([json]);
     expect(payloads).toHaveLength(1);
-    expect(payloads[0].message).toBe(json);
-    expect(Object.keys(payloads[0]).sort()).toEqual(["message", "title"]);
+    expect(payloads[0]).toEqual({
+      title: "FormPath derived evaluation report",
+      url: "file:///cache/formpath-derived-report-test.json",
+    });
+    expect(Object.keys(payloads[0]).sort()).toEqual(["title", "url"]);
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("cleans the temporary report after a shared or failed share-sheet outcome", async () => {
+    const json = '{"schemaVersion":1}';
+    const sharedCleanup = vi.fn(async () => undefined);
+    const failedCleanup = vi.fn(async () => undefined);
+
+    await expect(shareRealVideoEvaluation(
+      json,
+      async () => ({ uri: "file:///cache/shared.json", cleanup: sharedCleanup }),
+      async () => ({ action: "sharedAction" }),
+    )).resolves.toBe("shared");
+    await expect(shareRealVideoEvaluation(
+      json,
+      async () => ({ uri: "file:///cache/failed.json", cleanup: failedCleanup }),
+      async () => { throw new Error("share sheet unavailable"); },
+    )).resolves.toBe("share_failed");
+
+    expect(sharedCleanup).toHaveBeenCalledOnce();
+    expect(failedCleanup).toHaveBeenCalledOnce();
+  });
+
+  it("does not open the share sheet when temporary file preparation fails", async () => {
+    const share = vi.fn(async () => ({ action: "sharedAction" as const }));
+
+    await expect(shareRealVideoEvaluation(
+      '{"schemaVersion":1}',
+      async () => { throw new Error("cache unavailable"); },
+      share,
+    )).resolves.toBe("share_failed");
+
+    expect(share).not.toHaveBeenCalled();
   });
 
   it("preserves stable recapture reason codes verbatim in the derived report", () => {

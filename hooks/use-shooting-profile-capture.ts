@@ -24,6 +24,7 @@ import {
   shareRealVideoEvaluation,
   type RealVideoEvaluationState,
 } from "@/lib/shooting-profile/real-video-evaluation";
+import { prepareRealVideoEvaluationFile } from "@/lib/shooting-profile/real-video-evaluation-file";
 import { buildTwoViewRepresentativeProfile } from "@/lib/shooting-profile/two-view-pipeline";
 import type {
   CaptureProtocolV2,
@@ -422,11 +423,15 @@ export function useShootingProfileCapture(
     if (!evaluationEnabled) return;
     const current = evaluationRef.current;
     if (!("json" in current)) return;
-    // User-initiated system share sheet only; nothing is copied, posted, or tracked.
-    const outcome = await shareRealVideoEvaluation(current.json, (payload) => Share.share({
-      message: payload.message,
-      title: payload.title,
-    }));
+    // User-initiated system share sheet only; the temporary derived file is removed afterward.
+    const outcome = await shareRealVideoEvaluation(
+      current.json,
+      prepareRealVideoEvaluationFile,
+      (payload) => Share.share({
+        url: payload.url,
+        title: payload.title,
+      }),
+    );
     if (evaluationRef.current !== current) return;
     setEvaluation({ ...current, status: outcome });
   }, [evaluationEnabled]);

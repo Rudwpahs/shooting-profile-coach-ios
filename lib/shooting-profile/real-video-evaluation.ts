@@ -14,9 +14,8 @@ import type { LandmarkSequenceV2 } from "@/lib/shooting-profile/types";
  * The raw `LandmarkSequenceV2` clips stay exactly where the reducer already
  * holds them (in memory, on device). This module only turns them into the
  * strict-schema, non-identifying `TwoViewEvaluationReportV1` and maps a
- * user-initiated share-sheet outcome to a state. It has no network, cloud
- * persistence, file-system, or paste-board dependency, and it never produces a
- * save envelope.
+ * user-initiated share-sheet outcome to a state. It has no network, cloud, or
+ * platform dependency, and it never produces a save envelope.
  */
 
 export type RealVideoEvaluationFlags = Readonly<{ realVideoEvaluation: boolean }>;
@@ -116,27 +115,47 @@ export function buildRealVideoEvaluation(
 
 export type RealVideoEvaluationShareOutcome = "shared" | "share_dismissed" | "share_failed";
 
-export type RealVideoEvaluationSharePayload = Readonly<{ message: string; title: string }>;
+export type PreparedRealVideoEvaluationFile = Readonly<{
+  uri: string;
+  cleanup: () => Promise<void>;
+}>;
+
+export type RealVideoEvaluationFilePreparer = (
+  json: string,
+) => Promise<PreparedRealVideoEvaluationFile>;
+
+export type RealVideoEvaluationSharePayload = Readonly<{ url: string; title: string }>;
 
 export type RealVideoEvaluationShareResult = Readonly<{ action: "sharedAction" | "dismissedAction" }>;
 
 export const REAL_VIDEO_EVALUATION_SHARE_TITLE = "FormPath derived evaluation report";
 
 /**
- * Hands the already-validated report JSON to a user-initiated share function
- * (the React Native share sheet in the app) and maps the outcome. Dismissing
- * the sheet is a distinct, non-error state.
+ * Prepares the already-validated report JSON as a temporary file, hands its URL
+ * to a user-initiated share function, and removes the temporary item after the
+ * share attempt. Dismissing the sheet is a distinct, non-error state.
  */
 export async function shareRealVideoEvaluation(
   json: string,
+  prepareFile: RealVideoEvaluationFilePreparer,
   share: (payload: RealVideoEvaluationSharePayload) => Promise<RealVideoEvaluationShareResult>,
 ): Promise<RealVideoEvaluationShareOutcome> {
+  let prepared: PreparedRealVideoEvaluationFile | undefined;
+  let outcome: RealVideoEvaluationShareOutcome = "share_failed";
   try {
-    const result = await share({ message: json, title: REAL_VIDEO_EVALUATION_SHARE_TITLE });
-    return result.action === "sharedAction" ? "shared" : "share_dismissed";
+    prepared = await prepareFile(json);
+    const result = await share({ url: prepared.uri, title: REAL_VIDEO_EVALUATION_SHARE_TITLE });
+    outcome = result.action === "sharedAction" ? "shared" : "share_dismissed";
+  } catch {
+    outcome = "share_failed";
+  }
+  if (prepared === undefined) return outcome;
+  try {
+    await prepared.cleanup();
   } catch {
     return "share_failed";
   }
+  return outcome;
 }
 
 export type RealVideoEvaluationState =

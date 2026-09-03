@@ -14,9 +14,10 @@
 | 파일명, URI, 절대경로, macOS/Windows 사용자명, 이름·이메일·동의자 정보 | 파생 리포트의 지표 요약을 `HANDOFF.md`에 PR로 기록한 것 |
 | Apple 인증서·provisioning profile·UDID, Firebase·EAS·Apple 토큰·자격증명 | 익명 동의 기록 id (예: `local-consent-20260902-001`) |
 
-앱은 원본을 내보내는 기능이 없다. 리포트는 사용자가 버튼을 눌렀을 때만 시스템 공유 시트로
-전달되며, 자동 업로드·Firestore 저장·HTTP·analytics·clipboard 복사는 코드상 존재하지 않는다
-(`tests/shooting-profile-real-video-evaluation.test.ts`가 이를 고정한다).
+앱은 원본을 내보내는 기능이 없다. 리포트는 사용자가 버튼을 눌렀을 때만 앱 캐시에 임시
+`.json` 파일로 생성되어 시스템 공유 시트로 전달된다. 공유 성공·취소·오류 뒤에는 임시 파일
+삭제를 시도하며, 자동 업로드·Firestore 저장·HTTP 전송은 코드상 존재하지 않는다
+(`tests/shooting-profile-real-video-evaluation*.test.ts`가 이를 고정한다).
 
 ## 1. 환경별 가능 범위
 
@@ -106,8 +107,11 @@ pnpm dlx eas-cli@latest build --platform ios --profile development
 4. 화면 하단의 **INTERNAL · DEV BUILD ONLY — 파생 평가 리포트** 패널에서
    `파생 리포트 생성`을 누른다. 상태 줄에 `파생 리포트 준비됨 · complete` 또는
    `· recapture_required · <reason>`이 보여야 한다. `리포트를 만들지 못했습니다 · <reason>`이면 8절.
-5. `리포트 공유 · 저장`을 누르고 공유 시트에서 **파일에 저장**을 선택한다. 취소하면 상태가
-   `공유를 취소했습니다`로 바뀌며 오류가 아니다. 리포트는 그대로 남아 다시 공유할 수 있다.
+5. `리포트 공유 · 저장`을 누른다. 공유 시트에
+   `formpath-derived-evaluation-<opaque>.json` 파일이 표시되는지 확인한 뒤 **파일에 저장**을
+   선택한다. JSON 내용이 메시지 본문으로만 보이면 실패다. 취소하면 상태가
+   `공유를 취소했습니다`로 바뀌며 오류가 아니고, 메모리의 리포트로 새 임시 파일을 만들어
+   다시 공유할 수 있다.
 
 ## 6. High 3+3 반복성 테스트 (Basic 통과 후)
 
@@ -160,7 +164,8 @@ pnpm dlx eas-cli@latest build --platform ios --profile development
 ## 9. 사용 후 정리
 
 - iPhone: 사진 앱에서 촬영 클립 삭제 → **최근 삭제된 항목**에서도 삭제. 파일 앱의 리포트는 옮긴 뒤 삭제.
-- 앱 캐시: 개발 빌드 앱을 삭제하면 picker 캐시 사본이 함께 사라진다.
+- 앱 캐시: 파생 리포트 임시 파일은 공유 시트가 끝난 뒤 자동 삭제를 시도한다. 개발 빌드 앱을
+  삭제하면 picker 캐시 사본과 정리 실패로 남은 앱 캐시도 함께 사라진다.
 - Mac/PC: `.env.local` 삭제, `ios/` 프리빌드 디렉터리(gitignored)와 임시 리포트 삭제,
   `git status --short`와 `git ls-files | grep -iE "\.(mp4|mov|json)$"`로 추적 파일 확인.
 - 기록: `HANDOFF.md`에는 8절 표의 파생 지표와 동의 기록 id만 남긴다.
