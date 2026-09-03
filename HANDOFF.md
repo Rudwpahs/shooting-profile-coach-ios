@@ -31,8 +31,8 @@ Last updated: 2026-09-03 UTC
   intentional skip; typecheck and lint exit 0; Expo web export exit 0 with 18 static routes.
 - Local environment limit: a clean frozen install could not complete because this sandbox cannot
   fetch a missing npm tarball; an offline attempt stopped at the missing store entry. Firestore Rules
-  were not run locally because this checkout lacks Firebase CLI/emulator artifacts. PR CI must prove
-  frozen install and the existing 42/42 Emulator suite before this correction is accepted.
+  were not run locally because this checkout lacks Firebase CLI/emulator artifacts. PR CI run #58
+  subsequently proved frozen install and the existing 42/42 Emulator suite on a clean runner.
 - Independent review: no code finding; one Important documentation finding (stale message-share
   claims in this file), corrected by this section and the updates below.
 - PR #4 remains open and unmerged. Physical Basic 1+1 on iPhone remains the release/merge gate.
@@ -133,11 +133,11 @@ Last updated: 2026-09-03 UTC
 ### Verification (final tree, this machine)
 | Command | Result |
 | --- | --- |
-| `CI=true corepack pnpm install --frozen-lockfile` | corrective tree: local network/store blocker; PR CI required |
+| `CI=true corepack pnpm install --frozen-lockfile` | local network/store blocker; PR CI #58 exit 0 |
 | `corepack pnpm check` | exit 0 |
 | `corepack pnpm lint` | exit 0, 0 warnings |
 | `corepack pnpm test:unit` | 35 files passed + 1 skipped; 479 tests passed + 1 skipped |
-| `corepack pnpm test:rules` | corrective tree: local Firebase CLI/emulator unavailable; PR CI required |
+| `corepack pnpm test:rules` | local Firebase CLI/emulator unavailable; PR CI #58: 42 passed (42) |
 | `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir <temp>` | exit 0, 18 HTML routes, output outside the repository |
 
 ### Real-video evaluation result
@@ -152,7 +152,10 @@ Last updated: 2026-09-03 UTC
   on head `f07eee3` = **success**: typecheck, lint, unit 34 files passed + 1 skipped / 474 tests passed
   + 1 skipped, Firestore Rules in the emulator **42 passed (42)** (executed, Temurin 21), Expo web
   export. `gh pr view 4` = `OPEN` / `CLEAN`. This docs commit follows that head.
-- Corrective head: `0da6020`; PR CI link and frozen-install/Emulator results pending first push.
+- Corrective commits: `0da6020` (code) -> `da0d85c` (handoff). Representative 4D CI
+  [run #58](https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33761391354) =
+  **success**: frozen install, typecheck, lint, unit 35 files passed + 1 skipped / 479 tests passed +
+  1 skipped, Firestore Emulator 42 passed (42), Expo web export 18 static routes.
 - Merge: **not merged** - the work order forbids merging before one Basic 1+1 pair runs on a
   physical iPhone. After that run is recorded here, merge non-forcefully with `gh pr merge 4 --merge`.
 - Repository can return to private: **now** - nothing in this branch or on `main` depends on public
