@@ -1,6 +1,6 @@
 # FormPath repository handoff
 
-Last updated: 2026-09-02 UTC
+Last updated: 2026-09-03 UTC
 
 ## P1.1 Real-video validation handoff - 2026-09-02
 
@@ -14,6 +14,29 @@ Last updated: 2026-09-02 UTC
   identifying is committed (see the privacy scan in Verification).
 - Plan: `docs/superpowers/plans/2026-09-02-p1-1-real-video-validation.md`.
 
+### 2026-09-03 corrective follow-up - actual JSON file sharing
+- Defect: PR #4 head `bd1e8af` handed report JSON to React Native Share as `message` text while the
+  runbook required a `.json` attachment that could be saved to Files. The physical-iPhone step was
+  therefore not executable as documented.
+- Corrective commit: `0da6020` (`fix: share derived evaluation as json file`). It adds the Expo SDK
+  54-compatible `expo-file-system@~19.0.21`, writes only the already-validated derived report to an
+  opaque cache `.json`, shares its local URL on iOS, and attempts idempotent deletion after shared,
+  dismissed, and thrown-share outcomes. A failed write also attempts removal of a partial item.
+- Unchanged boundaries: exact `"1"` development flag, report schema/raw-evidence guard, capture and
+  reconstruction algorithms, save envelope, Firestore client, and Firestore Rules.
+- RED evidence: targeted Vitest run failed with the missing file adapter plus three old text-share
+  behavior failures; the partial-write cleanup test then failed with zero cleanup calls before the
+  cleanup branch was added.
+- GREEN evidence: targeted 15/15; full unit suite 35 files passed + 1 skipped, 479 tests passed + 1
+  intentional skip; typecheck and lint exit 0; Expo web export exit 0 with 18 static routes.
+- Local environment limit: a clean frozen install could not complete because this sandbox cannot
+  fetch a missing npm tarball; an offline attempt stopped at the missing store entry. Firestore Rules
+  were not run locally because this checkout lacks Firebase CLI/emulator artifacts. PR CI must prove
+  frozen install and the existing 42/42 Emulator suite before this correction is accepted.
+- Independent review: no code finding; one Important documentation finding (stale message-share
+  claims in this file), corrected by this section and the updates below.
+- PR #4 remains open and unmerged. Physical Basic 1+1 on iPhone remains the release/merge gate.
+
 ### Task 0 - environment and feasibility (no code changed)
 - Machine: Windows 11 (MINGW64). Node v24.18.0, pnpm 9.12.0 via `corepack pnpm`, Expo CLI in
   `node_modules/.bin`. **No** Xcode, `xcodebuild`, CocoaPods `pod`, Java, or EAS CLI on PATH.
@@ -25,9 +48,9 @@ Last updated: 2026-09-02 UTC
   lines). Expo autolinking includes it in an iOS custom development build after `expo prebuild` +
   `pod install`; the JS binding uses `requireOptionalNativeModule("FormpathPose")`, so Expo Go and
   simulators without the module return `native_build_required`.
-- Existing export path for real `LandmarkSequenceV2` or reports: **none in the app.** The only
-  consumer is the Node CLI `pnpm eval:two-view` (`scripts/evaluate-two-view-landmark-pair.ts`),
-  which reads local JSON files; the app never writes a sequence or a report anywhere.
+- Existing export path at the Task 0 baseline: **none in the app.** The corrective follow-up now
+  writes only the strict derived report to a temporary app-cache `.json` for a user-initiated share;
+  raw `LandmarkSequenceV2` still has no export path.
 - `buildTwoViewEvaluationReport` React Native safety: imports only `zod` and `lib/shooting-profile/*`
   (no `node:` modules, no Firebase); uses `performance.now()` (available in Hermes/RN 0.81) and
   `process.memoryUsage` only behind a `typeof` guard (RN's `process` shim lacks it -> `peakHeapBytes`
@@ -54,14 +77,18 @@ Last updated: 2026-09-02 UTC
   evaluatedCommitSha? })` -> `{ status: "ready", report, json }` or `build_failed` with
   `session_not_ready | report_build_failed | raw_evidence_detected | schema_invalid`
   (`assertReportContainsNoRawEvidence` and the strict zod schema run again after the builder),
-  `shareRealVideoEvaluation(json, share)` -> `shared | share_dismissed | share_failed`,
-  `describeRealVideoEvaluationState`. No network, Firebase, file-system, or clipboard import.
+  `shareRealVideoEvaluation(json, prepareFile, share)` -> `shared | share_dismissed | share_failed`,
+  with cleanup after the share attempt; `describeRealVideoEvaluationState`. This pure module has no
+  network, Firebase, or platform import.
 - `hooks/use-shooting-profile-capture.ts`: `evaluationEnabled = isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild())`,
   `evaluation` state (reset on session-generation change and by `invalidateDerivedSave`),
   `buildEvaluationReport()` (guarded `if (!evaluationEnabled) return;`),
-  `shareEvaluationReport()` (React Native `Share.share({ message: json, title })`, user-initiated),
+  `shareEvaluationReport()` (temporary file preparer + React Native `Share.share({ url, title })`,
+  user-initiated),
   `evaluationAvailable`. The aggregation effect, `save`, `matchingShootingProfileSaveInputV2`,
   `runCaptureSaveOperationV2`, and every cancellation guard are unchanged.
+- `lib/shooting-profile/real-video-evaluation-file.ts`: Expo FileSystem legacy-compatible cache
+  adapter. Opaque `.json` name; exact derived JSON write; idempotent cleanup; partial-write cleanup.
 - `components/shooting-profile/real-video-evaluation-panel.tsx` (new): two accessible buttons
   ("파생 리포트 생성", "리포트 공유 · 저장"), polite live status, no effects.
   `components/shooting-profile/capture-session.tsx`: renders the panel only under
@@ -70,8 +97,10 @@ Last updated: 2026-09-02 UTC
   behavior change. Codec, thresholds, solver, `CROSS_VIEW_PHASE_ALIGNMENT_V1`, Firestore contract:
   untouched (asserted by the new contract test).
 - Docs: `docs/real-video-validation-runbook.md`, `docs/superpowers/plans/2026-09-02-p1-1-real-video-validation.md`,
+  `docs/superpowers/specs/2026-09-03-p1-1-derived-report-file-sharing-design.md`,
   `docs/two-view-evaluation-tool.md` (cross-reference).
-- Tests: `tests/shooting-profile-real-video-evaluation.test.ts` (10),
+- Tests: `tests/shooting-profile-real-video-evaluation.test.ts` (12),
+  `tests/shooting-profile-real-video-evaluation-file.test.ts` (3),
   `tests/shooting-profile-real-video-evaluation-reasons.test.ts` (1, stubs the pipeline boundary to
   prove `uncertainty_exceeds_limit` is copied verbatim), `tests/shooting-profile-contract.test.ts`
   (flag shape now includes `realVideoEvaluation`).
@@ -83,11 +112,15 @@ Last updated: 2026-09-02 UTC
   skipped, 474 tests passed + 1 skipped (baseline on `main` was 463 + 1 skipped). Two intermediate
   reds were comment wording only (the source guards forbid the words "clipboard"/"analytics"/
   "Firebase" even in comments); no production logic changed to satisfy a test.
+- Corrective RED/GREEN on 2026-09-03: old text-sharing code failed the local-file URL, exact-content,
+  cleanup, and adapter-existence expectations. After `0da6020`, targeted 15/15 and full suite
+  479 passed + 1 skipped. A separate RED proved partial-write cleanup was absent before it was added.
 
 ### Evidence that nothing raw is stored or uploaded
 - Source guards (tests): `lib/shooting-profile/real-video-evaluation.ts`, the panel, and the hook's
   evaluation section contain none of `firebase|firestore|fetch(|axios|XMLHttpRequest|WebSocket|trpc|Clipboard|analytics|saveProfile|runCaptureSaveOperationV2`;
-  the hook's share call has no `url:`; runtime `fetch` spy never called during a build.
+  the hook shares `url: payload.url` and has no `message:`; runtime `fetch` spy never called during a
+  build. The file adapter accepts only the derived JSON string and has no network or cloud import.
 - Report guard: reports with injected `sourceLandmarks`, `z`, `timestampMs`, `file://...mp4`,
   `IMG_0001.mov`, `filename`, or a bare `uri` are rejected; the strict schema rejects extra keys.
 - The evaluation result exposes exactly `{ status, report, json }`; no `saveInput`,
@@ -100,11 +133,11 @@ Last updated: 2026-09-02 UTC
 ### Verification (final tree, this machine)
 | Command | Result |
 | --- | --- |
-| `CI=true corepack pnpm install --frozen-lockfile` | exit 0 |
+| `CI=true corepack pnpm install --frozen-lockfile` | corrective tree: local network/store blocker; PR CI required |
 | `corepack pnpm check` | exit 0 |
 | `corepack pnpm lint` | exit 0, 0 warnings |
-| `corepack pnpm test:unit` | 34 files passed + 1 skipped; 474 tests passed + 1 skipped |
-| `corepack pnpm test:rules` | exit 1: `Could not spawn java -version` (no Java on this machine) - evidence comes from PR CI |
+| `corepack pnpm test:unit` | 35 files passed + 1 skipped; 479 tests passed + 1 skipped |
+| `corepack pnpm test:rules` | corrective tree: local Firebase CLI/emulator unavailable; PR CI required |
 | `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir <temp>` | exit 0, 18 HTML routes, output outside the repository |
 
 ### Real-video evaluation result
@@ -119,6 +152,7 @@ Last updated: 2026-09-02 UTC
   on head `f07eee3` = **success**: typecheck, lint, unit 34 files passed + 1 skipped / 474 tests passed
   + 1 skipped, Firestore Rules in the emulator **42 passed (42)** (executed, Temurin 21), Expo web
   export. `gh pr view 4` = `OPEN` / `CLEAN`. This docs commit follows that head.
+- Corrective head: `0da6020`; PR CI link and frozen-install/Emulator results pending first push.
 - Merge: **not merged** - the work order forbids merging before one Basic 1+1 pair runs on a
   physical iPhone. After that run is recorded here, merge non-forcefully with `gh pr merge 4 --merge`.
 - Repository can return to private: **now** - nothing in this branch or on `main` depends on public
