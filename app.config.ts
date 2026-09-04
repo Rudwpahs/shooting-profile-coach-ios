@@ -41,7 +41,11 @@ const config: ExpoConfig = {
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
-  userInterfaceStyle: "automatic",
+  // Every product screen is painted from one fixed light FormPath palette, so
+  // the app declares light rather than following the system scheme. Declaring
+  // "automatic" made iOS draw system surfaces - including the share sheet the
+  // private evaluation export opens - in dark over hardcoded light screens.
+  userInterfaceStyle: "light",
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
@@ -84,6 +88,8 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    "expo-font",
+    "expo-web-browser",
     [
       "expo-audio",
       {

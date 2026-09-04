@@ -4,6 +4,6 @@
   "private": true,
   "main": "src/index.ts",
   "peerDependencies": {
-    "expo-modules-core": "~3.0.29"
+    "expo": "*"
   }
 }

@@ -162,8 +162,8 @@ const styles = StyleSheet.create({
   v2Button: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, minWidth: 44, paddingHorizontal: 12 },
   v2Pressed: { opacity: 0.76 },
   card: { backgroundColor: "rgba(238,244,248,0.72)", borderColor: "rgba(16,44,70,0.12)", borderRadius: 16, borderStyle: "dashed", borderWidth: 1, marginTop: 14, padding: 14 },
-  heading: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" }, title: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 20 }, subtitle: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
+  heading: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" }, title: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 20 }, subtitle: { color: "#5A6B80", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
   tip: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 12 }, tipText: { color: "#102C46", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17 },
   button: { alignItems: "center", backgroundColor: "#9A3412", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, minWidth: 44 }, buttonText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  status: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 10 }, error: { color: "#C24122" }, blocked: { color: "#8A5A00" }, complete: { color: "#166534" }, disabled: { opacity: 0.62 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
+  status: { color: "#5A6B80", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 10 }, error: { color: "#C24122" }, blocked: { color: "#8A5A00" }, complete: { color: "#166534" }, disabled: { opacity: 0.62 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });

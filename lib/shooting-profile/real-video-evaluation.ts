@@ -231,8 +231,9 @@ export async function shareRealVideoEvaluation(
 
 export type RealVideoEvaluationState =
   | Readonly<{ status: "idle" }>
+  | Readonly<{ status: "building"; sessionGeneration: number }>
   | Readonly<{
-    status: "ready" | RealVideoEvaluationShareOutcome;
+    status: "ready" | "sharing" | RealVideoEvaluationShareOutcome;
     sessionGeneration: number;
     report: TwoViewEvaluationReportV1;
     json: string;
@@ -247,8 +248,12 @@ export function describeRealVideoEvaluationState(state: RealVideoEvaluationState
   switch (state.status) {
     case "idle":
       return "아직 리포트를 만들지 않았습니다. 원본 영상과 랜드마크는 기기 밖으로 나가지 않습니다.";
+    case "building":
+      return "파생 리포트를 만드는 중입니다.";
     case "ready":
       return `파생 리포트 준비됨 · ${state.report.pipeline.status}${state.report.pipeline.reason ? ` · ${state.report.pipeline.reason}` : ""}`;
+    case "sharing":
+      return "공유 시트를 여는 중입니다.";
     case "shared":
       return "파생 리포트를 공유 시트로 전달했습니다.";
     case "share_dismissed":

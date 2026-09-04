@@ -167,12 +167,15 @@ describe("private real-video evaluation gate", () => {
   });
 
   it("keeps the evaluation panel and export code unreachable in a default build", () => {
-    const hook = read("hooks/use-shooting-profile-capture.ts");
+    const captureHook = read("hooks/use-shooting-profile-capture.ts");
+    const evaluationHook = read("hooks/use-real-video-evaluation.ts");
     const session = read("components/shooting-profile/capture-session.tsx");
     const panel = read("components/shooting-profile/real-video-evaluation-panel.tsx");
 
-    expect(hook).toContain("isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild())");
-    expect(hook.match(/if \(!evaluationEnabled\) return;/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(captureHook).toContain("isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild())");
+    expect(captureHook).toContain("enabled: evaluationEnabled,");
+    expect(evaluationHook.match(/if \(!enabled \|\| inFlightRef\.current\) return;/g)?.length ?? 0)
+      .toBeGreaterThanOrEqual(3);
     expect(session).toContain("capture.evaluationEnabled ? (");
     expect(session).toContain("RealVideoEvaluationPanel");
     expect(panel).toContain('accessibilityRole="button"');
@@ -183,18 +186,14 @@ describe("private real-video evaluation gate", () => {
   it("never hands sequences to Firestore or the network", () => {
     const evaluationModule = read("lib/shooting-profile/real-video-evaluation.ts");
     const panel = read("components/shooting-profile/real-video-evaluation-panel.tsx");
-    const hook = read("hooks/use-shooting-profile-capture.ts");
-    const evaluationSection = hook.slice(
-      hook.indexOf("const buildEvaluationReport = useCallback"),
-      hook.indexOf("const save = useCallback"),
-    );
-    for (const source of [evaluationModule, panel, evaluationSection]) {
+    const evaluationHook = read("hooks/use-real-video-evaluation.ts");
+
+    for (const source of [evaluationModule, panel, evaluationHook]) {
       expect(source).not.toMatch(/firebase|firestore|fetch\(|axios|XMLHttpRequest|WebSocket|trpc|Clipboard|analytics|saveProfile|runCaptureSaveOperationV2/i);
     }
-    expect(evaluationSection.length).toBeGreaterThan(0);
-    expect(evaluationSection).toContain("Share.share({");
-    expect(evaluationSection).toContain("url: payload.url");
-    expect(evaluationSection).not.toMatch(/message:/);
+    // The report leaves as a temporary file URL, never as an inline message body.
+    expect(evaluationHook).toContain("Share.share({ url: payload.url, title: payload.title })");
+    expect(evaluationHook).not.toMatch(/message: payload/);
 
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);

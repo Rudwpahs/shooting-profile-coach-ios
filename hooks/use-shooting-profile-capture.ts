@@ -1,7 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { Share } from "react-native";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 
+import { useRealVideoEvaluation } from "@/hooks/use-real-video-evaluation";
 import { FORMPATH_FLAGS, FORMPATH_REAL_VIDEO_CONSENT_RECORD_ID } from "@/lib/feature-flags";
 import type { SaveShootingProfileInputV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
@@ -17,12 +17,8 @@ import {
   type RetainedNormalizedAttemptsV2,
 } from "@/lib/shooting-profile/capture-session-reducer";
 import {
-  admitEvaluationAttempts,
-  buildRealVideoEvaluation,
   isDevelopmentBuild,
   isRealVideoEvaluationEnabled,
-  shareRealVideoEvaluation,
-  type RealVideoEvaluationState,
 } from "@/lib/shooting-profile/real-video-evaluation";
 import { prepareRealVideoEvaluationFile } from "@/lib/shooting-profile/real-video-evaluation-file";
 import { buildTwoViewRepresentativeProfile } from "@/lib/shooting-profile/two-view-pipeline";
@@ -122,25 +118,16 @@ export function useShootingProfileCapture(
   // Development-build-only private evaluation: derived report from the sequences
   // the reducer already holds; never auto-run, never persisted, never uploaded.
   const evaluationEnabled = isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild());
-  const [evaluation, setEvaluation] = useState<RealVideoEvaluationState>({ status: "idle" });
-  const [consentConfirmed, setConsentConfirmed] = useState(false);
-  const evaluationRef = useRef(evaluation);
+  const realVideoEvaluation = useRealVideoEvaluation({
+    enabled: evaluationEnabled,
+    state,
+    consentRecordId: FORMPATH_REAL_VIDEO_CONSENT_RECORD_ID,
+    prepareFile: prepareRealVideoEvaluationFile,
+  });
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
-
-  useEffect(() => {
-    evaluationRef.current = evaluation;
-  }, [evaluation]);
-
-  useEffect(() => {
-    setEvaluation((current) => (
-      current.status === "idle" || current.sessionGeneration === state.sessionGeneration
-        ? current
-        : { status: "idle" }
-    ));
-  }, [state.sessionGeneration]);
 
   useEffect(() => {
     if (!captureSessionRetainsSaveToken(state.status)) {
@@ -163,11 +150,11 @@ export function useShootingProfileCapture(
     });
   }, []);
 
+  // The evaluation controller clears itself on every session-generation change,
+  // which every one of these escapes triggers.
   const invalidateDerivedSave = useCallback(() => {
     saveInFlightRef.current = null;
     normalizedAttemptsRef.current = null;
-    setEvaluation({ status: "idle" });
-    setConsentConfirmed(false);
   }, []);
 
   useEffect(() => () => {
@@ -403,55 +390,6 @@ export function useShootingProfileCapture(
     }
   }, [state.mode, state.sessionGeneration, state.shootingHand, state.slots, state.status]);
 
-  const toggleConsentConfirmed = useCallback(() => {
-    if (!evaluationEnabled) return;
-    setConsentConfirmed((current) => !current);
-  }, [evaluationEnabled]);
-
-  const buildEvaluationReport = useCallback(() => {
-    if (!evaluationEnabled) return;
-    const snapshot = stateRef.current;
-    const result = buildRealVideoEvaluation(snapshot, {
-      sourceClass: "consented_self_capture",
-      consentConfirmed,
-      consentRecordId: FORMPATH_REAL_VIDEO_CONSENT_RECORD_ID,
-    });
-    setEvaluation(result.status === "ready"
-      ? {
-        status: "ready",
-        sessionGeneration: snapshot.sessionGeneration,
-        report: result.report,
-        json: result.json,
-      }
-      : {
-        status: "build_failed",
-        sessionGeneration: snapshot.sessionGeneration,
-        reason: result.reason,
-      });
-  }, [consentConfirmed, evaluationEnabled]);
-
-  const shareEvaluationReport = useCallback(async () => {
-    if (!evaluationEnabled) return;
-    const current = evaluationRef.current;
-    if (!("json" in current)) return;
-    // User-initiated system share sheet only; the temporary derived file is removed afterward.
-    const outcome = await shareRealVideoEvaluation(
-      current.json,
-      prepareRealVideoEvaluationFile,
-      (payload) => Share.share({
-        url: payload.url,
-        title: payload.title,
-      }),
-    );
-    if (evaluationRef.current !== current) return;
-    setEvaluation({ ...current, status: outcome });
-  }, [evaluationEnabled]);
-
-  const evaluationAdmission = evaluationEnabled ? admitEvaluationAttempts(state) : undefined;
-  const evaluationAvailable = evaluationAdmission?.status === "admitted" && consentConfirmed;
-  const evaluationAdmissionReason = evaluationAdmission?.status === "rejected"
-    ? evaluationAdmission.reason
-    : undefined;
 
   const save = useCallback(async () => {
     const snapshot = stateRef.current;
@@ -509,12 +447,6 @@ export function useShootingProfileCapture(
     retrySession,
     save,
     evaluationEnabled,
-    evaluationAvailable,
-    evaluationAdmissionReason,
-    evaluation,
-    consentConfirmed,
-    toggleConsentConfirmed,
-    buildEvaluationReport,
-    shareEvaluationReport,
+    evaluation: realVideoEvaluation,
   };
 }

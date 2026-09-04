@@ -1,6 +1,6 @@
 # FormPath 구현 현황과 다음 계획
 
-기준일: 2026-08-31
+기준일: 2026-09-02
 
 ## 한 줄 상태
 
@@ -32,6 +32,10 @@
 | Firestore 보안 규칙 | 정적 계약 구현, Emulator 대기 | owner/schema/크기/발행 순서 검증 코드는 있으나 실제 Rules Emulator 결과 필요 |
 | 개인 V2 프로필 재생 | 구현, 플래그 OFF | 101개 저장 위상을 순서대로 재생 |
 | 기존 CMU 익명 actual mocap 추천 | 기존 기능 유지 | 승인된 reference만 별도 legacy 추천에 사용 |
+| 두 시점 위상 정렬 gate·불확실성 전파 | 구현 (PR #2 병합) | 정면·측면 위상 불일치가 recapture와 불확실성에 반영되며, 정렬이 나빠질수록 confidence가 낮아진다 |
+| 원시 클립 → 저장 가능 프로필 단일 경계 | 구현 (PR #2 병합) | `buildTwoViewRepresentativeProfile`이 캡처 훅의 유일한 진입점 |
+| 기기 내 파생 평가 리포트 | 구현, 플래그 OFF (PR #4, 미병합) | 개발 빌드 + `EXPO_PUBLIC_FORMPATH_REAL_VIDEO_EVAL=1`에서만 노출. 앱 내 직접 촬영 클립·명시적 동의·불투명 동의 기록 ID·cross-view geometry gate를 모두 통과해야 파생 지표 JSON을 만든다. 원본 영상·랜드마크는 기기 밖으로 나가지 않는다 |
+| 실제 iPhone 실영상 E2E 스모크 | **미실행 (blocked)** | 물리 기기·macOS/Xcode·동의된 영상이 없어 `real_video_fixture_unavailable` 유지 |
 | V2 개인 기록 간 정량 비교·코칭 | 미구현 | validation 이후 Project 2로 진행 |
 | V2와 선수 스타일 데이터 비교 | 미구현 | source 권리·provenance·호환 metric 검증 이후 Project 3로 진행 |
 | 사용자 간 공유·peer range | 미구현 | 동의·최소화·privacy threshold 설계 이후 Project 4로 진행 |
@@ -44,6 +48,21 @@
 - `expo lint`가 비대화식 환경에서 의존성 재설치를 시도하던 문제를 제거하고, 고정 ESLint를 직접 실행하면서 `--max-warnings 0`을 강제했습니다.
 - 이전에 추적되던 `web-dist/` 생성물을 저장소 트리에서 제거하고 다시 들어오지 않도록 제외했으며, pnpm workspace build 설정 위치, ESLint CommonJS 구성, 미사용 코드와 배열 타입 경고도 정리했습니다.
 - 웹 정적 내보내기가 18개 라우트를 완성하도록 복구했습니다.
+
+## 2026-09-02 P1.1 촬영 전 hardening
+
+- 촬영 출처(camera/library)를 reducer 상태에 보존하고, 평가 증거는 앱 내 직접 촬영 클립만 인정한다.
+  라이브러리 입력은 `library_source_not_admissible`로 제외된다.
+- `consented_self_capture`는 명시적 동의 확인과 불투명 동의 기록 ID를 요구하며, 리포트 스키마가
+  source class별로 그 존재/부재를 강제한다.
+- cross-view geometry gate가 같은 각도를 재표기한 클립, 한쪽/양쪽 미러링, 사실상 동일한 두 투영을
+  거부한다. 정상 정면/측면 쌍과의 거리 차이는 3배 이상이다.
+- 리포트 스키마가 Basic/High 시도 수와 pipeline detail 코드를 고정하고, builder가 허용 목록 밖의
+  detail을 버려 임의 문자열이 리포트에 들어가지 못한다.
+- Expo Doctor 3건 중 3건 해결(직접 `expo-modules-core` 의존성 제거, `expo-asset` 추가, SDK 54 버전 정렬).
+  남은 1건은 `git check-ignore`로 반증된 오탐이다.
+- 작은 글자 muted 색상을 4.25:1에서 4.84:1로 올리고, 하드코딩된 light UI에 맞춰
+  `userInterfaceStyle`을 `light`로 선언했다.
 
 ## 아직 통과해야 하는 외부 gate
 

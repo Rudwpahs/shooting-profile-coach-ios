@@ -51,9 +51,14 @@ EXPO_PUBLIC_FORMPATH_CAPTURE_V2=1
 EXPO_PUBLIC_FORMPATH_PROFILE_V2=1
 EXPO_PUBLIC_FORMPATH_REPRESENTATIVE_4D=1
 EXPO_PUBLIC_FORMPATH_REAL_VIDEO_EVAL=1
+EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID=local-consent-20260902-001
 EOF
 git check-ignore .env.local   # 반드시 ".env.local"이 출력돼야 한다
 ```
+
+`EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID`는 **불투명한 로컬 기록 키**다. 8자 이상, 영숫자와
+`_`/`-`만, 숫자를 최소 하나 포함해야 하며 이름·이메일·경로는 거부된다. 앱은 이 값만 리포트에
+넣고 동의자 정보는 어디에도 기록하지 않는다.
 
 빌드와 설치 (물리 기기 연결 후):
 
@@ -99,19 +104,27 @@ pnpm dlx eas-cli@latest build --platform ios --profile development
 ## 5. Basic 1+1 첫 스모크 테스트
 
 1. 앱 → 개인 캡처 화면 → 모드 **Basic 1+1** → 슈팅 손 선택 → 정면 클립 → 측면 클립.
-2. 슬롯이 거부되면(`native_build_required`, `person_roi_unavailable`, 품질 사유) 아래 7절 표대로 조치.
+   **평가 증거로 쓰려면 두 클립 모두 슬롯의 "촬영" 버튼으로 앱 안에서 직접 찍어야 한다.**
+   사진 라이브러리에서 고른 영상은 출처를 확인할 수 없어 평가에서 제외된다
+   (`library_source_not_admissible`). 프로필 저장 자체는 라이브러리 영상으로도 되지만,
+   이번 검증 증거로는 인정되지 않는다.
+2. 슬롯이 거부되면(`native_build_required`, `person_roi_unavailable`, 품질 사유) 아래 8절 표대로 조치.
 3. 두 클립이 모두 통과하면 앱이 자동으로 위상 정렬·추정을 실행한다. 결과는 둘 중 하나다.
    - **리뷰 화면**: 대표 슛폼 + confidence(Basic은 0.65 상한). **저장 버튼은 누르지 않아도 된다.**
      이 검증에는 Firestore 저장이 필요 없다.
    - **오류 화면 + reason code**: recapture. 이것도 유효한 검증 결과다.
-4. 화면 하단의 **INTERNAL · DEV BUILD ONLY — 파생 평가 리포트** 패널에서
-   `파생 리포트 생성`을 누른다. 상태 줄에 `파생 리포트 준비됨 · complete` 또는
-   `· recapture_required · <reason>`이 보여야 한다. `리포트를 만들지 못했습니다 · <reason>`이면 8절.
-5. `리포트 공유 · 저장`을 누른다. 공유 시트에
+4. 화면 하단의 **INTERNAL · DEV BUILD ONLY — 파생 평가 리포트** 패널에서 먼저
+   **"본인이 촬영했고 사용에 동의한 영상입니다"** 체크박스를 누른다. 이 확인 없이는 생성
+   버튼이 비활성 상태로 남는다.
+5. `파생 리포트 생성`을 누른다. 생성 중에는 버튼이 `생성 중…`으로 바뀌고 진행 표시가 나오며
+   연속으로 눌러도 한 번만 실행된다. 상태 줄에 `파생 리포트 준비됨 · complete` 또는
+   `· recapture_required · <reason>`이 보여야 한다.
+   `리포트를 만들지 못했습니다 · <reason>`이면 8절.
+6. `리포트 공유 · 저장`을 누른다. 공유 시트에
    `formpath-derived-evaluation-<opaque>.json` 파일이 표시되는지 확인한 뒤 **파일에 저장**을
    선택한다. JSON 내용이 메시지 본문으로만 보이면 실패다. 취소하면 상태가
    `공유를 취소했습니다`로 바뀌며 오류가 아니고, 메모리의 리포트로 새 임시 파일을 만들어
-   다시 공유할 수 있다.
+   다시 공유할 수 있다. VoiceOver를 켜두면 각 상태가 음성으로 안내된다.
 
 ## 6. High 3+3 반복성 테스트 (Basic 통과 후)
 
@@ -159,6 +172,12 @@ pnpm dlx eas-cli@latest build --platform ios --profile development
 | 세션 | `inconsistent_skeleton_closure`, `perturbation_scenario_shortfall` | 어깨 폐합 또는 섭동 시나리오 실패 | 상체가 가려지지 않게, 카메라 고정 |
 | 세션 | `attempt_set_invalid`, `invalid_attempt`, `view_mismatch`, `shooting_hand_mismatch` | 세션 구성 오류 | 모드·손·슬롯을 처음부터 다시 설정 |
 | 리포트 | `session_not_ready` | 리뷰/오류 상태가 아니거나 슬롯 시퀀스가 없음 | 두 클립이 모두 통과한 뒤 다시 시도 |
+| 리포트 | `library_source_not_admissible` | 클립을 사진 라이브러리에서 골랐음 | 슬롯의 "촬영"으로 앱 안에서 직접 다시 촬영 |
+| 리포트 | `unknown_capture_source` | 슬롯의 촬영 출처 기록이 없음(이전 세션 잔여 등) | 해당 슬롯을 재촬영 |
+| 리포트 | `consent_not_confirmed` | 동의 체크박스를 누르지 않음 | 패널의 동의 확인을 누른 뒤 다시 생성 |
+| 리포트 | `consent_record_invalid` | `EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID`가 없거나 불투명 형식이 아님 | 2절 형식대로 `.env.local`을 고치고 앱을 다시 시작 |
+| 리포트 | `duplicate_view_projection` | 두 뷰가 사실상 같은 투영(같은 각도 재촬영, 재표기) | 정면과 슈팅 측면을 실제로 다른 각도에서 촬영 |
+| 리포트 | `mirrored_view_projection` | 한 클립이 다른 클립의 좌우 반전본 | 미러링된 영상을 쓰지 말고 두 각도를 각각 촬영 |
 | 리포트 | `report_build_failed`, `schema_invalid`, `raw_evidence_detected` | 리포트 생성·가드 실패 | 코드 결함 가능성. reason만 기록하고 리포트를 공유하지 말 것 |
 
 ## 9. 사용 후 정리

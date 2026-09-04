@@ -53,6 +53,44 @@ The release owner must verify the exact `pose_landmarker_full.task` artifact aga
 
 Status in this snapshot: **PENDING — model license and redistribution approval not established here.** A missing source/version match, unclear redistribution permission, or unmet notice obligation blocks release even if the hash matches.
 
+## Expo Doctor status (2026-09-02)
+
+`pnpm dlx expo-doctor@latest` reports **17/18 checks passed**. The three failures recorded before
+this pass were fixed:
+
+- `expo-modules-core` is no longer a direct dependency. `modules/formpath-pose/src/FormpathPoseModule.ts`
+  now imports `requireOptionalNativeModule` from the `expo` package and declares only the
+  `{ remove(): void }` shape it uses, so no `expo-modules-core` type import remains.
+- `expo-asset` is installed as the direct peer dependency `expo-audio` requires.
+- Every Expo package matches its SDK 54 expected version (`expo ~54.0.37` and the eleven packages
+  aligned with it), and `@react-navigation/*` use the ranges the SDK declares. `pnpm install
+  --frozen-lockfile` passes on the updated lockfile.
+
+The single remaining failure, "The android and/or ios directories for local Expo modules are
+gitignored", is a **verified false positive** for this layout:
+
+- `git check-ignore -v modules/formpath-pose/ios`, `.../android`, and the four source files under
+  `modules/formpath-pose/ios/` report nothing ignored.
+- All four files (`FormpathPoseModule.swift`, `FormpathPoseResources.swift`, `PoseSamplingPolicy.swift`,
+  `Resources/pose_landmarker_full.task`) are tracked by git.
+- The warning still fires with the `/ios` and `/android` lines deleted from `.gitignore` entirely,
+  so those root-anchored patterns are not its cause.
+
+`.gitignore` keeps the root-anchored `/ios` and `/android` patterns Expo itself recommends, and
+`tests/shooting-profile-evaluation-build-and-contrast.test.ts` pins that shape.
+
+## Private evaluation build (development only)
+
+The derived-report path in `docs/real-video-validation-runbook.md` is additional to this matrix and
+never ships enabled. It requires `EXPO_PUBLIC_FORMPATH_REAL_VIDEO_EVAL=1` **and** a development
+build (`__DEV__`), and it admits only clips filmed with the in-app camera plus an explicit consent
+confirmation and an opaque consent record id.
+
+- [ ] Confirm the evaluation panel is absent from a release build and from a build without the flag.
+- [ ] Confirm a library-picked clip is refused as evaluation evidence while still saving normally.
+- [ ] Confirm the consent checkbox gates report generation and that VoiceOver speaks each state.
+- [ ] Confirm the share sheet receives only the derived JSON, and that cancelling it is not an error.
+
 ## macOS/Xcode and CocoaPods gates
 
 Use a clean checkout and an Xcode/macOS combination supported by the project’s Expo SDK. Record command output and the exact tool versions.

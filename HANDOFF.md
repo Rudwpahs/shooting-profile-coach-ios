@@ -80,13 +80,13 @@ Last updated: 2026-09-03 UTC
   `shareRealVideoEvaluation(json, prepareFile, share)` -> `shared | share_dismissed | share_failed`,
   with cleanup after the share attempt; `describeRealVideoEvaluationState`. This pure module has no
   network, Firebase, or platform import.
-- `hooks/use-shooting-profile-capture.ts`: `evaluationEnabled = isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild())`,
-  `evaluation` state (reset on session-generation change and by `invalidateDerivedSave`),
-  `buildEvaluationReport()` (guarded `if (!evaluationEnabled) return;`),
-  `shareEvaluationReport()` (temporary file preparer + React Native `Share.share({ url, title })`,
-  user-initiated),
-  `evaluationAvailable`. The aggregation effect, `save`, `matchingShootingProfileSaveInputV2`,
-  `runCaptureSaveOperationV2`, and every cancellation guard are unchanged.
+- `hooks/use-shooting-profile-capture.ts`: `evaluationEnabled = isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild())`
+  and one `useRealVideoEvaluation({ enabled, state, consentRecordId, prepareFile })` call. **The
+  build and share callbacks themselves moved into `hooks/use-real-video-evaluation.ts` during the
+  2026-09-02 hardening pass** (see that section); the capture hook only injects
+  `prepareRealVideoEvaluationFile` and exposes the controller as `evaluation`. The aggregation
+  effect, `save`, `matchingShootingProfileSaveInputV2`, `runCaptureSaveOperationV2`, and every
+  cancellation guard are unchanged.
 - `lib/shooting-profile/real-video-evaluation-file.ts`: Expo FileSystem legacy-compatible cache
   adapter. Opaque `.json` name; exact derived JSON write; idempotent cleanup; partial-write cleanup.
 - `components/shooting-profile/real-video-evaluation-panel.tsx` (new): two accessible buttons
@@ -117,10 +117,12 @@ Last updated: 2026-09-03 UTC
   479 passed + 1 skipped. A separate RED proved partial-write cleanup was absent before it was added.
 
 ### Evidence that nothing raw is stored or uploaded
-- Source guards (tests): `lib/shooting-profile/real-video-evaluation.ts`, the panel, and the hook's
-  evaluation section contain none of `firebase|firestore|fetch(|axios|XMLHttpRequest|WebSocket|trpc|Clipboard|analytics|saveProfile|runCaptureSaveOperationV2`;
-  the hook shares `url: payload.url` and has no `message:`; runtime `fetch` spy never called during a
-  build. The file adapter accepts only the derived JSON string and has no network or cloud import.
+- Source guards (tests): `lib/shooting-profile/real-video-evaluation.ts`, the panel, and
+  `hooks/use-real-video-evaluation.ts` contain none of `firebase|firestore|fetch(|axios|XMLHttpRequest|WebSocket|trpc|Clipboard|analytics|saveProfile|runCaptureSaveOperationV2`;
+  the hook shares `url: payload.url` and never passes `message: payload`; runtime `fetch` spy never
+  called during a build. The file adapter accepts only the derived JSON string and has no network or
+  cloud import, and the evaluation hook takes the preparer by injection so it keeps no file-system
+  import of its own.
 - Report guard: reports with injected `sourceLandmarks`, `z`, `timestampMs`, `file://...mp4`,
   `IMG_0001.mov`, `filename`, or a bare `uri` are rejected; the strict schema rejects extra keys.
 - The evaluation result exposes exactly `{ status, report, json }`; no `saveInput`,
@@ -161,11 +163,88 @@ Last updated: 2026-09-03 UTC
 - Repository can return to private: **now** - nothing in this branch or on `main` depends on public
   visibility; CI runs on private repositories, and `gh` is authenticated as the owner.
 
+### Pre-capture hardening - 2026-09-02 (two commits on the same branch)
+
+These two commits were rebased **on top of** the 2026-09-03 JSON-file-sharing commits
+(`0da6020`, `da0d85c`, `c0f4531`) with no force push. The integration kept the owner's file-based
+share (`shareRealVideoEvaluation(json, prepareFile, share)` and `Share.share({ url, title })`) and
+moved it, unchanged in behaviour, into the extracted `hooks/use-real-video-evaluation.ts`. The
+preparer is injected rather than imported there so the hook keeps no file-system dependency and
+stays loadable in tests; `hooks/use-shooting-profile-capture.ts` supplies
+`prepareRealVideoEvaluationFile`. The panel interaction test asserts that each share attempt writes
+its own temporary file and cleans it up.
+
+**`bd9d63f` fix: validate real-video provenance and view admission**
+- `lib/shooting-profile/capture-session-reducer.ts`: `CaptureSlotSourceV2`, `slot.captureSource`,
+  `SLOT_ACQUIRE_STARTED.captureSource` (rejected unless `camera`/`library`), cleared on retake.
+- `lib/shooting-profile/real-video-evaluation.ts`: `admitEvaluationAttempts` replaces
+  `collectEvaluationAttempts` and returns `library_source_not_admissible` /
+  `unknown_capture_source` / `session_not_ready`; `isOpaqueConsentRecordId` (charset, >= 8 chars,
+  at least one digit); `consent_not_confirmed` and `consent_record_invalid` gates for
+  `consented_self_capture`; geometry gate wired in.
+- `lib/shooting-profile/cross-view-geometry.ts` (new): `assessCrossViewGeometry` compares every
+  front/side pair on phase-normalized, pelvis-centred, scale-free tracks. Measured on the synthetic
+  fixture: genuine pairs >= 0.1196, duplicates/mirrors <= 0.000337, limit 0.04 (3x below genuine,
+  118x above duplicates). Two front takes are never compared with each other. When a view cannot be
+  measured the gate defers so `phase_detection_failed` stays visible.
+- `lib/shooting-profile/evaluation-report.ts`: `TwoViewEvaluationReportError` with
+  `report_build_failed` / `raw_evidence_detected` / `schema_invalid`; schema now requires
+  `consentRecordId` exactly for `consented_self_capture` and forbids it for `synthetic_fixture`,
+  pins the Basic/High attempt set, and restricts `pipeline.detail` to `PIPELINE_DETAIL_CODES_V1`;
+  the builder drops any other detail so a thrown message cannot reach the report.
+- `lib/feature-flags.ts`: `FORMPATH_REAL_VIDEO_CONSENT_RECORD_ID` (separate export; the frozen
+  `FORMPATH_FLAGS` shape is unchanged apart from `realVideoEvaluation`).
+- Tests: `tests/shooting-profile-real-video-provenance.test.ts` (new, 16). Red first with
+  `Cannot find module '@/lib/shooting-profile/cross-view-geometry'`.
+
+**`<commit 2>` fix: prepare iOS evaluation build and accessible export**
+- `modules/formpath-pose/src/FormpathPoseModule.ts` imports `requireOptionalNativeModule` from
+  `expo` and declares its own `NativeEventSubscription`; `modules/formpath-pose/package.json`
+  peer-depends on `expo`; the direct `expo-modules-core` dependency is gone.
+- `package.json`: `expo-asset` added, `expo ~54.0.37` and eleven packages aligned to their SDK 54
+  expected versions, `@react-navigation/*` set to the SDK's declared ranges, lockfile regenerated
+  and re-verified with `--frozen-lockfile`.
+- `app.config.ts`: `expo-font` and `expo-web-browser` config plugins registered;
+  `userInterfaceStyle` changed from `automatic` to `light` because every product screen paints one
+  fixed light palette and the system share sheet was rendering dark over it.
+- `hooks/use-real-video-evaluation.ts` (new): owns consent, one in-flight build, one in-flight
+  share, `building`/`sharing` states, and `AccessibilityInfo.announceForAccessibility` for every
+  terminal state (iOS VoiceOver ignores `accessibilityLiveRegion`).
+  `hooks/use-shooting-profile-capture.ts` delegates to it and exposes `evaluation` as the controller.
+- `components/shooting-profile/real-video-evaluation-panel.tsx`: consent checkbox, admission copy,
+  activity indicator, busy labels, `accessibilityState` plus `aria-*` aliases.
+- Contrast: the muted small-text colour `#61738A` measured 4.25:1 on the `#F5F1E8` canvas. Replaced
+  with `#5A6B80` (4.84:1 on the canvas, 5.41:1 on the card) across the eight V2 surfaces.
+- Tests: `tests/shooting-profile-real-video-evaluation-panel.test.tsx` (new, 6 real render and
+  interaction cases through `react-dom` + `react-native-web` in jsdom: disabled-until-consent,
+  three consecutive build taps producing one build and one announcement, busy state during the
+  build, dismissed vs shared vs failed share, library exclusion, session-generation reset) and
+  `tests/shooting-profile-evaluation-build-and-contrast.test.ts` (new, 6). `vitest.config.ts` gains
+  the `react-native` -> `react-native-web` alias, `.test.tsx` include, jsdom match glob and the
+  automatic JSX runtime; `jsdom` and `@types/react-dom` added as dev dependencies.
+
+**Expo Doctor: 17/18 (was 15/18).** The three real failures are fixed. The remaining
+"local Expo module ios/android directories are gitignored" is a verified false positive:
+`git check-ignore -v` reports nothing ignored, all four `modules/formpath-pose/ios/**` files are
+tracked, and the warning still fires with `/ios` and `/android` deleted from `.gitignore`.
+`expo install --check` reports "Dependencies are up to date".
+
+**Verification after the second commit** (final tree, this machine):
+`CI=true corepack pnpm install --frozen-lockfile` exit 0; `corepack pnpm check` exit 0;
+`corepack pnpm lint` exit 0 with 0 warnings; `corepack pnpm test:unit` 37 files passed + 1 skipped,
+505 tests passed + 1 skipped; `corepack pnpm test:rules` exit 1 locally (no Java) with CI as the
+evidence; Expo web export exit 0 with 18 routes into a temporary directory.
+
+Unchanged by both commits: the 4D solver, 101 phases, 12 joints, the Basic 0.65 cap, `heuristic_v1`,
+the exact `"1"` flag comparisons, the boundary string, and the Firestore contract.
+
 ### Exact next single action (owner)
 On a Mac with Xcode and the registered iPhone, follow `docs/real-video-validation-runbook.md`
-sections 2, 4, 5: create the gitignored `.env.local` with the four flags, run
+sections 2, 4, 5: create the gitignored `.env.local` with the four flags **and**
+`EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID`, run
 `pnpm exec expo prebuild --platform ios --clean && (cd ios && pod install) && pnpm exec expo run:ios --device`,
-capture one consented Basic 1+1 pair, press "파생 리포트 생성" then "리포트 공유 · 저장", and record
+film one consented Basic 1+1 pair **with the in-app camera** (a library pick is refused as
+evidence), tick the consent checkbox, press "파생 리포트 생성" then "리포트 공유 · 저장", and record
 the derived metrics from section 7 in this file via a PR.
 
 ## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC

@@ -269,15 +269,19 @@ describe("native detector V2 packaging and two-pass Swift contract", () => {
     expect(module).not.toMatch(/(?:print|NSLog|os_log)\s*\(/);
   });
 
-  it("declares a clean Expo module-core relationship using the existing SDK 54 resolution", () => {
+  it("reaches native modules through the expo package instead of a direct expo-modules-core dependency", () => {
     const localPackage = JSON.parse(projectFile("modules/formpath-pose/package.json"));
     const rootPackage = JSON.parse(projectFile("package.json"));
-    const lockfile = projectFile("pnpm-lock.yaml");
+    const bridge = projectFile("modules/formpath-pose/src/FormpathPoseModule.ts");
     const tsconfig = JSON.parse(projectFile("tsconfig.json"));
-    expect(localPackage.peerDependencies).toEqual({ "expo-modules-core": "~3.0.29" });
-    expect(rootPackage.dependencies["expo-modules-core"]).toBe("~3.0.29");
-    expect(lockfile).toMatch(/expo-modules-core:\n\s+specifier: ~3\.0\.29\n\s+version: 3\.0\.29\(/);
-    expect(lockfile).toContain("expo-modules-core@3.0.29:");
+
+    // Expo Doctor fails a project that depends on expo-modules-core directly;
+    // the supported entry point is the expo package's own exported API.
+    expect(bridge).toContain('import { requireOptionalNativeModule } from "expo";');
+    expect(bridge).not.toMatch(/from ["']expo-modules-core["']/);
+    expect(localPackage.peerDependencies).toEqual({ expo: "*" });
+    expect(rootPackage.dependencies["expo-modules-core"]).toBeUndefined();
+    expect(rootPackage.dependencies.expo).toMatch(/^~54\./);
     expect(tsconfig.compilerOptions.skipLibCheck).not.toBe(true);
   });
 
