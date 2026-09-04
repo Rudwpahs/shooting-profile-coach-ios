@@ -1,8 +1,16 @@
-import type { CaptureSessionState } from "@/lib/shooting-profile/capture-session-reducer";
+import type {
+  CaptureSessionState,
+  CaptureSlotSourceV2,
+} from "@/lib/shooting-profile/capture-session-reducer";
+import {
+  assessCrossViewGeometry,
+  type CrossViewGeometryReasonV1,
+} from "@/lib/shooting-profile/cross-view-geometry";
 import {
   assertReportContainsNoRawEvidence,
   buildTwoViewEvaluationReport,
   twoViewEvaluationReportSchema,
+  TwoViewEvaluationReportError,
   type BuildTwoViewEvaluationReportInput,
   type TwoViewEvaluationReportV1,
 } from "@/lib/shooting-profile/evaluation-report";
@@ -34,6 +42,7 @@ export function isRealVideoEvaluationEnabled(
 
 export type RealVideoEvaluationAttemptV1 = Readonly<{
   id: string;
+  captureSource: CaptureSlotSourceV2;
   sequence: LandmarkSequenceV2;
 }>;
 
@@ -44,26 +53,63 @@ const EVALUABLE_STATUSES: ReadonlySet<CaptureSessionState["status"]> = new Set([
   "error",
 ] as const);
 
+export type EvaluationAttemptAdmissionReasonV1 =
+  | "session_not_ready"
+  | "unknown_capture_source"
+  | "library_source_not_admissible";
+
+export type EvaluationAttemptAdmissionV1 =
+  | Readonly<{ status: "admitted"; attempts: readonly RealVideoEvaluationAttemptV1[] }>
+  | Readonly<{ status: "rejected"; reason: EvaluationAttemptAdmissionReasonV1 }>;
+
 /**
- * Returns the accepted slot sequences already retained in reducer memory, or
- * `undefined` when the session is not in a state that has a complete set.
+ * Real-video evidence must come from a clip filmed inside this app right now.
+ * A library pick has unverifiable provenance - it can be any downloaded video -
+ * so it is excluded from evaluation evidence even though the capture flow
+ * itself still accepts it for the owner's private profile.
  */
-export function collectEvaluationAttempts(
-  state: CaptureSessionState,
-): readonly RealVideoEvaluationAttemptV1[] | undefined {
+export function admitEvaluationAttempts(state: CaptureSessionState): EvaluationAttemptAdmissionV1 {
   if (state.mode === null || state.slots.length === 0 || !EVALUABLE_STATUSES.has(state.status)) {
-    return undefined;
+    return { status: "rejected", reason: "session_not_ready" };
   }
   const attempts: RealVideoEvaluationAttemptV1[] = [];
   for (const slot of state.slots) {
-    if (slot.status !== "accepted" || slot.sequence === undefined) return undefined;
-    attempts.push(Object.freeze({ id: slot.id, sequence: slot.sequence }));
+    if (slot.status !== "accepted" || slot.sequence === undefined) {
+      return { status: "rejected", reason: "session_not_ready" };
+    }
+    if (slot.captureSource === undefined) {
+      return { status: "rejected", reason: "unknown_capture_source" };
+    }
+    if (slot.captureSource !== "camera") {
+      return { status: "rejected", reason: "library_source_not_admissible" };
+    }
+    attempts.push(Object.freeze({
+      id: slot.id,
+      captureSource: slot.captureSource,
+      sequence: slot.sequence,
+    }));
   }
-  return Object.freeze(attempts);
+  return Object.freeze({ status: "admitted" as const, attempts: Object.freeze(attempts) });
+}
+
+/**
+ * An acceptable consent record id is an opaque local reference, not a person.
+ * It stays inside the strict charset, is long enough to be a record key, and
+ * must carry at least one digit so a bare name cannot be pasted in.
+ */
+const CONSENT_RECORD_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/;
+
+export function isOpaqueConsentRecordId(value: unknown): value is string {
+  return typeof value === "string"
+    && CONSENT_RECORD_ID_PATTERN.test(value)
+    && /[0-9]/.test(value);
 }
 
 export type RealVideoEvaluationBuildFailureReason =
-  | "session_not_ready"
+  | EvaluationAttemptAdmissionReasonV1
+  | CrossViewGeometryReasonV1
+  | "consent_not_confirmed"
+  | "consent_record_invalid"
   | "report_build_failed"
   | "raw_evidence_detected"
   | "schema_invalid";
@@ -74,38 +120,63 @@ export type RealVideoEvaluationBuildResult =
 
 export type RealVideoEvaluationBuildOptions = Readonly<{
   sourceClass: BuildTwoViewEvaluationReportInput["sourceClass"];
+  consentConfirmed?: boolean;
   consentRecordId?: string;
   evaluatedCommitSha?: string;
 }>;
+
+function failed(reason: RealVideoEvaluationBuildFailureReason): RealVideoEvaluationBuildResult {
+  return { status: "build_failed", reason };
+}
 
 export function buildRealVideoEvaluation(
   state: CaptureSessionState,
   options: RealVideoEvaluationBuildOptions,
 ): RealVideoEvaluationBuildResult {
-  const attempts = collectEvaluationAttempts(state);
-  if (attempts === undefined || state.mode === null) {
-    return { status: "build_failed", reason: "session_not_ready" };
+  const admission = admitEvaluationAttempts(state);
+  if (admission.status !== "admitted" || state.mode === null) {
+    return failed(admission.status === "admitted" ? "session_not_ready" : admission.reason);
   }
+  const { attempts } = admission;
+
+  // Claiming consent requires the owner to say so in this session and to name
+  // an opaque local consent record; neither is inferred.
+  if (options.sourceClass === "consented_self_capture") {
+    if (options.consentConfirmed !== true) return failed("consent_not_confirmed");
+    if (!isOpaqueConsentRecordId(options.consentRecordId)) return failed("consent_record_invalid");
+  }
+
+  // Only a positively identified duplicate or mirror blocks the build. When the
+  // gate cannot measure a view at all, the pipeline's own typed recapture
+  // (`phase_detection_failed`) is both more precise and more actionable, so the
+  // gate defers instead of masking it.
+  const geometry = assessCrossViewGeometry(attempts);
+  if (geometry.status === "rejected" && geometry.reason !== "insufficient_view_evidence") {
+    return failed(geometry.reason);
+  }
+
   let report: TwoViewEvaluationReportV1;
   try {
     report = buildTwoViewEvaluationReport({
       sourceClass: options.sourceClass,
-      ...(options.consentRecordId === undefined ? {} : { consentRecordId: options.consentRecordId }),
+      ...(options.consentRecordId === undefined || options.sourceClass === "synthetic_fixture"
+        ? {}
+        : { consentRecordId: options.consentRecordId }),
       ...(options.evaluatedCommitSha === undefined ? {} : { evaluatedCommitSha: options.evaluatedCommitSha }),
       mode: state.mode,
       shootingHand: state.shootingHand,
-      attempts,
+      attempts: attempts.map(({ id, sequence }) => ({ id, sequence })),
     });
-  } catch {
-    return { status: "build_failed", reason: "report_build_failed" };
+  } catch (error) {
+    return failed(error instanceof TwoViewEvaluationReportError ? error.reason : "report_build_failed");
   }
   try {
     assertReportContainsNoRawEvidence(report);
   } catch {
-    return { status: "build_failed", reason: "raw_evidence_detected" };
+    return failed("raw_evidence_detected");
   }
   const parsed = twoViewEvaluationReportSchema.safeParse(report);
-  if (!parsed.success) return { status: "build_failed", reason: "schema_invalid" };
+  if (!parsed.success) return failed("schema_invalid");
   return Object.freeze({
     status: "ready" as const,
     report: parsed.data,

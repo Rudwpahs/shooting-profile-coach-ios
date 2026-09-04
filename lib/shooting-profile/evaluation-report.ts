@@ -59,10 +59,28 @@ const crossViewAlignmentSchema = z.union([
   }).strict(),
 ]);
 
+/**
+ * Only these stable sub-reasons may appear as `pipeline.detail`. Anything else,
+ * including a thrown error's message, is dropped by the builder and rejected by
+ * the schema so a free-form string can never carry identifying text.
+ */
+export const PIPELINE_DETAIL_CODES_V1 = Object.freeze([
+  "invalid_source_dimensions",
+  "insufficient_detected_frames",
+  "invalid_phase_observation",
+  "degenerate_body_scale",
+  "insufficient_total_motion",
+  "missing_dip",
+  "missing_rise",
+  "missing_release_proxy",
+  "missing_follow_through",
+  "critical_phase_gap",
+] as const);
+
 const pipelineSchema = z.object({
   status: z.enum(["complete", "recapture_required"]),
   reason: z.string().min(1).optional(),
-  detail: z.string().min(1).optional(),
+  detail: z.enum(PIPELINE_DETAIL_CODES_V1).optional(),
   affectedAttemptIds: z.array(z.string().min(1)).optional(),
   affectedBones: z.array(z.string().min(1)).optional(),
   confidence: finiteNumberSchema.min(0).max(1).optional(),
@@ -145,7 +163,63 @@ export const twoViewEvaluationReportSchema = z.object({
       message: "Recapture reports must not contain reconstruction metrics",
     });
   }
+
+  // Consent metadata is required exactly where the source class claims consent,
+  // and forbidden where the input never came from a person.
+  if (report.sourceClass === "consented_self_capture" && report.consentRecordId === undefined) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["consentRecordId"],
+      message: "consented_self_capture requires an opaque consent record id",
+    });
+  }
+  if (report.sourceClass === "synthetic_fixture" && report.consentRecordId !== undefined) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["consentRecordId"],
+      message: "A synthetic fixture must not carry a consent record id",
+    });
+  }
+
+  // The declared capture mode fixes the attempt set exactly: Basic is one take
+  // per view, High is three, every attempt is distinct, and no take index may
+  // repeat within a view.
+  const takesPerView = report.mode === "basic_1_plus_1" ? 1 : 3;
+  const front = report.attempts.filter((attempt) => attempt.view === "front");
+  const side = report.attempts.filter((attempt) => attempt.view === "shooting_side");
+  const distinctAttemptIds = new Set(report.attempts.map((attempt) => attempt.attemptId));
+  if (
+    report.attempts.length !== takesPerView * 2
+    || front.length !== takesPerView
+    || side.length !== takesPerView
+    || distinctAttemptIds.size !== report.attempts.length
+    || new Set(front.map((attempt) => attempt.takeIndex)).size !== takesPerView
+    || new Set(side.map((attempt) => attempt.takeIndex)).size !== takesPerView
+    || report.attempts.some((attempt) => attempt.takeIndex >= takesPerView)
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["attempts"],
+      message: `${report.mode} requires ${takesPerView} distinct take(s) per view`,
+    });
+  }
 });
+
+export type TwoViewEvaluationReportFailureReason =
+  | "report_build_failed"
+  | "raw_evidence_detected"
+  | "schema_invalid";
+
+/** Distinguishes why a derived report could not be produced, without leaking input detail. */
+export class TwoViewEvaluationReportError extends Error {
+  readonly reason: TwoViewEvaluationReportFailureReason;
+
+  constructor(reason: TwoViewEvaluationReportFailureReason, message: string) {
+    super(message);
+    this.name = "TwoViewEvaluationReportError";
+    this.reason = reason;
+  }
+}
 
 export type TwoViewEvaluationReportV1 = z.infer<typeof twoViewEvaluationReportSchema>;
 
@@ -398,7 +472,9 @@ export function buildTwoViewEvaluationReport(
       pipeline: {
         status: "recapture_required" as const,
         reason: result.reason,
-        ...(result.detail === undefined ? {} : { detail: result.detail }),
+        ...(allowlistedPipelineDetail(result.detail) === undefined
+          ? {}
+          : { detail: allowlistedPipelineDetail(result.detail) }),
         affectedAttemptIds: [...result.affectedAttemptIds],
         affectedBones: [...result.affectedBones],
       },
@@ -410,9 +486,15 @@ export function buildTwoViewEvaluationReport(
         containsFilenames: false as const,
       },
     };
-  const parsedReport = twoViewEvaluationReportSchema.parse(report);
-  assertReportContainsNoRawEvidence(parsedReport);
-  return parsedReport;
+  const parsed = twoViewEvaluationReportSchema.safeParse(report);
+  if (!parsed.success) {
+    throw new TwoViewEvaluationReportError(
+      "schema_invalid",
+      "Evaluation report does not satisfy the derived-report schema",
+    );
+  }
+  assertReportContainsNoRawEvidence(parsed.data);
+  return parsed.data;
 }
 
 /**
@@ -424,6 +506,15 @@ const RAW_EVIDENCE_PATTERN = /file:\/\/|\.mp4\b|\.mov\b|\bfilename\b|\bfileName\
 
 export function assertReportContainsNoRawEvidence(report: TwoViewEvaluationReportV1): void {
   if (RAW_EVIDENCE_PATTERN.test(JSON.stringify(report))) {
-    throw new Error("Evaluation report contains prohibited raw evidence");
+    throw new TwoViewEvaluationReportError(
+      "raw_evidence_detected",
+      "Evaluation report contains prohibited raw evidence",
+    );
   }
+}
+
+function allowlistedPipelineDetail(
+  detail: string | undefined,
+): (typeof PIPELINE_DETAIL_CODES_V1)[number] | undefined {
+  return PIPELINE_DETAIL_CODES_V1.find((code) => code === detail);
 }

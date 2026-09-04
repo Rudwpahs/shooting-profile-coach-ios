@@ -36,7 +36,7 @@ function acceptedSession(session: { front: LandmarkSequenceV2[]; shootingSide: L
     const generation = slot.generation + 1;
     const requestId = `opaque_${slot.id.replace(/[^A-Za-z0-9]/g, "_")}_${generation}`;
     const sequence = slot.view === "front" ? session.front[0] : session.shootingSide[0];
-    state = captureSessionReducer(state, { type: "SLOT_ACQUIRE_STARTED", slotId: slot.id, requestId, generation });
+    state = captureSessionReducer(state, { type: "SLOT_ACQUIRE_STARTED", slotId: slot.id, requestId, generation, captureSource: "camera" });
     state = captureSessionReducer(state, { type: "SLOT_ACCEPTED", slotId: slot.id, requestId, generation, sequence });
   }
   state = captureSessionReducer(state, { type: "AGGREGATE_STARTED" });
@@ -51,7 +51,11 @@ function acceptedSession(session: { front: LandmarkSequenceV2[]; shootingSide: L
 describe("private real-video evaluation reason codes", () => {
   it("preserves uncertainty_exceeds_limit and its alignment evidence verbatim", () => {
     const state = acceptedSession(syntheticLandmarkSession({ mode: "basic_1_plus_1" }));
-    const result = buildRealVideoEvaluation(state, { sourceClass: "consented_self_capture" });
+    const result = buildRealVideoEvaluation(state, {
+      sourceClass: "consented_self_capture",
+      consentConfirmed: true,
+      consentRecordId: "local-consent-20260902-001",
+    });
 
     expect(result.status).toBe("ready");
     if (result.status !== "ready") return;

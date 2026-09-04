@@ -2,7 +2,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { Share } from "react-native";
 
-import { FORMPATH_FLAGS } from "@/lib/feature-flags";
+import { FORMPATH_FLAGS, FORMPATH_REAL_VIDEO_CONSENT_RECORD_ID } from "@/lib/feature-flags";
 import type { SaveShootingProfileInputV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
   admitCaptureSaveOperationV2,
@@ -17,8 +17,8 @@ import {
   type RetainedNormalizedAttemptsV2,
 } from "@/lib/shooting-profile/capture-session-reducer";
 import {
+  admitEvaluationAttempts,
   buildRealVideoEvaluation,
-  collectEvaluationAttempts,
   isDevelopmentBuild,
   isRealVideoEvaluationEnabled,
   shareRealVideoEvaluation,
@@ -123,6 +123,7 @@ export function useShootingProfileCapture(
   // the reducer already holds; never auto-run, never persisted, never uploaded.
   const evaluationEnabled = isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild());
   const [evaluation, setEvaluation] = useState<RealVideoEvaluationState>({ status: "idle" });
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
   const evaluationRef = useRef(evaluation);
 
   useEffect(() => {
@@ -166,6 +167,7 @@ export function useShootingProfileCapture(
     saveInFlightRef.current = null;
     normalizedAttemptsRef.current = null;
     setEvaluation({ status: "idle" });
+    setConsentConfirmed(false);
   }, []);
 
   useEffect(() => () => {
@@ -209,7 +211,7 @@ export function useShootingProfileCapture(
     const requestId = opaqueRequestId();
     const generation = slot.generation + 1;
     activeRequestsRef.current.set(slotId, { requestId, generation });
-    dispatch({ type: "SLOT_ACQUIRE_STARTED", slotId, requestId, generation });
+    dispatch({ type: "SLOT_ACQUIRE_STARTED", slotId, requestId, generation, captureSource: source });
     const requestIsActive = () => {
       const active = activeRequestsRef.current.get(slotId);
       return active?.requestId === requestId && active.generation === generation;
@@ -401,10 +403,19 @@ export function useShootingProfileCapture(
     }
   }, [state.mode, state.sessionGeneration, state.shootingHand, state.slots, state.status]);
 
+  const toggleConsentConfirmed = useCallback(() => {
+    if (!evaluationEnabled) return;
+    setConsentConfirmed((current) => !current);
+  }, [evaluationEnabled]);
+
   const buildEvaluationReport = useCallback(() => {
     if (!evaluationEnabled) return;
     const snapshot = stateRef.current;
-    const result = buildRealVideoEvaluation(snapshot, { sourceClass: "consented_self_capture" });
+    const result = buildRealVideoEvaluation(snapshot, {
+      sourceClass: "consented_self_capture",
+      consentConfirmed,
+      consentRecordId: FORMPATH_REAL_VIDEO_CONSENT_RECORD_ID,
+    });
     setEvaluation(result.status === "ready"
       ? {
         status: "ready",
@@ -417,7 +428,7 @@ export function useShootingProfileCapture(
         sessionGeneration: snapshot.sessionGeneration,
         reason: result.reason,
       });
-  }, [evaluationEnabled]);
+  }, [consentConfirmed, evaluationEnabled]);
 
   const shareEvaluationReport = useCallback(async () => {
     if (!evaluationEnabled) return;
@@ -436,7 +447,11 @@ export function useShootingProfileCapture(
     setEvaluation({ ...current, status: outcome });
   }, [evaluationEnabled]);
 
-  const evaluationAvailable = evaluationEnabled && collectEvaluationAttempts(state) !== undefined;
+  const evaluationAdmission = evaluationEnabled ? admitEvaluationAttempts(state) : undefined;
+  const evaluationAvailable = evaluationAdmission?.status === "admitted" && consentConfirmed;
+  const evaluationAdmissionReason = evaluationAdmission?.status === "rejected"
+    ? evaluationAdmission.reason
+    : undefined;
 
   const save = useCallback(async () => {
     const snapshot = stateRef.current;
@@ -495,7 +510,10 @@ export function useShootingProfileCapture(
     save,
     evaluationEnabled,
     evaluationAvailable,
+    evaluationAdmissionReason,
     evaluation,
+    consentConfirmed,
+    toggleConsentConfirmed,
     buildEvaluationReport,
     shareEvaluationReport,
   };

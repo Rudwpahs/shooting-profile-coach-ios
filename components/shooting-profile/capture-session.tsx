@@ -290,10 +290,13 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
             {renderSlots()}
             {capture.evaluationEnabled ? (
               <RealVideoEvaluationPanel
+                admissionReason={capture.evaluationAdmissionReason}
                 canBuild={capture.evaluationAvailable}
+                consentConfirmed={capture.consentConfirmed}
                 evaluation={capture.evaluation}
                 onBuild={capture.buildEvaluationReport}
                 onShare={() => void capture.shareEvaluationReport()}
+                onToggleConsent={capture.toggleConsentConfirmed}
               />
             ) : null}
           </View>
@@ -383,10 +386,13 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
             </Pressable>
             {capture.evaluationEnabled ? (
               <RealVideoEvaluationPanel
+                admissionReason={capture.evaluationAdmissionReason}
                 canBuild={capture.evaluationAvailable}
+                consentConfirmed={capture.consentConfirmed}
                 evaluation={capture.evaluation}
                 onBuild={capture.buildEvaluationReport}
                 onShare={() => void capture.shareEvaluationReport()}
+                onToggleConsent={capture.toggleConsentConfirmed}
               />
             ) : null}
           </View>

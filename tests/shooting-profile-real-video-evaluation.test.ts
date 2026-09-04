@@ -19,7 +19,7 @@ import {
 } from "@/lib/shooting-profile/evaluation-report";
 import {
   buildRealVideoEvaluation,
-  collectEvaluationAttempts,
+  admitEvaluationAttempts,
   isDevelopmentBuild,
   isRealVideoEvaluationEnabled,
   shareRealVideoEvaluation,
@@ -38,6 +38,12 @@ type Session = { front: LandmarkSequenceV2[]; shootingSide: LandmarkSequenceV2[]
 
 const read = (path: string) => readFileSync(path, "utf8");
 
+const CONSENT_OPTIONS = {
+  sourceClass: "consented_self_capture",
+  consentConfirmed: true,
+  consentRecordId: "local-consent-20260902-001",
+} as const;
+
 function sequenceForSlot(session: Session, slotId: string): LandmarkSequenceV2 {
   const [view, take] = slotId.split("-");
   const pool = view === "front" ? session.front : session.shootingSide;
@@ -55,7 +61,7 @@ function acceptedSession(
   for (const slot of state.slots) {
     const generation = slot.generation + 1;
     const requestId = `opaque_${slot.id.replace(/[^A-Za-z0-9]/g, "_")}_${generation}`;
-    state = captureSessionReducer(state, { type: "SLOT_ACQUIRE_STARTED", slotId: slot.id, requestId, generation });
+    state = captureSessionReducer(state, { type: "SLOT_ACQUIRE_STARTED", slotId: slot.id, requestId, generation, captureSource: "camera" });
     state = captureSessionReducer(state, {
       type: "SLOT_ACCEPTED",
       slotId: slot.id,
@@ -194,7 +200,7 @@ describe("private real-video evaluation gate", () => {
     vi.stubGlobal("fetch", fetchSpy);
     const result = expectReady(buildRealVideoEvaluation(
       reviewState("basic_1_plus_1", syntheticLandmarkSession({ mode: "basic_1_plus_1" })),
-      { sourceClass: "consented_self_capture" },
+      CONSENT_OPTIONS,
     ));
     vi.unstubAllGlobals();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -206,13 +212,16 @@ describe("private real-video evaluation gate", () => {
   it("builds a strict-schema derived report from the sequences already held in reducer memory", () => {
     const session = syntheticLandmarkSession({ mode: "basic_1_plus_1" });
     const state = reviewState("basic_1_plus_1", session);
-    const attempts = collectEvaluationAttempts(state);
-    expect(attempts?.map((attempt) => attempt.id)).toEqual(["front-0", "shooting_side-0"]);
-    expect(attempts?.every((attempt) => attempt.sequence === state.slots.find((slot) => slot.id === attempt.id)?.sequence)).toBe(true);
+    const admission = admitEvaluationAttempts(state);
+    expect(admission.status).toBe("admitted");
+    if (admission.status !== "admitted") return;
+    expect(admission.attempts.map((attempt) => attempt.id)).toEqual(["front-0", "shooting_side-0"]);
+    expect(admission.attempts.every((attempt) => (
+      attempt.sequence === state.slots.find((slot) => slot.id === attempt.id)?.sequence
+    ))).toBe(true);
 
     const result = expectReady(buildRealVideoEvaluation(state, {
-      sourceClass: "consented_self_capture",
-      consentRecordId: "local-consent-20260902-001",
+      ...CONSENT_OPTIONS,
     }));
 
     expect(twoViewEvaluationReportSchema.parse(result.report)).toEqual(result.report);
@@ -238,7 +247,7 @@ describe("private real-video evaluation gate", () => {
     const session = syntheticLandmarkSession({ mode: "basic_1_plus_1" });
     const mismatched = { ...session, shootingSide: [slowFirstHalf(session.shootingSide[0])] };
     const state = recaptureState("basic_1_plus_1", mismatched, "cross_view_phase_mismatch");
-    const recapture = expectReady(buildRealVideoEvaluation(state, { sourceClass: "consented_self_capture" }));
+    const recapture = expectReady(buildRealVideoEvaluation(state, CONSENT_OPTIONS));
     expect(recapture.report.pipeline.status).toBe("recapture_required");
     expect(recapture.report.pipeline.reason).toBe(state.recaptureReasonCode);
     expect(recapture.report.reconstruction).toBeUndefined();
@@ -248,7 +257,7 @@ describe("private real-video evaluation gate", () => {
   it("rejects raw landmarks, native z, timestamps, URIs, and file names before anything can leave the app", () => {
     const { report } = expectReady(buildRealVideoEvaluation(
       reviewState("basic_1_plus_1", syntheticLandmarkSession({ mode: "basic_1_plus_1" })),
-      { sourceClass: "consented_self_capture" },
+      CONSENT_OPTIONS,
     ));
     const poisoned: unknown[] = [
       { ...report, sourceLandmarks: [{ x: 0.1, y: 0.2 }] },
@@ -269,7 +278,7 @@ describe("private real-video evaluation gate", () => {
   it("shares the validated report as a temporary JSON file and cleans it after dismissal", async () => {
     const { json } = expectReady(buildRealVideoEvaluation(
       reviewState("basic_1_plus_1", syntheticLandmarkSession({ mode: "basic_1_plus_1" })),
-      { sourceClass: "consented_self_capture" },
+      CONSENT_OPTIONS,
     ));
     const preparedContents: string[] = [];
     const cleanup = vi.fn(async () => undefined);
@@ -333,7 +342,7 @@ describe("private real-video evaluation gate", () => {
     ];
     for (const [reasonCode, corrupted] of cases) {
       const state = recaptureState("basic_1_plus_1", corrupted, reasonCode);
-      const { report } = expectReady(buildRealVideoEvaluation(state, { sourceClass: "consented_self_capture" }));
+      const { report } = expectReady(buildRealVideoEvaluation(state, CONSENT_OPTIONS));
       expect(report.pipeline).toMatchObject({ status: "recapture_required", reason: reasonCode });
       expect(state.recaptureReasonCode).toBe(reasonCode);
     }
@@ -351,16 +360,17 @@ describe("private real-video evaluation gate", () => {
     };
 
     expect(matchingShootingProfileSaveInputV2(state, retained)).toBeNull();
-    const built = buildRealVideoEvaluation(state, { sourceClass: "consented_self_capture" });
+    const built = buildRealVideoEvaluation(state, CONSENT_OPTIONS);
     expect(built.status).toBe("ready");
     expect(matchingShootingProfileSaveInputV2(state, retained)).toBeNull();
     expect(state.profile).toBeUndefined();
 
-    const notReady = buildRealVideoEvaluation(createCaptureSession("basic_1_plus_1", "right"), {
-      sourceClass: "consented_self_capture",
-    });
+    const notReady = buildRealVideoEvaluation(createCaptureSession("basic_1_plus_1", "right"), CONSENT_OPTIONS);
     expect(notReady).toEqual({ status: "build_failed", reason: "session_not_ready" });
-    expect(collectEvaluationAttempts(createCaptureSession())).toBeUndefined();
+    expect(admitEvaluationAttempts(createCaptureSession())).toEqual({
+      status: "rejected",
+      reason: "session_not_ready",
+    });
   });
 
   it("leaves the frozen V2 contracts untouched", () => {
