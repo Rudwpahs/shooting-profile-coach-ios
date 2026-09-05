@@ -83,12 +83,10 @@ function fixedScenarios(): SyntheticSweepScenarioV1[] {
     { ...base, id: "fixed-clean-left", shootingHand: "left", degeneracy: "none", expectation: "accepts" },
     { ...base, id: "fixed-clean-landscape", display: "landscape", degeneracy: "none", expectation: "accepts" },
     { ...base, id: "fixed-clean-square", display: "square", degeneracy: "none", expectation: "accepts" },
-    // OPEN GAP: `assessCrossViewGeometry` is wired into the private evaluation
-    // path only, so the profile-building path still fuses two views that are the
-    // same projection. Recorded as `unspecified` because the pipeline makes no
-    // promise here today; the sweep report shows them completing.
-    { ...base, id: "fixed-duplicate-view", degeneracy: "duplicate_view", expectation: "unspecified" },
-    { ...base, id: "fixed-mirrored-view", degeneracy: "mirrored_view", expectation: "unspecified" },
+    // The cross-view geometry admission gate runs inside the product pipeline,
+    // so two views that are the same projection must never complete.
+    { ...base, id: "fixed-duplicate-view", degeneracy: "duplicate_view", expectation: "rejects" },
+    { ...base, id: "fixed-mirrored-view", degeneracy: "mirrored_view", expectation: "rejects" },
     { ...base, id: "fixed-frozen-arm", degeneracy: "frozen_shooting_arm", expectation: "rejects" },
     { ...base, id: "fixed-stalled-clip", degeneracy: "stalled_clip", expectation: "rejects" },
     {

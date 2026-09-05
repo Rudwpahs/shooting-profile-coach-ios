@@ -150,11 +150,20 @@ describe("synthetic sweep report", () => {
     });
   });
 
-  it("counts the documented open gaps as unspecified rather than as passes", () => {
-    const duplicateIndex = plan.findIndex((scenario) => scenario.id === "fixed-duplicate-view");
-    const report = summariseSyntheticSweep([outcome(duplicateIndex, {})]);
+  it("counts a scenario without a contract promise as unspecified rather than as a pass", () => {
+    const borderlineIndex = plan.findIndex((scenario) => scenario.id === "fixed-phase-borderline");
+    const report = summariseSyntheticSweep([outcome(borderlineIndex, {})]);
 
     expect(report.expectations).toMatchObject({ satisfied: 0, violated: 0, unspecified: 1 });
+  });
+
+  it("promises that a duplicate or mirrored view is rejected by the product pipeline", () => {
+    for (const id of ["fixed-duplicate-view", "fixed-mirrored-view"]) {
+      const index = plan.findIndex((scenario) => scenario.id === id);
+      expect(plan[index].expectation, id).toBe("rejects");
+      const report = summariseSyntheticSweep([outcome(index, {})]);
+      expect(report.expectations.violated, id).toBe(1);
+    }
   });
 
   it("keeps one display size per aspect so the isotropic conversion is exercised", () => {

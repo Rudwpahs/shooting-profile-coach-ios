@@ -97,6 +97,12 @@ function recaptureReason(reason: string): string {
   if (reason === "phase_detection_failed") {
     return "클립에서 준비·딥·릴리스·팔로우스루 위상을 찾지 못했습니다. 전신이 보이는 한 번의 완결된 슛으로 다시 촬영하세요.";
   }
+  if (reason === "duplicate_view_projection") {
+    return "정면 클립과 측면 클립이 사실상 같은 각도의 투영입니다. 정면과 슈팅 측면을 실제로 다른 위치에서 각각 촬영하세요.";
+  }
+  if (reason === "mirrored_view_projection") {
+    return "한 클립이 다른 클립의 좌우 반전본으로 보입니다. 미러링된 영상 대신 두 각도를 각각 촬영하세요.";
+  }
   if (reason === "uncertainty_exceeds_limit") {
     return "두 시점에서 추정한 관절 방향의 불확실성이 허용 범위를 넘었습니다. 카메라를 정면과 측면에 더 정확히 두고 다시 촬영하세요.";
   }

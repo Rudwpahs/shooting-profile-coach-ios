@@ -48,6 +48,10 @@ High accuracy passes three `--front` and three `--side` files. Exit codes:
   lower-decile visibility of the twelve required joints, phase-anchor detection
   outcome and the five anchor positions as fractions of the ready to
   follow-through span (never timestamps);
+- cross-view geometry: status, the minimum normalized view distance between
+  any front/side pair against the provisional 0.04 admission limit, compared
+  pair count, or the rejection reason (`duplicate_view_projection`,
+  `mirrored_view_projection`);
 - cross-view alignment: status, confidence, maximum intermediate anchor delta,
   interval RMSE, compared pair count, or the rejection reason;
 - pipeline outcome: `complete` or `recapture_required` with the stable reason,

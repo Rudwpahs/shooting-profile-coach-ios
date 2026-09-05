@@ -1,6 +1,7 @@
 import {
   detectPhaseAnchors,
   resampleAttemptToPhaseGrid,
+  type PhaseSampleFrameV2,
 } from "@/lib/shooting-profile/phase-normalization";
 import type { LandmarkSequenceV2 } from "@/lib/shooting-profile/types";
 
@@ -53,11 +54,19 @@ export type CrossViewGeometryAttemptV1 = Readonly<{
   sequence: LandmarkSequenceV2;
 }>;
 
+/** An attempt already resampled onto the 101-phase grid by the pipeline. */
+export type NormalizedCrossViewGeometryAttemptV1 = Readonly<{
+  id: string;
+  frames: readonly PhaseSampleFrameV2[];
+}>;
+
 /** The twelve landmarks the reconstruction itself depends on. */
 const REQUIRED_LANDMARK_INDICES = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28] as const;
 const LEFT_HIP_INDEX = 23;
 const RIGHT_HIP_INDEX = 24;
 const EPSILON = 1e-12;
+
+type Track = readonly (readonly number[])[];
 
 /**
  * Phase-normalized landmark track with translation and scale removed: for every
@@ -65,13 +74,8 @@ const EPSILON = 1e-12;
  * centre and divided by one root-mean-square body radius for the whole take.
  * Even x indices hold the horizontal component, so mirroring is a sign flip.
  */
-function normalizedTrack(sequence: LandmarkSequenceV2): readonly (readonly number[])[] | undefined {
-  let frames;
-  try {
-    frames = resampleAttemptToPhaseGrid(sequence, detectPhaseAnchors(sequence));
-  } catch {
-    return undefined;
-  }
+function normalizedTrackFromFrames(frames: readonly PhaseSampleFrameV2[]): Track | undefined {
+  if (frames.length === 0) return undefined;
   const centred = frames.map((frame) => {
     const leftHip = frame.sourceLandmarks[LEFT_HIP_INDEX];
     const rightHip = frame.sourceLandmarks[RIGHT_HIP_INDEX];
@@ -98,11 +102,15 @@ function normalizedTrack(sequence: LandmarkSequenceV2): readonly (readonly numbe
   return rows.map((row) => row.map((value) => value / scale));
 }
 
-function meanAbsoluteDistance(
-  left: readonly (readonly number[])[],
-  right: readonly (readonly number[])[],
-  mirrorHorizontal: boolean,
-): number {
+function normalizedTrackFromSequence(sequence: LandmarkSequenceV2): Track | undefined {
+  try {
+    return normalizedTrackFromFrames(resampleAttemptToPhaseGrid(sequence, detectPhaseAnchors(sequence)));
+  } catch {
+    return undefined;
+  }
+}
+
+function meanAbsoluteDistance(left: Track, right: Track, mirrorHorizontal: boolean): number {
   let sum = 0;
   let count = 0;
   for (let frameIndex = 0; frameIndex < left.length; frameIndex += 1) {
@@ -132,21 +140,17 @@ function rejected(
 }
 
 /**
- * Compares every front take against every shooting-side take. Same-view takes
- * are deliberately not compared: repeated shots from one angle are supposed to
- * look alike, and the repeated-shot consensus already governs them.
+ * Compares every front track against every shooting-side track. Same-view
+ * takes are deliberately not compared: repeated shots from one angle are
+ * supposed to look alike, and the repeated-shot consensus already governs them.
  */
-export function assessCrossViewGeometry(
-  attempts: readonly CrossViewGeometryAttemptV1[],
+function assessTracks(
+  frontTracks: readonly (Track | undefined)[],
+  sideTracks: readonly (Track | undefined)[],
 ): CrossViewGeometryResultV1 {
-  const front = attempts.filter((attempt) => attempt.sequence.view === "front");
-  const side = attempts.filter((attempt) => attempt.sequence.view === "shooting_side");
-  if (front.length === 0 || side.length === 0) {
+  if (frontTracks.length === 0 || sideTracks.length === 0) {
     return rejected("insufficient_view_evidence", 0);
   }
-
-  const frontTracks = front.map((attempt) => normalizedTrack(attempt.sequence));
-  const sideTracks = side.map((attempt) => normalizedTrack(attempt.sequence));
   if (frontTracks.some((track) => track === undefined) || sideTracks.some((track) => track === undefined)) {
     return rejected("insufficient_view_evidence", 0);
   }
@@ -154,8 +158,8 @@ export function assessCrossViewGeometry(
   let minimumDistance = Number.POSITIVE_INFINITY;
   let mirroredIsCloser = false;
   let comparedPairCount = 0;
-  for (const frontTrack of frontTracks as (readonly number[])[][]) {
-    for (const sideTrack of sideTracks as (readonly number[])[][]) {
+  for (const frontTrack of frontTracks as Track[]) {
+    for (const sideTrack of sideTracks as Track[]) {
       if (frontTrack.length !== sideTrack.length) return rejected("insufficient_view_evidence", comparedPairCount);
       const identity = meanAbsoluteDistance(frontTrack, sideTrack, false);
       const mirrored = meanAbsoluteDistance(frontTrack, sideTrack, true);
@@ -183,4 +187,31 @@ export function assessCrossViewGeometry(
     minimumNormalizedViewDistance: minimumDistance,
     comparedPairCount,
   });
+}
+
+/**
+ * Gate for attempts the pipeline has already phase-normalized. The view is the
+ * one every resampled frame carries, so no second phase detection runs.
+ */
+export function assessNormalizedCrossViewGeometry(
+  attempts: readonly NormalizedCrossViewGeometryAttemptV1[],
+): CrossViewGeometryResultV1 {
+  const front = attempts.filter((attempt) => attempt.frames[0]?.view === "front");
+  const side = attempts.filter((attempt) => attempt.frames[0]?.view === "shooting_side");
+  return assessTracks(
+    front.map((attempt) => normalizedTrackFromFrames(attempt.frames)),
+    side.map((attempt) => normalizedTrackFromFrames(attempt.frames)),
+  );
+}
+
+/** Gate for raw clips: normalizes each one first, then applies the same comparison. */
+export function assessCrossViewGeometry(
+  attempts: readonly CrossViewGeometryAttemptV1[],
+): CrossViewGeometryResultV1 {
+  const front = attempts.filter((attempt) => attempt.sequence.view === "front");
+  const side = attempts.filter((attempt) => attempt.sequence.view === "shooting_side");
+  return assessTracks(
+    front.map((attempt) => normalizedTrackFromSequence(attempt.sequence)),
+    side.map((attempt) => normalizedTrackFromSequence(attempt.sequence)),
+  );
 }

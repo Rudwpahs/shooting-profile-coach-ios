@@ -3,10 +3,6 @@ import type {
   CaptureSlotSourceV2,
 } from "@/lib/shooting-profile/capture-session-reducer";
 import {
-  assessCrossViewGeometry,
-  type CrossViewGeometryReasonV1,
-} from "@/lib/shooting-profile/cross-view-geometry";
-import {
   assertReportContainsNoRawEvidence,
   buildTwoViewEvaluationReport,
   CONSENT_RECORD_ID_PATTERN_V1,
@@ -105,7 +101,6 @@ export function isOpaqueConsentRecordId(value: unknown): value is string {
 
 export type RealVideoEvaluationBuildFailureReason =
   | EvaluationAttemptAdmissionReasonV1
-  | CrossViewGeometryReasonV1
   | "consent_not_confirmed"
   | "consent_record_invalid"
   | "report_build_failed"
@@ -144,15 +139,9 @@ export function buildRealVideoEvaluation(
     if (!isOpaqueConsentRecordId(options.consentRecordId)) return failed("consent_record_invalid");
   }
 
-  // Only a positively identified duplicate or mirror blocks the build. When the
-  // gate cannot measure a view at all, the pipeline's own typed recapture
-  // (`phase_detection_failed`) is both more precise and more actionable, so the
-  // gate defers instead of masking it.
-  const geometry = assessCrossViewGeometry(attempts);
-  if (geometry.status === "rejected" && geometry.reason !== "insufficient_view_evidence") {
-    return failed(geometry.reason);
-  }
-
+  // Cross-view geometry admission (duplicate / mirrored views) runs inside the
+  // product pipeline, so a same-projection pair surfaces here as a derived
+  // recapture report carrying the stable reason rather than as a build failure.
   let report: TwoViewEvaluationReportV1;
   try {
     report = buildTwoViewEvaluationReport({

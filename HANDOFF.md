@@ -1,6 +1,6 @@
 # FormPath repository handoff
 
-Last updated: 2026-09-03 UTC
+Last updated: 2026-09-05 UTC
 
 ## P1.1 Real-video validation handoff - 2026-09-02
 
@@ -275,6 +275,59 @@ resolve separately - it does not block PR #4.
 Verification after the fixes: `corepack pnpm check` exit 0, `corepack pnpm lint` exit 0,
 `corepack pnpm test:unit` 38 files passed + 1 skipped / 512 tests passed + 1 skipped.
 
+### Follow-ups after the security review - 2026-09-05
+
+Executed under the owner's blanket delegation of remaining engineering decisions (2026-09-05). The
+three owner-only gates are unchanged: PR #4 stays unmerged until the physical-iPhone smoke run is
+recorded, repository visibility is untouched, and no history is rewritten.
+
+**`d1fa785` test: add the synthetic known-geometry sweep and a build preflight**
+- `lib/shooting-profile/synthetic-sweep.ts` + `scripts/sweep-synthetic-sessions.ts`
+  (`corepack pnpm sweep:synthetic`): the first dataset of the validation protocol, 200 deterministic
+  sessions through the real pipeline over mode, hand, aspect ratio, phase shift, noise, visibility
+  and five degeneracies; every completed profile is checked against the frozen contract. Report:
+  `docs/evaluation/synthetic-known-geometry-sweep.json`, narrative
+  `docs/synthetic-known-geometry-sweep.md`. Aspect invariance of the isotropic conversion was
+  confirmed for the first time (landscape 64/64, square 63/63).
+- `lib/shooting-profile/evaluation-preflight.ts` + `scripts/check-evaluation-preflight.ts`
+  (`corepack pnpm preflight:evaluation`): checks the gitignored `.env.local`, the four exact `"1"`
+  flags, the `local-consent-YYYYMMDD-NNN` consent form and the iOS build tools without ever echoing
+  a value. On this Windows machine it correctly reports `tool_xcodebuild` / `tool_pod` blockers.
+- Anchor-ordering residual from the P1 to-do: investigated, no code change. `detectPhaseAnchors`
+  already emits the canonical order; any stricter guarantee would need a frozen V2 contract bump.
+
+**cross-view geometry admission moved into the product pipeline** (this commit)
+- The first sweep run exposed that `assessCrossViewGeometry` guarded only the private evaluation
+  path, so two same-angle clips (duplicate or mirrored) completed as a confident saved profile.
+- `lib/shooting-profile/two-view-pipeline.ts` now calls `assessNormalizedCrossViewGeometry` on the
+  already phase-normalized attempts, after phase normalization and before per-view consensus. A
+  positively identified duplicate or mirror returns `duplicate_view_projection` /
+  `mirrored_view_projection` with all attempt ids and no partial output; an unmeasurable view
+  defers so `phase_detection_failed` and the consensus reasons stay visible. The verdict
+  (`crossViewGeometry`, with the measured minimum normalized view distance) is attached to every
+  pipeline result.
+- `lib/shooting-profile/cross-view-geometry.ts`: comparison factored onto normalized frames;
+  `assessCrossViewGeometry` (raw clips) is a thin wrapper that yields identical numbers.
+- `lib/shooting-profile/evaluation-report.ts`: optional strict `crossViewGeometry` block in the
+  report schema, copied by the builder. The first real-video report will therefore show where a
+  genuine pair lands against the provisional 0.04 limit.
+- `lib/shooting-profile/real-video-evaluation.ts`: the duplicate pre-check is removed; a
+  same-projection pair now yields a derived recapture report carrying the reason (evidence) rather
+  than a `build_failed`.
+- `hooks/use-shooting-profile-capture.ts`: user copy for the two new session reasons.
+- Sweep contract: `fixed-duplicate-view` / `fixed-mirrored-view` flipped from `unspecified` to
+  `rejects`; re-run 194 complete / 6 recapture, 0 expectation violations, 0 invariant violations,
+  deterministic. Docs updated: sweep narrative, implementation status, runbook reason table (both
+  reasons are now session-level), evaluation tool report contents.
+- Red/green: `tests/shooting-profile-two-view-geometry-admission.test.ts` failed 6/7 before the
+  wiring (`duplicate_view_projection` expected, `complete` received; `crossViewGeometry`
+  undefined) and passes after.
+- Unchanged: the 0.04 limit, the 4D solver, 101 phases, 12 joints, the Basic 0.65 cap,
+  `heuristic_v1`, the exact `"1"` flags, the boundary string, the Firestore contract.
+- Verification: `corepack pnpm check` exit 0, `corepack pnpm lint` exit 0, `corepack pnpm test:unit`
+  41 files passed + 1 skipped / 536 tests passed + 1 skipped, Expo web export exit 0 with 18 routes,
+  `corepack pnpm sweep:synthetic -- --sessions 200` exit 0.
+
 ### Exact next single action (owner)
 On a Mac with Xcode and the registered iPhone, follow `docs/real-video-validation-runbook.md`
 sections 2, 4, 5: create the gitignored `.env.local` with the four flags **and**
@@ -282,7 +335,9 @@ sections 2, 4, 5: create the gitignored `.env.local` with the four flags **and**
 `pnpm exec expo prebuild --platform ios --clean && (cd ios && pod install) && pnpm exec expo run:ios --device`,
 film one consented Basic 1+1 pair **with the in-app camera** (a library pick is refused as
 evidence), tick the consent checkbox, press "파생 리포트 생성" then "리포트 공유 · 저장", and record
-the derived metrics from section 7 in this file via a PR.
+the derived metrics from section 7 in this file via a PR - including the report's
+`crossViewGeometry.minimumNormalizedViewDistance`, the first real-body reading against the
+provisional 0.04 limit. Run `corepack pnpm preflight:evaluation` first.
 
 ## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC
 

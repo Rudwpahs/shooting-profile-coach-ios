@@ -59,6 +59,22 @@ const crossViewAlignmentSchema = z.union([
   }).strict(),
 ]);
 
+const crossViewGeometrySchema = z.union([
+  z.object({
+    status: z.literal("accepted"),
+    version: z.literal("cross_view_geometry_admission_v1"),
+    minimumNormalizedViewDistance: finiteNumberSchema.nonnegative(),
+    comparedPairCount: z.number().int().nonnegative(),
+  }).strict(),
+  z.object({
+    status: z.literal("rejected"),
+    version: z.literal("cross_view_geometry_admission_v1"),
+    reason: z.enum(["insufficient_view_evidence", "duplicate_view_projection", "mirrored_view_projection"]),
+    minimumNormalizedViewDistance: finiteNumberSchema.nonnegative().optional(),
+    comparedPairCount: z.number().int().nonnegative(),
+  }).strict(),
+]);
+
 /**
  * Only these stable sub-reasons may appear as `pipeline.detail`. Anything else,
  * including a thrown error's message, is dropped by the builder and rejected by
@@ -141,6 +157,7 @@ export const twoViewEvaluationReportSchema = z.object({
   boundary: z.literal("representative_phase_fused_4d_estimate_not_actual_3d"),
   evaluatedCommitSha: z.string().regex(/^[a-f0-9]{40}$/i).optional(),
   attempts: z.array(attemptSchema),
+  crossViewGeometry: crossViewGeometrySchema.optional(),
   crossViewAlignment: crossViewAlignmentSchema.optional(),
   pipeline: pipelineSchema,
   evidenceSummary: evidenceSummarySchema.optional(),
@@ -284,6 +301,28 @@ function normalizedAnchorPositions(sequence: LandmarkSequenceV2): TwoViewEvaluat
       reason: error instanceof PhaseDetectionError ? error.reason : "invalid_phase_observation",
     };
   }
+}
+
+function copyCrossViewGeometry(
+  result: ReturnType<typeof buildTwoViewRepresentativeProfile>,
+): TwoViewEvaluationReportV1["crossViewGeometry"] {
+  if (result.crossViewGeometry === undefined) return undefined;
+  return result.crossViewGeometry.status === "accepted"
+    ? {
+      status: "accepted",
+      version: result.crossViewGeometry.version,
+      minimumNormalizedViewDistance: result.crossViewGeometry.minimumNormalizedViewDistance,
+      comparedPairCount: result.crossViewGeometry.comparedPairCount,
+    }
+    : {
+      status: "rejected",
+      version: result.crossViewGeometry.version,
+      reason: result.crossViewGeometry.reason,
+      ...(result.crossViewGeometry.minimumNormalizedViewDistance === undefined ? {} : {
+        minimumNormalizedViewDistance: result.crossViewGeometry.minimumNormalizedViewDistance,
+      }),
+      comparedPairCount: result.crossViewGeometry.comparedPairCount,
+    };
 }
 
 function copyCrossViewAlignment(
@@ -441,6 +480,7 @@ export function buildTwoViewEvaluationReport(
     processingMs: Math.max(0, nowMs() - startedAt),
     ...(peakHeapBytes === undefined ? {} : { peakHeapBytes }),
   };
+  const crossViewGeometry = copyCrossViewGeometry(result);
   const crossViewAlignment = copyCrossViewAlignment(result);
   const report = result.status === "complete"
     ? {
@@ -452,6 +492,7 @@ export function buildTwoViewEvaluationReport(
       boundary: "representative_phase_fused_4d_estimate_not_actual_3d",
       ...(input.evaluatedCommitSha === undefined ? {} : { evaluatedCommitSha: input.evaluatedCommitSha }),
       attempts,
+      ...(crossViewGeometry === undefined ? {} : { crossViewGeometry }),
       crossViewAlignment,
       pipeline: {
         status: "complete" as const,
@@ -477,6 +518,7 @@ export function buildTwoViewEvaluationReport(
       boundary: "representative_phase_fused_4d_estimate_not_actual_3d",
       ...(input.evaluatedCommitSha === undefined ? {} : { evaluatedCommitSha: input.evaluatedCommitSha }),
       attempts,
+      ...(crossViewGeometry === undefined ? {} : { crossViewGeometry }),
       ...(crossViewAlignment === undefined ? {} : { crossViewAlignment }),
       pipeline: {
         status: "recapture_required" as const,

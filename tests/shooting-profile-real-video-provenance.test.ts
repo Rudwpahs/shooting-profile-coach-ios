@@ -369,19 +369,23 @@ describe("cross-view geometry admission", () => {
     });
   });
 
-  it("stops a relabelled clip from producing a derived report", () => {
+  it("turns a relabelled or mirrored clip into a derived recapture report, never a profile", () => {
     const session = syntheticLandmarkSession({ mode: "basic_1_plus_1" });
-    const duplicated = { ...session, shootingSide: [relabel(session.front[0], "shooting_side")] };
-    const mirrored = { ...session, shootingSide: [relabel(mirrorHorizontally(session.front[0]), "shooting_side")] };
+    const cases: { shootingSide: LandmarkSequenceV2[]; reason: string }[] = [
+      { shootingSide: [relabel(session.front[0], "shooting_side")], reason: "duplicate_view_projection" },
+      { shootingSide: [relabel(mirrorHorizontally(session.front[0]), "shooting_side")], reason: "mirrored_view_projection" },
+    ];
 
-    expect(buildRealVideoEvaluation(reviewState("basic_1_plus_1", duplicated), CONSENT)).toEqual({
-      status: "build_failed",
-      reason: "duplicate_view_projection",
-    });
-    expect(buildRealVideoEvaluation(reviewState("basic_1_plus_1", mirrored), CONSENT)).toEqual({
-      status: "build_failed",
-      reason: "mirrored_view_projection",
-    });
+    for (const { shootingSide, reason } of cases) {
+      const result = buildRealVideoEvaluation(reviewState("basic_1_plus_1", { ...session, shootingSide }), CONSENT);
+
+      expect(result.status, reason).toBe("ready");
+      if (result.status !== "ready") continue;
+      expect(result.report.pipeline).toMatchObject({ status: "recapture_required", reason });
+      expect(result.report.crossViewGeometry).toMatchObject({ status: "rejected", reason });
+      expect(result.report.reconstruction).toBeUndefined();
+      expect(twoViewEvaluationReportSchema.parse(result.report)).toEqual(result.report);
+    }
   });
 });
 

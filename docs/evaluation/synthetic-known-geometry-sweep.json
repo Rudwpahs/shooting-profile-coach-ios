@@ -2,21 +2,23 @@
   "version": "synthetic_known_geometry_sweep_v1",
   "sessionCount": 200,
   "outcomes": {
-    "complete": 196,
-    "recaptureRequired": 4,
+    "complete": 194,
+    "recaptureRequired": 6,
     "byReason": {
+      "duplicate_view_projection": 1,
+      "mirrored_view_projection": 1,
       "phase_detection_failed": 3,
       "cross_view_phase_mismatch": 1
     }
   },
   "expectations": {
-    "satisfied": 197,
+    "satisfied": 199,
     "violated": 0,
-    "unspecified": 3,
+    "unspecified": 1,
     "violations": []
   },
   "invariants": {
-    "completedProfilesChecked": 196,
+    "completedProfilesChecked": 194,
     "violations": [],
     "worstBoneLengthDrift": 4.440892098500626e-16,
     "boneLengthTolerance": 0.00001,
@@ -27,8 +29,8 @@
   "perAxis": {
     "mode": {
       "basic_1_plus_1": {
-        "complete": 101,
-        "recaptureRequired": 4
+        "complete": 99,
+        "recaptureRequired": 6
       },
       "high_accuracy_3_plus_3": {
         "complete": 95,
@@ -37,8 +39,8 @@
     },
     "shootingHand": {
       "right": {
-        "complete": 101,
-        "recaptureRequired": 4
+        "complete": 99,
+        "recaptureRequired": 6
       },
       "left": {
         "complete": 95,
@@ -47,8 +49,8 @@
     },
     "display": {
       "portrait": {
-        "complete": 69,
-        "recaptureRequired": 4
+        "complete": 67,
+        "recaptureRequired": 6
       },
       "landscape": {
         "complete": 64,
@@ -61,8 +63,8 @@
     },
     "sideAnchorShift": {
       "0.000": {
-        "complete": 70,
-        "recaptureRequired": 4
+        "complete": 68,
+        "recaptureRequired": 6
       },
       "0.090": {
         "complete": 1,
@@ -79,8 +81,8 @@
     },
     "noiseAmplitude": {
       "3.0e-6": {
-        "complete": 8,
-        "recaptureRequired": 4
+        "complete": 6,
+        "recaptureRequired": 6
       },
       "2.0e-6": {
         "complete": 47,
@@ -101,8 +103,8 @@
     },
     "visibility": {
       "0.95": {
-        "complete": 73,
-        "recaptureRequired": 3
+        "complete": 71,
+        "recaptureRequired": 5
       },
       "0.25": {
         "complete": 0,
@@ -123,12 +125,12 @@
         "recaptureRequired": 1
       },
       "duplicate_view": {
-        "complete": 1,
-        "recaptureRequired": 0
+        "complete": 0,
+        "recaptureRequired": 1
       },
       "mirrored_view": {
-        "complete": 1,
-        "recaptureRequired": 0
+        "complete": 0,
+        "recaptureRequired": 1
       },
       "frozen_shooting_arm": {
         "complete": 0,
@@ -145,8 +147,8 @@
     }
   },
   "runtime": {
-    "totalMs": 37138.886500000015,
-    "medianSessionMs": 63.955949999999575,
-    "slowestSessionMs": 582.4426999999996
+    "totalMs": 36300.641999999985,
+    "medianSessionMs": 58.92380000000071,
+    "slowestSessionMs": 426.46979999999894
   }
 }

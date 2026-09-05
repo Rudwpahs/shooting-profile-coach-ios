@@ -39,40 +39,52 @@ coordinates are finite, forward-kinematic bone lengths stay inside
 0.65.
 
 Scenarios carry one of three expectations. `accepts` and `rejects` are contract promises and a
-mismatch fails the run. `unspecified` records the outcome without judging it — used where the
-pipeline makes no promise today.
+mismatch fails the run. `unspecified` records the outcome without judging it — used only for the
+0.09 phase-shift borderline case, where the pipeline makes no promise on which side of the 0.10
+limit detection lands.
 
-## 2026-09-05 result (200 sessions)
+## 2026-09-05 result (200 sessions, geometry gate in the product path)
 
 | Measure | Value |
 | --- | --- |
-| complete / recapture | 196 / 4 |
-| recapture reasons | `phase_detection_failed` ×3, `cross_view_phase_mismatch` ×1 |
-| expectation violations | **0** |
+| complete / recapture | 194 / 6 |
+| recapture reasons | `phase_detection_failed` ×3, `cross_view_phase_mismatch` ×1, `duplicate_view_projection` ×1, `mirrored_view_projection` ×1 |
+| expectations | 199 satisfied, **0** violated, 1 unspecified (phase borderline) |
 | invariant violations | **0** |
 | worst bone-length drift | 4.44e-16 against a 1e-5 tolerance |
 | maximum directional cone | 21.93° against the 25° admission gate |
 | confidence range | 0.65 (Basic cap) … 0.793 (High) |
 | determinism recheck | reproduced |
-| runtime | 37.1 s total, 64 ms median session |
+| runtime | 36.3 s total, 59 ms median session |
+
+The first run of this sweep (same day, before the gate moved) completed 196 / 4 with the two
+same-projection scenarios recorded as `unspecified`; the only difference between the two runs is
+the two new recaptures.
 
 **Aspect invariance holds.** Landscape (64/64) and square (63/63) sessions complete at the same rate
 as portrait, so the isotropic source-height conversion is not distorted by the aspect ratio. This was
 previously untested — every earlier fixture was 1080×1920.
 
-## Open gap this sweep exposes
+## Gap this sweep exposed, and how it was closed
 
-`assessCrossViewGeometry` — which refuses two views that are the same projection — is wired into the
-**private evaluation path only** (`buildRealVideoEvaluation`). The profile-building path that the
-product actually uses does not call it, so `duplicate_view` and `mirrored_view` sessions **complete**
-and would produce a confident, geometrically wrong saved profile from two clips filmed at the same
-angle. Those two scenarios are therefore marked `unspecified` rather than `rejects`: the pipeline
-makes no such promise today, and the sweep records the fact instead of asserting a contract that does
-not exist.
+The first run showed that `assessCrossViewGeometry` — which refuses two views that are the same
+projection — was wired into the **private evaluation path only**. The profile-building path the
+product actually uses did not call it, so `duplicate_view` and `mirrored_view` sessions completed
+and would have produced a confident, geometrically wrong saved profile from two clips filmed at the
+same angle.
 
-Closing it means calling the gate inside `buildTwoViewRepresentativeProfile` and turning those
-sessions into a typed recapture. That changes product admission behaviour — some sessions that save
-today would ask for a retake — so it is a deliberate decision, not a silent fix.
+The gate now runs inside `buildTwoViewRepresentativeProfile`, on the attempts the pipeline has
+already phase-normalized (`assessNormalizedCrossViewGeometry`, no second phase detection), after
+phase normalization and before per-view consensus. A positively identified duplicate or mirror is a
+typed recapture — `duplicate_view_projection` / `mirrored_view_projection` — with every attempt
+listed and no partial output; when the gate cannot measure a view it defers, so
+`phase_detection_failed` and the consensus reasons stay visible. The verdict, including the measured
+minimum normalized view distance, is attached to every pipeline result and copied into the derived
+evaluation report as `crossViewGeometry`, so the first real-video run will show where a genuine
+pair lands relative to the provisional 0.04 limit. Both scenarios are now `rejects`.
+
+This is a product admission tightening: a session made from two same-angle clips asks for a retake
+instead of saving. No threshold, formula, phase grid, joint set, confidence cap, or flag changed.
 
 ## Known coverage limits
 

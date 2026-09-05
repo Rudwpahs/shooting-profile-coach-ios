@@ -67,13 +67,27 @@
 ## 2026-09-05 synthetic known-geometry sweep
 
 결정적 200 세션 스윕을 실제 파이프라인에 통과시켰다([synthetic-known-geometry-sweep.md](synthetic-known-geometry-sweep.md)).
-196 complete / 4 recapture, 기대 위반 0, 불변 위반 0, 재현 가능. 뼈 길이 drift 최대 4.44e-16(허용 1e-5),
+194 complete / 6 recapture, 기대 위반 0, 불변 위반 0, 재현 가능. 뼈 길이 drift 최대 4.44e-16(허용 1e-5),
 방향 콘 최대 21.93°(게이트 25°), Basic confidence는 상한 0.65에 고정. **portrait·landscape·square에서
 동일하게 통과해 isotropic 변환의 aspect 불변성이 처음으로 확인됐다.**
 
-이 스윕이 드러낸 미해결 gap: cross-view geometry gate가 비공개 평가 경로에만 연결돼 있어, 같은 각도로
-찍은 두 클립(duplicate/mirrored view)이 제품 경로에서는 그대로 프로필로 완성된다. 제품 admission 동작을
-바꾸는 결정이라 별도 판단이 필요하다.
+첫 실행(196/4)이 드러낸 gap — cross-view geometry gate가 비공개 평가 경로에만 연결돼 있어 같은 각도로
+찍은 두 클립(duplicate/mirrored view)이 제품 경로에서 그대로 프로필로 완성되던 문제 — 는 같은 날 닫았다.
+
+## 2026-09-05 cross-view geometry gate를 제품 경로로 이동
+
+- `buildTwoViewRepresentativeProfile`이 위상 정규화 직후, 뷰별 consensus 전에
+  `assessNormalizedCrossViewGeometry`를 호출한다. 이미 101-phase로 리샘플된 시도를 그대로 쓰므로
+  위상 검출이 두 번 돌지 않는다.
+- 같은 투영으로 판정된 쌍은 부분 출력 없이 `duplicate_view_projection` / `mirrored_view_projection`
+  recapture로 끝난다. 뷰를 측정할 수 없을 때는 판정을 유보해 `phase_detection_failed`와 consensus
+  사유를 가리지 않는다.
+- 판정(측정된 최소 정규화 뷰 거리 포함)이 파이프라인 결과와 파생 평가 리포트의 `crossViewGeometry`
+  블록에 실린다. 실기기 첫 실행에서 정상 쌍이 잠정 한계 0.04 대비 어디에 놓이는지 이 값으로 확인한다.
+- 비공개 평가 경로의 사전 검사는 제거했다. 같은 투영 쌍은 이제 build 실패가 아니라 사유를 담은
+  파생 recapture 리포트가 된다(증거로 남는다).
+- 제품 admission 강화다: 같은 각도로 찍은 두 클립은 저장 대신 재촬영을 요구한다. 임계값·수식·
+  101 phase·12 joint·0.65 cap·플래그는 바뀌지 않았다. 스윕 재실행: 194/6, 기대 위반 0, 불변 위반 0.
 
 ## 아직 통과해야 하는 외부 gate
 

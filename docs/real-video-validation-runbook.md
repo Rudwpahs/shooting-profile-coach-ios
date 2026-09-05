@@ -169,6 +169,8 @@ pnpm dlx eas-cli@latest build --platform ios --profile development
 | 슬롯 | `critical_phase_gap` | 릴리스 전후 포즈 끊김 | 릴리스 구간이 프레임 안에서 이어지게 |
 | 세션 | `phase_detection_failed` + detail `missing_dip` / `missing_rise` / `missing_release_proxy` / `missing_follow_through` / `insufficient_total_motion` / `degenerate_body_scale` / `critical_phase_gap` | 준비→딥→상승→릴리스→팔로우스루 중 하나를 못 찾음 | detail이 가리키는 구간이 확실히 보이게 한 번의 완결된 슛으로 재촬영; 팔로우스루 후 0.5초 이상 유지 |
 | 세션 | `cross_view_phase_mismatch` | 정면·측면 슛 리듬 차이 > 0.10 (앵커 간격 RMSE > 0.08) | 리듬을 맞춰 한 뷰만 재촬영. 임계값을 낮추지 않는다 |
+| 세션 | `duplicate_view_projection` | 두 뷰가 사실상 같은 투영(같은 각도 재촬영, 재표기). 리포트의 `crossViewGeometry.minimumNormalizedViewDistance` < 0.04 | 정면과 슈팅 측면을 실제로 다른 위치에서 각각 촬영. 한계를 낮추지 않는다 |
+| 세션 | `mirrored_view_projection` | 한 클립이 다른 클립의 좌우 반전본 | 미러링된 영상을 쓰지 말고 두 각도를 각각 촬영 |
 | 세션 | `uncertainty_exceeds_limit` (+ `affectedBones`) | 해당 뼈의 콘이 25°를 넘음 (대개 수평에 가까운 어깨선·두 뷰 타이밍 불일치의 결합) | 카메라를 정면·정측면에 더 정확히 배치, 리듬 일치 |
 | 세션 | `no_complete_agreeing_subset` (High) | 3회 슛이 서로 불일치 | 같은 슛 종류·리듬으로 재촬영 |
 | 세션 | `vertical_sign_disagreement`, `both_views_horizontal`, `ill_conditioned_projection_constraints`, `collapsed_front_projection`, `collapsed_side_projection` | 두 뷰의 뼈 방향이 기하학적으로 양립 불가 | 뷰 라벨(정면/측면)과 슈팅 손 설정 확인, 카메라 각도 교정 |
@@ -179,8 +181,6 @@ pnpm dlx eas-cli@latest build --platform ios --profile development
 | 리포트 | `unknown_capture_source` | 슬롯의 촬영 출처 기록이 없음(이전 세션 잔여 등) | 해당 슬롯을 재촬영 |
 | 리포트 | `consent_not_confirmed` | 동의 체크박스를 누르지 않음 | 패널의 동의 확인을 누른 뒤 다시 생성 |
 | 리포트 | `consent_record_invalid` | `EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID`가 없거나 `local-consent-YYYYMMDD-NNN` 형식이 아님 | 2절 형식대로 `.env.local`을 고치고 앱을 다시 시작 |
-| 리포트 | `duplicate_view_projection` | 두 뷰가 사실상 같은 투영(같은 각도 재촬영, 재표기) | 정면과 슈팅 측면을 실제로 다른 각도에서 촬영 |
-| 리포트 | `mirrored_view_projection` | 한 클립이 다른 클립의 좌우 반전본 | 미러링된 영상을 쓰지 말고 두 각도를 각각 촬영 |
 | 리포트 | `report_build_failed`, `schema_invalid`, `raw_evidence_detected` | 리포트 생성·가드 실패 | 코드 결함 가능성. reason만 기록하고 리포트를 공유하지 말 것 |
 
 ## 9. 사용 후 정리
