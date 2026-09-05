@@ -7,6 +7,7 @@ import { useRealVideoEvaluation } from "@/hooks/use-real-video-evaluation";
 import {
   captureSessionReducer,
   createCaptureSession,
+  type CaptureSessionAction,
   type CaptureSessionState,
   type CaptureSlotSourceV2,
 } from "@/lib/shooting-profile/capture-session-reducer";
@@ -62,9 +63,10 @@ type HarnessProps = {
   announce: (message: string) => void;
   written?: { json: string; cleaned: boolean }[];
   onControllerReady?: (bump: () => void) => void;
+  onDispatchReady?: (dispatch: (action: CaptureSessionAction) => void) => void;
 };
 
-function Harness({ initialState, share, announce, written, onControllerReady }: HarnessProps) {
+function Harness({ initialState, share, announce, written, onControllerReady, onDispatchReady }: HarnessProps) {
   const [state, setState] = useState(initialState);
   const controller = useRealVideoEvaluation({
     enabled: true,
@@ -87,6 +89,7 @@ function Harness({ initialState, share, announce, written, onControllerReady }: 
     ...current,
     sessionGeneration: current.sessionGeneration + 1,
   })));
+  onDispatchReady?.((action) => setState((current) => captureSessionReducer(current, action)));
   return <RealVideoEvaluationPanel controller={controller} />;
 }
 
@@ -257,6 +260,29 @@ describe("real-video evaluation panel interaction", () => {
 
     expect(text()).toContain("이 앱에서 직접 촬영한 클립만 사용합니다");
     press(CONSENT);
+    expect(disabled(BUILD)).toBe(true);
+  });
+
+  it("stops sharing a report that no longer describes the clips in the session", async () => {
+    // RETAKE_SLOT does not advance sessionGeneration, so a report built from the
+    // previous pair must be invalidated by the attempt set itself; otherwise the
+    // owner could export evidence describing clips the session no longer holds.
+    const session = syntheticLandmarkSession({ mode: "basic_1_plus_1" });
+    let dispatch: (action: CaptureSessionAction) => void = () => {};
+    render(<Harness
+      announce={vi.fn()}
+      initialState={reviewState("basic_1_plus_1", session)}
+      onDispatchReady={(fn) => { dispatch = fn; }}
+      share={vi.fn(async () => ({ action: "sharedAction" as const }))}
+    />);
+    press(CONSENT);
+    await pressAndSettle(BUILD);
+    expect(disabled(SHARE)).toBe(false);
+
+    act(() => dispatch({ type: "RETAKE_SLOT", slotId: "shooting_side-0" }));
+
+    expect(text()).toContain("아직 리포트를 만들지 않았습니다");
+    expect(disabled(SHARE)).toBe(true);
     expect(disabled(BUILD)).toBe(true);
   });
 

@@ -9,6 +9,7 @@ import {
 import {
   assertReportContainsNoRawEvidence,
   buildTwoViewEvaluationReport,
+  CONSENT_RECORD_ID_PATTERN_V1,
   twoViewEvaluationReportSchema,
   TwoViewEvaluationReportError,
   type BuildTwoViewEvaluationReportInput,
@@ -93,16 +94,13 @@ export function admitEvaluationAttempts(state: CaptureSessionState): EvaluationA
 }
 
 /**
- * An acceptable consent record id is an opaque local reference, not a person.
- * It stays inside the strict charset, is long enough to be a record key, and
- * must carry at least one digit so a bare name cannot be pasted in.
+ * Rejects a consent record id before the report is built, so the panel can name
+ * the reason. The report schema enforces the same pattern at the boundary, which
+ * also covers the local CLI. Changing the accepted form means changing
+ * `CONSENT_RECORD_ID_PATTERN_V1` and the runbook together.
  */
-const CONSENT_RECORD_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/;
-
 export function isOpaqueConsentRecordId(value: unknown): value is string {
-  return typeof value === "string"
-    && CONSENT_RECORD_ID_PATTERN.test(value)
-    && /[0-9]/.test(value);
+  return typeof value === "string" && CONSENT_RECORD_ID_PATTERN_V1.test(value);
 }
 
 export type RealVideoEvaluationBuildFailureReason =

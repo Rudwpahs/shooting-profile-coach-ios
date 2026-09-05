@@ -56,9 +56,10 @@ EOF
 git check-ignore .env.local   # 반드시 ".env.local"이 출력돼야 한다
 ```
 
-`EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID`는 **불투명한 로컬 기록 키**다. 8자 이상, 영숫자와
-`_`/`-`만, 숫자를 최소 하나 포함해야 하며 이름·이메일·경로는 거부된다. 앱은 이 값만 리포트에
-넣고 동의자 정보는 어디에도 기록하지 않는다.
+`EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID`는 **불투명한 로컬 기록 키**이며 형식이 정확히
+`local-consent-YYYYMMDD-NNN` 하나로 고정되어 있다(`NNN`은 그날의 3자리 일련번호). 이 값은 리포트에
+그대로 담겨 공유되므로, 이름이 섞일 여지를 없애려고 형식 자체를 고정했다. 다른 형식은
+`consent_record_invalid`로 거부된다. 동의자 정보는 어디에도 기록하지 않는다.
 
 빌드와 설치 (물리 기기 연결 후):
 
@@ -120,6 +121,8 @@ pnpm dlx eas-cli@latest build --platform ios --profile development
    연속으로 눌러도 한 번만 실행된다. 상태 줄에 `파생 리포트 준비됨 · complete` 또는
    `· recapture_required · <reason>`이 보여야 한다.
    `리포트를 만들지 못했습니다 · <reason>`이면 8절.
+   리포트는 생성 시점의 두 클립에 대한 증거이므로, 어느 슬롯이든 다시 촬영하면 즉시 폐기되고
+   상태가 초기로 돌아간다. 재촬영 뒤에는 새로 생성해야 한다.
 6. `리포트 공유 · 저장`을 누른다. 공유 시트에
    `formpath-derived-evaluation-<opaque>.json` 파일이 표시되는지 확인한 뒤 **파일에 저장**을
    선택한다. JSON 내용이 메시지 본문으로만 보이면 실패다. 취소하면 상태가
@@ -175,7 +178,7 @@ pnpm dlx eas-cli@latest build --platform ios --profile development
 | 리포트 | `library_source_not_admissible` | 클립을 사진 라이브러리에서 골랐음 | 슬롯의 "촬영"으로 앱 안에서 직접 다시 촬영 |
 | 리포트 | `unknown_capture_source` | 슬롯의 촬영 출처 기록이 없음(이전 세션 잔여 등) | 해당 슬롯을 재촬영 |
 | 리포트 | `consent_not_confirmed` | 동의 체크박스를 누르지 않음 | 패널의 동의 확인을 누른 뒤 다시 생성 |
-| 리포트 | `consent_record_invalid` | `EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID`가 없거나 불투명 형식이 아님 | 2절 형식대로 `.env.local`을 고치고 앱을 다시 시작 |
+| 리포트 | `consent_record_invalid` | `EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID`가 없거나 `local-consent-YYYYMMDD-NNN` 형식이 아님 | 2절 형식대로 `.env.local`을 고치고 앱을 다시 시작 |
 | 리포트 | `duplicate_view_projection` | 두 뷰가 사실상 같은 투영(같은 각도 재촬영, 재표기) | 정면과 슈팅 측면을 실제로 다른 각도에서 촬영 |
 | 리포트 | `mirrored_view_projection` | 한 클립이 다른 클립의 좌우 반전본 | 미러링된 영상을 쓰지 말고 두 각도를 각각 촬영 |
 | 리포트 | `report_build_failed`, `schema_invalid`, `raw_evidence_detected` | 리포트 생성·가드 실패 | 코드 결함 가능성. reason만 기록하고 리포트를 공유하지 말 것 |

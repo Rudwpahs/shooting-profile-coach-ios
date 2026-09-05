@@ -13,6 +13,7 @@ import {
   type RealVideoEvaluationSharePayload,
   type RealVideoEvaluationState,
 } from "@/lib/shooting-profile/real-video-evaluation";
+import type { LandmarkSequenceV2 } from "@/lib/shooting-profile/types";
 
 export type UseRealVideoEvaluationOptions = {
   enabled: boolean;
@@ -70,6 +71,7 @@ export function useRealVideoEvaluation({
   const evaluationRef = useRef(evaluation);
   const inFlightRef = useRef(false);
   const stateRef = useRef(state);
+  const builtFromRef = useRef<readonly LandmarkSequenceV2[] | undefined>(undefined);
 
   useEffect(() => {
     evaluationRef.current = evaluation;
@@ -82,6 +84,7 @@ export function useRealVideoEvaluation({
   // A new capture generation invalidates any derived report and its consent.
   useEffect(() => {
     inFlightRef.current = false;
+    builtFromRef.current = undefined;
     setEvaluation({ status: "idle" });
     setConsentConfirmed(false);
   }, [state.sessionGeneration]);
@@ -91,6 +94,26 @@ export function useRealVideoEvaluation({
     [enabled, state],
   );
   const admissionReason = admission?.status === "rejected" ? admission.reason : undefined;
+  const admittedSequences = admission?.status === "admitted"
+    ? admission.attempts.map((attempt) => attempt.sequence)
+    : undefined;
+
+  /**
+   * A report is evidence about one exact pair of clips. Retaking a slot does not
+   * advance `sessionGeneration`, so the report is tied to the admitted sequences
+   * themselves and is dropped as soon as the session no longer holds them.
+   */
+  useEffect(() => {
+    if (builtFromRef.current === undefined) return;
+    const previous = builtFromRef.current;
+    const unchanged = admittedSequences !== undefined
+      && admittedSequences.length === previous.length
+      && admittedSequences.every((sequence, index) => sequence === previous[index]);
+    if (unchanged) return;
+    inFlightRef.current = false;
+    builtFromRef.current = undefined;
+    setEvaluation({ status: "idle" });
+  }, [admittedSequences]);
 
   const settle = useCallback((next: RealVideoEvaluationState) => {
     inFlightRef.current = false;
@@ -115,6 +138,7 @@ export function useRealVideoEvaluation({
       consentConfirmed,
       consentRecordId,
     });
+    builtFromRef.current = result.status === "ready" ? admittedSequences : undefined;
     settle(result.status === "ready"
       ? {
         status: "ready",
@@ -127,7 +151,7 @@ export function useRealVideoEvaluation({
         sessionGeneration: snapshot.sessionGeneration,
         reason: result.reason,
       });
-  }, [consentConfirmed, consentRecordId, enabled, settle]);
+  }, [admittedSequences, consentConfirmed, consentRecordId, enabled, settle]);
 
   const shareReport = useCallback(async () => {
     if (!enabled || inFlightRef.current) return;

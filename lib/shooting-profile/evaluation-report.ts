@@ -123,10 +123,19 @@ const reconstructionSchema = z.object({
   }).strict(),
 }).strict();
 
+/**
+ * The single accepted consent record form, shared by the on-device panel and
+ * the local CLI. A report claiming consent is shared and pasted into a public
+ * handoff, so the identifier's shape is pinned to something that cannot carry a
+ * person: `local-consent-YYYYMMDD-NNN`. A looser charset rule would admit a real
+ * name with a year in it.
+ */
+export const CONSENT_RECORD_ID_PATTERN_V1 = /^local-consent-\d{8}-\d{3}$/;
+
 export const twoViewEvaluationReportSchema = z.object({
   version: z.literal(TWO_VIEW_EVALUATION_REPORT_VERSION),
   sourceClass: sourceClassSchema,
-  consentRecordId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/).optional(),
+  consentRecordId: z.string().regex(CONSENT_RECORD_ID_PATTERN_V1).optional(),
   mode: captureModeSchema,
   shootingHand: shootingHandSchema,
   boundary: z.literal("representative_phase_fused_4d_estimate_not_actual_3d"),

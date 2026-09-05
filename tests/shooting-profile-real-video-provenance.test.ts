@@ -193,8 +193,8 @@ describe("real-video evidence admission", () => {
 });
 
 describe("consent admission for consented_self_capture", () => {
-  it("accepts only opaque record identifiers", () => {
-    for (const value of ["local-consent-20260902-001", "owner_2026_09_02_a1", "abcd1234"]) {
+  it("accepts only the documented opaque record form", () => {
+    for (const value of ["local-consent-20260902-001", "local-consent-19991231-999"]) {
       expect(isOpaqueConsentRecordId(value), value).toBe(true);
     }
     for (const value of [
@@ -205,6 +205,15 @@ describe("consent admission for consented_self_capture", () => {
       "/Users/owner/consent.pdf",
       "consent record 1",
       "홍길동동의기록2026",
+      // A name with digits satisfies a mere charset-and-digit rule, so the
+      // identifier is pinned to the one non-identifying form the runbook documents.
+      "hyunjun-lee-1990",
+      "owner_2026_09_02_a1",
+      "abcd1234",
+      "local-consent-2026902-001",
+      "local-consent-20260902-1",
+      "LOCAL-CONSENT-20260902-001",
+      "local-consent-20260902-001-hyunjun",
       undefined,
       null,
       42,
@@ -229,6 +238,19 @@ describe("consent admission for consented_self_capture", () => {
       reason: "consent_record_invalid",
     });
     expect(buildRealVideoEvaluation(state, CONSENT).status).toBe("ready");
+  });
+
+  it("enforces the same record form at the report boundary, which also covers the local CLI", () => {
+    const state = reviewState("basic_1_plus_1", syntheticLandmarkSession({ mode: "basic_1_plus_1" }));
+    const built = buildRealVideoEvaluation(state, CONSENT);
+    expect(built.status).toBe("ready");
+    if (built.status !== "ready") return;
+
+    expect(twoViewEvaluationReportSchema.parse(built.report)).toEqual(built.report);
+    for (const consentRecordId of ["hyunjun-lee-1990", "abcd1234", "owner_2026_09_02_a1"]) {
+      expect(() => twoViewEvaluationReportSchema.parse({ ...built.report, consentRecordId }), consentRecordId)
+        .toThrow();
+    }
   });
 
   it("does not demand consent metadata for a synthetic fixture and forbids it in the report", () => {

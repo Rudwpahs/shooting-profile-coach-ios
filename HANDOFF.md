@@ -238,6 +238,43 @@ evidence; Expo web export exit 0 with 18 routes into a temporary directory.
 Unchanged by both commits: the 4D solver, 101 phases, 12 joints, the Basic 0.65 cap, `heuristic_v1`,
 the exact `"1"` flag comparisons, the boundary string, and the Firestore contract.
 
+### Security review of PR #4 - 2026-09-04
+
+Scope: the branch diff against `main`, over six threat areas - raw video/landmark memory lifetime,
+the temporary derived-report file and share sheet, consent and capture-provenance forgery, the
+Firebase/Auth persistence boundary, native pose input validation, and dependency/CI/secret handling.
+An independent read-only audit returned **no exploitable finding** and confirmed: the evaluation path
+re-references the sequences the reducer already holds rather than copying them; `attemptId` is
+re-derived as `<view>-<takeIndex>` so no slot id, URI, or file name can reach the report; the
+temporary file name has no attacker-controlled component and cleanup runs on every path including a
+thrown share; the new code contains no Firebase, Firestore, or network reference and never reads
+`saveInput`; the native bridge change is type-only; and no secret, credential, or absolute path is
+committed (`/Users/owner/...` strings in tests are negative inputs asserting rejection, and
+`.github/**` is untouched on this branch).
+
+Two integrity gaps the audit surfaced were judged worth fixing and were fixed here:
+
+- **Stale evidence after a retake.** `RETAKE_SLOT` bumps only the slot generation, not
+  `sessionGeneration`, so the controller's generation-keyed reset never fired and a report built from
+  the previous pair stayed shareable (`canShare` only checked for a built report). A report is
+  evidence about one exact pair, so `hooks/use-real-video-evaluation.ts` now remembers the admitted
+  sequence identities it built from and drops the report as soon as the session no longer holds them.
+- **Consent id could carry a name.** The old rule (charset, >= 8 chars, at least one digit) accepts
+  `hyunjun-lee-1990`, and that value is copied verbatim into a report the owner shares and pastes
+  into a public handoff. Rather than trying to detect names, the accepted form is pinned to the one
+  the runbook documents, `local-consent-YYYYMMDD-NNN`, as `CONSENT_RECORD_ID_PATTERN_V1` in
+  `lib/shooting-profile/evaluation-report.ts`. The report **schema** enforces it, so the local
+  `pnpm eval:two-view` CLI is covered by the same rule as the on-device panel.
+
+Out of scope but relevant while the repository is public: `artifacts/` holds 127 tracked files
+(**none touched by this PR**) carrying player names and at least one source video URL in
+`artifacts/curry-video-source-candidate.json`. `docs/real-video-source-admission.md` requires player
+names and source URLs to live only in a private audit registry, so this is a pre-existing exposure to
+resolve separately - it does not block PR #4.
+
+Verification after the fixes: `corepack pnpm check` exit 0, `corepack pnpm lint` exit 0,
+`corepack pnpm test:unit` 38 files passed + 1 skipped / 512 tests passed + 1 skipped.
+
 ### Exact next single action (owner)
 On a Mac with Xcode and the registered iPhone, follow `docs/real-video-validation-runbook.md`
 sections 2, 4, 5: create the gitignored `.env.local` with the four flags **and**
