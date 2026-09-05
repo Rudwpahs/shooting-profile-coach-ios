@@ -1,0 +1,152 @@
+{
+  "version": "synthetic_known_geometry_sweep_v1",
+  "sessionCount": 200,
+  "outcomes": {
+    "complete": 196,
+    "recaptureRequired": 4,
+    "byReason": {
+      "phase_detection_failed": 3,
+      "cross_view_phase_mismatch": 1
+    }
+  },
+  "expectations": {
+    "satisfied": 197,
+    "violated": 0,
+    "unspecified": 3,
+    "violations": []
+  },
+  "invariants": {
+    "completedProfilesChecked": 196,
+    "violations": [],
+    "worstBoneLengthDrift": 4.440892098500626e-16,
+    "boneLengthTolerance": 0.00001,
+    "maximumConeDegrees": 21.93293507005457,
+    "minimumConfidence": 0.65,
+    "maximumConfidence": 0.7927102442767213
+  },
+  "perAxis": {
+    "mode": {
+      "basic_1_plus_1": {
+        "complete": 101,
+        "recaptureRequired": 4
+      },
+      "high_accuracy_3_plus_3": {
+        "complete": 95,
+        "recaptureRequired": 0
+      }
+    },
+    "shootingHand": {
+      "right": {
+        "complete": 101,
+        "recaptureRequired": 4
+      },
+      "left": {
+        "complete": 95,
+        "recaptureRequired": 0
+      }
+    },
+    "display": {
+      "portrait": {
+        "complete": 69,
+        "recaptureRequired": 4
+      },
+      "landscape": {
+        "complete": 64,
+        "recaptureRequired": 0
+      },
+      "square": {
+        "complete": 63,
+        "recaptureRequired": 0
+      }
+    },
+    "sideAnchorShift": {
+      "0.000": {
+        "complete": 70,
+        "recaptureRequired": 4
+      },
+      "0.090": {
+        "complete": 1,
+        "recaptureRequired": 0
+      },
+      "0.020": {
+        "complete": 63,
+        "recaptureRequired": 0
+      },
+      "0.040": {
+        "complete": 62,
+        "recaptureRequired": 0
+      }
+    },
+    "noiseAmplitude": {
+      "3.0e-6": {
+        "complete": 8,
+        "recaptureRequired": 4
+      },
+      "2.0e-6": {
+        "complete": 47,
+        "recaptureRequired": 0
+      },
+      "8.0e-6": {
+        "complete": 47,
+        "recaptureRequired": 0
+      },
+      "2.0e-5": {
+        "complete": 47,
+        "recaptureRequired": 0
+      },
+      "4.0e-5": {
+        "complete": 47,
+        "recaptureRequired": 0
+      }
+    },
+    "visibility": {
+      "0.95": {
+        "complete": 73,
+        "recaptureRequired": 3
+      },
+      "0.25": {
+        "complete": 0,
+        "recaptureRequired": 1
+      },
+      "0.85": {
+        "complete": 63,
+        "recaptureRequired": 0
+      },
+      "0.70": {
+        "complete": 60,
+        "recaptureRequired": 0
+      }
+    },
+    "degeneracy": {
+      "none": {
+        "complete": 194,
+        "recaptureRequired": 1
+      },
+      "duplicate_view": {
+        "complete": 1,
+        "recaptureRequired": 0
+      },
+      "mirrored_view": {
+        "complete": 1,
+        "recaptureRequired": 0
+      },
+      "frozen_shooting_arm": {
+        "complete": 0,
+        "recaptureRequired": 1
+      },
+      "stalled_clip": {
+        "complete": 0,
+        "recaptureRequired": 1
+      },
+      "slow_first_half": {
+        "complete": 0,
+        "recaptureRequired": 1
+      }
+    }
+  },
+  "runtime": {
+    "totalMs": 37138.886500000015,
+    "medianSessionMs": 63.955949999999575,
+    "slowestSessionMs": 582.4426999999996
+  }
+}

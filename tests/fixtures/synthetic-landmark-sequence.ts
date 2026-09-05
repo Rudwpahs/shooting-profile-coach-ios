@@ -2,6 +2,8 @@ import type { Vector3 } from "@/lib/pose-motion";
 import type { KinematicBoneIdV1 } from "@/lib/shooting-profile/kinematics";
 import type { CaptureViewV2, LandmarkSequenceV2, ShootingHandV2, SourceLandmarkV2 } from "@/lib/shooting-profile/types";
 
+export type SyntheticDisplaySize = Readonly<{ width: number; height: number }>;
+
 type SyntheticLandmarkSequenceOptions = {
   view: "front" | "shooting_side";
   shootingHand?: "left" | "right";
@@ -10,16 +12,23 @@ type SyntheticLandmarkSequenceOptions = {
   durationScale?: number;
   anchorScheduleShift?: number;
   noiseAmplitude?: number;
+  /** Exercises the isotropic source-height conversion across aspect ratios. */
+  displaySize?: SyntheticDisplaySize;
+  /** Uniform landmark visibility; below the consensus floor it must be rejected. */
+  visibility?: number;
 };
 
 type SyntheticLandmarkSessionOptions = {
   mode: "basic_1_plus_1" | "high_accuracy_3_plus_3";
   shootingHand?: "left" | "right";
   sideAnchorScheduleShift?: number;
+  displaySize?: SyntheticDisplaySize;
+  visibility?: number;
+  /** Overrides the per-take noise ladder with one amplitude for every take. */
+  noiseAmplitude?: number;
 };
 
-const DISPLAY_WIDTH = 1080;
-const DISPLAY_HEIGHT = 1920;
+export const DEFAULT_SYNTHETIC_DISPLAY: SyntheticDisplaySize = Object.freeze({ width: 1080, height: 1920 });
 const FRAME_RATE = 30;
 const TEMPLATE_LENGTHS = Object.freeze({
   pelvis_to_left_hip: 0.34,
@@ -243,12 +252,19 @@ function deterministicObservationNoise(
   return { x: Math.sin(seed * 0.73) * amplitude, y: Math.cos(seed * 0.61) * amplitude };
 }
 
-function project(point: Vector3, view: CaptureViewV2, shootingHand: ShootingHandV2): { x: number; y: number } {
+function project(
+  point: Vector3,
+  view: CaptureViewV2,
+  shootingHand: ShootingHandV2,
+  display: SyntheticDisplaySize,
+): { x: number; y: number } {
   const horizontal = view === "front"
     ? point.x
     : shootingHand === "right" ? point.z : -point.z;
+  // Normalized x is pre-divided by the aspect ratio so one world unit stays one
+  // source-image height after the pipeline converts to isotropic units.
   return {
-    x: 0.5 + horizontal * SOURCE_SCALE * (DISPLAY_HEIGHT / DISPLAY_WIDTH),
+    x: 0.5 + horizontal * SOURCE_SCALE * (display.height / display.width),
     y: 0.6 - point.y * SOURCE_SCALE,
   };
 }
@@ -260,6 +276,8 @@ function landmarksForPose(
   takeIndex: number,
   frameIndex: number,
   noiseAmplitude: number,
+  display: SyntheticDisplaySize,
+  visibility: number,
 ): SourceLandmarkV2[] {
   const shoulders = scale(add(pose.joints[11], pose.joints[12]), 0.5);
   const leftAnkle = pose.joints[27];
@@ -290,9 +308,9 @@ function landmarksForPose(
   };
   return Array.from({ length: 33 }, (_, landmarkIndex) => {
     const sourcePoint = landmarksByIndex[landmarkIndex] ?? pose.root;
-    const projection = project(sourcePoint, view, shootingHand);
+    const projection = project(sourcePoint, view, shootingHand, display);
     const noise = deterministicObservationNoise(view, takeIndex, frameIndex, landmarkIndex, noiseAmplitude);
-    return { x: projection.x + noise.x, y: projection.y + noise.y, z: landmarkIndex * 0.0001, visibility: 0.95 };
+    return { x: projection.x + noise.x, y: projection.y + noise.y, z: landmarkIndex * 0.0001, visibility };
   });
 }
 
@@ -304,6 +322,8 @@ export function syntheticLandmarkSequence(options: SyntheticLandmarkSequenceOpti
   const timeOffsetMs = options.timeOffsetMs ?? 0;
   const anchorScheduleShift = options.anchorScheduleShift ?? 0;
   const noiseAmplitude = options.noiseAmplitude ?? 0.000003;
+  const display = options.displaySize ?? DEFAULT_SYNTHETIC_DISPLAY;
+  const visibility = options.visibility ?? 0.95;
   if (anchorScheduleShift < -0.2 || anchorScheduleShift > 0.2) {
     throw new Error("anchorScheduleShift must keep the canonical schedule ordered");
   }
@@ -321,9 +341,10 @@ export function syntheticLandmarkSequence(options: SyntheticLandmarkSequenceOpti
       timestampMs,
       sourceLandmarks: landmarksForPose(
         syntheticPose(phase), options.view, shootingHand, takeIndex, frameIndex, noiseAmplitude,
+        display, visibility,
       ),
-      cropRectPx: { x: 0, y: 0, width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
-      modelToSourcePx: [DISPLAY_WIDTH, 0, 0, 0, DISPLAY_HEIGHT, 0, 0, 0, 1],
+      cropRectPx: { x: 0, y: 0, width: display.width, height: display.height },
+      modelToSourcePx: [display.width, 0, 0, 0, display.height, 0, 0, 0, 1],
     };
   });
   const releaseTimelinePosition = 0.75 + anchorScheduleShift;
@@ -335,8 +356,8 @@ export function syntheticLandmarkSequence(options: SyntheticLandmarkSequenceOpti
     takeIndex,
     metadata: {
       durationMs: clipDurationMs,
-      displayWidth: DISPLAY_WIDTH,
-      displayHeight: DISPLAY_HEIGHT,
+      displayWidth: display.width,
+      displayHeight: display.height,
       nominalFrameRate: FRAME_RATE,
       frameRateMode: "constant",
       locatorAttemptedFrames: frameCount,
@@ -378,7 +399,9 @@ export function syntheticLandmarkSession(options: SyntheticLandmarkSessionOption
       timeOffsetMs: variation.timeOffsetMs + (view === "shooting_side" ? 12_000 : 0),
       durationScale: variation.durationScale,
       anchorScheduleShift: view === "shooting_side" ? options.sideAnchorScheduleShift : undefined,
-      noiseAmplitude: variation.noiseAmplitude,
+      noiseAmplitude: options.noiseAmplitude ?? variation.noiseAmplitude,
+      ...(options.displaySize === undefined ? {} : { displaySize: options.displaySize }),
+      ...(options.visibility === undefined ? {} : { visibility: options.visibility }),
     })
   ));
   return { front: create("front"), shootingSide: create("shooting_side") };

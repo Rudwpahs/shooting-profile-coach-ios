@@ -64,6 +64,17 @@
 - 작은 글자 muted 색상을 4.25:1에서 4.84:1로 올리고, 하드코딩된 light UI에 맞춰
   `userInterfaceStyle`을 `light`로 선언했다.
 
+## 2026-09-05 synthetic known-geometry sweep
+
+결정적 200 세션 스윕을 실제 파이프라인에 통과시켰다([synthetic-known-geometry-sweep.md](synthetic-known-geometry-sweep.md)).
+196 complete / 4 recapture, 기대 위반 0, 불변 위반 0, 재현 가능. 뼈 길이 drift 최대 4.44e-16(허용 1e-5),
+방향 콘 최대 21.93°(게이트 25°), Basic confidence는 상한 0.65에 고정. **portrait·landscape·square에서
+동일하게 통과해 isotropic 변환의 aspect 불변성이 처음으로 확인됐다.**
+
+이 스윕이 드러낸 미해결 gap: cross-view geometry gate가 비공개 평가 경로에만 연결돼 있어, 같은 각도로
+찍은 두 클립(duplicate/mirrored view)이 제품 경로에서는 그대로 프로필로 완성된다. 제품 admission 동작을
+바꾸는 결정이라 별도 판단이 필요하다.
+
 ## 아직 통과해야 하는 외부 gate
 
 - Firebase Security Rules compiler 및 Emulator의 실제 allow/deny·복구·삭제 테스트
