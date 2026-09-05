@@ -14,6 +14,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { CaptureModePicker } from "@/components/shooting-profile/capture-mode-picker";
 import { CaptureSlotCard } from "@/components/shooting-profile/capture-slot-card";
 import { QualitySummary } from "@/components/shooting-profile/quality-summary";
+import { RealVideoEvaluationPanel } from "@/components/shooting-profile/real-video-evaluation-panel";
 import {
   type SaveRepresentativeProfile,
   useShootingProfileCapture,
@@ -287,6 +288,9 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
             <Text style={styles.retakeHeading}>클립별 확인</Text>
             <Text style={styles.retakeIntro}>결과가 평소 폼과 다르면 필요한 클립 하나만 다시 선택하세요.</Text>
             {renderSlots()}
+            {capture.evaluationEnabled ? (
+              <RealVideoEvaluationPanel controller={capture.evaluation} />
+            ) : null}
           </View>
         ) : null}
 
@@ -318,7 +322,7 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
 
         {state.status === "cancelled" ? (
           <View style={styles.centerState}>
-            <MaterialIcons name="pause-circle-outline" size={44} color="#61738A" />
+            <MaterialIcons name="pause-circle-outline" size={44} color="#5A6B80" />
             <Text style={styles.centerTitle}>촬영 세션을 멈췄습니다</Text>
             <Text style={styles.centerCopy}>기기 내 분석 요청을 취소했습니다. 통과한 파생 결과는 이 화면 안에서만 유지됩니다.</Text>
             <Pressable
@@ -372,6 +376,9 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
                 {state.recoveryStatus === "result_review" ? "리뷰로 돌아가기" : "클립 확인하기"}
               </Text>
             </Pressable>
+            {capture.evaluationEnabled ? (
+              <RealVideoEvaluationPanel controller={capture.evaluation} />
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -389,9 +396,9 @@ const styles = StyleSheet.create({
   page: { alignSelf: "center", maxWidth: 680, paddingBottom: 36, paddingHorizontal: 16, paddingTop: 18, width: "100%" },
   stepHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 13 },
   stepCount: { color: "#9A3412", fontFamily: "BarlowCondensed-Bold", fontSize: 13, letterSpacing: 1 },
-  stepNames: { color: "#61738A", fontFamily: "Barlow-SemiBold", fontSize: 11 },
+  stepNames: { color: "#5A6B80", fontFamily: "Barlow-SemiBold", fontSize: 11 },
   pageTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 32, lineHeight: 36 },
-  pageIntro: { color: "#61738A", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6 },
+  pageIntro: { color: "#5A6B80", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6 },
   modeSummary: { alignItems: "center", backgroundColor: "#102235", borderRadius: 17, flexDirection: "row", gap: 10, marginTop: 18, padding: 14 },
   modeSummaryCopy: { flex: 1 },
   summaryLabel: { color: "#B6C2CD", fontFamily: "Barlow", fontSize: 11 },
@@ -419,10 +426,10 @@ const styles = StyleSheet.create({
   cancelText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
   centerState: { alignItems: "center", paddingHorizontal: 8, paddingTop: 34 },
   centerTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 14, textAlign: "center" },
-  centerCopy: { color: "#61738A", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" },
+  centerCopy: { color: "#5A6B80", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" },
   completeIcon: { alignItems: "center", backgroundColor: "#166534", borderRadius: 24, height: 52, justifyContent: "center", width: 52 },
   retakeHeading: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 24, marginTop: 25 },
-  retakeIntro: { color: "#61738A", fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 3 },
+  retakeIntro: { color: "#5A6B80", fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 3 },
   globalError: { color: "#9A3412", fontFamily: "Barlow-SemiBold", fontSize: 14, lineHeight: 21, marginTop: 8, textAlign: "center" },
   disabled: { opacity: 0.44 },
   pressed: { opacity: 0.72 },

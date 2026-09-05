@@ -1,4 +1,11 @@
-import { requireOptionalNativeModule, type EventSubscription } from "expo-modules-core";
+import { requireOptionalNativeModule } from "expo";
+
+/**
+ * The only part of a native event subscription this bridge uses. Declaring it
+ * here keeps the module on the `expo` package's public API, which is what Expo
+ * expects an app to depend on, instead of reaching into `expo-modules-core`.
+ */
+export type NativeEventSubscription = { remove(): void };
 
 export type NativePoseFrame = {
   timestampMs: number;
@@ -85,7 +92,7 @@ export type FormpathPoseNativeModule = {
   addListener(
     eventName: "onPoseAnalysisProgress",
     listener: (event: NativePoseProgressV2) => void,
-  ): EventSubscription;
+  ): NativeEventSubscription;
 };
 
 export default requireOptionalNativeModule<FormpathPoseNativeModule>("FormpathPose");

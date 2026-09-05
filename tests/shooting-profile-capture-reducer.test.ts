@@ -155,6 +155,7 @@ function acceptSlot(state: CaptureSessionState, slotId: string): CaptureSessionS
   const requestId = `opaque_${slotId.replace(/[^A-Za-z0-9]/g, "_")}_${generation}`;
   const acquiring = captureSessionReducer(state, {
     type: "SLOT_ACQUIRE_STARTED",
+    captureSource: "camera",
     slotId,
     requestId,
     generation,
@@ -502,6 +503,7 @@ describe("captureSessionReducer", () => {
     let state = collecting("basic_1_plus_1");
     state = captureSessionReducer(state, {
       type: "SLOT_ACQUIRE_STARTED",
+      captureSource: "camera",
       slotId: "front-0",
       requestId: "opaque_old_request",
       generation: 1,
@@ -514,6 +516,7 @@ describe("captureSessionReducer", () => {
     });
     state = captureSessionReducer(state, {
       type: "SLOT_ACQUIRE_STARTED",
+      captureSource: "camera",
       slotId: "front-0",
       requestId: "opaque_new_request",
       generation: 3,
@@ -549,6 +552,7 @@ describe("captureSessionReducer", () => {
       let state = collecting("basic_1_plus_1");
       state = captureSessionReducer(state, {
         type: "SLOT_ACQUIRE_STARTED",
+        captureSource: "camera",
         slotId: "front-0",
         requestId: "opaque_active_retake",
         generation: 1,
@@ -594,6 +598,7 @@ describe("captureSessionReducer", () => {
     let state = collecting("basic_1_plus_1");
     state = captureSessionReducer(state, {
       type: "SLOT_ACQUIRE_STARTED",
+      captureSource: "camera",
       slotId: "front-0",
       requestId: "opaque_rejected_request",
       generation: 1,
@@ -632,6 +637,7 @@ describe("captureSessionReducer", () => {
     let state = collecting("basic_1_plus_1");
     state = captureSessionReducer(state, {
       type: "SLOT_ACQUIRE_STARTED",
+      captureSource: "camera",
       slotId: "front-0",
       requestId: "opaque_active_request",
       generation: 1,

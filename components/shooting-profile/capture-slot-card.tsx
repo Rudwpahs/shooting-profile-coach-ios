@@ -36,8 +36,8 @@ function statusIcon(slot: CaptureSessionSlot) {
   if (slot.status === "acquiring" || slot.status === "analyzing") {
     return <MaterialIcons name="hourglass-top" size={21} color="#F97316" />;
   }
-  if (slot.status === "cancelled") return <MaterialIcons name="cancel" size={21} color="#61738A" />;
-  return <MaterialIcons name={slot.enabled ? "radio-button-unchecked" : "lock-outline"} size={21} color="#61738A" />;
+  if (slot.status === "cancelled") return <MaterialIcons name="cancel" size={21} color="#5A6B80" />;
+  return <MaterialIcons name={slot.enabled ? "radio-button-unchecked" : "lock-outline"} size={21} color="#5A6B80" />;
 }
 
 export function CaptureSlotCard({
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   heading: { alignItems: "center", flexDirection: "row", gap: 10, justifyContent: "space-between" },
   headingCopy: { flex: 1 },
   label: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 19 },
-  status: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
+  status: { color: "#5A6B80", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
   errorBox: { alignItems: "flex-start", backgroundColor: "#FFF0E8", borderRadius: 11, flexDirection: "row", gap: 7, marginTop: 11, padding: 10 },
   errorText: { color: "#9A3412", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18 },
   actions: { flexDirection: "row", gap: 8, marginTop: 12 },

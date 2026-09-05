@@ -89,11 +89,15 @@ export function captureSessionRetainsSaveToken(status: CaptureSessionStatus): bo
   return status === "result_review" || status === "saving";
 }
 
+/** Where a slot's clip came from. Provenance only; never a URI, path, or file name. */
+export type CaptureSlotSourceV2 = "camera" | "library";
+
 export type CaptureSessionSlot = ReturnType<typeof buildCapturePlan>[number] & {
   status: CaptureSlotStatus;
   enabled: boolean;
   generation: number;
   requestId?: string;
+  captureSource?: CaptureSlotSourceV2;
   progress?: CaptureProgress;
   sequence?: LandmarkSequenceV2;
   rejectionReason?: string;
@@ -275,6 +279,7 @@ export type CaptureSessionAction =
     slotId: string;
     requestId: string;
     generation: number;
+    captureSource: CaptureSlotSourceV2;
   }
   | {
     type: "SLOT_PROGRESS";
@@ -444,6 +449,7 @@ export function captureSessionReducer(
       const index = state.slots.findIndex((slot) => slot.id === action.slotId);
       const slot = state.slots[index];
       if (!slot?.enabled || action.generation !== slot.generation + 1 || !action.requestId) return state;
+      if (action.captureSource !== "camera" && action.captureSource !== "library") return state;
       const slots = [...state.slots];
       slots[index] = {
         ...slot,
@@ -451,6 +457,7 @@ export function captureSessionReducer(
         enabled: true,
         generation: action.generation,
         requestId: action.requestId,
+        captureSource: action.captureSource,
         progress: { stage: "metadata", completed: 0, total: 0 },
         sequence: undefined,
         rejectionReason: undefined,
@@ -546,6 +553,7 @@ export function captureSessionReducer(
         enabled: false,
         generation: slot.generation + 1,
         requestId: undefined,
+        captureSource: undefined,
         progress: undefined,
         sequence: undefined,
         rejectionReason: undefined,

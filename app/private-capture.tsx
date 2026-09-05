@@ -68,5 +68,5 @@ export default function PrivateCaptureRoute() {
 const styles = StyleSheet.create({
   loading: { alignItems: "center", backgroundColor: "#F5F1E8", flex: 1, justifyContent: "center", padding: 24 },
   loadingTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 25, marginTop: 14, textAlign: "center" },
-  loadingCopy: { color: "#61738A", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 5, textAlign: "center" },
+  loadingCopy: { color: "#5A6B80", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 5, textAlign: "center" },
 });

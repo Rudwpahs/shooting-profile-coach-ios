@@ -1,6 +1,374 @@
 # FormPath repository handoff
 
-Last updated: 2026-09-02 UTC
+Last updated: 2026-09-05 UTC
+
+## P1.1 Real-video validation handoff - 2026-09-02
+
+### Repository State
+- Start `main` SHA: `075efaa860c6d0aadb403b697abdec2f5a94c5b6` (matches the work order; re-fetched
+  before branching, clean tree).
+- Branch: `feat/p1-real-video-validation` from `origin/main`. No direct `main` push, no force push.
+- Status: **`code_complete_but_real_video_validation_blocked`** / `real_video_fixture_unavailable`
+  (unchanged until a consented pair runs on a physical iPhone).
+- Repository visibility: public for the duration of this work; **not changed here**. Nothing
+  identifying is committed (see the privacy scan in Verification).
+- Plan: `docs/superpowers/plans/2026-09-02-p1-1-real-video-validation.md`.
+
+### 2026-09-03 corrective follow-up - actual JSON file sharing
+- Defect: PR #4 head `bd1e8af` handed report JSON to React Native Share as `message` text while the
+  runbook required a `.json` attachment that could be saved to Files. The physical-iPhone step was
+  therefore not executable as documented.
+- Corrective commit: `0da6020` (`fix: share derived evaluation as json file`). It adds the Expo SDK
+  54-compatible `expo-file-system@~19.0.21`, writes only the already-validated derived report to an
+  opaque cache `.json`, shares its local URL on iOS, and attempts idempotent deletion after shared,
+  dismissed, and thrown-share outcomes. A failed write also attempts removal of a partial item.
+- Unchanged boundaries: exact `"1"` development flag, report schema/raw-evidence guard, capture and
+  reconstruction algorithms, save envelope, Firestore client, and Firestore Rules.
+- RED evidence: targeted Vitest run failed with the missing file adapter plus three old text-share
+  behavior failures; the partial-write cleanup test then failed with zero cleanup calls before the
+  cleanup branch was added.
+- GREEN evidence: targeted 15/15; full unit suite 35 files passed + 1 skipped, 479 tests passed + 1
+  intentional skip; typecheck and lint exit 0; Expo web export exit 0 with 18 static routes.
+- Local environment limit: a clean frozen install could not complete because this sandbox cannot
+  fetch a missing npm tarball; an offline attempt stopped at the missing store entry. Firestore Rules
+  were not run locally because this checkout lacks Firebase CLI/emulator artifacts. PR CI run #58
+  subsequently proved frozen install and the existing 42/42 Emulator suite on a clean runner.
+- Independent review: no code finding; one Important documentation finding (stale message-share
+  claims in this file), corrected by this section and the updates below.
+- PR #4 remains open and unmerged. Physical Basic 1+1 on iPhone remains the release/merge gate.
+
+### Task 0 - environment and feasibility (no code changed)
+- Machine: Windows 11 (MINGW64). Node v24.18.0, pnpm 9.12.0 via `corepack pnpm`, Expo CLI in
+  `node_modules/.bin`. **No** Xcode, `xcodebuild`, CocoaPods `pod`, Java, or EAS CLI on PATH.
+  Consequence: Expo prebuild/iOS compile, CocoaPods, the Firestore emulator, and any physical
+  iPhone run are impossible on this machine; they are owner steps on macOS (runbook Task 3).
+- Native module: `modules/formpath-pose` is an Expo module (`expo-module.config.json`, platform
+  `apple`, `FormpathPose.podspec` depending on `ExpoModulesCore` and `MediaPipeTasksVision = 0.10.21`,
+  resource bundle with `pose_landmarker_full.task`, Swift sources `FormpathPoseModule.swift` 1128
+  lines). Expo autolinking includes it in an iOS custom development build after `expo prebuild` +
+  `pod install`; the JS binding uses `requireOptionalNativeModule("FormpathPose")`, so Expo Go and
+  simulators without the module return `native_build_required`.
+- Existing export path at the Task 0 baseline: **none in the app.** The corrective follow-up now
+  writes only the strict derived report to a temporary app-cache `.json` for a user-initiated share;
+  raw `LandmarkSequenceV2` still has no export path.
+- `buildTwoViewEvaluationReport` React Native safety: imports only `zod` and `lib/shooting-profile/*`
+  (no `node:` modules, no Firebase); uses `performance.now()` (available in Hermes/RN 0.81) and
+  `process.memoryUsage` only behind a `typeof` guard (RN's `process` shim lacks it -> `peakHeapBytes`
+  omitted). Runnable on device; the timing call is additionally guarded in this branch.
+- Where front and side sequences coexist in memory: reducer state `state.slots[].sequence`
+  (`CaptureSessionSlot`, set by `SLOT_ACCEPTED`), retained through `ready_to_aggregate` ->
+  `aggregating` -> `result_review` / `saving` / `complete` and through the recapture `error` state
+  (`clearDerivedSession` keeps `slots`). The hook's aggregation effect reads them once for
+  `buildTwoViewRepresentativeProfile`; nothing else copies them.
+- Automatable without an iPhone: everything from `LandmarkSequenceV2` onward (phase detection,
+  alignment, 101x12 estimate, gates, report schema, share-state machine) via the contract-valid
+  synthetic fixture. Physical device required: native MediaPipe output on a real clip, the iOS build,
+  the share sheet, and the consented video itself.
+- Physical iPhone available to this agent: **no.** Consented real front/side pair available: **no.**
+  Real video used in this work: **none** (synthetic fixture only, never counted as real evidence).
+
+### Tasks 1-3 - changed files and functions
+- `lib/feature-flags.ts`: `realVideoEvaluation: process.env.EXPO_PUBLIC_FORMPATH_REAL_VIDEO_EVAL === "1"`
+  (default off; the three V2 flags are unchanged).
+- `lib/shooting-profile/real-video-evaluation.ts` (new, pure): `isDevelopmentBuild` (reads
+  `globalThis.__DEV__ === true`; absent = release), `isRealVideoEvaluationEnabled(flags, dev)`,
+  `collectEvaluationAttempts(state)` (accepted `state.slots[].sequence` only in `result_review` /
+  `saving` / `complete` / `error`), `buildRealVideoEvaluation(state, { sourceClass, consentRecordId?,
+  evaluatedCommitSha? })` -> `{ status: "ready", report, json }` or `build_failed` with
+  `session_not_ready | report_build_failed | raw_evidence_detected | schema_invalid`
+  (`assertReportContainsNoRawEvidence` and the strict zod schema run again after the builder),
+  `shareRealVideoEvaluation(json, prepareFile, share)` -> `shared | share_dismissed | share_failed`,
+  with cleanup after the share attempt; `describeRealVideoEvaluationState`. This pure module has no
+  network, Firebase, or platform import.
+- `hooks/use-shooting-profile-capture.ts`: `evaluationEnabled = isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild())`
+  and one `useRealVideoEvaluation({ enabled, state, consentRecordId, prepareFile })` call. **The
+  build and share callbacks themselves moved into `hooks/use-real-video-evaluation.ts` during the
+  2026-09-02 hardening pass** (see that section); the capture hook only injects
+  `prepareRealVideoEvaluationFile` and exposes the controller as `evaluation`. The aggregation
+  effect, `save`, `matchingShootingProfileSaveInputV2`, `runCaptureSaveOperationV2`, and every
+  cancellation guard are unchanged.
+- `lib/shooting-profile/real-video-evaluation-file.ts`: Expo FileSystem legacy-compatible cache
+  adapter. Opaque `.json` name; exact derived JSON write; idempotent cleanup; partial-write cleanup.
+- `components/shooting-profile/real-video-evaluation-panel.tsx` (new): two accessible buttons
+  ("파생 리포트 생성", "리포트 공유 · 저장"), polite live status, no effects.
+  `components/shooting-profile/capture-session.tsx`: renders the panel only under
+  `capture.evaluationEnabled ? (` in the review and recapture states. No other UI change.
+- `lib/shooting-profile/evaluation-report.ts`: `performance.now()` -> guarded `nowMs()`; no
+  behavior change. Codec, thresholds, solver, `CROSS_VIEW_PHASE_ALIGNMENT_V1`, Firestore contract:
+  untouched (asserted by the new contract test).
+- Docs: `docs/real-video-validation-runbook.md`, `docs/superpowers/plans/2026-09-02-p1-1-real-video-validation.md`,
+  `docs/superpowers/specs/2026-09-03-p1-1-derived-report-file-sharing-design.md`,
+  `docs/two-view-evaluation-tool.md` (cross-reference).
+- Tests: `tests/shooting-profile-real-video-evaluation.test.ts` (12),
+  `tests/shooting-profile-real-video-evaluation-file.test.ts` (3),
+  `tests/shooting-profile-real-video-evaluation-reasons.test.ts` (1, stubs the pipeline boundary to
+  prove `uncertainty_exceeds_limit` is copied verbatim), `tests/shooting-profile-contract.test.ts`
+  (flag shape now includes `realVideoEvaluation`).
+
+### Red/green evidence
+- Red: both new test files failed with `Cannot find module '@/lib/shooting-profile/real-video-evaluation'`
+  before any implementation (commit `463f5f4` holds the tests alone).
+- Green after `3a3b7eb`: 87/87 in the seven affected files, then full suite 34 files passed + 1
+  skipped, 474 tests passed + 1 skipped (baseline on `main` was 463 + 1 skipped). Two intermediate
+  reds were comment wording only (the source guards forbid the words "clipboard"/"analytics"/
+  "Firebase" even in comments); no production logic changed to satisfy a test.
+- Corrective RED/GREEN on 2026-09-03: old text-sharing code failed the local-file URL, exact-content,
+  cleanup, and adapter-existence expectations. After `0da6020`, targeted 15/15 and full suite
+  479 passed + 1 skipped. A separate RED proved partial-write cleanup was absent before it was added.
+
+### Evidence that nothing raw is stored or uploaded
+- Source guards (tests): `lib/shooting-profile/real-video-evaluation.ts`, the panel, and
+  `hooks/use-real-video-evaluation.ts` contain none of `firebase|firestore|fetch(|axios|XMLHttpRequest|WebSocket|trpc|Clipboard|analytics|saveProfile|runCaptureSaveOperationV2`;
+  the hook shares `url: payload.url` and never passes `message: payload`; runtime `fetch` spy never
+  called during a build. The file adapter accepts only the derived JSON string and has no network or
+  cloud import, and the evaluation hook takes the preparer by injection so it keeps no file-system
+  import of its own.
+- Report guard: reports with injected `sourceLandmarks`, `z`, `timestampMs`, `file://...mp4`,
+  `IMG_0001.mov`, `filename`, or a bare `uri` are rejected; the strict schema rejects extra keys.
+- The evaluation result exposes exactly `{ status, report, json }`; no `saveInput`,
+  `normalizedAttempts`, or `profile`; `matchingShootingProfileSaveInputV2` stays `null` for a recapture
+  session before and after building.
+- Repository scan on the branch diff: no media, raw JSON, `.env`, credentials, absolute paths, or user
+  names (`git ls-files` media hits are only pre-existing `artifacts/**` audit PNGs from earlier work);
+  `git diff --check` clean.
+
+### Verification (final tree, this machine)
+| Command | Result |
+| --- | --- |
+| `CI=true corepack pnpm install --frozen-lockfile` | local network/store blocker; PR CI #58 exit 0 |
+| `corepack pnpm check` | exit 0 |
+| `corepack pnpm lint` | exit 0, 0 warnings |
+| `corepack pnpm test:unit` | 35 files passed + 1 skipped; 479 tests passed + 1 skipped |
+| `corepack pnpm test:rules` | local Firebase CLI/emulator unavailable; PR CI #58: 42 passed (42) |
+| `CI=true EXPO_NO_TELEMETRY=1 corepack pnpm exec expo export --platform web --output-dir <temp>` | exit 0, 18 HTML routes, output outside the repository |
+
+### Real-video evaluation result
+- **Blocked: `real_video_fixture_unavailable`.** No physical iPhone, no macOS/Xcode, no consented
+  pair. The synthetic example report remains shape-only evidence. Status:
+  `code_complete_but_real_video_validation_blocked`.
+
+### PR, CI, merge
+- PR: https://github.com/Rudwpahs/shooting-profile-coach-ios/pull/4 (`feat/p1-real-video-validation`
+  -> `main`; commits `f89a501`, `463f5f4`, `3a3b7eb`, `ae40643`, `a668df9` plus this docs commit).
+  CI: `Representative 4D CI` run https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33637978414
+  on head `f07eee3` = **success**: typecheck, lint, unit 34 files passed + 1 skipped / 474 tests passed
+  + 1 skipped, Firestore Rules in the emulator **42 passed (42)** (executed, Temurin 21), Expo web
+  export. `gh pr view 4` = `OPEN` / `CLEAN`. This docs commit follows that head.
+- Corrective commits: `0da6020` (code) -> `da0d85c` (handoff). Representative 4D CI
+  [run #58](https://github.com/Rudwpahs/shooting-profile-coach-ios/actions/runs/33761391354) =
+  **success**: frozen install, typecheck, lint, unit 35 files passed + 1 skipped / 479 tests passed +
+  1 skipped, Firestore Emulator 42 passed (42), Expo web export 18 static routes.
+- Merge: **not merged** - the work order forbids merging before one Basic 1+1 pair runs on a
+  physical iPhone. After that run is recorded here, merge non-forcefully with `gh pr merge 4 --merge`.
+- Repository can return to private: **now** - nothing in this branch or on `main` depends on public
+  visibility; CI runs on private repositories, and `gh` is authenticated as the owner.
+
+### Pre-capture hardening - 2026-09-02 (two commits on the same branch)
+
+These two commits were rebased **on top of** the 2026-09-03 JSON-file-sharing commits
+(`0da6020`, `da0d85c`, `c0f4531`) with no force push. The integration kept the owner's file-based
+share (`shareRealVideoEvaluation(json, prepareFile, share)` and `Share.share({ url, title })`) and
+moved it, unchanged in behaviour, into the extracted `hooks/use-real-video-evaluation.ts`. The
+preparer is injected rather than imported there so the hook keeps no file-system dependency and
+stays loadable in tests; `hooks/use-shooting-profile-capture.ts` supplies
+`prepareRealVideoEvaluationFile`. The panel interaction test asserts that each share attempt writes
+its own temporary file and cleans it up.
+
+**`bd9d63f` fix: validate real-video provenance and view admission**
+- `lib/shooting-profile/capture-session-reducer.ts`: `CaptureSlotSourceV2`, `slot.captureSource`,
+  `SLOT_ACQUIRE_STARTED.captureSource` (rejected unless `camera`/`library`), cleared on retake.
+- `lib/shooting-profile/real-video-evaluation.ts`: `admitEvaluationAttempts` replaces
+  `collectEvaluationAttempts` and returns `library_source_not_admissible` /
+  `unknown_capture_source` / `session_not_ready`; `isOpaqueConsentRecordId` (charset, >= 8 chars,
+  at least one digit); `consent_not_confirmed` and `consent_record_invalid` gates for
+  `consented_self_capture`; geometry gate wired in.
+- `lib/shooting-profile/cross-view-geometry.ts` (new): `assessCrossViewGeometry` compares every
+  front/side pair on phase-normalized, pelvis-centred, scale-free tracks. Measured on the synthetic
+  fixture: genuine pairs >= 0.1196, duplicates/mirrors <= 0.000337, limit 0.04 (3x below genuine,
+  118x above duplicates). Two front takes are never compared with each other. When a view cannot be
+  measured the gate defers so `phase_detection_failed` stays visible.
+- `lib/shooting-profile/evaluation-report.ts`: `TwoViewEvaluationReportError` with
+  `report_build_failed` / `raw_evidence_detected` / `schema_invalid`; schema now requires
+  `consentRecordId` exactly for `consented_self_capture` and forbids it for `synthetic_fixture`,
+  pins the Basic/High attempt set, and restricts `pipeline.detail` to `PIPELINE_DETAIL_CODES_V1`;
+  the builder drops any other detail so a thrown message cannot reach the report.
+- `lib/feature-flags.ts`: `FORMPATH_REAL_VIDEO_CONSENT_RECORD_ID` (separate export; the frozen
+  `FORMPATH_FLAGS` shape is unchanged apart from `realVideoEvaluation`).
+- Tests: `tests/shooting-profile-real-video-provenance.test.ts` (new, 16). Red first with
+  `Cannot find module '@/lib/shooting-profile/cross-view-geometry'`.
+
+**`<commit 2>` fix: prepare iOS evaluation build and accessible export**
+- `modules/formpath-pose/src/FormpathPoseModule.ts` imports `requireOptionalNativeModule` from
+  `expo` and declares its own `NativeEventSubscription`; `modules/formpath-pose/package.json`
+  peer-depends on `expo`; the direct `expo-modules-core` dependency is gone.
+- `package.json`: `expo-asset` added, `expo ~54.0.37` and eleven packages aligned to their SDK 54
+  expected versions, `@react-navigation/*` set to the SDK's declared ranges, lockfile regenerated
+  and re-verified with `--frozen-lockfile`.
+- `app.config.ts`: `expo-font` and `expo-web-browser` config plugins registered;
+  `userInterfaceStyle` changed from `automatic` to `light` because every product screen paints one
+  fixed light palette and the system share sheet was rendering dark over it.
+- `hooks/use-real-video-evaluation.ts` (new): owns consent, one in-flight build, one in-flight
+  share, `building`/`sharing` states, and `AccessibilityInfo.announceForAccessibility` for every
+  terminal state (iOS VoiceOver ignores `accessibilityLiveRegion`).
+  `hooks/use-shooting-profile-capture.ts` delegates to it and exposes `evaluation` as the controller.
+- `components/shooting-profile/real-video-evaluation-panel.tsx`: consent checkbox, admission copy,
+  activity indicator, busy labels, `accessibilityState` plus `aria-*` aliases.
+- Contrast: the muted small-text colour `#61738A` measured 4.25:1 on the `#F5F1E8` canvas. Replaced
+  with `#5A6B80` (4.84:1 on the canvas, 5.41:1 on the card) across the eight V2 surfaces.
+- Tests: `tests/shooting-profile-real-video-evaluation-panel.test.tsx` (new, 6 real render and
+  interaction cases through `react-dom` + `react-native-web` in jsdom: disabled-until-consent,
+  three consecutive build taps producing one build and one announcement, busy state during the
+  build, dismissed vs shared vs failed share, library exclusion, session-generation reset) and
+  `tests/shooting-profile-evaluation-build-and-contrast.test.ts` (new, 6). `vitest.config.ts` gains
+  the `react-native` -> `react-native-web` alias, `.test.tsx` include, jsdom match glob and the
+  automatic JSX runtime; `jsdom` and `@types/react-dom` added as dev dependencies.
+
+**Expo Doctor: 17/18 (was 15/18).** The three real failures are fixed. The remaining
+"local Expo module ios/android directories are gitignored" is a verified false positive:
+`git check-ignore -v` reports nothing ignored, all four `modules/formpath-pose/ios/**` files are
+tracked, and the warning still fires with `/ios` and `/android` deleted from `.gitignore`.
+`expo install --check` reports "Dependencies are up to date".
+
+**Verification after the second commit** (final tree, this machine):
+`CI=true corepack pnpm install --frozen-lockfile` exit 0; `corepack pnpm check` exit 0;
+`corepack pnpm lint` exit 0 with 0 warnings; `corepack pnpm test:unit` 37 files passed + 1 skipped,
+505 tests passed + 1 skipped; `corepack pnpm test:rules` exit 1 locally (no Java) with CI as the
+evidence; Expo web export exit 0 with 18 routes into a temporary directory.
+
+Unchanged by both commits: the 4D solver, 101 phases, 12 joints, the Basic 0.65 cap, `heuristic_v1`,
+the exact `"1"` flag comparisons, the boundary string, and the Firestore contract.
+
+### Security review of PR #4 - 2026-09-04
+
+Scope: the branch diff against `main`, over six threat areas - raw video/landmark memory lifetime,
+the temporary derived-report file and share sheet, consent and capture-provenance forgery, the
+Firebase/Auth persistence boundary, native pose input validation, and dependency/CI/secret handling.
+An independent read-only audit returned **no exploitable finding** and confirmed: the evaluation path
+re-references the sequences the reducer already holds rather than copying them; `attemptId` is
+re-derived as `<view>-<takeIndex>` so no slot id, URI, or file name can reach the report; the
+temporary file name has no attacker-controlled component and cleanup runs on every path including a
+thrown share; the new code contains no Firebase, Firestore, or network reference and never reads
+`saveInput`; the native bridge change is type-only; and no secret, credential, or absolute path is
+committed (`/Users/owner/...` strings in tests are negative inputs asserting rejection, and
+`.github/**` is untouched on this branch).
+
+Two integrity gaps the audit surfaced were judged worth fixing and were fixed here:
+
+- **Stale evidence after a retake.** `RETAKE_SLOT` bumps only the slot generation, not
+  `sessionGeneration`, so the controller's generation-keyed reset never fired and a report built from
+  the previous pair stayed shareable (`canShare` only checked for a built report). A report is
+  evidence about one exact pair, so `hooks/use-real-video-evaluation.ts` now remembers the admitted
+  sequence identities it built from and drops the report as soon as the session no longer holds them.
+- **Consent id could carry a name.** The old rule (charset, >= 8 chars, at least one digit) accepts
+  `hyunjun-lee-1990`, and that value is copied verbatim into a report the owner shares and pastes
+  into a public handoff. Rather than trying to detect names, the accepted form is pinned to the one
+  the runbook documents, `local-consent-YYYYMMDD-NNN`, as `CONSENT_RECORD_ID_PATTERN_V1` in
+  `lib/shooting-profile/evaluation-report.ts`. The report **schema** enforces it, so the local
+  `pnpm eval:two-view` CLI is covered by the same rule as the on-device panel.
+
+Out of scope but relevant while the repository is public: `artifacts/` holds 127 tracked files
+(**none touched by this PR**) carrying player names and at least one source video URL in
+`artifacts/curry-video-source-candidate.json`. `docs/real-video-source-admission.md` requires player
+names and source URLs to live only in a private audit registry, so this is a pre-existing exposure to
+resolve separately - it does not block PR #4.
+
+Verification after the fixes: `corepack pnpm check` exit 0, `corepack pnpm lint` exit 0,
+`corepack pnpm test:unit` 38 files passed + 1 skipped / 512 tests passed + 1 skipped.
+
+### Follow-ups after the security review - 2026-09-05
+
+Executed under the owner's blanket delegation of remaining engineering decisions (2026-09-05). The
+three owner-only gates are unchanged: PR #4 stays unmerged until the physical-iPhone smoke run is
+recorded, repository visibility is untouched, and no history is rewritten.
+
+**`d1fa785` test: add the synthetic known-geometry sweep and a build preflight**
+- `lib/shooting-profile/synthetic-sweep.ts` + `scripts/sweep-synthetic-sessions.ts`
+  (`corepack pnpm sweep:synthetic`): the first dataset of the validation protocol, 200 deterministic
+  sessions through the real pipeline over mode, hand, aspect ratio, phase shift, noise, visibility
+  and five degeneracies; every completed profile is checked against the frozen contract. Report:
+  `docs/evaluation/synthetic-known-geometry-sweep.json`, narrative
+  `docs/synthetic-known-geometry-sweep.md`. Aspect invariance of the isotropic conversion was
+  confirmed for the first time (landscape 64/64, square 63/63).
+- `lib/shooting-profile/evaluation-preflight.ts` + `scripts/check-evaluation-preflight.ts`
+  (`corepack pnpm preflight:evaluation`): checks the gitignored `.env.local`, the four exact `"1"`
+  flags, the `local-consent-YYYYMMDD-NNN` consent form and the iOS build tools without ever echoing
+  a value. On this Windows machine it correctly reports `tool_xcodebuild` / `tool_pod` blockers.
+- Anchor-ordering residual from the P1 to-do: investigated, no code change. `detectPhaseAnchors`
+  already emits the canonical order; any stricter guarantee would need a frozen V2 contract bump.
+
+**cross-view geometry admission moved into the product pipeline** (this commit)
+- The first sweep run exposed that `assessCrossViewGeometry` guarded only the private evaluation
+  path, so two same-angle clips (duplicate or mirrored) completed as a confident saved profile.
+- `lib/shooting-profile/two-view-pipeline.ts` now calls `assessNormalizedCrossViewGeometry` on the
+  already phase-normalized attempts, after phase normalization and before per-view consensus. A
+  positively identified duplicate or mirror returns `duplicate_view_projection` /
+  `mirrored_view_projection` with all attempt ids and no partial output; an unmeasurable view
+  defers so `phase_detection_failed` and the consensus reasons stay visible. The verdict
+  (`crossViewGeometry`, with the measured minimum normalized view distance) is attached to every
+  pipeline result.
+- `lib/shooting-profile/cross-view-geometry.ts`: comparison factored onto normalized frames;
+  `assessCrossViewGeometry` (raw clips) is a thin wrapper that yields identical numbers.
+- `lib/shooting-profile/evaluation-report.ts`: optional strict `crossViewGeometry` block in the
+  report schema, copied by the builder. The first real-video report will therefore show where a
+  genuine pair lands against the provisional 0.04 limit.
+- `lib/shooting-profile/real-video-evaluation.ts`: the duplicate pre-check is removed; a
+  same-projection pair now yields a derived recapture report carrying the reason (evidence) rather
+  than a `build_failed`.
+- `hooks/use-shooting-profile-capture.ts`: user copy for the two new session reasons.
+- Sweep contract: `fixed-duplicate-view` / `fixed-mirrored-view` flipped from `unspecified` to
+  `rejects`; re-run 194 complete / 6 recapture, 0 expectation violations, 0 invariant violations,
+  deterministic. Docs updated: sweep narrative, implementation status, runbook reason table (both
+  reasons are now session-level), evaluation tool report contents.
+- Red/green: `tests/shooting-profile-two-view-geometry-admission.test.ts` failed 6/7 before the
+  wiring (`duplicate_view_projection` expected, `complete` received; `crossViewGeometry`
+  undefined) and passes after.
+- Unchanged: the 0.04 limit, the 4D solver, 101 phases, 12 joints, the Basic 0.65 cap,
+  `heuristic_v1`, the exact `"1"` flags, the boundary string, the Firestore contract.
+- Verification: `corepack pnpm check` exit 0, `corepack pnpm lint` exit 0, `corepack pnpm test:unit`
+  41 files passed + 1 skipped / 536 tests passed + 1 skipped, Expo web export exit 0 with 18 routes,
+  `corepack pnpm sweep:synthetic -- --sessions 200` exit 0.
+
+### Decision record: player-name and source-URL exposure - 2026-09-05
+
+The security review flagged `artifacts/` (127 tracked files) as carrying player names and one source
+video URL while the repository is public. A full inventory before acting shows the true scope:
+
+- The names are two **public figures** (Stephen Curry, Paul George) attached to publicly posted
+  YouTube footage; no private individual, consent record, credential, or owner path is involved.
+  The one `sourceUrl` is a public YouTube video id in `artifacts/curry-video-source-candidate.json`;
+  the other URLs are the public CMU mocap dataset and press/reference pages.
+- The names are not confined to `artifacts/`: 19 `docs/` files (several named after the player),
+  `README.md`, `lib/anonymous-pose-library.ts` (21 mentions), `lib/motions/*.json`,
+  `lib/skeleton-reviews/*.json`, four `scripts/*.py`, and two tests. `tests/product-boundary-regression.test.ts`
+  reads `artifacts/curry-actual-3d-reevaluation/front-side-admission.json` to assert that the
+  rejected source pair is never promoted to actual 3D.
+- Every byte is already in public history. A HEAD-only scrub would touch product code and tests,
+  would not remove anything from the public clone, and would weaken the audit trail the boundary
+  test depends on.
+
+Decision (under the owner's delegation): **no HEAD scrub on this branch or in a side PR.** The
+exposure is real against `docs/real-video-source-admission.md` (names and source URLs belong in a
+private registry) but it is not a privacy incident, and the only remediation that actually works is
+owner-only: return the repository to private after the iPhone step (the stated plan), and, if the
+archive should ever be public again, migrate `artifacts/`, the player-named docs, and the two
+`lib/` JSON records to a private registry first and rewrite history in one deliberate operation.
+Nothing in PR #4 adds to the exposure.
+
+Also deliberately not done under the delegation: the `reconstructBoneDirection` projected-length
+consistency check listed under Residual Risks. Adding a new rejection to the solver without a real
+pair to calibrate it against risks false retakes on the first iPhone run; it stays a follow-up for
+after that run.
+
+### Exact next single action (owner)
+On a Mac with Xcode and the registered iPhone, follow `docs/real-video-validation-runbook.md`
+sections 2, 4, 5: create the gitignored `.env.local` with the four flags **and**
+`EXPO_PUBLIC_FORMPATH_CONSENT_RECORD_ID`, run
+`pnpm exec expo prebuild --platform ios --clean && (cd ios && pod install) && pnpm exec expo run:ios --device`,
+film one consented Basic 1+1 pair **with the in-app camera** (a library pick is refused as
+evidence), tick the consent checkbox, press "파생 리포트 생성" then "리포트 공유 · 저장", and record
+the derived metrics from section 7 in this file via a PR - including the report's
+`crossViewGeometry.minimumNormalizedViewDistance`, the first real-body reading against the
+provisional 0.04 limit. Run `corepack pnpm preflight:evaluation` first.
 
 ## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC
 

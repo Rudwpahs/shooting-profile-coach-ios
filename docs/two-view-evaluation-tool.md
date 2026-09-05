@@ -48,6 +48,10 @@ High accuracy passes three `--front` and three `--side` files. Exit codes:
   lower-decile visibility of the twelve required joints, phase-anchor detection
   outcome and the five anchor positions as fractions of the ready to
   follow-through span (never timestamps);
+- cross-view geometry: status, the minimum normalized view distance between
+  any front/side pair against the provisional 0.04 admission limit, compared
+  pair count, or the rejection reason (`duplicate_view_projection`,
+  `mirrored_view_projection`);
 - cross-view alignment: status, confidence, maximum intermediate anchor delta,
   interval RMSE, compared pair count, or the rejection reason;
 - pipeline outcome: `complete` or `recapture_required` with the stable reason,
@@ -63,6 +67,15 @@ High accuracy passes three `--front` and three `--side` files. Exit codes:
 generated from the deterministic synthetic fixture
 (`tests/fixtures/synthetic-landmark-sequence.ts`) with `sourceClass:
 "synthetic_fixture"`. It documents the shape only; it is not real-video evidence.
+
+## On-device path (P1.1)
+
+A development build with `EXPO_PUBLIC_FORMPATH_REAL_VIDEO_EVAL=1` (exactly `1`,
+plus the three V2 flags) shows an internal panel on the capture review and
+recapture screens that builds the same `TwoViewEvaluationReportV1` from the
+sequences already held in memory and hands the JSON to the system share sheet
+only when the user presses the button. Raw clips and landmarks never leave the
+app; see `docs/real-video-validation-runbook.md`.
 
 ## Status
 

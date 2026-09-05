@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   sectionCount: { color: "#667789", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 0.8 },
   vaultCard: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 19, borderWidth: 1, marginTop: 11, padding: 13 },
   loader: { marginVertical: 22 },
-  stateText: { color: "#61738A", fontFamily: "Barlow-SemiBold", fontSize: 13, marginVertical: 18, textAlign: "center" },
+  stateText: { color: "#5A6B80", fontFamily: "Barlow-SemiBold", fontSize: 13, marginVertical: 18, textAlign: "center" },
   empty: { alignItems: "center", paddingHorizontal: 10, paddingVertical: 14 },
   emptyIcon: { alignItems: "center", backgroundColor: "#FFF0E8", borderRadius: 14, height: 44, justifyContent: "center", width: 44 },
   emptyTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 21, marginTop: 10 },

@@ -46,6 +46,7 @@ describe("V2 shooting-profile contract", () => {
       captureV2: process.env.EXPO_PUBLIC_FORMPATH_CAPTURE_V2 === "1",
       representative4DViewer: process.env.EXPO_PUBLIC_FORMPATH_REPRESENTATIVE_4D === "1",
       profileV2: process.env.EXPO_PUBLIC_FORMPATH_PROFILE_V2 === "1",
+      realVideoEvaluation: process.env.EXPO_PUBLIC_FORMPATH_REAL_VIDEO_EVAL === "1",
     });
     expect(Object.isFrozen(FORMPATH_FLAGS)).toBe(true);
   });

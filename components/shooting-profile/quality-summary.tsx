@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   statusRow: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 15 },
   statusText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
   evidence: { color: "#C24122", fontFamily: "Barlow-SemiBold", fontSize: 13, lineHeight: 19, marginTop: 10 },
-  detail: { color: "#61738A", fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 4 },
+  detail: { color: "#5A6B80", fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 4 },
   saveBoundary: { alignItems: "flex-start", backgroundColor: "#EEF4F8", borderRadius: 12, flexDirection: "row", gap: 7, marginTop: 14, padding: 11 },
   saveBoundaryText: { color: "#102235", flex: 1, fontFamily: "Barlow", fontSize: 12, lineHeight: 18 },
   saveButton: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 13, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },

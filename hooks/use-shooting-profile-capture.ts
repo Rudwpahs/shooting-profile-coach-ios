@@ -1,6 +1,8 @@
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 
+import { useRealVideoEvaluation } from "@/hooks/use-real-video-evaluation";
+import { FORMPATH_FLAGS, FORMPATH_REAL_VIDEO_CONSENT_RECORD_ID } from "@/lib/feature-flags";
 import type { SaveShootingProfileInputV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
   admitCaptureSaveOperationV2,
@@ -14,6 +16,11 @@ import {
   type CaptureSaveOperationTokenV2,
   type RetainedNormalizedAttemptsV2,
 } from "@/lib/shooting-profile/capture-session-reducer";
+import {
+  isDevelopmentBuild,
+  isRealVideoEvaluationEnabled,
+} from "@/lib/shooting-profile/real-video-evaluation";
+import { prepareRealVideoEvaluationFile } from "@/lib/shooting-profile/real-video-evaluation-file";
 import { buildTwoViewRepresentativeProfile } from "@/lib/shooting-profile/two-view-pipeline";
 import type {
   CaptureProtocolV2,
@@ -90,6 +97,12 @@ function recaptureReason(reason: string): string {
   if (reason === "phase_detection_failed") {
     return "클립에서 준비·딥·릴리스·팔로우스루 위상을 찾지 못했습니다. 전신이 보이는 한 번의 완결된 슛으로 다시 촬영하세요.";
   }
+  if (reason === "duplicate_view_projection") {
+    return "정면 클립과 측면 클립이 사실상 같은 각도의 투영입니다. 정면과 슈팅 측면을 실제로 다른 위치에서 각각 촬영하세요.";
+  }
+  if (reason === "mirrored_view_projection") {
+    return "한 클립이 다른 클립의 좌우 반전본으로 보입니다. 미러링된 영상 대신 두 각도를 각각 촬영하세요.";
+  }
   if (reason === "uncertainty_exceeds_limit") {
     return "두 시점에서 추정한 관절 방향의 불확실성이 허용 범위를 넘었습니다. 카메라를 정면과 측면에 더 정확히 두고 다시 촬영하세요.";
   }
@@ -108,6 +121,15 @@ export function useShootingProfileCapture(
   const activeRequestsRef = useRef(new Map<string, ActiveRequest>());
   const saveInFlightRef = useRef<CaptureSaveOperationTokenV2 | null>(null);
   const normalizedAttemptsRef = useRef<RetainedNormalizedAttemptsV2 | null>(null);
+  // Development-build-only private evaluation: derived report from the sequences
+  // the reducer already holds; never auto-run, never persisted, never uploaded.
+  const evaluationEnabled = isRealVideoEvaluationEnabled(FORMPATH_FLAGS, isDevelopmentBuild());
+  const realVideoEvaluation = useRealVideoEvaluation({
+    enabled: evaluationEnabled,
+    state,
+    consentRecordId: FORMPATH_REAL_VIDEO_CONSENT_RECORD_ID,
+    prepareFile: prepareRealVideoEvaluationFile,
+  });
 
   useEffect(() => {
     stateRef.current = state;
@@ -134,6 +156,8 @@ export function useShootingProfileCapture(
     });
   }, []);
 
+  // The evaluation controller clears itself on every session-generation change,
+  // which every one of these escapes triggers.
   const invalidateDerivedSave = useCallback(() => {
     saveInFlightRef.current = null;
     normalizedAttemptsRef.current = null;
@@ -180,7 +204,7 @@ export function useShootingProfileCapture(
     const requestId = opaqueRequestId();
     const generation = slot.generation + 1;
     activeRequestsRef.current.set(slotId, { requestId, generation });
-    dispatch({ type: "SLOT_ACQUIRE_STARTED", slotId, requestId, generation });
+    dispatch({ type: "SLOT_ACQUIRE_STARTED", slotId, requestId, generation, captureSource: source });
     const requestIsActive = () => {
       const active = activeRequestsRef.current.get(slotId);
       return active?.requestId === requestId && active.generation === generation;
@@ -372,6 +396,7 @@ export function useShootingProfileCapture(
     }
   }, [state.mode, state.sessionGeneration, state.shootingHand, state.slots, state.status]);
 
+
   const save = useCallback(async () => {
     const snapshot = stateRef.current;
     const retained = normalizedAttemptsRef.current;
@@ -427,5 +452,7 @@ export function useShootingProfileCapture(
     cancelSession,
     retrySession,
     save,
+    evaluationEnabled,
+    evaluation: realVideoEvaluation,
   };
 }
