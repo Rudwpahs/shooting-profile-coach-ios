@@ -328,6 +328,37 @@ recorded, repository visibility is untouched, and no history is rewritten.
   41 files passed + 1 skipped / 536 tests passed + 1 skipped, Expo web export exit 0 with 18 routes,
   `corepack pnpm sweep:synthetic -- --sessions 200` exit 0.
 
+### Decision record: player-name and source-URL exposure - 2026-09-05
+
+The security review flagged `artifacts/` (127 tracked files) as carrying player names and one source
+video URL while the repository is public. A full inventory before acting shows the true scope:
+
+- The names are two **public figures** (Stephen Curry, Paul George) attached to publicly posted
+  YouTube footage; no private individual, consent record, credential, or owner path is involved.
+  The one `sourceUrl` is a public YouTube video id in `artifacts/curry-video-source-candidate.json`;
+  the other URLs are the public CMU mocap dataset and press/reference pages.
+- The names are not confined to `artifacts/`: 19 `docs/` files (several named after the player),
+  `README.md`, `lib/anonymous-pose-library.ts` (21 mentions), `lib/motions/*.json`,
+  `lib/skeleton-reviews/*.json`, four `scripts/*.py`, and two tests. `tests/product-boundary-regression.test.ts`
+  reads `artifacts/curry-actual-3d-reevaluation/front-side-admission.json` to assert that the
+  rejected source pair is never promoted to actual 3D.
+- Every byte is already in public history. A HEAD-only scrub would touch product code and tests,
+  would not remove anything from the public clone, and would weaken the audit trail the boundary
+  test depends on.
+
+Decision (under the owner's delegation): **no HEAD scrub on this branch or in a side PR.** The
+exposure is real against `docs/real-video-source-admission.md` (names and source URLs belong in a
+private registry) but it is not a privacy incident, and the only remediation that actually works is
+owner-only: return the repository to private after the iPhone step (the stated plan), and, if the
+archive should ever be public again, migrate `artifacts/`, the player-named docs, and the two
+`lib/` JSON records to a private registry first and rewrite history in one deliberate operation.
+Nothing in PR #4 adds to the exposure.
+
+Also deliberately not done under the delegation: the `reconstructBoneDirection` projected-length
+consistency check listed under Residual Risks. Adding a new rejection to the solver without a real
+pair to calibrate it against risks false retakes on the first iPhone run; it stays a follow-up for
+after that run.
+
 ### Exact next single action (owner)
 On a Mac with Xcode and the registered iPhone, follow `docs/real-video-validation-runbook.md`
 sections 2, 4, 5: create the gitignored `.env.local` with the four flags **and**
