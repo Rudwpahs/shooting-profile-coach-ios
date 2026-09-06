@@ -66,6 +66,12 @@ describe("explore tab", () => {
     expect(explore).toContain("poseMotionGlyph");
   });
 
+  it("measures its own width and never lays out a negative tile", () => {
+    expect(explore).toContain("onLayout=");
+    expect(explore).toContain("Math.max(1, Math.floor((contentWidth - GAP * 2) / 3))");
+    expect(explore).toContain("FALLBACK_WIDTH");
+  });
+
   it("keeps every tile and chip accessible and labels the source in one line", () => {
     expectEveryPressableToBeAccessible(explore);
     expect(explore).toContain("accessibilityState={{ selected }}");

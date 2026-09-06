@@ -15,6 +15,7 @@ const VIEWS: readonly { id: GlyphView; label: string }[] = [
 ];
 const GAP = 2;
 const MAX_WIDTH = 680;
+const FALLBACK_WIDTH = 375;
 
 /**
  * 탐색: a grid of anonymous skeleton motion. Today the only lawful public
@@ -24,11 +25,14 @@ const MAX_WIDTH = 680;
  */
 export default function ExploreScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
+  const [measuredWidth, setMeasuredWidth] = useState(0);
   const [view, setView] = useState<GlyphView>("oblique");
   const reference = ANONYMOUS_POSE_REFERENCES[0];
-  const contentWidth = Math.min(width, MAX_WIDTH);
-  const tile = Math.floor((contentWidth - GAP * 2) / 3);
+  // The window can report 0 before layout (static web render); measure the
+  // screen itself and fall back to a phone width so tiles never go negative.
+  const contentWidth = Math.min(measuredWidth || windowWidth || FALLBACK_WIDTH, MAX_WIDTH);
+  const tile = Math.max(1, Math.floor((contentWidth - GAP * 2) / 3));
   const big = tile * 2 + GAP;
 
   const glyphs = useMemo(
@@ -55,7 +59,10 @@ export default function ExploreScreen() {
   };
 
   return (
-    <ScreenContainer containerClassName="bg-background">
+    <ScreenContainer
+      containerClassName="bg-background"
+      onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>탐색</Text>
         <View style={styles.chips}>
