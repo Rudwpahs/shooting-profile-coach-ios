@@ -38,6 +38,7 @@ function Disclosure({ id, title, children }: { id: string; title: string; childr
         accessibilityLabel={`${title} ${expanded ? "접기" : "펼치기"}`}
         accessibilityRole="button"
         accessibilityState={{ expanded, disabled: false }}
+        aria-expanded={expanded}
         disabled={false}
         focusable
         onBlur={() => setFocused(false)}

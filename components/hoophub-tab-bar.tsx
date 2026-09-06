@@ -45,6 +45,7 @@ export function HoopHubTabBar({ state, navigation }: BottomTabBarProps) {
         key={tab.name}
         accessibilityRole="tab"
         accessibilityState={{ selected }}
+        aria-selected={selected}
         accessibilityLabel={tab.label}
         onPress={() => {
           haptic();

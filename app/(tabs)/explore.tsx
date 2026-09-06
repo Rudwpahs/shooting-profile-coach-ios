@@ -74,6 +74,7 @@ export default function ExploreScreen() {
                 accessibilityLabel={`${candidate.label} 시점`}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
+                aria-selected={selected}
                 onPress={() => setView(candidate.id)}
                 style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.pressed]}
               >

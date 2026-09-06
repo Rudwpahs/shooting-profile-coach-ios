@@ -339,9 +339,11 @@ export default function PersonalProfileTab() {
   const selectedFluid = selectedPose ? privatePoseFluid(selectedPose) : null;
   const latestSummary = v2Records[0];
   const latestRecord = latestSummary ? v2Glyphs[latestSummary.id] : undefined;
+  // With V2 persistence off there is nothing to load, so the hero must not wait on it.
+  const v2HeroLoading = FORMPATH_FLAGS.profileV2 && (visibleV2Loading || (latestSummary !== undefined && !latestRecord));
   const heroState: ProfileHeroState = !user
     ? "signed-out"
-    : loading || visibleV2Loading || (latestSummary && !latestRecord)
+    : loading || v2HeroLoading
       ? "loading"
       : latestRecord
         ? "ready"
@@ -360,6 +362,7 @@ export default function PersonalProfileTab() {
             accessibilityLabel={user ? (accountOpen ? "계정 닫기" : "계정") : "로그인"}
             accessibilityRole="button"
             accessibilityState={{ disabled: false, expanded: accountVisible }}
+            aria-expanded={accountVisible}
             disabled={false}
             focusable
             onBlur={() => setFocusedControl((current) => current === "account" ? null : current)}

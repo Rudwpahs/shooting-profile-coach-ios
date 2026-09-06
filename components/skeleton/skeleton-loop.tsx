@@ -60,7 +60,7 @@ export function SkeletonLoop({ profile, shootingHand, view, width, height, confi
     const reconcile = (nextState: AppStateStatus) => applyLifecycleEvent({ type: "app-state", value: nextState });
     const subscription = AppState.addEventListener("change", reconcile);
     reconcile(AppState.currentState);
-    return () => subscription.remove();
+    return () => subscription?.remove?.();
   }, [applyLifecycleEvent]);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export function SkeletonLoop({ profile, shootingHand, view, width, height, confi
     const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", update);
     return () => {
       mounted = false;
-      subscription.remove();
+      subscription?.remove?.();
     };
   }, [applyLifecycleEvent]);
 

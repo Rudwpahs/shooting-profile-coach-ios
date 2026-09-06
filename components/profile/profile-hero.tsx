@@ -83,6 +83,7 @@ export function ProfileHero({ width, state, record, view, onViewChange }: Profil
                   accessibilityLabel={`${preset.label} 시점`}
                   accessibilityRole="button"
                   accessibilityState={{ selected, disabled: false }}
+                  aria-selected={selected}
                   disabled={false}
                   focusable
                   onBlur={() => setFocused((current) => current === key ? null : current)}

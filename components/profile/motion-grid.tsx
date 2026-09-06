@@ -89,6 +89,8 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
               accessibilityLabel={label}
               accessibilityRole="button"
               accessibilityState={{ disabled, busy: deleting }}
+              aria-busy={deleting}
+              aria-disabled={disabled}
               disabled={disabled}
               focusable
               onAccessibilityAction={(event) => {

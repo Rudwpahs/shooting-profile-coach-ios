@@ -353,7 +353,7 @@ export function SequenceViewer({
     };
     const subscription = AppState.addEventListener("change", reconcileAppState);
     reconcileAppState(AppState.currentState);
-    return () => subscription.remove();
+    return () => subscription?.remove?.();
   }, [applyLifecycleEvent]);
 
   useEffect(() => {
@@ -367,7 +367,7 @@ export function SequenceViewer({
     const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", updateReducedMotion);
     return () => {
       mounted = false;
-      subscription.remove();
+      subscription?.remove?.();
     };
   }, [applyLifecycleEvent]);
 
