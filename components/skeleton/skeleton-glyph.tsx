@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
 
 import { tokens } from "@/constants/tokens";
-import { fitGlyphPoints, type SkeletonGlyphData } from "@/lib/skeleton/pose-motion-glyph";
+import { fitGlyphPoints, type GlyphBounds, type SkeletonGlyphData } from "@/lib/skeleton/pose-motion-glyph";
 
 /**
  * How much the skeleton may be trusted, shown in form rather than as a number:
@@ -22,6 +22,8 @@ type SkeletonGlyphProps = {
   accessibilityLabel: string;
   ground?: boolean;
   padding?: number;
+  /** Fit against these bounds (e.g. a whole loop) instead of this frame alone. */
+  bounds?: GlyphBounds;
 };
 
 /**
@@ -38,10 +40,11 @@ export function SkeletonGlyph({
   accessibilityLabel,
   ground = true,
   padding,
+  bounds,
 }: SkeletonGlyphProps) {
   const fitted = useMemo(
-    () => fitGlyphPoints(data.points, width, height, padding ?? Math.max(4, Math.min(width, height) * 0.1)),
-    [data.points, width, height, padding],
+    () => fitGlyphPoints(data.points, width, height, padding ?? Math.max(4, Math.min(width, height) * 0.1), bounds),
+    [data.points, width, height, padding, bounds],
   );
   const weight = Math.max(0.45, Math.min(1.4, Math.min(width, height) / 300));
   const recapture = confidence === "recapture";

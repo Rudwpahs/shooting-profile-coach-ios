@@ -75,19 +75,34 @@ export type FittedGlyph = {
   scale: number;
 };
 
-/** Fits glyph points into a width × height box, preserving aspect ratio, with even padding. */
+export type GlyphBounds = { minX: number; maxX: number; minY: number; maxY: number };
+
+/** Bounds of a set of glyph points; pass several frames' points to fit a whole loop at once. */
+export function glyphBounds(pointSets: readonly Readonly<Record<string, GlyphPoint>>[]): GlyphBounds {
+  const values = pointSets.flatMap((points) => Object.values(points));
+  if (values.length === 0) throw new Error("glyph needs at least one point");
+  return {
+    minX: Math.min(...values.map((point) => point.x)),
+    maxX: Math.max(...values.map((point) => point.x)),
+    minY: Math.min(...values.map((point) => point.y)),
+    maxY: Math.max(...values.map((point) => point.y)),
+  };
+}
+
+/**
+ * Fits glyph points into a width × height box, preserving aspect ratio, with
+ * even padding. Pass `bounds` from `glyphBounds` over every frame of a loop so
+ * the figure stays anchored while it moves.
+ */
 export function fitGlyphPoints(
   points: Readonly<Record<string, GlyphPoint>>,
   width: number,
   height: number,
   padding: number,
+  bounds?: GlyphBounds,
 ): FittedGlyph {
-  const values = Object.values(points);
-  if (values.length === 0) throw new Error("glyph needs at least one point");
-  const minX = Math.min(...values.map((point) => point.x));
-  const maxX = Math.max(...values.map((point) => point.x));
-  const minY = Math.min(...values.map((point) => point.y));
-  const maxY = Math.max(...values.map((point) => point.y));
+  if (Object.keys(points).length === 0) throw new Error("glyph needs at least one point");
+  const { minX, maxX, minY, maxY } = bounds ?? glyphBounds([points]);
   const spanX = Math.max(1e-6, maxX - minX);
   const spanY = Math.max(1e-6, maxY - minY);
   const scale = Math.min((width - padding * 2) / spanX, (height - padding * 2) / spanY);

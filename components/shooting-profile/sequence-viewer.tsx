@@ -78,7 +78,7 @@ const DISPLAY_JOINTS: readonly RepresentativeDisplayJointName[] = [
   ...PERSISTED_JOINTS,
   "head", "neck", "spine", "pelvis",
 ];
-const DISPLAY_BONES: readonly (readonly [RepresentativeDisplayJointName, RepresentativeDisplayJointName])[] = [
+export const DISPLAY_BONES: readonly (readonly [RepresentativeDisplayJointName, RepresentativeDisplayJointName])[] = [
   ["head", "neck"], ["neck", "spine"], ["spine", "pelvis"],
   ["neck", "leftShoulder"], ["leftShoulder", "leftElbow"], ["leftElbow", "leftWrist"],
   ["neck", "rightShoulder"], ["rightShoulder", "rightElbow"], ["rightElbow", "rightWrist"],
