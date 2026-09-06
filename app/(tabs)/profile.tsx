@@ -488,7 +488,7 @@ function privatePoseFluid(pose: FirebasePrivatePose): { motion: PoseMotion; sour
 const styles = StyleSheet.create({
   canvas: { backgroundColor: tokens.background, bottom: 0, left: 0, overflow: "hidden", position: "absolute", right: 0, top: 0 },
   topArc: { borderColor: tokens.primarySoft, borderRadius: 260, borderWidth: 1, height: 380, position: "absolute", right: -245, top: -180, width: 380 },
-  page: { alignSelf: "center", maxWidth: 680, paddingBottom: 116, paddingHorizontal: 16, paddingTop: 20, width: "100%" },
+  page: { alignSelf: "center", maxWidth: 680, paddingBottom: 32, paddingHorizontal: 16, paddingTop: 20, width: "100%" },
   header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   kicker: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.7 },
   title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 45, letterSpacing: -1.1, lineHeight: 49, marginTop: 2 },
