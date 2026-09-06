@@ -225,12 +225,15 @@ A는 dark-first다. `userInterfaceStyle`은 `dark`로 고정하고 ThemeProvider
 ## 5. 다음 단계
 
 1. ~~소유자가 A/B/C 중 하나를 고른다~~ → A 확정 (2026-09-06).
-2. `refactor(ui): centralize visual tokens` — 토큰 확장 + 리터럴 제거, 화면 동작 변경 없음.
-3. `feat(ui): redesign bottom navigation` — 4탭 + 중앙 촬영.
-4. `feat(profile): make skeleton the profile identity` — 시각 컴포넌트 추출, 데이터 로직 보존.
-5. `feat(home): restructure home around motion loop`.
-6. `feat(analysis): simplify result hierarchy`.
-7. `test(ui): preserve routes accessibility and states`.
+2. ~~`refactor(ui): centralize visual tokens`~~ → `40f9013` (리터럴 480 → 0, dark 고정).
+3. ~~`feat(ui): redesign bottom navigation`~~ → `6dc15ce`, `cd49ecf` (아이콘 바 + 탐색 라우트).
+4. ~~`feat(profile): make skeleton the profile identity`~~ → `3765b44`.
+5. ~~`feat(home): restructure home around motion loop`~~ → `b144ff4`.
+6. ~~`feat(analysis): simplify result hierarchy`~~ → `67cb659`.
+7. ~~`test(ui): preserve routes accessibility and states`~~ → `31edb0b` (jsdom 렌더 테스트 10건).
+
+남은 후속: PROGRESS/SAVED 탭과 비교·저장 기능(기능이 생기기 전에는 그리지 않는다), Archivo display 서체,
+다른 사용자 skeleton 피드(공개 opt-in 계약 후), PR #4 병합 후 rebase, 소유자의 기기 화면 검토.
 
 각 단계는 iPhone portrait 기준 Expo web export + 렌더 테스트로 검토하고, light/dark·signed-out·empty·
 loading/error·low-confidence 상태를 확인한다. 물리 iPhone 검증은 소유자 단계다.

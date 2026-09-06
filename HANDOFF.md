@@ -2,6 +2,48 @@
 
 Last updated: 2026-09-02 UTC
 
+## UI/UX redesign handoff - 2026-09-06
+
+### Repository State
+- Branch `feat/uiux-skeleton-social-redesign` from `main` `075efaa`; draft PR #5. No direct `main` push, no force push.
+- Handoff package: `HoopHub_UIUX_Claude_Handoff_2026-09-06.zip` (14 files, SHA-256 verified). Owner chose
+  **Direction A (Graphite / Volt)** and rejected text-heavy mocks; Instagram density is the governing rule.
+- Commits, in the handoff's order: `fab19d1` docs inventory + directions, `a28df9d` decision + text budget,
+  `40f9013` tokens, `6dc15ce` + `cd49ecf` navigation + explore, `3765b44` profile, `b144ff4` home,
+  `67cb659` analysis, `31edb0b` render tests.
+
+### What changed
+- 23 semantic colour tokens in both schemes; the app commits to dark (A). 480 colour literals under
+  `app/` and `components/` replaced by tokens through a property-aware codemod; a contract test keeps
+  the count at zero and checks WCAG pairs in both schemes.
+- Icon-only tab bar 홈 · 탐색 · [촬영] · 프로필 (labels only for assistive tech); hidden routes kept.
+- New skeleton primitives: pure glyph adapters for `PoseMotion` and `RepresentativePose4DV2`, an SVG
+  glyph (observed filled, derived hollow, shooting arm accent, dashed when a retake is needed), and
+  loops that reuse the viewer's playback lifecycle.
+- Profile = skeleton identity (hero loop, two numbers, one goal line, tile grid); Home = story strip +
+  skeleton feed; Explore = anonymous reference tiles; Analysis = three disclosed layers.
+- `profile.tsx` keeps every owner-bound load/delete/recovery decision; the one new data path (full
+  records for hero and tiles) is read-only, capped at nine, owner- and generation-guarded.
+
+### Not changed
+Reconstruction math and gates, `lib/shooting-profile/*`, Firebase/auth/privacy boundaries, Firestore
+contracts, flag meaning, route names, accessibility contracts, the boundary string, real-video status.
+
+### Verification (final head `31edb0b`, this machine)
+`corepack pnpm check` 0 · `corepack pnpm lint` 0 · `corepack pnpm test:unit` 42 files + 1 skipped /
+520 tests + 1 skipped · `expo export --platform web` 20 routes. Explore, Profile (signed out) and Home
+were reviewed on the exported web build at 375 pt; the signed-in Profile and Analysis need a device.
+
+### Follow-ups deliberately left
+Profile PROGRESS/SAVED tabs and compare/save actions (features do not exist; nothing fake was drawn),
+Archivo display face (Barlow Condensed kept), other users' skeleton feed (needs a public opt-in
+contract), rebase onto `main` after PR #4 merges (overlap: `app.config.ts` where A's `dark` replaces
+PR #4's `light`, capture components, `profile.tsx`, `vitest.config.ts`, `package.json`).
+
+### Exact next single action (owner)
+Build the branch on a device (or run the web export at phone width) and review the five screens
+against the Direction A page; then decide the merge order with PR #4.
+
 ## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC
 
 ### Repository State
