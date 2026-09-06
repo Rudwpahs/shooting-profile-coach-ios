@@ -1,21 +1,23 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AnalysisDetails, AnalysisEvidence, AnalysisSummaryLine } from "@/components/analysis/analysis-layers";
 import {
   SequenceViewer,
   buildShootingProfileViewerKey,
   canRenderShootingProfileViewerRecord,
   getRepresentativeFocusStyle,
 } from "@/components/shooting-profile/sequence-viewer";
+import { tokens } from "@/constants/tokens";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import {
   getShootingProfileV2,
   type ShootingProfileViewerRecordV2,
 } from "@/lib/firebase-shooting-profiles";
-import { tokens } from "@/constants/tokens";
 
 const OPAQUE_PROFILE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -32,6 +34,13 @@ type ViewerLoadState =
   | { status: "not-found"; key: string }
   | { status: "error"; key: string };
 
+/**
+ * 분석, in three layers: the skeleton with its band and one finding (layer 1),
+ * the numbers behind it (layer 2, collapsed), and per-joint evidence with the
+ * boundary of what the record is (layer 3, collapsed). Access rules are
+ * unchanged: both viewer flags, the signed-in owner, an opaque id, and a
+ * request key that must still be current when the record arrives.
+ */
 export default function PrivateAnalysisRoute() {
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const router = useRouter();
@@ -83,9 +92,8 @@ export default function PrivateAnalysisRoute() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
-          <ActivityIndicator color={tokens.primary} size="large" />
+          <ActivityIndicator color={tokens.mutedForeground} size="large" />
           <Text accessibilityLiveRegion="polite" style={styles.stateTitle}>분석을 불러오는 중</Text>
-          <Text style={styles.stateCopy}>소유자 전용 대표 슛폼을 안전하게 확인하고 있습니다.</Text>
         </View>
       </SafeAreaView>
     );
@@ -93,11 +101,10 @@ export default function PrivateAnalysisRoute() {
 
   if (loadState.status === "error" || loadState.status === "not-found") {
     const notFound = loadState.status === "not-found";
-    const title = notFound ? "분석을 찾을 수 없습니다" : "분석을 불러오지 못했습니다";
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
-          <Text accessibilityLiveRegion="polite" style={styles.stateTitle}>{title}</Text>
+          <Text accessibilityLiveRegion="polite" style={styles.stateTitle}>{notFound ? "분석을 찾을 수 없습니다" : "분석을 불러오지 못했습니다"}</Text>
           <Text style={styles.stateCopy}>
             {notFound ? "삭제되었거나 이 계정에서 볼 수 없는 분석입니다." : "연결을 확인한 뒤 다시 시도해 주세요."}
           </Text>
@@ -145,7 +152,7 @@ export default function PrivateAnalysisRoute() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
-          <ActivityIndicator color={tokens.primary} size="large" />
+          <ActivityIndicator color={tokens.mutedForeground} size="large" />
           <Text accessibilityLiveRegion="polite" style={styles.stateTitle}>분석을 불러오는 중</Text>
         </View>
       </SafeAreaView>
@@ -155,30 +162,39 @@ export default function PrivateAnalysisRoute() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.page}>
-        <Pressable
-          accessibilityLabel="대표 슛폼 분석에서 뒤로 가기"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: false }}
-          focusable
-          onBlur={() => setFocusedControl((current) => current === "viewer-back" ? null : current)}
-          onFocus={() => setFocusedControl("viewer-back")}
-          onPress={goBack}
-          style={({ pressed }) => [
-            styles.backButton,
-            getRepresentativeFocusStyle(focusedControl === "viewer-back", "light"),
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.backButtonText}>‹ 뒤로</Text>
-        </Pressable>
-        <Text style={styles.eyebrow}>PRIVATE ANALYSIS</Text>
-        <Text style={styles.title}>나의 대표 슛폼</Text>
-        <Text style={styles.intro}>소유자 계정에서만 불러온 비공개 101위상 분석입니다.</Text>
+        <View style={styles.bar}>
+          <Pressable
+            accessibilityLabel="대표 슛폼 분석에서 뒤로 가기"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: false }}
+            focusable
+            onBlur={() => setFocusedControl((current) => current === "viewer-back" ? null : current)}
+            onFocus={() => setFocusedControl("viewer-back")}
+            onPress={goBack}
+            style={({ pressed }) => [
+              styles.iconButton,
+              getRepresentativeFocusStyle(focusedControl === "viewer-back", "light"),
+              pressed && styles.pressed,
+            ]}
+          >
+            <MaterialCommunityIcons name="chevron-left" size={28} color={tokens.foreground} />
+          </Pressable>
+          <Text style={styles.title}>대표 슛폼</Text>
+          <View style={styles.iconButton} />
+        </View>
+        <AnalysisSummaryLine profile={loadState.record.profile} />
         <SequenceViewer
+          confidence={loadState.record.confidence}
+          layout="stage"
+          profile={loadState.record.profile}
+          shootingHand={loadState.record.shootingHand}
+        />
+        <AnalysisDetails
           confidence={loadState.record.confidence}
           profile={loadState.record.profile}
           shootingHand={loadState.record.shootingHand}
         />
+        <AnalysisEvidence profile={loadState.record.profile} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -186,18 +202,16 @@ export default function PrivateAnalysisRoute() {
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: tokens.background, flex: 1 },
-  page: { alignSelf: "center", gap: 10, maxWidth: 760, padding: 18, paddingBottom: 48, width: "100%" },
-  backButton: { alignItems: "center", alignSelf: "flex-start", justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 5 },
-  backButtonText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  eyebrow: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.4, marginTop: 4 },
-  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 38, lineHeight: 42 },
-  intro: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginBottom: 7 },
+  page: { alignSelf: "center", maxWidth: 680, paddingBottom: 40, width: "100%" },
+  bar: { alignItems: "center", flexDirection: "row", height: 48, justifyContent: "space-between", paddingHorizontal: 4 },
+  iconButton: { alignItems: "center", height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
+  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 20 },
   centerState: { alignItems: "center", flex: 1, justifyContent: "center", padding: 24 },
-  stateTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 15, textAlign: "center" },
-  stateCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6, maxWidth: 420, textAlign: "center" },
-  primaryButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 13, justifyContent: "center", marginTop: 18, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
-  primaryButtonText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  secondaryButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 13, borderWidth: 2, justifyContent: "center", marginTop: 10, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
-  secondaryButtonText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
+  stateTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 24, marginTop: 14, textAlign: "center" },
+  stateCopy: { color: tokens.mutedForeground, fontSize: 14, lineHeight: 21, marginTop: 6, maxWidth: 420, textAlign: "center" },
+  primaryButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 12, justifyContent: "center", marginTop: 18, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
+  primaryButtonText: { color: tokens.primaryForeground, fontSize: 15, fontWeight: "700" },
+  secondaryButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 12, borderWidth: 1, justifyContent: "center", marginTop: 10, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
+  secondaryButtonText: { color: tokens.foreground, fontSize: 15, fontWeight: "600" },
+  pressed: { opacity: 0.72 },
 });

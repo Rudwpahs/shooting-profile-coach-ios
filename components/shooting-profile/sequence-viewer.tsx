@@ -56,6 +56,8 @@ type SequenceViewerProps = {
   profile: RepresentativePose4DV2;
   confidence?: number;
   shootingHand?: ShootingHandV2;
+  /** "stage" renders the stage and its controls only; the analysis route layers the text around it. */
+  layout?: "full" | "stage";
 };
 
 type ViewPreset = {
@@ -290,6 +292,7 @@ export function SequenceViewer({
   profile,
   confidence,
   shootingHand = "right",
+  layout = "full",
 }: SequenceViewerProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [view, setView] = useState<RepresentativeViewId>("oblique");
@@ -426,31 +429,35 @@ export function SequenceViewer({
   }, [seekToIndex, sliderWidth]);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>REPRESENTATIVE SEQUENCE</Text>
-          <Text style={styles.title}>대표 슛폼 101</Text>
-          <Text style={styles.boundary}>위상 결합 4D 추정 · 실측 3D 아님</Text>
-        </View>
-        <View style={styles.percentBadge}>
-          <Text style={styles.percentValue}>{frameIndex}%</Text>
-          <Text style={styles.percentLabel}>현재 위상</Text>
-        </View>
-      </View>
+    <View style={layout === "full" ? styles.card : styles.stageOnly}>
+      {layout === "full" ? (
+        <>
+          <View style={styles.header}>
+            <View style={styles.headerCopy}>
+              <Text style={styles.eyebrow}>REPRESENTATIVE SEQUENCE</Text>
+              <Text style={styles.title}>대표 슛폼 101</Text>
+              <Text style={styles.boundary}>위상 결합 4D 추정 · 실측 3D 아님</Text>
+            </View>
+            <View style={styles.percentBadge}>
+              <Text style={styles.percentValue}>{frameIndex}%</Text>
+              <Text style={styles.percentLabel}>현재 위상</Text>
+            </View>
+          </View>
 
-      <View style={styles.metaPanel}>
-        <Text style={styles.mode}>{modeCopy}</Text>
-        <Text style={styles.meta}>저장 위상 {validatedProfile.frames.length}개 · {selectedView.label}{confidenceCopy}</Text>
-        <Text style={validatedProfile.quality.passed ? styles.qualityPass : styles.qualityRecapture}>
-          {qualityCopy}{validatedProfile.quality.reasons.length ? ` · ${validatedProfile.quality.reasons.join(", ")}` : ""}
-        </Text>
-        <Text style={styles.mirrorConvention}>
-          {shootingHand === "left"
-            ? "왼손 슈터 · 표시 x축을 미러해 슈팅 측면을 정규화"
-            : "오른손 슈터 · 원본 x축 기준으로 슈팅 측면 표시"}
-        </Text>
-      </View>
+          <View style={styles.metaPanel}>
+            <Text style={styles.mode}>{modeCopy}</Text>
+            <Text style={styles.meta}>저장 위상 {validatedProfile.frames.length}개 · {selectedView.label}{confidenceCopy}</Text>
+            <Text style={validatedProfile.quality.passed ? styles.qualityPass : styles.qualityRecapture}>
+              {qualityCopy}{validatedProfile.quality.reasons.length ? ` · ${validatedProfile.quality.reasons.join(", ")}` : ""}
+            </Text>
+            <Text style={styles.mirrorConvention}>
+              {shootingHand === "left"
+                ? "왼손 슈터 · 표시 x축을 미러해 슈팅 측면을 정규화"
+                : "오른손 슈터 · 원본 x축 기준으로 슈팅 측면 표시"}
+            </Text>
+          </View>
+        </>
+      ) : null}
 
       <View
         accessible
@@ -490,10 +497,12 @@ export function SequenceViewer({
             );
           })}
         </Svg>
-        <View style={styles.legend}>
-          <Text style={styles.legendObserved}>● 관측 12</Text>
-          <Text style={styles.legendDerived}>○ 표시용 파생 4</Text>
-        </View>
+        {layout === "full" ? (
+          <View style={styles.legend}>
+            <Text style={styles.legendObserved}>● 관측 12</Text>
+            <Text style={styles.legendDerived}>○ 표시용 파생 4</Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.viewRow}>
@@ -605,13 +614,16 @@ export function SequenceViewer({
       {lifecycle.reducedMotion === true ? (
         <Text style={styles.motionNote}>동작 줄이기 설정으로 자동 재생이 꺼져 있습니다. 재생과 위상 이동은 직접 사용할 수 있습니다.</Text>
       ) : null}
-      <Text style={styles.sampleNote}>다섯 위상 표시는 탐색 마커이며, 재생은 저장된 101개 원본 위상 샘플을 순서대로 사용합니다.</Text>
+      {layout === "full" ? (
+        <Text style={styles.sampleNote}>다섯 위상 표시는 탐색 마커이며, 재생은 저장된 101개 원본 위상 샘플을 순서대로 사용합니다.</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 20, borderWidth: 1, gap: 12, overflow: "hidden", padding: 15 },
+  stageOnly: { gap: 10, paddingHorizontal: 14, paddingTop: 10 },
   header: { alignItems: "center", flexDirection: "row", gap: 12 },
   headerCopy: { flex: 1 },
   eyebrow: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1.2 },
