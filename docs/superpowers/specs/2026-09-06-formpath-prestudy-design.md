@@ -26,7 +26,7 @@ The prestudy site is educational infrastructure. It is not part of the productio
 
 - A responsive web application.
 - Dashboard with curriculum map and progress.
-- Learn pages for each module.
+- Learn pages for each released module.
 - Browser-local Python laboratory using Pyodide.
 - Short quizzes with immediate feedback.
 - Reference area for formulas, terms, source links, and FormPath mappings.
@@ -88,15 +88,11 @@ The existing `shooting-profile-coach-ios` repository may link to the prestudy si
 
 ### Deployment
 
-Primary goal: static deployment.
+Primary deployment target: **GitHub Pages from the standalone `formpath-prestudy` repository**.
 
-Acceptable hosting targets:
+Secondary compatible target: Vercel static deployment, without changing application architecture.
 
-- GitHub Pages,
-- Vercel static deployment,
-- or an equivalent static host.
-
-The app must not require a backend server to complete any v1 learning activity.
+The app must not require a backend server to complete any v1 learning activity. The first production deployment should use a stable GitHub Pages URL before a custom domain is considered.
 
 ## 5. Information architecture
 
@@ -115,9 +111,9 @@ Shows:
 
 ### 5.2 Learn
 
-One route per learning module.
+One route per released learning module.
 
-Each module uses the same instructional sequence:
+Each released module uses the same instructional sequence:
 
 1. Why this matters for FormPath
 2. Core concept
@@ -127,6 +123,8 @@ Each module uses the same instructional sequence:
 6. Five-question knowledge check
 7. FormPath connection
 8. Completion gate
+
+Locked modules appear in the roadmap but do not expose unfinished lesson routes.
 
 ### 5.3 Lab
 
@@ -142,7 +140,7 @@ A focused Python environment with:
 
 ### 5.4 Quiz
 
-Five-question checks per module.
+Five-question checks per released module.
 
 Rules:
 
@@ -366,18 +364,28 @@ The prestudy must not expose private media, credentials, or unsafe internal data
 
 ## 7. Content model
 
-Each module is represented by validated structured content.
-
-Required fields:
+Content uses an explicit release state so unreleased modules can appear in the roadmap without pretending to be complete.
 
 ```ts
-interface LearningModule {
+type ModuleStatus = "released" | "locked";
+
+interface ModuleBase {
   id: string;
   order: number;
   title: string;
   summary: string;
-  whyItMatters: string;
+  status: ModuleStatus;
   prerequisites: string[];
+}
+
+interface LockedModule extends ModuleBase {
+  status: "locked";
+  releaseLabel: string;
+}
+
+interface ReleasedModule extends ModuleBase {
+  status: "released";
+  whyItMatters: string;
   lessonMarkdown: string;
   sources: SourceItem[];
   visual?: VisualDefinition;
@@ -385,11 +393,18 @@ interface LearningModule {
   quiz: QuizQuestion[];
   formPathConnections: FormPathConnection[];
 }
+
+type LearningModule = LockedModule | ReleasedModule;
 ```
 
 Content validation runs during build and test.
 
-No module may ship with missing title, missing lab, fewer than five quiz questions, broken internal references, or an undeclared prerequisite.
+Rules:
+
+- Every module requires id, order, title, summary, status, and valid prerequisites.
+- Every released module requires a complete lesson, lab, FormPath mapping, and exactly five or more quiz questions.
+- Locked modules must not contain partial lesson/lab/quiz content and must not have a public learn route.
+- Broken internal references or undeclared prerequisites fail the build.
 
 ## 8. Source policy
 
@@ -448,7 +463,7 @@ Completion rule:
 - lab run successfully or explicitly completed through fallback mode,
 - quiz score >= 4/5.
 
-Progress loss is acceptable if browser storage is cleared; v1 does not promise cloud recovery.
+Progress applies only to released modules. Progress loss is acceptable if browser storage is cleared; v1 does not promise cloud recovery.
 
 ## 11. UI / UX direction
 
@@ -470,6 +485,7 @@ Design requirements:
 - clear typography hierarchy,
 - readable code,
 - visible progress state,
+- locked modules visually distinct from incomplete released modules,
 - no decorative UI that competes with learning content,
 - keyboard operability,
 - sufficient contrast,
@@ -486,6 +502,7 @@ Required states:
 - Python execution error
 - source embed unavailable
 - module content invalid at build time
+- locked module selected
 - no progress yet
 - completed curriculum
 - local progress reset confirmation
@@ -497,6 +514,7 @@ Build-time content errors must fail CI rather than appear as runtime blank pages
 ### Unit tests
 
 - content schema validation
+- released/locked discriminated-union validation
 - prerequisite graph validity
 - progress reducer/storage migration
 - quiz scoring
@@ -504,9 +522,10 @@ Build-time content errors must fail CI rather than appear as runtime blank pages
 
 ### Integration tests
 
-- open module → run lab → pass quiz → completion state updates
+- open released module → run lab → pass quiz → completion state updates
 - refresh → progress restores
 - failed Pyodide load → fallback remains usable
+- locked module → no unfinished lesson route
 - invalid route → safe navigation to curriculum
 
 ### Build checks
@@ -526,7 +545,7 @@ At minimum:
 - keyboard navigation
 - visible focus state
 - text scaling/reflow
-- loading/error/empty states
+- loading/error/empty/locked states
 
 ## 14. Initial delivery slice
 
@@ -541,25 +560,26 @@ Milestone 1 includes:
 - Pyodide runtime wrapper,
 - quiz engine,
 - reference page,
-- complete Module 01,
-- complete Module 02,
-- placeholder-free metadata records for Modules 03–12 that clearly mark them as locked/not yet released rather than unfinished pages.
+- complete released Module 01,
+- complete released Module 02,
+- locked metadata records for Modules 03–12 with titles, summaries, prerequisites, status, and release labels only,
+- GitHub Pages deployment workflow.
 
-Milestone 1 is successful when a new learner can complete Module 01 and Module 02 end-to-end on desktop and mobile without a backend.
+Milestone 1 is successful when a new learner can complete Module 01 and Module 02 end-to-end on desktop and mobile without a backend, while Modules 03–12 appear clearly as locked rather than unfinished.
 
 ## 15. Future milestones
 
 ### Milestone 2
 
-Modules 03–06: video, pose landmarks, two-view direction, cross-view alignment.
+Release Modules 03–06: video, pose landmarks, two-view direction, cross-view alignment.
 
 ### Milestone 3
 
-Modules 07–09: uncertainty, biomechanics, evidence/data quality.
+Release Modules 07–09: uncertainty, biomechanics, evidence/data quality.
 
 ### Milestone 4
 
-Modules 10–12: PyTorch, validation, FormPath pipeline reading.
+Release Modules 10–12: PyTorch, validation, FormPath pipeline reading.
 
 ### Milestone 5 — optional, separate design approval required
 
@@ -573,15 +593,16 @@ Modules 10–12: PyTorch, validation, FormPath pipeline reading.
 The architecture is considered implemented when:
 
 1. The site is in a repository separate from the iOS app.
-2. It can build and deploy as a static site.
+2. It builds and deploys to GitHub Pages as a static site.
 3. Module 01 and Module 02 are fully completable.
-4. Python executes client-side through Pyodide.
-5. Pyodide failure does not block learning or quiz completion.
-6. Progress survives reload through localStorage.
-7. No raw user media, credentials, Firebase data, or private evaluation artifacts are required.
-8. Content schema failures stop CI.
-9. Desktop and narrow-mobile flows are usable.
-10. The architecture leaves a clean boundary for future cloud sync without requiring it now.
+4. Modules 03–12 appear as validated locked metadata with no unfinished lesson routes.
+5. Python executes client-side through Pyodide.
+6. Pyodide failure does not block learning or quiz completion.
+7. Progress survives reload through localStorage.
+8. No raw user media, credentials, Firebase data, or private evaluation artifacts are required.
+9. Content schema failures stop CI.
+10. Desktop and narrow-mobile flows are usable.
+11. The architecture leaves a clean boundary for future cloud sync without requiring it now.
 
 ## 17. Explicit non-goals and safety boundaries
 
@@ -593,4 +614,4 @@ The architecture is considered implemented when:
 
 ## 18. Implementation decision
 
-Proceed with the independent static-site architecture using React + TypeScript + Vite + Pyodide + localStorage, with content isolated in validated Markdown/JSON and Module 01–02 as the first complete vertical slice.
+Proceed with the independent static-site architecture using React + TypeScript + Vite + Pyodide + localStorage, with content isolated in validated Markdown/JSON, GitHub Pages as the first deployment target, and Modules 01–02 as the first complete vertical slice.
