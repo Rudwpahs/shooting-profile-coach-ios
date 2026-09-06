@@ -23,6 +23,8 @@ type SkeletonLoopProps = {
   height: number;
   confidence: SkeletonConfidence;
   accessibilityLabel: string;
+  /** Held on the release still while true (a viewer tapped the stage). */
+  paused?: boolean;
 };
 
 /**
@@ -31,7 +33,7 @@ type SkeletonLoopProps = {
  * holds the release-proxy frame under Reduce Motion). Purely visual; it never
  * exposes controls, so anything interactive lives in the parent.
  */
-export function SkeletonLoop({ profile, shootingHand, view, width, height, confidence, accessibilityLabel }: SkeletonLoopProps) {
+export function SkeletonLoop({ profile, shootingHand, view, width, height, confidence, accessibilityLabel, paused = false }: SkeletonLoopProps) {
   const releaseIndex = useMemo(() => representativeReleaseFrameIndex(profile), [profile]);
   const [frameIndex, setFrameIndex] = useState(releaseIndex);
   const [lifecycle, setLifecycle] = useState(createRepresentativePlaybackLifecycle);
@@ -82,6 +84,15 @@ export function SkeletonLoop({ profile, shootingHand, view, width, height, confi
     setFrameIndex(releaseIndex);
     applyLifecycleEvent({ type: "profile" });
   }, [applyLifecycleEvent, profile, releaseIndex]);
+
+  // Only a change of the viewer's own tap moves the intent; mounting leaves
+  // autoplay to the Reduce Motion resolution.
+  const pausedRef = useRef(paused);
+  useEffect(() => {
+    if (pausedRef.current === paused) return;
+    pausedRef.current = paused;
+    applyLifecycleEvent({ type: paused ? "pause" : "explicit-play" });
+  }, [applyLifecycleEvent, paused]);
 
   useEffect(() => {
     if (!isPlaying) {

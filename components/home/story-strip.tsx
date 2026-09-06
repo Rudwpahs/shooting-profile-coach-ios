@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 import type { SkeletonGlyphData } from "@/lib/skeleton/pose-motion-glyph";
 
 export type StoryItem = {
@@ -54,6 +55,6 @@ const styles = StyleSheet.create({
   inner: { borderRadius: INNER / 2, height: INNER, overflow: "hidden", width: INNER },
   plus: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: INNER / 2, height: INNER, justifyContent: "center", width: INNER },
   plusText: { color: tokens.primaryForeground, fontSize: 26, fontWeight: "800", lineHeight: 30 },
-  label: { color: tokens.foreground, fontSize: 10 },
-  pressed: { opacity: 0.7 },
+  label: { ...typography.label, color: tokens.foreground },
+  pressed: { opacity: 0.6, transform: [{ scale: 0.97 }] },
 });

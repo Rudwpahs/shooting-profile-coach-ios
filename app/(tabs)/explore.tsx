@@ -4,7 +4,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 
 import { ScreenContainer } from "@/components/screen-container";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
+import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { poseMotionGlyph, type GlyphView } from "@/lib/skeleton/pose-motion-glyph";
 
@@ -63,8 +65,8 @@ export default function ExploreScreen() {
       containerClassName="bg-background"
       onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}
     >
+      <TopBar title="탐색" />
       <View style={styles.header}>
-        <Text style={styles.title}>탐색</Text>
         <View style={styles.chips}>
           {VIEWS.map((candidate) => {
             const selected = candidate.id === view;
@@ -103,16 +105,15 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { alignSelf: "center", gap: 10, maxWidth: MAX_WIDTH, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, width: "100%" },
-  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 26, letterSpacing: -0.3 },
+  header: { alignSelf: "center", maxWidth: MAX_WIDTH, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10, width: "100%" },
   chips: { flexDirection: "row", gap: 6 },
   chip: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 999, justifyContent: "center", minHeight: 34, paddingHorizontal: 14 },
   chipSelected: { backgroundColor: tokens.foreground },
-  chipText: { color: tokens.foreground, fontSize: 13, fontWeight: "600" },
+  chipText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
   chipTextSelected: { color: tokens.background },
   page: { alignSelf: "center", gap: GAP, paddingBottom: 32 },
   row: { flexDirection: "row", gap: GAP },
   column: { gap: GAP },
-  caption: { color: tokens.mutedForeground, fontSize: 11, paddingHorizontal: 14, paddingTop: 10 },
-  pressed: { opacity: 0.7 },
+  caption: { ...typography.label, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 10 },
+  pressed: { opacity: 0.6 },
 });

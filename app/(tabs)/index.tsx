@@ -5,11 +5,14 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-nat
 import { FeedCard } from "@/components/home/feed-card";
 import { StoryStrip, type StoryItem } from "@/components/home/story-strip";
 import { ScreenContainer } from "@/components/screen-container";
+import { LoopStage } from "@/components/skeleton/loop-stage";
 import { PoseMotionLoop } from "@/components/skeleton/pose-motion-loop";
 import { representativeConfidence, representativeGlyph, representativeReleaseFrameIndex } from "@/components/skeleton/representative-glyph";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { SkeletonLoop } from "@/components/skeleton/skeleton-loop";
+import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 import { useLatestRepresentativeProfile } from "@/hooks/use-latest-representative-profile";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
@@ -68,8 +71,8 @@ export default function HomeScreen() {
       containerClassName="bg-background"
       onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}
     >
+      <TopBar wordmark="Hoop Hub" />
       <ScrollView contentContainerStyle={[styles.page, { width }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.bar}><Text style={styles.wordmark}>Hoop Hub</Text></View>
         <StoryStrip items={stories} />
 
         {latest.status === "ready" ? (
@@ -83,15 +86,20 @@ export default function HomeScreen() {
             confidence={representativeConfidence(latest.record.profile)}
             meta={relativeDayLabel(latest.summary.createdAt.toDate())}
             stage={(
-              <SkeletonLoop
-                accessibilityLabel="내 최근 대표 슛폼 skeleton, 사선 시점 재생"
-                confidence={representativeConfidence(latest.record.profile)}
-                height={stageHeight}
-                profile={latest.record.profile}
-                shootingHand={latest.record.shootingHand}
-                view="oblique"
-                width={width}
-              />
+              <LoopStage accessibilityLabel="내 최근 대표 슛폼 skeleton" height={stageHeight} width={width}>
+                {(paused) => (
+                  <SkeletonLoop
+                    accessibilityLabel="내 최근 대표 슛폼 skeleton, 사선 시점 재생"
+                    confidence={representativeConfidence(latest.record.profile)}
+                    height={stageHeight}
+                    paused={paused}
+                    profile={latest.record.profile}
+                    shootingHand={latest.record.shootingHand}
+                    view="oblique"
+                    width={width}
+                  />
+                )}
+              </LoopStage>
             )}
             title="내 슛폼"
           />
@@ -117,13 +125,18 @@ export default function HomeScreen() {
           caption={reference.styleTitle}
           meta="CMU optical mocap"
           stage={(
-            <PoseMotionLoop
-              accessibilityLabel={`${reference.shortLabel} 참조 skeleton, 사선 시점 재생`}
-              height={stageHeight}
-              motion={reference.motion}
-              view="oblique"
-              width={width}
-            />
+            <LoopStage accessibilityLabel={`${reference.shortLabel} 참조 skeleton`} height={stageHeight} width={width}>
+              {(paused) => (
+                <PoseMotionLoop
+                  accessibilityLabel={`${reference.shortLabel} 참조 skeleton, 사선 시점 재생`}
+                  height={stageHeight}
+                  motion={reference.motion}
+                  paused={paused}
+                  view="oblique"
+                  width={width}
+                />
+              )}
+            </LoopStage>
           )}
           title={reference.shortLabel}
         />
@@ -134,9 +147,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   page: { alignSelf: "center", paddingBottom: 32 },
-  bar: { alignItems: "center", flexDirection: "row", height: 44, paddingHorizontal: 14 },
-  wordmark: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 24, letterSpacing: -0.3 },
   placeholder: { alignItems: "center", backgroundColor: tokens.stage, justifyContent: "flex-end", overflow: "hidden", paddingBottom: 22 },
   silhouette: { left: 0, opacity: 0.16, position: "absolute", top: 0 },
-  placeholderText: { color: tokens.mutedForeground, fontSize: 13 },
+  placeholderText: { ...typography.callout, color: tokens.mutedForeground },
 });

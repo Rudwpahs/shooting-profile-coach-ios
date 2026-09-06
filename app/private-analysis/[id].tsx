@@ -11,7 +11,9 @@ import {
   canRenderShootingProfileViewerRecord,
   getRepresentativeFocusStyle,
 } from "@/components/shooting-profile/sequence-viewer";
+import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import {
@@ -161,8 +163,8 @@ export default function PrivateAnalysisRoute() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.bar}>
+      <TopBar
+        left={(
           <Pressable
             accessibilityLabel="대표 슛폼 분석에서 뒤로 가기"
             accessibilityRole="button"
@@ -179,9 +181,10 @@ export default function PrivateAnalysisRoute() {
           >
             <MaterialCommunityIcons name="chevron-left" size={28} color={tokens.foreground} />
           </Pressable>
-          <Text style={styles.title}>대표 슛폼</Text>
-          <View style={styles.iconButton} />
-        </View>
+        )}
+        title="대표 슛폼"
+      />
+      <ScrollView contentContainerStyle={styles.page}>
         <AnalysisSummaryLine profile={loadState.record.profile} />
         <SequenceViewer
           confidence={loadState.record.confidence}
@@ -202,15 +205,13 @@ export default function PrivateAnalysisRoute() {
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: tokens.background, flex: 1 },
   page: { alignSelf: "center", maxWidth: 680, paddingBottom: 40, width: "100%" },
-  bar: { alignItems: "center", flexDirection: "row", height: 48, justifyContent: "space-between", paddingHorizontal: 4 },
   iconButton: { alignItems: "center", height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
-  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 20 },
   centerState: { alignItems: "center", flex: 1, justifyContent: "center", padding: 24 },
-  stateTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 24, marginTop: 14, textAlign: "center" },
-  stateCopy: { color: tokens.mutedForeground, fontSize: 14, lineHeight: 21, marginTop: 6, maxWidth: 420, textAlign: "center" },
+  stateTitle: { ...typography.title, color: tokens.foreground, marginTop: 14, textAlign: "center" },
+  stateCopy: { ...typography.callout, color: tokens.mutedForeground, marginTop: 6, maxWidth: 420, textAlign: "center" },
   primaryButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 12, justifyContent: "center", marginTop: 18, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
-  primaryButtonText: { color: tokens.primaryForeground, fontSize: 15, fontWeight: "700" },
+  primaryButtonText: { ...typography.headline, color: tokens.primaryForeground },
   secondaryButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 12, borderWidth: 1, justifyContent: "center", marginTop: 10, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
-  secondaryButtonText: { color: tokens.foreground, fontSize: 15, fontWeight: "600" },
-  pressed: { opacity: 0.72 },
+  secondaryButtonText: { ...typography.headline, color: tokens.foreground },
+  pressed: { opacity: 0.6, transform: [{ scale: 0.97 }] },
 });

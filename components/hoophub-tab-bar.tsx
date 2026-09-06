@@ -17,9 +17,10 @@ type TabSpec = {
 };
 
 /**
- * Icon-only bottom bar: 홈 · 탐색 · [촬영] · 프로필. Labels exist only for
- * assistive technology; the filled/outline icon pair and colour carry the
- * selected state visually, the accessibility state carries it semantically.
+ * Flat, icon-only bottom bar: 홈 · 탐색 · 촬영 · 프로필. Every item is the
+ * same weight, like a social app; the filled/outline pair shows the selected
+ * tab, the accessibility state says it, and labels exist only for assistive
+ * technology. Feedback lands on touch-down.
  */
 export const HOOPHUB_TABS: readonly TabSpec[] = [
   { name: "index", label: "홈", icon: "home-variant", outline: "home-variant-outline" },
@@ -28,6 +29,7 @@ export const HOOPHUB_TABS: readonly TabSpec[] = [
 ];
 
 export const CAPTURE_ACTION_LABEL = "슛폼 촬영";
+const ICON_SIZE = 26;
 
 function haptic() {
   if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -55,7 +57,7 @@ export function HoopHubTabBar({ state, navigation }: BottomTabBarProps) {
       >
         <MaterialCommunityIcons
           name={selected ? tab.icon : tab.outline}
-          size={26}
+          size={ICON_SIZE}
           color={selected ? tokens.foreground : tokens.mutedForeground}
         />
       </Pressable>
@@ -75,9 +77,7 @@ export function HoopHubTabBar({ state, navigation }: BottomTabBarProps) {
         }}
         style={({ pressed }) => [styles.item, pressed && styles.pressed]}
       >
-        <View style={styles.capture}>
-          <MaterialCommunityIcons name="video" size={22} color={tokens.primaryForeground} />
-        </View>
+        <MaterialCommunityIcons name="plus-box-outline" size={ICON_SIZE} color={tokens.foreground} />
       </Pressable>
       {renderTab(HOOPHUB_TABS[2])}
     </View>
@@ -91,16 +91,8 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     paddingHorizontal: 8,
-    paddingTop: 6,
+    paddingTop: 8,
   },
   item: { alignItems: "center", flex: 1, justifyContent: "center", minHeight: 48, minWidth: 48 },
-  capture: {
-    alignItems: "center",
-    backgroundColor: tokens.primary,
-    borderRadius: 22,
-    height: 44,
-    justifyContent: "center",
-    width: 44,
-  },
-  pressed: { opacity: 0.6 },
+  pressed: { opacity: 0.45 },
 });

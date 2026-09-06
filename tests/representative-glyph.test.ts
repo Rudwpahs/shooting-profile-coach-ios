@@ -8,6 +8,8 @@ vi.mock("react-native", () => ({
   AppState: {},
 }));
 vi.mock("react-native-svg", () => ({ default: () => null, Circle: () => null, Line: () => null }));
+vi.mock("@expo/vector-icons/MaterialCommunityIcons", () => ({ default: () => null }));
+vi.mock("expo-haptics", () => ({ selectionAsync: async () => undefined }));
 
 const {
   representativeConfidence,

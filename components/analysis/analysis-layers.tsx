@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { getRepresentativeFocusStyle } from "@/components/shooting-profile/sequence-viewer";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 import {
   anchorPositions,
   confidenceBandCopy,
@@ -106,22 +107,22 @@ const styles = StyleSheet.create({
   dot: { backgroundColor: tokens.mutedForeground, borderRadius: 5, height: 10, width: 10 },
   dotHigh: { backgroundColor: tokens.analysisHighConfidence },
   dotRecapture: { backgroundColor: tokens.warning },
-  bandText: { color: tokens.foreground, fontSize: 13, fontWeight: "700" },
-  qualityText: { color: tokens.positive, fontSize: 13 },
+  bandText: { ...typography.callout, color: tokens.foreground, fontWeight: "700" },
+  qualityText: { ...typography.callout, color: tokens.positive },
   qualityRecapture: { color: tokens.warning },
-  finding: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 18, lineHeight: 22 },
+  finding: { ...typography.finding, color: tokens.foreground },
   disclosure: { borderTopColor: tokens.border, borderTopWidth: StyleSheet.hairlineWidth, marginTop: 12 },
   disclosureHead: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", minHeight: 48, minWidth: 44, paddingHorizontal: 14 },
-  disclosureTitle: { color: tokens.foreground, fontSize: 14, fontWeight: "600" },
+  disclosureTitle: { ...typography.headline, color: tokens.foreground },
   disclosureBody: { gap: 8, paddingBottom: 12, paddingHorizontal: 14 },
   row: { flexDirection: "row", gap: 12 },
-  rowLabel: { color: tokens.mutedForeground, fontSize: 12.5, width: 72 },
-  rowValue: { color: tokens.foreground, flex: 1, fontSize: 12.5, fontVariant: ["tabular-nums"], lineHeight: 18 },
+  rowLabel: { ...typography.callout, color: tokens.mutedForeground, width: 72 },
+  rowValue: { ...typography.callout, color: tokens.foreground, flex: 1, fontVariant: ["tabular-nums"] },
   coneRow: { alignItems: "center", flexDirection: "row", gap: 10, minHeight: 24 },
-  coneLabel: { color: tokens.mutedForeground, fontSize: 12, width: 88 },
+  coneLabel: { ...typography.caption, color: tokens.mutedForeground, width: 88 },
   coneTrack: { backgroundColor: tokens.elevatedSurface, borderRadius: 3, flex: 1, height: 6, overflow: "hidden" },
   coneFill: { backgroundColor: tokens.analysisLowConfidence, borderRadius: 3, height: 6 },
-  coneValue: { color: tokens.foreground, fontSize: 12, fontVariant: ["tabular-nums"], textAlign: "right", width: 36 },
-  boundary: { color: tokens.mutedForeground, fontSize: 11, lineHeight: 16, paddingTop: 6 },
-  pressed: { opacity: 0.7 },
+  coneValue: { ...typography.caption, color: tokens.foreground, fontVariant: ["tabular-nums"], textAlign: "right", width: 36 },
+  boundary: { ...typography.label, color: tokens.mutedForeground, paddingTop: 6 },
+  pressed: { opacity: 0.6 },
 });

@@ -22,6 +22,8 @@ type PoseMotionLoopProps = {
   width: number;
   height: number;
   accessibilityLabel: string;
+  /** Held on the release still while true (a viewer tapped the stage). */
+  paused?: boolean;
 };
 
 /**
@@ -29,7 +31,7 @@ type PoseMotionLoopProps = {
  * phases over a short cycle, under the same lifecycle rules as every other
  * loop (background pause, Reduce Motion holds the release still).
  */
-export function PoseMotionLoop({ motion, view, hand = "right", width, height, accessibilityLabel }: PoseMotionLoopProps) {
+export function PoseMotionLoop({ motion, view, hand = "right", width, height, accessibilityLabel, paused = false }: PoseMotionLoopProps) {
   const [progress, setProgress] = useState(RELEASE_PROGRESS);
   const [lifecycle, setLifecycle] = useState(createRepresentativePlaybackLifecycle);
   const lifecycleRef = useRef(lifecycle);
@@ -73,6 +75,15 @@ export function PoseMotionLoop({ motion, view, hand = "right", width, height, ac
       subscription?.remove?.();
     };
   }, [applyLifecycleEvent]);
+
+  // Only a change of the viewer's own tap moves the intent; mounting leaves
+  // autoplay to the Reduce Motion resolution.
+  const pausedRef = useRef(paused);
+  useEffect(() => {
+    if (pausedRef.current === paused) return;
+    pausedRef.current = paused;
+    applyLifecycleEvent({ type: paused ? "pause" : "explicit-play" });
+  }, [applyLifecycleEvent, paused]);
 
   useEffect(() => {
     if (!isPlaying) {

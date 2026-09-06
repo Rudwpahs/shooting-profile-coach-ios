@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { TopBar } from "@/components/ui/top-bar";
 import { CaptureModePicker } from "@/components/shooting-profile/capture-mode-picker";
 import { CaptureSlotCard } from "@/components/shooting-profile/capture-slot-card";
 import { QualitySummary } from "@/components/shooting-profile/quality-summary";
@@ -119,26 +120,24 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
   return (
     <ScreenContainer containerClassName="bg-background" edges={["top", "bottom", "left", "right"]}>
       <View style={styles.canvas} />
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.kicker}>FORMPATH / PRIVATE CAPTURE</Text>
-          <Text style={styles.headerTitle}>대표 슛폼 만들기</Text>
-        </View>
-        <Pressable
-          accessibilityLabel="대표 슛폼 촬영 화면 닫기"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: saving, busy: saving }}
-          disabled={saving}
-          focusable
-          onBlur={() => setFocusedControl((current) => current === "close" ? null : current)}
-          onFocus={() => setFocusedControl("close")}
-          onPress={close}
-          style={({ pressed }) => [styles.closeButton, focusStyle(focusedControl === "close"), saving && styles.disabled, pressed && !saving && styles.pressed]}
-        >
-          <MaterialIcons name="close" size={20} color={tokens.foreground} />
-          <Text style={styles.closeText}>닫기</Text>
-        </Pressable>
-      </View>
+      <TopBar
+        right={(
+          <Pressable
+            accessibilityLabel="대표 슛폼 촬영 화면 닫기"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: saving, busy: saving }}
+            disabled={saving}
+            focusable
+            onBlur={() => setFocusedControl((current) => current === "close" ? null : current)}
+            onFocus={() => setFocusedControl("close")}
+            onPress={close}
+            style={({ pressed }) => [styles.closeButton, focusStyle(focusedControl === "close"), saving && styles.disabled, pressed && !saving && styles.pressed]}
+          >
+            <Text style={styles.closeText}>닫기</Text>
+          </Pressable>
+        )}
+        title="슛폼 촬영"
+      />
 
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         {state.status === "mode_select" ? (
@@ -382,11 +381,8 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
 
 const styles = StyleSheet.create({
   canvas: { backgroundColor: tokens.background, bottom: 0, left: 0, position: "absolute", right: 0, top: 0 },
-  header: { alignItems: "center", borderBottomColor: tokens.border, borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12 },
-  kicker: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 1.2 },
-  headerTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 22, marginTop: 1 },
-  closeButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 12, borderWidth: 1, flexDirection: "row", gap: 5, justifyContent: "center", minHeight: 44, minWidth: 70, paddingHorizontal: 10 },
-  closeText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
+  closeButton: { alignItems: "center", borderRadius: 10, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 10 },
+  closeText: { color: tokens.foreground, fontSize: 17, fontWeight: "400", letterSpacing: -0.2 },
   page: { alignSelf: "center", maxWidth: 680, paddingBottom: 36, paddingHorizontal: 16, paddingTop: 18, width: "100%" },
   stepHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 13 },
   stepCount: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 13, letterSpacing: 1 },

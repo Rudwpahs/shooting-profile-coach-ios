@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 
 export type ProfileStat = { value: number; label: string };
 
@@ -21,6 +22,6 @@ export function ProfileStats({ stats, locked }: { stats: readonly ProfileStat[];
 const styles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 14, paddingTop: 12 },
   stat: { alignItems: "center", minWidth: 72 },
-  value: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 24, fontVariant: ["tabular-nums"], lineHeight: 26 },
-  label: { color: tokens.mutedForeground, fontSize: 10, letterSpacing: 0.3, marginTop: 2 },
+  value: { ...typography.stat, color: tokens.foreground },
+  label: { ...typography.label, color: tokens.mutedForeground, marginTop: 2 },
 });

@@ -12,7 +12,9 @@ import { ProfileHero, type ProfileHeroState } from "@/components/profile/profile
 import { ProfileStats } from "@/components/profile/profile-stats";
 import { ScreenContainer } from "@/components/screen-container";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
+import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { listFirebasePrivatePoses, removeFirebasePrivatePose, type FirebasePrivatePose } from "@/lib/firebase-private-data";
@@ -355,9 +357,8 @@ export default function PersonalProfileTab() {
       containerClassName="bg-background"
       onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}
     >
-      <ScrollView contentContainerStyle={[styles.page, { width: contentWidth }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.topBar}>
-          <Text style={styles.title}>{user ? "내 슛폼" : "프로필"}</Text>
+      <TopBar
+        right={(
           <Pressable
             accessibilityLabel={user ? (accountOpen ? "계정 닫기" : "계정") : "로그인"}
             accessibilityRole="button"
@@ -372,8 +373,10 @@ export default function PersonalProfileTab() {
           >
             <MaterialCommunityIcons name={user ? "account-circle-outline" : "login"} size={24} color={tokens.foreground} />
           </Pressable>
-        </View>
-
+        )}
+        title={user ? "내 슛폼" : "프로필"}
+      />
+      <ScrollView contentContainerStyle={[styles.page, { width: contentWidth }]} showsVerticalScrollIndicator={false}>
         <ProfileHero onViewChange={setHeroView} record={latestRecord} state={heroState} view={heroView} width={contentWidth} />
         <ProfileStats
           locked={!user}
@@ -499,19 +502,17 @@ function privatePoseFluid(pose: FirebasePrivatePose): { motion: PoseMotion; sour
 
 const styles = StyleSheet.create({
   page: { alignSelf: "center", paddingBottom: 32 },
-  topBar: { alignItems: "center", flexDirection: "row", height: 44, justifyContent: "space-between", paddingLeft: 14, paddingRight: 4 },
-  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 22, letterSpacing: -0.2 },
   iconButton: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
-  goalLine: { color: tokens.mutedForeground, fontSize: 12.5, paddingHorizontal: 14, paddingTop: 8 },
+  goalLine: { ...typography.caption, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 8 },
   syncWarning: { backgroundColor: tokens.warningSoft, borderColor: tokens.warning, borderRadius: 10, borderWidth: 1, marginHorizontal: 14, marginTop: 10, padding: 10 },
   syncWarningText: { color: tokens.warning, fontSize: 12, lineHeight: 17 },
   section: { marginTop: 14 },
-  stateText: { color: tokens.mutedForeground, fontSize: 13, marginVertical: 14, textAlign: "center" },
-  noticeText: { color: tokens.positive, fontSize: 12, lineHeight: 18, paddingHorizontal: 14, paddingTop: 8 },
-  errorText: { color: tokens.destructive, fontSize: 12, lineHeight: 17, paddingHorizontal: 14 },
+  stateText: { ...typography.callout, color: tokens.mutedForeground, marginVertical: 14, textAlign: "center" },
+  noticeText: { ...typography.caption, color: tokens.positive, paddingHorizontal: 14, paddingTop: 8 },
+  errorText: { ...typography.caption, color: tokens.destructive, paddingHorizontal: 14 },
   poseRow: { alignItems: "center", flexDirection: "row", gap: 8, paddingHorizontal: 14, paddingVertical: 4 },
   poseSelect: { alignItems: "center", borderRadius: 10, flex: 1, flexDirection: "row", gap: 10, minHeight: 48, minWidth: 44, paddingHorizontal: 6 },
-  poseName: { color: tokens.foreground, flex: 1, fontSize: 14 },
+  poseName: { ...typography.body, color: tokens.foreground, flex: 1 },
   deleteButton: { alignItems: "center", borderRadius: 10, height: 48, justifyContent: "center", minHeight: 48, minWidth: 48, width: 48 },
   viewerWrap: { marginHorizontal: 14, marginTop: 10 },
   pressed: { opacity: 0.75 },

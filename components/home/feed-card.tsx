@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { SkeletonConfidence } from "@/components/skeleton/skeleton-glyph";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -64,16 +65,16 @@ export function FeedCard({ title, meta, stage, actions, captionLead, caption, co
 const styles = StyleSheet.create({
   card: { marginTop: 8 },
   head: { alignItems: "center", flexDirection: "row", minHeight: 36, paddingHorizontal: 14 },
-  title: { color: tokens.foreground, fontSize: 13, fontWeight: "700" },
-  meta: { color: tokens.mutedForeground, fontSize: 12 },
+  title: { ...typography.headline, color: tokens.foreground },
+  meta: { ...typography.caption, color: tokens.mutedForeground },
   actions: { alignItems: "center", flexDirection: "row", gap: 4, paddingHorizontal: 6, paddingTop: 2 },
   action: { alignItems: "center", height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
   band: { alignItems: "center", flexDirection: "row", gap: 6, marginLeft: "auto", paddingRight: 10 },
   dot: { backgroundColor: tokens.mutedForeground, borderRadius: 4, height: 8, width: 8 },
   dotHigh: { backgroundColor: tokens.analysisHighConfidence },
   dotRecapture: { backgroundColor: tokens.warning },
-  bandText: { color: tokens.mutedForeground, fontSize: 11 },
-  caption: { color: tokens.foreground, fontSize: 12.5, paddingHorizontal: 14, paddingTop: 2 },
+  bandText: { ...typography.label, color: tokens.mutedForeground },
+  caption: { ...typography.callout, color: tokens.foreground, paddingHorizontal: 14, paddingTop: 2 },
   captionLead: { fontWeight: "700" },
-  pressed: { opacity: 0.6 },
+  pressed: { opacity: 0.5 },
 });

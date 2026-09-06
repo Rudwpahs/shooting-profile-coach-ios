@@ -3,9 +3,11 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 
 import { getRepresentativeFocusStyle, getRepresentativeViewPresets, type RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
 import { representativeConfidence } from "@/components/skeleton/representative-glyph";
+import { LoopStage } from "@/components/skeleton/loop-stage";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { SkeletonLoop } from "@/components/skeleton/skeleton-loop";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import type { ShootingProfileViewerRecordV2 } from "@/lib/firebase-shooting-profiles";
 import { poseMotionGlyph } from "@/lib/skeleton/pose-motion-glyph";
@@ -45,15 +47,20 @@ export function ProfileHero({ width, state, record, view, onViewChange }: Profil
   return (
     <View style={[styles.frame, { width, height }]}>
       {state === "ready" && record ? (
-        <SkeletonLoop
-          accessibilityLabel={`내 대표 슛폼 skeleton, ${presets.find((preset) => preset.id === view)?.label ?? view} 시점 재생`}
-          confidence={confidence}
-          height={height}
-          profile={record.profile}
-          shootingHand={record.shootingHand}
-          view={view}
-          width={width}
-        />
+        <LoopStage accessibilityLabel="내 대표 슛폼 skeleton" height={height} width={width}>
+          {(paused) => (
+            <SkeletonLoop
+              accessibilityLabel={`내 대표 슛폼 skeleton, ${presets.find((preset) => preset.id === view)?.label ?? view} 시점 재생`}
+              confidence={confidence}
+              height={height}
+              paused={paused}
+              profile={record.profile}
+              shootingHand={record.shootingHand}
+              view={view}
+              width={width}
+            />
+          )}
+        </LoopStage>
       ) : (
         <View accessible accessibilityLabel={PLACEHOLDER[state]} style={[styles.placeholder, { width, height }]}>
           <View pointerEvents="none" style={styles.silhouette}>
@@ -106,7 +113,7 @@ const styles = StyleSheet.create({
   frame: { backgroundColor: tokens.stage, overflow: "hidden", position: "relative" },
   placeholder: { alignItems: "center", justifyContent: "flex-end", paddingBottom: 22 },
   silhouette: { left: 0, opacity: 0.16, position: "absolute", top: 0 },
-  placeholderText: { color: tokens.mutedForeground, fontSize: 13 },
+  placeholderText: { ...typography.callout, color: tokens.mutedForeground },
   badge: { backgroundColor: tokens.mutedForeground, borderRadius: 5, height: 10, position: "absolute", right: 12, top: 12, width: 10 },
   badgeHigh: { backgroundColor: tokens.analysisHighConfidence },
   badgeRecapture: { backgroundColor: tokens.warning },
