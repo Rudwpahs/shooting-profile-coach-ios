@@ -950,9 +950,10 @@ describe("guided capture static integration contract", () => {
       entry.indexOf("function GuidedPrivatePoseCaptureEntry"),
       entry.indexOf("function LegacyPrivatePoseCapture"),
     );
-    expect(sources).not.toContain('backgroundColor: "#F97316"');
-    expect(sources).not.toContain('color: "#F97316"');
-    expect(entry).toContain('v2Button: { alignItems: "center", backgroundColor: "#C24122"');
+    expect(sources).not.toMatch(/#[0-9A-Fa-f]{6}/);
+    expect(entry).not.toMatch(/#[0-9A-Fa-f]{6}/);
+    expect(entry).toContain('v2Button: { alignItems: "center", backgroundColor: tokens.primary');
+    expect(entry).toContain("buttonText: { color: tokens.primaryForeground");
     expectEveryPressableToBeAccessible(guidedEntry);
   });
 });

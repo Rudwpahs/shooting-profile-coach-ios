@@ -10,6 +10,7 @@ import {
   saveShootingProfileV2,
   type SaveShootingProfileInputV2,
 } from "@/lib/firebase-shooting-profiles";
+import { tokens } from "@/constants/tokens";
 
 export default function PrivateCaptureRoute() {
   const router = useRouter();
@@ -47,7 +48,7 @@ export default function PrivateCaptureRoute() {
   if (authLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color="#9A3412" size="large" />
+        <ActivityIndicator color={tokens.primary} size="large" />
         <Text accessibilityLiveRegion="polite" style={styles.loadingTitle}>로그인 상태를 확인하는 중</Text>
         <Text style={styles.loadingCopy}>비공개 대표 슛폼 저장 공간을 안전하게 준비하고 있습니다.</Text>
       </View>
@@ -66,7 +67,7 @@ export default function PrivateCaptureRoute() {
 }
 
 const styles = StyleSheet.create({
-  loading: { alignItems: "center", backgroundColor: "#F5F1E8", flex: 1, justifyContent: "center", padding: 24 },
-  loadingTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 25, marginTop: 14, textAlign: "center" },
-  loadingCopy: { color: "#61738A", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 5, textAlign: "center" },
+  loading: { alignItems: "center", backgroundColor: tokens.background, flex: 1, justifyContent: "center", padding: 24 },
+  loadingTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 25, marginTop: 14, textAlign: "center" },
+  loadingCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 5, textAlign: "center" },
 });

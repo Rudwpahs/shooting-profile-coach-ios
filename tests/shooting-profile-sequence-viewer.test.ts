@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
+import { tokens } from "@/constants/tokens";
+
 import {
   advanceRepresentativeFrameIndex,
   buildShootingProfileViewerKey,
@@ -240,28 +242,28 @@ describe("representative keyboard focus visuals", () => {
     const selectedNavy = getRepresentativeFocusStyle(true, "selected-navy");
 
     expect(unfocused).toEqual({});
-    expect(light).toMatchObject({ outlineColor: "#102235", outlineWidth: 3, shadowColor: "#F97316", elevation: 8 });
-    expect(selectedNavy).toMatchObject({ outlineColor: "#F97316", outlineWidth: 3, shadowColor: "#FFFFFF", elevation: 8 });
-    expect(light.outlineColor).not.toBe("#F5F1E8");
-    expect(selectedNavy.outlineColor).not.toBe("#102235");
+    expect(light).toMatchObject({ outlineColor: tokens.focusRing, outlineWidth: 3, shadowColor: tokens.primary, elevation: 8 });
+    expect(selectedNavy).toMatchObject({ outlineColor: tokens.primary, outlineWidth: 3, shadowColor: tokens.foreground, elevation: 8 });
+    expect(light.outlineColor).not.toBe(tokens.background);
+    expect(selectedNavy.outlineColor).not.toBe(tokens.elevatedSurface);
     expect(light).not.toHaveProperty("borderWidth");
     expect(selectedNavy).not.toHaveProperty("borderWidth");
   });
 
-  it("uses a white inner outline and navy outer shadow around the dark-red play surface", () => {
+  it("uses a light inner outline and a dark outer shadow around the primary play surface", () => {
     const play = getRepresentativeFocusStyle(true, "play");
 
     expect(play).toMatchObject({
-      outlineColor: "#FFFFFF",
+      outlineColor: tokens.focusRing,
       outlineOffset: 2,
       outlineWidth: 3,
-      shadowColor: "#102235",
+      shadowColor: tokens.background,
       shadowOpacity: 1,
       shadowRadius: 4,
       elevation: 8,
     });
-    expect(play.outlineColor).not.toBe("#9A3412");
-    expect(play.shadowColor).not.toBe("#9A3412");
+    expect(play.outlineColor).not.toBe(tokens.primary);
+    expect(play.shadowColor).not.toBe(tokens.primary);
     expect(play).not.toHaveProperty("borderWidth");
   });
 });
@@ -312,7 +314,8 @@ describe("viewer and private route static safety", () => {
     expect(viewerSource).toContain("accessibilityLabel={`${selectedView.label}, ${frameIndex}% 위상 대표 골격 이미지");
     expect(viewerSource).not.toContain("accessibilityState={{ selected: isPlaying }}");
     expect(viewerSource).toContain("getRepresentativeFocusStyle");
-    expect(viewerSource).toContain("#607487");
+    expect(viewerSource).toContain("borderColor: tokens.border");
+    expect(viewerSource).not.toMatch(/#[0-9A-Fa-f]{6}/);
   });
 
   it("keeps route access behind both flags, Firebase owner auth, and opaque ID validation", () => {

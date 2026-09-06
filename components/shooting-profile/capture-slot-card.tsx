@@ -2,6 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { CaptureSessionSlot } from "@/lib/shooting-profile/capture-session-reducer";
+import { tokens } from "@/constants/tokens";
 
 type CaptureSlotCardProps = {
   slot: CaptureSessionSlot;
@@ -31,13 +32,13 @@ function statusCopy(slot: CaptureSessionSlot): string {
 }
 
 function statusIcon(slot: CaptureSessionSlot) {
-  if (slot.status === "accepted") return <MaterialIcons name="check-circle" size={21} color="#166534" />;
-  if (slot.status === "rejected") return <MaterialIcons name="error-outline" size={21} color="#C24122" />;
+  if (slot.status === "accepted") return <MaterialIcons name="check-circle" size={21} color={tokens.positive} />;
+  if (slot.status === "rejected") return <MaterialIcons name="error-outline" size={21} color={tokens.destructive} />;
   if (slot.status === "acquiring" || slot.status === "analyzing") {
-    return <MaterialIcons name="hourglass-top" size={21} color="#F97316" />;
+    return <MaterialIcons name="hourglass-top" size={21} color={tokens.primary} />;
   }
-  if (slot.status === "cancelled") return <MaterialIcons name="cancel" size={21} color="#61738A" />;
-  return <MaterialIcons name={slot.enabled ? "radio-button-unchecked" : "lock-outline"} size={21} color="#61738A" />;
+  if (slot.status === "cancelled") return <MaterialIcons name="cancel" size={21} color={tokens.mutedForeground} />;
+  return <MaterialIcons name={slot.enabled ? "radio-button-unchecked" : "lock-outline"} size={21} color={tokens.mutedForeground} />;
 }
 
 export function CaptureSlotCard({
@@ -66,7 +67,7 @@ export function CaptureSlotCard({
 
       {slot.rejectionReason ? (
         <View style={styles.errorBox}>
-          <MaterialIcons name="info-outline" size={18} color="#C24122" />
+          <MaterialIcons name="info-outline" size={18} color={tokens.destructive} />
           <Text accessibilityLiveRegion="assertive" style={styles.errorText}>
             {slot.rejectionReason}
           </Text>
@@ -86,7 +87,7 @@ export function CaptureSlotCard({
             pressed && !retakeDisabled && styles.pressed,
           ]}
         >
-          <MaterialIcons name="refresh" size={18} color="#102235" />
+          <MaterialIcons name="refresh" size={18} color={tokens.foreground} />
           <Text style={styles.retakeText}>이 클립 다시 선택</Text>
         </Pressable>
       ) : (
@@ -103,7 +104,7 @@ export function CaptureSlotCard({
               pressed && !captureDisabled && styles.pressed,
             ]}
           >
-            <MaterialIcons name="videocam" size={18} color="#FFFFFF" />
+            <MaterialIcons name="videocam" size={18} color={tokens.primaryForeground} />
             <Text style={styles.primaryText}>카메라 촬영</Text>
           </Pressable>
           <Pressable
@@ -118,7 +119,7 @@ export function CaptureSlotCard({
               pressed && !captureDisabled && styles.pressed,
             ]}
           >
-            <MaterialIcons name="video-library" size={18} color="#102235" />
+            <MaterialIcons name="video-library" size={18} color={tokens.foreground} />
             <Text style={styles.secondaryText}>영상 선택</Text>
           </Pressable>
         </View>
@@ -128,21 +129,21 @@ export function CaptureSlotCard({
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 16, borderWidth: 1, padding: 14 },
-  waitingCard: { backgroundColor: "#F1F3F3" },
+  card: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 16, borderWidth: 1, padding: 14 },
+  waitingCard: { backgroundColor: tokens.elevatedSurface },
   heading: { alignItems: "center", flexDirection: "row", gap: 10, justifyContent: "space-between" },
   headingCopy: { flex: 1 },
-  label: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 19 },
-  status: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
-  errorBox: { alignItems: "flex-start", backgroundColor: "#FFF0E8", borderRadius: 11, flexDirection: "row", gap: 7, marginTop: 11, padding: 10 },
-  errorText: { color: "#9A3412", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18 },
+  label: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 19 },
+  status: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
+  errorBox: { alignItems: "flex-start", backgroundColor: tokens.primarySoft, borderRadius: 11, flexDirection: "row", gap: 7, marginTop: 11, padding: 10 },
+  errorText: { color: tokens.destructive, flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18 },
   actions: { flexDirection: "row", gap: 8, marginTop: 12 },
-  primaryButton: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 12, flex: 1, flexDirection: "row", gap: 6, justifyContent: "center", minHeight: 44, paddingHorizontal: 8 },
-  primaryText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
-  secondaryButton: { alignItems: "center", borderColor: "#102235", borderRadius: 12, borderWidth: 1, flex: 1, flexDirection: "row", gap: 6, justifyContent: "center", minHeight: 44, paddingHorizontal: 8 },
-  secondaryText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
-  retakeButton: { alignItems: "center", borderColor: "#B8C2CA", borderRadius: 12, borderWidth: 1, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 44, paddingHorizontal: 12 },
-  retakeText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
+  primaryButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 12, flex: 1, flexDirection: "row", gap: 6, justifyContent: "center", minHeight: 44, paddingHorizontal: 8 },
+  primaryText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
+  secondaryButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 12, borderWidth: 1, flex: 1, flexDirection: "row", gap: 6, justifyContent: "center", minHeight: 44, paddingHorizontal: 8 },
+  secondaryText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
+  retakeButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 12, borderWidth: 1, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 44, paddingHorizontal: 12 },
+  retakeText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
   disabled: { opacity: 0.42 },
   pressed: { opacity: 0.72 },
 });

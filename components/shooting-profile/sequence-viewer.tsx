@@ -17,6 +17,7 @@ import type {
   RepresentativePoseFrameV2,
   ShootingHandV2,
 } from "@/lib/shooting-profile/types";
+import { tokens } from "@/constants/tokens";
 
 type Point3 = { x: number; y: number; z: number };
 
@@ -140,14 +141,14 @@ export function getRepresentativeFocusStyle(
   surface: RepresentativeFocusSurface,
 ): ViewStyle {
   if (!focused) return {};
-  let outlineColor = "#102235";
-  let shadowColor = "#F97316";
+  let outlineColor = tokens.focusRing;
+  let shadowColor = tokens.primary;
   if (surface === "play") {
-    outlineColor = "#FFFFFF";
-    shadowColor = "#102235";
+    outlineColor = tokens.focusRing;
+    shadowColor = tokens.background;
   } else if (surface === "selected-navy") {
-    outlineColor = "#F97316";
-    shadowColor = "#FFFFFF";
+    outlineColor = tokens.primary;
+    shadowColor = tokens.foreground;
   }
   return {
     elevation: 8,
@@ -458,7 +459,7 @@ export function SequenceViewer({
         style={styles.stage}
       >
         <Svg width="100%" height={300} viewBox="0 0 330 300">
-          <Line x1="20" y1="280" x2="310" y2="280" stroke="#607487" strokeWidth="1" strokeDasharray="5 6" />
+          <Line x1="20" y1="280" x2="310" y2="280" stroke={tokens.skeletonDerived} strokeWidth="1" strokeDasharray="5 6" />
           {DISPLAY_BONES.map(([from, to]) => {
             const derived = canvasPoints[from].source === "derived" || canvasPoints[to].source === "derived";
             return (
@@ -468,7 +469,7 @@ export function SequenceViewer({
                 y1={canvasPoints[from].y}
                 x2={canvasPoints[to].x}
                 y2={canvasPoints[to].y}
-                stroke={derived ? "#8FA2B1" : "#E7EDF1"}
+                stroke={derived ? tokens.skeletonDerived : tokens.skeletonPrimary}
                 strokeWidth={derived ? 4 : 6}
                 strokeLinecap="round"
               />
@@ -482,8 +483,8 @@ export function SequenceViewer({
                 cx={canvasPoints[joint].x}
                 cy={canvasPoints[joint].y}
                 r={derived ? 5 : 6}
-                fill={derived ? "#0B1623" : "#F5F1E8"}
-                stroke={derived ? "#B6C2CD" : "#C24122"}
+                fill={derived ? tokens.stage : tokens.skeletonPrimary}
+                stroke={derived ? tokens.skeletonDerived : tokens.skeletonSecondary}
                 strokeWidth={derived ? 2 : 1.5}
               />
             );
@@ -610,46 +611,46 @@ export function SequenceViewer({
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 20, borderWidth: 1, gap: 12, overflow: "hidden", padding: 15 },
+  card: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 20, borderWidth: 1, gap: 12, overflow: "hidden", padding: 15 },
   header: { alignItems: "center", flexDirection: "row", gap: 12 },
   headerCopy: { flex: 1 },
-  eyebrow: { color: "#9A3412", fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1.2 },
-  title: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 2 },
-  boundary: { color: "#9A3412", fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18, marginTop: 2 },
-  percentBadge: { alignItems: "center", backgroundColor: "#102235", borderRadius: 14, minWidth: 68, paddingHorizontal: 10, paddingVertical: 8 },
-  percentValue: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 22 },
-  percentLabel: { color: "#B6C2CD", fontFamily: "Barlow", fontSize: 9 },
-  metaPanel: { backgroundColor: "#EEF4F8", borderRadius: 13, padding: 11 },
-  mode: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
-  meta: { color: "#52677B", fontFamily: "Barlow-SemiBold", fontSize: 12, marginTop: 3 },
-  qualityPass: { color: "#166534", fontFamily: "Barlow-SemiBold", fontSize: 12, marginTop: 5 },
-  qualityRecapture: { color: "#9A3412", fontFamily: "Barlow-SemiBold", fontSize: 12, marginTop: 5 },
-  mirrorConvention: { color: "#52677B", fontFamily: "Barlow", fontSize: 11, lineHeight: 16, marginTop: 5 },
-  stage: { backgroundColor: "#0B1623", borderRadius: 15, minHeight: 300, overflow: "hidden" },
+  eyebrow: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1.2 },
+  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 2 },
+  boundary: { color: tokens.warning, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18, marginTop: 2 },
+  percentBadge: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 14, minWidth: 68, paddingHorizontal: 10, paddingVertical: 8 },
+  percentValue: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 22 },
+  percentLabel: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 9 },
+  metaPanel: { backgroundColor: tokens.elevatedSurface, borderRadius: 13, padding: 11 },
+  mode: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
+  meta: { color: tokens.mutedForeground, fontFamily: "Barlow-SemiBold", fontSize: 12, marginTop: 3 },
+  qualityPass: { color: tokens.positive, fontFamily: "Barlow-SemiBold", fontSize: 12, marginTop: 5 },
+  qualityRecapture: { color: tokens.destructive, fontFamily: "Barlow-SemiBold", fontSize: 12, marginTop: 5 },
+  mirrorConvention: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 11, lineHeight: 16, marginTop: 5 },
+  stage: { backgroundColor: tokens.stage, borderRadius: 15, minHeight: 300, overflow: "hidden" },
   legend: { alignItems: "center", bottom: 9, flexDirection: "row", gap: 12, left: 12, position: "absolute" },
-  legendObserved: { color: "#F5F1E8", fontFamily: "Barlow-SemiBold", fontSize: 10 },
-  legendDerived: { color: "#B6C2CD", fontFamily: "Barlow-SemiBold", fontSize: 10 },
+  legendObserved: { color: tokens.foreground, fontFamily: "Barlow-SemiBold", fontSize: 10 },
+  legendDerived: { color: tokens.mutedForeground, fontFamily: "Barlow-SemiBold", fontSize: 10 },
   viewRow: { flexDirection: "row", gap: 7 },
-  viewButton: { alignItems: "center", backgroundColor: "#F5F1E8", borderColor: "#607487", borderRadius: 11, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 5 },
-  controlSelected: { backgroundColor: "#102235", borderColor: "#102235" },
-  viewText: { color: "#43596E", fontFamily: "BarlowCondensed-Bold", fontSize: 13 },
-  controlSelectedText: { color: "#FFFFFF" },
+  viewButton: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderColor: tokens.border, borderRadius: 11, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 5 },
+  controlSelected: { backgroundColor: tokens.primarySoft, borderColor: tokens.primary },
+  viewText: { color: tokens.mutedForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 13 },
+  controlSelectedText: { color: tokens.foreground },
   markerRow: { flexDirection: "row", gap: 4 },
-  marker: { alignItems: "center", borderColor: "#607487", borderRadius: 10, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 58, minWidth: 44, paddingHorizontal: 2, paddingVertical: 5 },
-  markerSelected: { backgroundColor: "#FFF0E8", borderColor: "#9A3412", borderWidth: 2 },
-  markerSymbol: { color: "#607487", fontSize: 13 },
-  markerText: { color: "#43596E", fontFamily: "BarlowCondensed-Bold", fontSize: 10, marginTop: 1 },
-  markerSelectedText: { color: "#9A3412" },
-  markerPercent: { color: "#607487", fontFamily: "Barlow", fontSize: 8, marginTop: 1 },
+  marker: { alignItems: "center", borderColor: tokens.border, borderRadius: 10, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 58, minWidth: 44, paddingHorizontal: 2, paddingVertical: 5 },
+  markerSelected: { backgroundColor: tokens.primarySoft, borderColor: tokens.primary, borderWidth: 2 },
+  markerSymbol: { color: tokens.mutedForeground, fontSize: 13 },
+  markerText: { color: tokens.mutedForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 10, marginTop: 1 },
+  markerSelectedText: { color: tokens.primary },
+  markerPercent: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 8, marginTop: 1 },
   slider: { justifyContent: "center", minHeight: 44, minWidth: 44, paddingVertical: 12 },
-  sliderRail: { backgroundColor: "#607487", borderRadius: 99, height: 6, left: 0, position: "absolute", right: 0 },
-  sliderFill: { backgroundColor: "#9A3412", borderRadius: 99, height: 6, left: 0, position: "absolute" },
-  sliderThumb: { backgroundColor: "#FFFFFF", borderColor: "#9A3412", borderRadius: 99, borderWidth: 3, height: 22, marginLeft: -11, position: "absolute", width: 22 },
-  playButton: { alignItems: "center", backgroundColor: "#9A3412", borderRadius: 13, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 48, minWidth: 44, paddingHorizontal: 16 },
-  playSymbol: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
-  playText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  announcement: { color: "#102235", fontFamily: "Barlow-SemiBold", fontSize: 11, textAlign: "center" },
-  motionNote: { backgroundColor: "#EEF4F8", borderRadius: 9, color: "#43596E", fontFamily: "Barlow", fontSize: 11, lineHeight: 17, padding: 9 },
-  sampleNote: { color: "#52677B", fontFamily: "Barlow", fontSize: 10, lineHeight: 15 },
+  sliderRail: { backgroundColor: tokens.border, borderRadius: 99, height: 6, left: 0, position: "absolute", right: 0 },
+  sliderFill: { backgroundColor: tokens.primary, borderRadius: 99, height: 6, left: 0, position: "absolute" },
+  sliderThumb: { backgroundColor: tokens.foreground, borderColor: tokens.primary, borderRadius: 99, borderWidth: 3, height: 22, marginLeft: -11, position: "absolute", width: 22 },
+  playButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 13, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 48, minWidth: 44, paddingHorizontal: 16 },
+  playSymbol: { color: tokens.primaryForeground, fontSize: 15, fontWeight: "900" },
+  playText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  announcement: { color: tokens.foreground, fontFamily: "Barlow-SemiBold", fontSize: 11, textAlign: "center" },
+  motionNote: { backgroundColor: tokens.elevatedSurface, borderRadius: 9, color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 11, lineHeight: 17, padding: 9 },
+  sampleNote: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 10, lineHeight: 15 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
 });

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { tokens } from "@/constants/tokens";
 
 const TABS = [
   { name: "index", icon: "home-filled" as const, label: "홈" },
@@ -41,7 +42,7 @@ export function LiquidTabBar({ state, navigation }: BottomTabBarProps) {
             }}
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
-            <MaterialIcons name={tab.icon} size={22} color={active ? "#0B1623" : "#D7E2EB"} />
+            <MaterialIcons name={tab.icon} size={22} color={active ? tokens.primaryForeground : tokens.mutedForeground} />
             <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
           </Pressable>;
         })}
@@ -51,10 +52,10 @@ export function LiquidTabBar({ state, navigation }: BottomTabBarProps) {
 
 const styles = StyleSheet.create({
   shell: { alignSelf: "center", left: 16, maxWidth: 460, position: "absolute", right: 16, zIndex: 30 },
-  dock: { backgroundColor: "rgba(11,22,35,0.96)", borderColor: "rgba(172,200,220,0.28)", borderRadius: 22, borderWidth: 1, flexDirection: "row", minHeight: 68, overflow: "hidden", padding: 7, shadowColor: "#0B1623", shadowOffset: { height: 12, width: 0 }, shadowOpacity: 0.28, shadowRadius: 22 },
-  glassCapsule: { backgroundColor: "rgba(249,115,22,0.94)", borderColor: "rgba(255,248,238,0.64)", borderRadius: 16, borderWidth: 1, bottom: 7, left: 4, position: "absolute", top: 7 },
+  dock: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 22, borderWidth: 1, flexDirection: "row", minHeight: 68, overflow: "hidden", padding: 7, shadowColor: tokens.background, shadowOffset: { height: 12, width: 0 }, shadowOpacity: 0.28, shadowRadius: 22 },
+  glassCapsule: { backgroundColor: tokens.primary, borderColor: tokens.border, borderRadius: 16, borderWidth: 1, bottom: 7, left: 4, position: "absolute", top: 7 },
   tab: { alignItems: "center", borderRadius: 16, flex: 1, gap: 3, justifyContent: "center", minHeight: 52, zIndex: 1 },
-  tabLabel: { color: "#D7E2EB", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 0.65 },
-  tabLabelActive: { color: "#0B1623" },
+  tabLabel: { color: tokens.mutedForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 0.65 },
+  tabLabelActive: { color: tokens.primaryForeground },
   pressed: { opacity: 0.75, transform: [{ scale: 0.96 }] },
 });

@@ -18,6 +18,7 @@ import {
   type SaveRepresentativeProfile,
   useShootingProfileCapture,
 } from "@/hooks/use-shooting-profile-capture";
+import { tokens } from "@/constants/tokens";
 
 type CaptureSessionProps = {
   completionActionLabel: string;
@@ -38,7 +39,7 @@ function StepHeader({ current }: { current: 1 | 2 | 3 | 4 }) {
 function SetupInstruction({ icon, children }: { icon: "accessibility-new" | "straighten" | "photo-size-select-large" | "sports-basketball"; children: string }) {
   return (
     <View style={styles.instructionRow}>
-      <MaterialIcons name={icon} size={19} color="#F97316" />
+      <MaterialIcons name={icon} size={19} color={tokens.primary} />
       <Text style={styles.instructionText}>{children}</Text>
     </View>
   );
@@ -48,11 +49,11 @@ function focusStyle(focused: boolean, dark = false): ViewStyle {
   if (!focused) return {};
   return {
     elevation: 8,
-    outlineColor: dark ? "#FFFFFF" : "#102235",
+    outlineColor: tokens.focusRing,
     outlineOffset: 2,
     outlineStyle: "solid",
     outlineWidth: 3,
-    shadowColor: "#F97316",
+    shadowColor: dark ? tokens.background : tokens.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 4,
@@ -134,7 +135,7 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
           onPress={close}
           style={({ pressed }) => [styles.closeButton, focusStyle(focusedControl === "close"), saving && styles.disabled, pressed && !saving && styles.pressed]}
         >
-          <MaterialIcons name="close" size={20} color="#102235" />
+          <MaterialIcons name="close" size={20} color={tokens.foreground} />
           <Text style={styles.closeText}>닫기</Text>
         </Pressable>
       </View>
@@ -204,7 +205,7 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
                       pressed && styles.pressed,
                     ]}
                   >
-                    <MaterialIcons name={selected ? "check-circle" : "radio-button-unchecked"} size={19} color={selected ? "#FFFFFF" : "#102235"} />
+                    <MaterialIcons name={selected ? "check-circle" : "radio-button-unchecked"} size={19} color={selected ? tokens.foreground : tokens.foreground} />
                     <Text style={[styles.handText, selected && styles.handTextSelected]}>
                       {hand === "right" ? "오른손" : "왼손"}
                     </Text>
@@ -232,7 +233,7 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
               style={({ pressed }) => [styles.startButton, focusStyle(focusedControl === "start", true), pressed && styles.primaryPressed]}
             >
               <Text style={styles.startText}>정면 클립부터 시작</Text>
-              <MaterialIcons name="arrow-forward" size={19} color="#FFFFFF" />
+              <MaterialIcons name="arrow-forward" size={19} color={tokens.primaryForeground} />
             </Pressable>
           </View>
         ) : null}
@@ -264,7 +265,7 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
         {state.status === "ready_to_aggregate" || state.status === "aggregating" ? (
           <View style={styles.centerState}>
             <StepHeader current={3} />
-            <ActivityIndicator color="#C24122" size="large" />
+            <ActivityIndicator color={tokens.destructive} size="large" />
             <Text style={styles.centerTitle}>정규화된 슛 위상을 결합하는 중</Text>
             <Text accessibilityLiveRegion="polite" style={styles.centerCopy}>
               모든 필수 클립이 통과했습니다. 정면과 측면의 서로 다른 시간축을 각각 정규화하고 있습니다.
@@ -294,7 +295,7 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
           <View style={styles.centerState}>
             <StepHeader current={4} />
             <View style={styles.completeIcon}>
-              <MaterialIcons name="lock" size={28} color="#FFFFFF" />
+              <MaterialIcons name="lock" size={28} color={tokens.primaryForeground} />
             </View>
             <Text style={styles.centerTitle}>비공개 저장 완료</Text>
             <Text accessibilityLiveRegion="polite" style={styles.centerCopy}>
@@ -318,7 +319,7 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
 
         {state.status === "cancelled" ? (
           <View style={styles.centerState}>
-            <MaterialIcons name="pause-circle-outline" size={44} color="#61738A" />
+            <MaterialIcons name="pause-circle-outline" size={44} color={tokens.mutedForeground} />
             <Text style={styles.centerTitle}>촬영 세션을 멈췄습니다</Text>
             <Text style={styles.centerCopy}>기기 내 분석 요청을 취소했습니다. 통과한 파생 결과는 이 화면 안에서만 유지됩니다.</Text>
             <Pressable
@@ -352,7 +353,7 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
 
         {state.status === "error" ? (
           <View style={styles.centerState}>
-            <MaterialIcons name="error-outline" size={44} color="#C24122" />
+            <MaterialIcons name="error-outline" size={44} color={tokens.destructive} />
             <Text style={styles.centerTitle}>다시 확인해 주세요</Text>
             <Text accessibilityLiveRegion="assertive" style={styles.globalError}>
               {state.errorMessage ?? "세션을 계속하지 못했습니다."}
@@ -380,50 +381,50 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: "#F5F1E8", bottom: 0, left: 0, position: "absolute", right: 0, top: 0 },
-  header: { alignItems: "center", borderBottomColor: "#D9E0E4", borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12 },
-  kicker: { color: "#9A3412", fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 1.2 },
-  headerTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 22, marginTop: 1 },
-  closeButton: { alignItems: "center", borderColor: "#B8C2CA", borderRadius: 12, borderWidth: 1, flexDirection: "row", gap: 5, justifyContent: "center", minHeight: 44, minWidth: 70, paddingHorizontal: 10 },
-  closeText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
+  canvas: { backgroundColor: tokens.background, bottom: 0, left: 0, position: "absolute", right: 0, top: 0 },
+  header: { alignItems: "center", borderBottomColor: tokens.border, borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12 },
+  kicker: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 1.2 },
+  headerTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 22, marginTop: 1 },
+  closeButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 12, borderWidth: 1, flexDirection: "row", gap: 5, justifyContent: "center", minHeight: 44, minWidth: 70, paddingHorizontal: 10 },
+  closeText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
   page: { alignSelf: "center", maxWidth: 680, paddingBottom: 36, paddingHorizontal: 16, paddingTop: 18, width: "100%" },
   stepHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 13 },
-  stepCount: { color: "#9A3412", fontFamily: "BarlowCondensed-Bold", fontSize: 13, letterSpacing: 1 },
-  stepNames: { color: "#61738A", fontFamily: "Barlow-SemiBold", fontSize: 11 },
-  pageTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 32, lineHeight: 36 },
-  pageIntro: { color: "#61738A", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6 },
-  modeSummary: { alignItems: "center", backgroundColor: "#102235", borderRadius: 17, flexDirection: "row", gap: 10, marginTop: 18, padding: 14 },
+  stepCount: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 13, letterSpacing: 1 },
+  stepNames: { color: tokens.mutedForeground, fontFamily: "Barlow-SemiBold", fontSize: 11 },
+  pageTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 32, lineHeight: 36 },
+  pageIntro: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6 },
+  modeSummary: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 17, flexDirection: "row", gap: 10, marginTop: 18, padding: 14 },
   modeSummaryCopy: { flex: 1 },
-  summaryLabel: { color: "#B6C2CD", fontFamily: "Barlow", fontSize: 11 },
-  summaryValue: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 20, marginTop: 2 },
-  summaryEvidence: { color: "#FDBA74", fontFamily: "Barlow-SemiBold", fontSize: 11, lineHeight: 16, marginTop: 3 },
-  textButton: { alignItems: "center", borderColor: "#F5F1E8", borderRadius: 11, borderWidth: 1, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 10 },
-  textButtonText: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 13 },
-  sectionLabel: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 18, marginTop: 21 },
+  summaryLabel: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 11 },
+  summaryValue: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 20, marginTop: 2 },
+  summaryEvidence: { color: tokens.warning, fontFamily: "Barlow-SemiBold", fontSize: 11, lineHeight: 16, marginTop: 3 },
+  textButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 11, borderWidth: 1, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 10 },
+  textButtonText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 13 },
+  sectionLabel: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 18, marginTop: 21 },
   handRow: { flexDirection: "row", gap: 9, marginTop: 9 },
-  handButton: { alignItems: "center", borderColor: "#B8C2CA", borderRadius: 12, borderWidth: 1, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 44, minWidth: 44 },
-  handButtonSelected: { backgroundColor: "#102235", borderColor: "#102235" },
-  handText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
-  handTextSelected: { color: "#FFFFFF" },
-  instructions: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 17, borderWidth: 1, gap: 11, marginTop: 18, padding: 14 },
+  handButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 12, borderWidth: 1, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 44, minWidth: 44 },
+  handButtonSelected: { backgroundColor: tokens.elevatedSurface, borderColor: tokens.border },
+  handText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
+  handTextSelected: { color: tokens.foreground },
+  instructions: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 17, borderWidth: 1, gap: 11, marginTop: 18, padding: 14 },
   instructionRow: { alignItems: "flex-start", flexDirection: "row", gap: 8 },
-  instructionText: { color: "#102235", flex: 1, fontFamily: "Barlow", fontSize: 13, lineHeight: 19 },
-  startButton: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 18, minHeight: 48, minWidth: 44, paddingHorizontal: 14 },
-  startText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
+  instructionText: { color: tokens.foreground, flex: 1, fontFamily: "Barlow", fontSize: 13, lineHeight: 19 },
+  startButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 18, minHeight: 48, minWidth: 44, paddingHorizontal: 14 },
+  startText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
   slotSection: { marginTop: 22 },
   slotSectionHeading: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", marginBottom: 9 },
-  slotSectionTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 22 },
-  slotProgress: { color: "#C24122", fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
+  slotSectionTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 22 },
+  slotProgress: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
   slotList: { gap: 10 },
-  cancelButton: { alignItems: "center", borderColor: "#B8C2CA", borderRadius: 13, borderWidth: 1, justifyContent: "center", marginTop: 14, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
-  cancelText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
+  cancelButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 13, borderWidth: 1, justifyContent: "center", marginTop: 14, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
+  cancelText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
   centerState: { alignItems: "center", paddingHorizontal: 8, paddingTop: 34 },
-  centerTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 14, textAlign: "center" },
-  centerCopy: { color: "#61738A", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" },
-  completeIcon: { alignItems: "center", backgroundColor: "#166534", borderRadius: 24, height: 52, justifyContent: "center", width: 52 },
-  retakeHeading: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 24, marginTop: 25 },
-  retakeIntro: { color: "#61738A", fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 3 },
-  globalError: { color: "#9A3412", fontFamily: "Barlow-SemiBold", fontSize: 14, lineHeight: 21, marginTop: 8, textAlign: "center" },
+  centerTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 14, textAlign: "center" },
+  centerCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" },
+  completeIcon: { alignItems: "center", backgroundColor: tokens.positive, borderRadius: 24, height: 52, justifyContent: "center", width: 52 },
+  retakeHeading: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 24, marginTop: 25 },
+  retakeIntro: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 3 },
+  globalError: { color: tokens.destructive, fontFamily: "Barlow-SemiBold", fontSize: 14, lineHeight: 21, marginTop: 8, textAlign: "center" },
   disabled: { opacity: 0.44 },
   pressed: { opacity: 0.72 },
   primaryPressed: { opacity: 0.76 },

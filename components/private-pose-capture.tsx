@@ -11,6 +11,7 @@ import { describeLegacySaveFailure } from "@/lib/legacy-capture-status";
 import { detectPoseFromSelectedVideo } from "@/lib/pose-detection";
 import { personalPoseToCorrectedMotion } from "@/lib/personal-pose";
 import { validateSelectedShootingVideo } from "@/lib/video-intake";
+import { tokens } from "@/constants/tokens";
 
 type CaptureState = "idle" | "picking" | "detecting" | "saving" | "complete" | "blocked" | "error";
 
@@ -29,10 +30,10 @@ function GuidedPrivatePoseCaptureEntry() {
         <Text style={styles.title}>정면·측면 대표 슛폼</Text>
         <Text style={styles.subtitle}>Basic 1+1 또는 High accuracy 3+3 클립을 기기 안에서 분석합니다.</Text>
       </View>
-      <MaterialIcons name="switch-video" size={23} color="#F97316" />
+      <MaterialIcons name="switch-video" size={23} color={tokens.primary} />
     </View>
     <View style={styles.tip}>
-      <MaterialIcons name="privacy-tip" size={18} color="#102C46" />
+      <MaterialIcons name="privacy-tip" size={18} color={tokens.foreground} />
       <Text style={styles.tipText}>정면과 슈팅 측면은 따로 촬영하며, 원본 영상을 업로드하거나 저장했다고 표시하지 않습니다.</Text>
     </View>
     <Pressable
@@ -46,7 +47,7 @@ function GuidedPrivatePoseCaptureEntry() {
       onPress={() => router.push("/private-capture")}
       style={({ pressed }) => [styles.v2Button, focusStyle(focused, true), pressed && styles.v2Pressed]}
     >
-      <MaterialIcons name="videocam" size={19} color="#FFFFFF" />
+      <MaterialIcons name="videocam" size={19} color={tokens.primaryForeground} />
       <Text style={styles.buttonText}>정면·측면 슛폼 만들기</Text>
     </Pressable>
   </View>;
@@ -122,8 +123,8 @@ function LegacyPrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | 
 
   const working = state === "picking" || state === "detecting" || state === "saving";
   return <View style={styles.card}>
-    <View style={styles.heading}><View><Text style={styles.title}>새 개인 스켈레톤</Text><Text style={styles.subtitle}>기기 안에서 분석합니다. 기존 분석의 클라우드 저장은 현재 사용할 수 없습니다.</Text></View><MaterialIcons name="video-library" size={22} color="#F97316" /></View>
-    <View style={styles.tip}><MaterialIcons name="tips-and-updates" size={17} color="#102C46" /><Text style={styles.tipText}>측면·전신·밝은 조명에서 2–20초 슈팅 영상을 선택하세요. 추출은 iPhone custom development build에서 기기 안에서 실행됩니다. 결과를 클라우드에 저장하는 기능은 현재 사용할 수 없습니다.</Text></View>
+    <View style={styles.heading}><View><Text style={styles.title}>새 개인 스켈레톤</Text><Text style={styles.subtitle}>기기 안에서 분석합니다. 기존 분석의 클라우드 저장은 현재 사용할 수 없습니다.</Text></View><MaterialIcons name="video-library" size={22} color={tokens.primary} /></View>
+    <View style={styles.tip}><MaterialIcons name="tips-and-updates" size={17} color={tokens.foreground} /><Text style={styles.tipText}>측면·전신·밝은 조명에서 2–20초 슈팅 영상을 선택하세요. 추출은 iPhone custom development build에서 기기 안에서 실행됩니다. 결과를 클라우드에 저장하는 기능은 현재 사용할 수 없습니다.</Text></View>
     <Pressable
       accessibilityLabel="기존 단일 시점 슈팅 영상 선택 후 분석"
       accessibilityRole="button"
@@ -135,7 +136,7 @@ function LegacyPrivatePoseCapture({ onSaved }: { onSaved: () => Promise<void> | 
       onPress={() => void chooseAndAnalyze()}
       style={({ pressed }) => [styles.button, focusStyle(focused, true), working && styles.disabled, pressed && !working && styles.pressed]}
     >
-      {working ? <ActivityIndicator color="#FFFFFF" /> : <MaterialIcons name="add-to-photos" size={18} color="#FFFFFF" />}<Text style={styles.buttonText}>{working ? "분석 중" : "영상 선택 후 분석"}</Text>
+      {working ? <ActivityIndicator color={tokens.primaryForeground} /> : <MaterialIcons name="add-to-photos" size={18} color={tokens.primaryForeground} />}<Text style={styles.buttonText}>{working ? "분석 중" : "영상 선택 후 분석"}</Text>
     </Pressable>
     <Text accessibilityLiveRegion={state === "error" || state === "blocked" ? "assertive" : "polite"} style={[styles.status, state === "error" && styles.error, state === "blocked" && styles.blocked, state === "complete" && styles.complete]}>{detail}</Text>
   </View>;
@@ -145,11 +146,11 @@ function focusStyle(focused: boolean, dark: boolean): ViewStyle {
   if (!focused) return {};
   return {
     elevation: 8,
-    outlineColor: dark ? "#FFFFFF" : "#102235",
+    outlineColor: tokens.focusRing,
     outlineOffset: 2,
     outlineStyle: "solid",
     outlineWidth: 3,
-    shadowColor: "#102235",
+    shadowColor: dark ? tokens.background : tokens.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 4,
@@ -157,13 +158,13 @@ function focusStyle(focused: boolean, dark: boolean): ViewStyle {
 }
 
 const styles = StyleSheet.create({
-  v2Card: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 16, borderWidth: 1, marginTop: 14, padding: 14 },
+  v2Card: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 16, borderWidth: 1, marginTop: 14, padding: 14 },
   v2HeadingCopy: { flex: 1, paddingRight: 10 },
-  v2Button: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, minWidth: 44, paddingHorizontal: 12 },
+  v2Button: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, minWidth: 44, paddingHorizontal: 12 },
   v2Pressed: { opacity: 0.76 },
-  card: { backgroundColor: "rgba(238,244,248,0.72)", borderColor: "rgba(16,44,70,0.12)", borderRadius: 16, borderStyle: "dashed", borderWidth: 1, marginTop: 14, padding: 14 },
-  heading: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" }, title: { color: "#102C46", fontFamily: "BarlowCondensed-Bold", fontSize: 20 }, subtitle: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
-  tip: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 12 }, tipText: { color: "#102C46", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17 },
-  button: { alignItems: "center", backgroundColor: "#9A3412", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, minWidth: 44 }, buttonText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  status: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 10 }, error: { color: "#C24122" }, blocked: { color: "#8A5A00" }, complete: { color: "#166534" }, disabled: { opacity: 0.62 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
+  card: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 16, borderStyle: "dashed", borderWidth: 1, marginTop: 14, padding: 14 },
+  heading: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" }, title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 20 }, subtitle: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
+  tip: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 12 }, tipText: { color: tokens.foreground, flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17 },
+  button: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 13, minHeight: 46, minWidth: 44 }, buttonText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  status: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 10 }, error: { color: tokens.destructive }, blocked: { color: tokens.warning }, complete: { color: tokens.positive }, disabled: { opacity: 0.62 }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });

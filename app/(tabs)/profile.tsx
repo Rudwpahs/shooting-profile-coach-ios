@@ -39,16 +39,17 @@ import {
   valueForExactOwner,
   type OwnerOperationToken,
 } from "@/lib/shooting-profile/capture-session-reducer";
+import { tokens } from "@/constants/tokens";
 
 function focusStyle(focused: boolean, dark = false): ViewStyle {
   if (!focused) return {};
   return {
     elevation: 8,
-    outlineColor: dark ? "#FFFFFF" : "#102235",
+    outlineColor: tokens.focusRing,
     outlineOffset: 2,
     outlineStyle: "solid",
     outlineWidth: 3,
-    shadowColor: "#F97316",
+    shadowColor: dark ? tokens.background : tokens.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 4,
@@ -285,21 +286,21 @@ export default function PersonalProfileTab() {
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View><Text style={styles.kicker}>FORMPATH / PRIVATE VAULT</Text><Text style={styles.title}>내 기록</Text></View>
-          <View style={styles.lockChip}><MaterialIcons name="lock-outline" size={15} color="#F5F1E8" /><Text style={styles.lockChipText}>PRIVATE</Text></View>
+          <View style={styles.lockChip}><MaterialIcons name="lock-outline" size={15} color={tokens.foreground} /><Text style={styles.lockChipText}>PRIVATE</Text></View>
         </View>
 
         <View style={styles.identityCard}>
           <View style={styles.identityTop}>
             <View style={styles.avatar}><Text style={styles.avatarText}>{(user?.email?.[0] ?? "F").toUpperCase()}</Text></View>
             <View style={styles.identityCopy}><Text style={styles.name}>{user?.email?.split("@")[0] ?? "나의 훈련 기록"}</Text><Text style={styles.identityDetail}>{user ? "개인 저장공간 연결됨" : "계정을 연결하면 분석을 보관합니다"}</Text></View>
-            <MaterialIcons name={user ? "verified-user" : "person-outline"} size={23} color={user ? "#7AD8B7" : "#F97316"} />
+            <MaterialIcons name={user ? "verified-user" : "person-outline"} size={23} color={user ? tokens.positive : tokens.primary} />
           </View>
           <View style={styles.metricRail}><VaultMetric value={goalLabel} label="목표" /><VaultMetric value={user ? String(visibleRecordCount) : "—"} label="저장 모션" /><VaultMetric value={user ? "연결" : "대기"} label="계정" /></View>
         </View>
 
         {user && profileSync?.status === "failed" ? (
           <View accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.profileSyncWarning}>
-            <MaterialIcons name="error-outline" size={18} color="#8A5A00" />
+            <MaterialIcons name="error-outline" size={18} color={tokens.warning} />
             <View style={styles.profileSyncCopy}>
               <Text style={styles.profileSyncTitle}>프로필을 완성하지 못했습니다</Text>
               <Text style={styles.profileSyncDetail}>{profileSync.message}</Text>
@@ -331,7 +332,7 @@ export default function PersonalProfileTab() {
 
         <View style={styles.sectionHead}><View><Text style={styles.sectionKicker}>MY MOTIONS</Text><Text style={styles.sectionTitle}>개인 분석</Text></View><Text style={styles.sectionCount}>{user ? `${poses.length}개` : "LOCKED"}</Text></View>
         <View style={styles.vaultCard}>
-          {loading ? <ActivityIndicator color="#F97316" style={styles.loader} /> : !user ? <LockedEmpty /> : (
+          {loading ? <ActivityIndicator color={tokens.primary} style={styles.loader} /> : !user ? <LockedEmpty /> : (
             <>
               {visibleV1Loading ? <Text accessibilityLiveRegion="polite" style={styles.stateText}>기존 분석을 불러오는 중</Text> : null}
               {visibleV1Error ? <Text accessibilityLiveRegion="assertive" style={styles.errorText}>{visibleV1Error}</Text> : null}
@@ -348,9 +349,9 @@ export default function PersonalProfileTab() {
                     onPress={() => setSelectedPoseEnvelope({ ownerUid: user.uid, value: pose })}
                     style={({ pressed }) => [styles.poseSelect, focusStyle(focusedControl === `v1-open-${pose.id}`), pressed && styles.pressed]}
                   >
-                    <View style={styles.poseIcon}><MaterialIcons name="accessibility-new" size={20} color="#F97316" /></View>
+                    <View style={styles.poseIcon}><MaterialIcons name="accessibility-new" size={20} color={tokens.primary} /></View>
                     <View style={styles.poseCopy}><Text style={styles.poseName}>{pose.sourceLabel}</Text><Text style={styles.poseMeta}>기존 단일 시점 분석</Text></View>
-                    <MaterialIcons name="chevron-right" size={22} color="#102235" />
+                    <MaterialIcons name="chevron-right" size={22} color={tokens.foreground} />
                   </Pressable>
                   <Pressable
                     accessibilityLabel={`${pose.sourceLabel} 기존 단일 시점 분석 삭제`}
@@ -363,14 +364,14 @@ export default function PersonalProfileTab() {
                     onPress={() => void deletePose(pose.id)}
                     style={({ pressed }) => [styles.deleteButton, focusStyle(focusedControl === `v1-delete-${pose.id}`), pressed && styles.pressed]}
                   >
-                    <MaterialIcons name="delete-outline" size={20} color="#C74B11" />
+                    <MaterialIcons name="delete-outline" size={20} color={tokens.destructive} />
                     <Text style={styles.srDeleteText}>삭제</Text>
                   </Pressable>
                 </View>
               )) : null}
               {!visibleV1Loading && !visibleV1Error && !poses.length ? (
                 <View style={styles.empty}>
-                  <View style={styles.emptyIcon}><MaterialIcons name="add" size={26} color="#F97316" /></View>
+                  <View style={styles.emptyIcon}><MaterialIcons name="add" size={26} color={tokens.primary} /></View>
                   <Text accessibilityLiveRegion="polite" style={styles.emptyTitle}>저장된 분석이 없습니다</Text>
                   <Text style={styles.emptyCopy}>기존 분석의 클라우드 저장은 현재 사용할 수 없습니다. 영상 분석은 기기 안에서 계속 실행되며, 이미 저장된 기록은 여기서 확인하고 삭제할 수 있습니다.</Text>
                   <Pressable
@@ -384,7 +385,7 @@ export default function PersonalProfileTab() {
                     onPress={() => router.navigate("/motion" as never)}
                     style={({ pressed }) => [styles.emptyAction, focusStyle(focusedControl === "motion"), pressed && styles.pressed]}
                   >
-                    <Text style={styles.emptyActionText}>모션 랩 열기</Text><MaterialIcons name="arrow-forward" size={17} color="#0B1623" />
+                    <Text style={styles.emptyActionText}>모션 랩 열기</Text><MaterialIcons name="arrow-forward" size={17} color={tokens.primaryForeground} />
                   </Pressable>
                 </View>
               ) : null}
@@ -394,13 +395,13 @@ export default function PersonalProfileTab() {
           )}
         </View>
 
-        <View style={styles.sectionHead}><View><Text style={styles.sectionKicker}>ACCOUNT ACCESS</Text><Text style={styles.sectionTitle}>계정 연결</Text></View><MaterialIcons name="security" size={20} color="#1D9B77" /></View>
+        <View style={styles.sectionHead}><View><Text style={styles.sectionKicker}>ACCOUNT ACCESS</Text><Text style={styles.sectionTitle}>계정 연결</Text></View><MaterialIcons name="security" size={20} color={tokens.positive} /></View>
         <View style={styles.accountCard}>
-          {loading ? <ActivityIndicator color="#F97316" style={styles.loader} /> : !configured ? <Text style={styles.accountCopy}>Firebase client 설정이 누락되었습니다. 환경 변수를 다시 확인하세요.</Text> : !user ? (
+          {loading ? <ActivityIndicator color={tokens.primary} style={styles.loader} /> : !configured ? <Text style={styles.accountCopy}>Firebase client 설정이 누락되었습니다. 환경 변수를 다시 확인하세요.</Text> : !user ? (
             <View style={styles.authForm}>
               <Text style={styles.accountCopy}>로그인하면 개인 스켈레톤과 분석 이력을 독립 Firebase private space에 저장합니다.</Text>
-              <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" placeholder="이메일" placeholderTextColor="#8D9AA6" style={styles.input} />
-              <TextInput value={password} onChangeText={setPassword} secureTextEntry autoComplete={mode === "signin" ? "current-password" : "new-password"} placeholder="비밀번호 (6자 이상)" placeholderTextColor="#8D9AA6" style={styles.input} />
+              <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" placeholder="이메일" placeholderTextColor={tokens.mutedForeground} style={styles.input} />
+              <TextInput value={password} onChangeText={setPassword} secureTextEntry autoComplete={mode === "signin" ? "current-password" : "new-password"} placeholder="비밀번호 (6자 이상)" placeholderTextColor={tokens.mutedForeground} style={styles.input} />
               {status ? <Text accessibilityLiveRegion="assertive" style={styles.errorText}>{status}</Text> : null}
               <Pressable
                 accessibilityLabel={mode === "signin" ? "계정 로그인" : "계정 회원가입"}
@@ -413,7 +414,7 @@ export default function PersonalProfileTab() {
                 onPress={() => void submit()}
                 style={({ pressed }) => [styles.authButton, focusStyle(focusedControl === "submit", true), submitting && styles.disabled, pressed && !submitting && styles.pressed]}
               >
-                <Text accessibilityLiveRegion="polite" style={styles.authButtonText}>{submitting ? "처리 중" : mode === "signin" ? "로그인" : "회원가입"}</Text><MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+                <Text accessibilityLiveRegion="polite" style={styles.authButtonText}>{submitting ? "처리 중" : mode === "signin" ? "로그인" : "회원가입"}</Text><MaterialIcons name="arrow-forward" size={18} color={tokens.primaryForeground} />
               </Pressable>
               <Pressable
                 accessibilityLabel={mode === "signin" ? "회원가입 화면으로 전환" : "로그인 화면으로 전환"}
@@ -459,7 +460,7 @@ function VaultMetric({ value, label }: { value: string; label: string }) {
 }
 
 function LockedEmpty() {
-  return <View style={styles.empty}><View style={styles.emptyIcon}><MaterialIcons name="lock-outline" size={25} color="#F97316" /></View><Text accessibilityLiveRegion="polite" style={styles.emptyTitle}>vault가 잠겨 있습니다</Text><Text style={styles.emptyCopy}>계정을 연결하면 개인 motion과 분석 이력이 이곳에 보관됩니다.</Text></View>;
+  return <View style={styles.empty}><View style={styles.emptyIcon}><MaterialIcons name="lock-outline" size={25} color={tokens.primary} /></View><Text accessibilityLiveRegion="polite" style={styles.emptyTitle}>vault가 잠겨 있습니다</Text><Text style={styles.emptyCopy}>계정을 연결하면 개인 motion과 분석 이력이 이곳에 보관됩니다.</Text></View>;
 }
 
 function firebaseMessage(error: unknown) {
@@ -485,63 +486,63 @@ function privatePoseFluid(pose: FirebasePrivatePose): { motion: PoseMotion; sour
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: "#F5F1E8", bottom: 0, left: 0, overflow: "hidden", position: "absolute", right: 0, top: 0 },
-  topArc: { borderColor: "rgba(249,115,22,0.18)", borderRadius: 260, borderWidth: 1, height: 380, position: "absolute", right: -245, top: -180, width: 380 },
+  canvas: { backgroundColor: tokens.background, bottom: 0, left: 0, overflow: "hidden", position: "absolute", right: 0, top: 0 },
+  topArc: { borderColor: tokens.primarySoft, borderRadius: 260, borderWidth: 1, height: 380, position: "absolute", right: -245, top: -180, width: 380 },
   page: { alignSelf: "center", maxWidth: 680, paddingBottom: 116, paddingHorizontal: 16, paddingTop: 20, width: "100%" },
   header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  kicker: { color: "#F97316", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.7 },
-  title: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 45, letterSpacing: -1.1, lineHeight: 49, marginTop: 2 },
-  lockChip: { alignItems: "center", backgroundColor: "#102235", borderRadius: 12, flexDirection: "row", gap: 5, paddingHorizontal: 9, paddingVertical: 7 },
-  lockChipText: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 1 },
-  identityCard: { backgroundColor: "#0B1623", borderRadius: 23, marginTop: 20, overflow: "hidden", padding: 18 },
-  profileSyncWarning: { alignItems: "flex-start", backgroundColor: "#FFF6E5", borderColor: "#E0B84C", borderRadius: 14, borderWidth: 1, flexDirection: "row", gap: 9, marginTop: 12, padding: 13 },
+  kicker: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.7 },
+  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 45, letterSpacing: -1.1, lineHeight: 49, marginTop: 2 },
+  lockChip: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 12, flexDirection: "row", gap: 5, paddingHorizontal: 9, paddingVertical: 7 },
+  lockChipText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 10, letterSpacing: 1 },
+  identityCard: { backgroundColor: tokens.surface, borderRadius: 23, marginTop: 20, overflow: "hidden", padding: 18 },
+  profileSyncWarning: { alignItems: "flex-start", backgroundColor: tokens.warningSoft, borderColor: tokens.warning, borderRadius: 14, borderWidth: 1, flexDirection: "row", gap: 9, marginTop: 12, padding: 13 },
   profileSyncCopy: { flex: 1 },
-  profileSyncTitle: { color: "#7A4E00", fontFamily: "Barlow-SemiBold", fontSize: 13 },
-  profileSyncDetail: { color: "#7A4E00", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 3 },
+  profileSyncTitle: { color: tokens.warning, fontFamily: "Barlow-SemiBold", fontSize: 13 },
+  profileSyncDetail: { color: tokens.warning, fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 3 },
   identityTop: { alignItems: "center", flexDirection: "row", gap: 12 },
-  avatar: { alignItems: "center", backgroundColor: "#F97316", borderRadius: 17, height: 54, justifyContent: "center", width: 54 },
-  avatarText: { color: "#0B1623", fontFamily: "BarlowCondensed-Bold", fontSize: 27 },
+  avatar: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 17, height: 54, justifyContent: "center", width: 54 },
+  avatarText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 27 },
   identityCopy: { flex: 1 },
-  name: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 25 },
-  identityDetail: { color: "#B6C2CD", fontFamily: "Barlow", fontSize: 12, marginTop: 2 },
-  metricRail: { borderTopColor: "rgba(231,237,241,0.14)", borderTopWidth: 1, flexDirection: "row", marginTop: 18, paddingTop: 14 },
+  name: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 25 },
+  identityDetail: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 12, marginTop: 2 },
+  metricRail: { borderTopColor: tokens.border, borderTopWidth: 1, flexDirection: "row", marginTop: 18, paddingTop: 14 },
   vaultMetric: { alignItems: "center", flex: 1 },
-  vaultMetricValue: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 18 },
-  vaultMetricLabel: { color: "#8FA2B1", fontFamily: "Barlow-SemiBold", fontSize: 10, marginTop: 1 },
+  vaultMetricValue: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 18 },
+  vaultMetricLabel: { color: tokens.mutedForeground, fontFamily: "Barlow-SemiBold", fontSize: 10, marginTop: 1 },
   sectionHead: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", marginTop: 27 },
-  sectionKicker: { color: "#F97316", fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1.1 },
-  sectionTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 28, marginTop: 1 },
-  sectionCount: { color: "#667789", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 0.8 },
-  vaultCard: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 19, borderWidth: 1, marginTop: 11, padding: 13 },
+  sectionKicker: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1.1 },
+  sectionTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 28, marginTop: 1 },
+  sectionCount: { color: tokens.mutedForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 0.8 },
+  vaultCard: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 19, borderWidth: 1, marginTop: 11, padding: 13 },
   loader: { marginVertical: 22 },
-  stateText: { color: "#61738A", fontFamily: "Barlow-SemiBold", fontSize: 13, marginVertical: 18, textAlign: "center" },
+  stateText: { color: tokens.mutedForeground, fontFamily: "Barlow-SemiBold", fontSize: 13, marginVertical: 18, textAlign: "center" },
   empty: { alignItems: "center", paddingHorizontal: 10, paddingVertical: 14 },
-  emptyIcon: { alignItems: "center", backgroundColor: "#FFF0E8", borderRadius: 14, height: 44, justifyContent: "center", width: 44 },
-  emptyTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 21, marginTop: 10 },
-  emptyCopy: { color: "#667789", fontFamily: "Barlow", fontSize: 12, lineHeight: 18, marginTop: 3, textAlign: "center" },
-  emptyAction: { alignItems: "center", backgroundColor: "#F97316", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 14, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
-  emptyActionText: { color: "#0B1623", fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
-  poseRow: { alignItems: "center", borderBottomColor: "#E7EDF1", borderBottomWidth: 1, flexDirection: "row", gap: 8, paddingVertical: 8 },
+  emptyIcon: { alignItems: "center", backgroundColor: tokens.primarySoft, borderRadius: 14, height: 44, justifyContent: "center", width: 44 },
+  emptyTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 21, marginTop: 10 },
+  emptyCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 12, lineHeight: 18, marginTop: 3, textAlign: "center" },
+  emptyAction: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 14, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
+  emptyActionText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
+  poseRow: { alignItems: "center", borderBottomColor: tokens.border, borderBottomWidth: 1, flexDirection: "row", gap: 8, paddingVertical: 8 },
   poseSelect: { alignItems: "center", borderRadius: 12, flex: 1, flexDirection: "row", gap: 10, minHeight: 56, minWidth: 44, paddingHorizontal: 4 },
-  poseIcon: { alignItems: "center", backgroundColor: "#FFF0E8", borderRadius: 12, height: 42, justifyContent: "center", width: 42 },
+  poseIcon: { alignItems: "center", backgroundColor: tokens.primarySoft, borderRadius: 12, height: 42, justifyContent: "center", width: 42 },
   poseCopy: { flex: 1 },
-  poseName: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
-  poseMeta: { color: "#667789", fontFamily: "Barlow", fontSize: 11, marginTop: 1 },
-  deleteButton: { alignItems: "center", backgroundColor: "#FFF0E8", borderRadius: 11, justifyContent: "center", minHeight: 48, minWidth: 48 },
-  srDeleteText: { color: "#C74B11", fontFamily: "BarlowCondensed-Bold", fontSize: 10 },
+  poseName: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
+  poseMeta: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 11, marginTop: 1 },
+  deleteButton: { alignItems: "center", backgroundColor: tokens.primarySoft, borderRadius: 11, justifyContent: "center", minHeight: 48, minWidth: 48 },
+  srDeleteText: { color: tokens.destructive, fontFamily: "BarlowCondensed-Bold", fontSize: 10 },
   viewerWrap: { marginTop: 12 },
-  accountCard: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 19, borderWidth: 1, marginTop: 11, padding: 15 },
-  accountCopy: { color: "#667789", fontFamily: "Barlow", fontSize: 13, lineHeight: 19 },
+  accountCard: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 19, borderWidth: 1, marginTop: 11, padding: 15 },
+  accountCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 13, lineHeight: 19 },
   authForm: { gap: 9 },
-  input: { backgroundColor: "#F5F1E8", borderColor: "#D9E0E4", borderRadius: 13, borderWidth: 1, color: "#102235", fontFamily: "Barlow", fontSize: 15, minHeight: 47, paddingHorizontal: 12 },
-  authButton: { alignItems: "center", backgroundColor: "#9A3412", borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 3, minHeight: 47, minWidth: 44 },
-  authButtonText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  input: { backgroundColor: tokens.elevatedSurface, borderColor: tokens.border, borderRadius: 13, borderWidth: 1, color: tokens.elevatedSurface, fontFamily: "Barlow", fontSize: 15, minHeight: 47, paddingHorizontal: 12 },
+  authButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 3, minHeight: 47, minWidth: 44 },
+  authButtonText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
   modeButton: { alignItems: "center", borderRadius: 11, justifyContent: "center", minHeight: 44, minWidth: 44 },
-  modeButtonText: { color: "#102235", fontFamily: "Barlow-SemiBold", fontSize: 13 },
-  errorText: { color: "#C24122", fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17 },
-  successText: { color: "#166534", fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18, marginTop: 10, textAlign: "center" },
-  logoutButton: { alignItems: "center", borderColor: "#C74B11", borderRadius: 13, borderWidth: 1, justifyContent: "center", marginTop: 14, minHeight: 44, minWidth: 44 },
-  logoutText: { color: "#C74B11", fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
+  modeButtonText: { color: tokens.foreground, fontFamily: "Barlow-SemiBold", fontSize: 13 },
+  errorText: { color: tokens.destructive, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17 },
+  successText: { color: tokens.positive, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18, marginTop: 10, textAlign: "center" },
+  logoutButton: { alignItems: "center", borderColor: tokens.destructive, borderRadius: 13, borderWidth: 1, justifyContent: "center", marginTop: 14, minHeight: 44, minWidth: 44 },
+  logoutText: { color: tokens.destructive, fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
 });

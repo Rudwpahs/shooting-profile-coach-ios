@@ -11,6 +11,7 @@ import {
 
 import type { ShootingProfileSummaryV2 } from "@/lib/firebase-shooting-profiles";
 import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-contract";
+import { tokens } from "@/constants/tokens";
 
 type ShootingProfileListProps = {
   records: readonly ShootingProfileSummaryV2[];
@@ -26,11 +27,11 @@ function focusStyle(focused: boolean, dark = false): ViewStyle {
   if (!focused) return {};
   return {
     elevation: 8,
-    outlineColor: dark ? "#FFFFFF" : "#102235",
+    outlineColor: tokens.focusRing,
     outlineOffset: 2,
     outlineStyle: "solid",
     outlineWidth: 3,
-    shadowColor: "#F97316",
+    shadowColor: dark ? tokens.background : tokens.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 4,
@@ -55,7 +56,7 @@ export function ShootingProfileList({
   if (loading) {
     return (
       <View style={styles.state}>
-        <ActivityIndicator color="#9A3412" />
+        <ActivityIndicator color={tokens.primary} />
         <Text accessibilityLiveRegion="polite" style={styles.stateTitle}>대표 슛폼을 불러오는 중</Text>
       </View>
     );
@@ -64,7 +65,7 @@ export function ShootingProfileList({
   if (error) {
     return (
       <View style={styles.state}>
-        <MaterialIcons name="error-outline" size={28} color="#C24122" />
+        <MaterialIcons name="error-outline" size={28} color={tokens.destructive} />
         <Text accessibilityLiveRegion="assertive" style={styles.errorText}>{error}</Text>
       </View>
     );
@@ -73,7 +74,7 @@ export function ShootingProfileList({
   if (records.length === 0) {
     return (
       <View style={styles.state}>
-        <MaterialIcons name="view-in-ar" size={28} color="#9A3412" />
+        <MaterialIcons name="view-in-ar" size={28} color={tokens.primary} />
         <Text accessibilityLiveRegion="polite" style={styles.stateTitle}>저장된 대표 슛폼이 없습니다</Text>
         <Text style={styles.stateCopy}>가이드 촬영을 완료하면 비공개 V2 기록이 이곳에 표시됩니다.</Text>
       </View>
@@ -109,7 +110,7 @@ export function ShootingProfileList({
               ]}
             >
               <View style={styles.icon}>
-                <MaterialIcons name="view-in-ar" size={21} color="#9A3412" />
+                <MaterialIcons name="view-in-ar" size={21} color={tokens.primary} />
               </View>
               <View style={styles.copy}>
                 <Text style={styles.mode}>{modeLabel}</Text>
@@ -118,7 +119,7 @@ export function ShootingProfileList({
                 {!validId ? <Text accessibilityLiveRegion="assertive" style={styles.invalid}>기록 식별자가 유효하지 않아 열거나 삭제할 수 없습니다.</Text> : null}
                 {!canOpen ? <Text style={styles.unavailable}>대표 뷰어가 꺼져 있어 지금은 열 수 없습니다.</Text> : null}
               </View>
-              <MaterialIcons name="chevron-right" size={22} color="#102235" />
+              <MaterialIcons name="chevron-right" size={22} color={tokens.foreground} />
             </Pressable>
             <Pressable
               accessibilityLabel={validId ? `${modeLabel} 삭제` : `${modeLabel} 삭제 불가`}
@@ -136,7 +137,7 @@ export function ShootingProfileList({
                 pressed && !deleteDisabled && styles.pressed,
               ]}
             >
-              <MaterialIcons name={deleting ? "hourglass-top" : "delete-outline"} size={20} color="#9A3412" />
+              <MaterialIcons name={deleting ? "hourglass-top" : "delete-outline"} size={20} color={tokens.primary} />
               <Text accessibilityLiveRegion="polite" style={styles.deleteText}>{deleting ? "삭제 중" : "삭제"}</Text>
             </Pressable>
           </View>
@@ -148,21 +149,21 @@ export function ShootingProfileList({
 
 const styles = StyleSheet.create({
   list: { gap: 8 },
-  row: { alignItems: "center", borderBottomColor: "#E7EDF1", borderBottomWidth: 1, flexDirection: "row", gap: 8, paddingVertical: 8 },
+  row: { alignItems: "center", borderBottomColor: tokens.border, borderBottomWidth: 1, flexDirection: "row", gap: 8, paddingVertical: 8 },
   openButton: { alignItems: "center", borderRadius: 12, flex: 1, flexDirection: "row", gap: 10, minHeight: 72, minWidth: 44, paddingHorizontal: 6, paddingVertical: 6 },
-  icon: { alignItems: "center", backgroundColor: "#FFF0E8", borderRadius: 12, height: 42, justifyContent: "center", width: 42 },
+  icon: { alignItems: "center", backgroundColor: tokens.primarySoft, borderRadius: 12, height: 42, justifyContent: "center", width: 42 },
   copy: { flex: 1 },
-  mode: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
-  meta: { color: "#61738A", fontFamily: "Barlow", fontSize: 11, marginTop: 2 },
-  boundary: { color: "#9A3412", fontFamily: "Barlow-SemiBold", fontSize: 11, lineHeight: 16, marginTop: 2 },
-  unavailable: { color: "#61738A", fontFamily: "Barlow", fontSize: 10, lineHeight: 14, marginTop: 2 },
-  invalid: { color: "#9A3412", fontFamily: "Barlow-SemiBold", fontSize: 10, lineHeight: 14, marginTop: 2 },
-  deleteButton: { alignItems: "center", backgroundColor: "#FFF0E8", borderRadius: 11, justifyContent: "center", minHeight: 52, minWidth: 52, paddingHorizontal: 5 },
-  deleteText: { color: "#9A3412", fontFamily: "BarlowCondensed-Bold", fontSize: 11, marginTop: 1 },
+  mode: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
+  meta: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 11, marginTop: 2 },
+  boundary: { color: tokens.warning, fontFamily: "Barlow-SemiBold", fontSize: 11, lineHeight: 16, marginTop: 2 },
+  unavailable: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 10, lineHeight: 14, marginTop: 2 },
+  invalid: { color: tokens.destructive, fontFamily: "Barlow-SemiBold", fontSize: 10, lineHeight: 14, marginTop: 2 },
+  deleteButton: { alignItems: "center", backgroundColor: tokens.primarySoft, borderRadius: 11, justifyContent: "center", minHeight: 52, minWidth: 52, paddingHorizontal: 5 },
+  deleteText: { color: tokens.destructive, fontFamily: "BarlowCondensed-Bold", fontSize: 11, marginTop: 1 },
   state: { alignItems: "center", justifyContent: "center", minHeight: 116, paddingHorizontal: 12, paddingVertical: 18 },
-  stateTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 18, marginTop: 7, textAlign: "center" },
-  stateCopy: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 18, marginTop: 3, textAlign: "center" },
-  errorText: { color: "#9A3412", fontFamily: "Barlow-SemiBold", fontSize: 13, lineHeight: 19, marginTop: 7, textAlign: "center" },
+  stateTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 18, marginTop: 7, textAlign: "center" },
+  stateCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 12, lineHeight: 18, marginTop: 3, textAlign: "center" },
+  errorText: { color: tokens.destructive, fontFamily: "Barlow-SemiBold", fontSize: 13, lineHeight: 19, marginTop: 7, textAlign: "center" },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.72 },
 });

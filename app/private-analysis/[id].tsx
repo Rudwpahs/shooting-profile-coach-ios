@@ -15,6 +15,7 @@ import {
   getShootingProfileV2,
   type ShootingProfileViewerRecordV2,
 } from "@/lib/firebase-shooting-profiles";
+import { tokens } from "@/constants/tokens";
 
 const OPAQUE_PROFILE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -82,7 +83,7 @@ export default function PrivateAnalysisRoute() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
-          <ActivityIndicator color="#9A3412" size="large" />
+          <ActivityIndicator color={tokens.primary} size="large" />
           <Text accessibilityLiveRegion="polite" style={styles.stateTitle}>분석을 불러오는 중</Text>
           <Text style={styles.stateCopy}>소유자 전용 대표 슛폼을 안전하게 확인하고 있습니다.</Text>
         </View>
@@ -144,7 +145,7 @@ export default function PrivateAnalysisRoute() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
-          <ActivityIndicator color="#9A3412" size="large" />
+          <ActivityIndicator color={tokens.primary} size="large" />
           <Text accessibilityLiveRegion="polite" style={styles.stateTitle}>분석을 불러오는 중</Text>
         </View>
       </SafeAreaView>
@@ -184,19 +185,19 @@ export default function PrivateAnalysisRoute() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { backgroundColor: "#F5F1E8", flex: 1 },
+  safeArea: { backgroundColor: tokens.background, flex: 1 },
   page: { alignSelf: "center", gap: 10, maxWidth: 760, padding: 18, paddingBottom: 48, width: "100%" },
   backButton: { alignItems: "center", alignSelf: "flex-start", justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 5 },
-  backButtonText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  eyebrow: { color: "#9A3412", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.4, marginTop: 4 },
-  title: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 38, lineHeight: 42 },
-  intro: { color: "#52677B", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginBottom: 7 },
+  backButtonText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  eyebrow: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.4, marginTop: 4 },
+  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 38, lineHeight: 42 },
+  intro: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginBottom: 7 },
   centerState: { alignItems: "center", flex: 1, justifyContent: "center", padding: 24 },
-  stateTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 15, textAlign: "center" },
-  stateCopy: { color: "#52677B", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6, maxWidth: 420, textAlign: "center" },
-  primaryButton: { alignItems: "center", backgroundColor: "#9A3412", borderRadius: 13, justifyContent: "center", marginTop: 18, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
-  primaryButtonText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  secondaryButton: { alignItems: "center", borderColor: "#102235", borderRadius: 13, borderWidth: 2, justifyContent: "center", marginTop: 10, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
-  secondaryButtonText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  stateTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 15, textAlign: "center" },
+  stateCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6, maxWidth: 420, textAlign: "center" },
+  primaryButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 13, justifyContent: "center", marginTop: 18, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
+  primaryButtonText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  secondaryButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 13, borderWidth: 2, justifyContent: "center", marginTop: 10, minHeight: 48, minWidth: 150, paddingHorizontal: 18 },
+  secondaryButtonText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
 });
