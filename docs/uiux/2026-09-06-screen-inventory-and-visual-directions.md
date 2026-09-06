@@ -202,9 +202,29 @@ radius `0 / 8 / 14 / 22 / pill`. 카드 14, 시트 22, 칩 pill. 4pt 그리드: 
   `analysisHighConfidence` 강조. 두 상태는 썸네일 크기에서도 구분돼야 한다.
 - 경계 문구 "위상 결합 4D 추정 · 실측 3D 아님"은 분석 1층 하단에 항상 노출.
 
+## 4.6 결정 (2026-09-06) — 방향 A + Instagram 밀도
+
+소유자가 **A Graphite / Volt**를 선택했다. 동시에 비교 mock이 "글씨가 너무 많다"는 지적을 받았다:
+처음부터 Instagram 같은 감각을 요구했는데 mock은 kicker·부제·설명문·라벨 칩으로 분석 대시보드처럼
+읽혔다. 이 지적은 팔레트보다 우선하는 규칙이 된다.
+
+**텍스트 예산 (홈·탐색·프로필 공통)**
+
+- skeleton stage가 카드 폭을 채운다(정사각형 이상). 글은 stage 위가 아니라 아래 한 줄.
+- 카드당 텍스트 최대 1줄. 숫자는 큰 숫자 + 아주 작은 라벨(세션·비교·저장), 문장 없음.
+- eyebrow/kicker 줄, 부제, 설명 문단, "예시 · …" 같은 긴 캡션은 쓰지 않는다. 예시 표기는 한 단어.
+- 탭바·액션 행은 아이콘만(비교 ⇄, 저장 북마크, 프로필). 라벨은 접근성 label로만 존재한다.
+- 경계 문구("위상 결합 4D 추정 · 실측 3D 아님")와 개인정보 안내는 분석 화면 하단과 시트에만 둔다.
+- 신뢰도 밴드는 작은 점/배지 하나로: High = volt 점, 재촬영 필요 = 점선 skeleton + warning 점.
+- 설명이 필요하면 한 탭 아래(분석 2–3층, 시트)로 보낸다. 망설여지면 글자를 뺀다.
+
+A는 dark-first다. `userInterfaceStyle`은 `dark`로 고정하고 ThemeProvider 기본 scheme도 dark로 둔다
+(PR #4의 `light`는 rebase 시 이 결정으로 덮는다). light 토큰 세트는 theme-lab과 향후 확장을 위해
+정의만 유지한다.
+
 ## 5. 다음 단계
 
-1. 소유자가 A/B/C 중 하나를 고른다(Artifact 비교 페이지).
+1. ~~소유자가 A/B/C 중 하나를 고른다~~ → A 확정 (2026-09-06).
 2. `refactor(ui): centralize visual tokens` — 토큰 확장 + 리터럴 제거, 화면 동작 변경 없음.
 3. `feat(ui): redesign bottom navigation` — 4탭 + 중앙 촬영.
 4. `feat(profile): make skeleton the profile identity` — 시각 컴포넌트 추출, 데이터 로직 보존.
