@@ -185,7 +185,6 @@ export default function PrivateAnalysisRoute() {
         <AnalysisSummaryLine profile={loadState.record.profile} />
         <SequenceViewer
           confidence={loadState.record.confidence}
-          layout="stage"
           profile={loadState.record.profile}
           shootingHand={loadState.record.shootingHand}
         />

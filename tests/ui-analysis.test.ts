@@ -9,7 +9,7 @@ const viewer = readFileSync("components/shooting-profile/sequence-viewer.tsx", "
 describe("analysis in three layers", () => {
   it("opens on the skeleton, a band and one finding, with the numbers one tap deeper", () => {
     const summary = route.indexOf("<AnalysisSummaryLine");
-    const stage = route.indexOf('layout="stage"');
+    const stage = route.indexOf("<SequenceViewer");
     const details = route.indexOf("<AnalysisDetails");
     const evidence = route.indexOf("<AnalysisEvidence");
     expect(summary).toBeGreaterThan(-1);
@@ -37,12 +37,14 @@ describe("analysis in three layers", () => {
     expect(layers).not.toMatch(/reconstructBoneDirection|buildRepresentativeSequence|two-view-pipeline/);
   });
 
-  it("lets the viewer drop its own text chrome in stage layout without touching its controls", () => {
-    expect(viewer).toContain('layout?: "full" | "stage";');
-    expect(viewer).toContain('layout = "full",');
-    expect(viewer.match(/layout === "full" \?/g)?.length).toBeGreaterThanOrEqual(3);
-    // Interactive controls remain unconditional in both layouts.
-    for (const control of ["대표 동작 위상 슬라이더", "시점 선택", "위상 ${markerIndex}%로 이동", "대표 동작 재생"]) {
+  it("plays like a post: tap the stage to pause or resume, scrub 1:1, snap to anchors, no text chrome", () => {
+    expect(viewer).not.toMatch(/REPRESENTATIVE SEQUENCE|대표 슛폼 101|metaPanel|sampleNote|legend/);
+    expect(viewer).toContain('accessibilityLabel={isPlaying ? "대표 동작 일시정지" : "대표 동작 재생"}');
+    expect(viewer).toContain("onTouchMove={(event) => seekFromTrack(event.nativeEvent.locationX)}");
+    expect(viewer).toContain('accessibilityRole="adjustable"');
+    expect(viewer).toContain("Haptics.selectionAsync()");
+    expect(viewer).toContain("AccessibilityInfo.announceForAccessibility(message)");
+    for (const control of ["대표 동작 위상 슬라이더", "시점 선택", "위상 ${marker.index}%로 이동"]) {
       expect(viewer).toContain(control);
     }
   });
