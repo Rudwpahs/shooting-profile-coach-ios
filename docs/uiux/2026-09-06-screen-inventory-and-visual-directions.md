@@ -222,6 +222,37 @@ A는 dark-first다. `userInterfaceStyle`은 `dark`로 고정하고 ThemeProvider
 (PR #4의 `light`는 rebase 시 이 결정으로 덮는다). light 토큰 세트는 theme-lab과 향후 확장을 위해
 정의만 유지한다.
 
+## 4.7 2026-09-06 후속 지시 — 재생 창·상하단 바를 Instagram처럼, Apple 디자인 원칙 적용
+
+소유자 피드백: "스켈레톤 재생 창이 너무 복잡하다, 인스타그램처럼", "하단 바·상단 바도", 그리고 전체 UI/UX에
+[emilkowalski/skills — apple-design](https://github.com/emilkowalski/skills/tree/main/skills/apple-design)을
+참조할 것. 그 스킬은 WWDC의 *Designing Fluid Interfaces*, *The Details of UI Typography*, *Principles of
+Great Design*을 요약한 것으로, React Native 앱에 적용 가능한 부분을 골라 규칙으로 고정했다
+(`tests/ui-apple-design.test.ts`).
+
+| Apple 원칙 | 적용 |
+| --- | --- |
+| Response — 터치-다운 즉시 피드백 | 모든 Pressable에 pressed 상태(불투명도·0.97 스케일) |
+| Direct manipulation — 1:1 추적 | 재생 창 진행선을 손가락으로 스크럽(`onTouchMove`) |
+| Interruptibility | 재생 중 언제든 stage 탭으로 일시정지·재개 |
+| Feedback — 의미 있는 순간에만 | 앵커 스냅에서만 selection haptic |
+| Simplicity ≠ minimalism | 1층 stage+밴드+발견 한 줄, 숫자·증거는 접힘 |
+| Typography | 시스템 서체, 무게·크기·행간으로 위계, 크기별 자간(큰 글자 음수·본문 0·작은 라벨 양수), tabular 숫자 |
+| Familiarity / Wayfinding | 모든 화면에 44pt 바 하나: 제목(어디), 왼쪽(나가기), 오른쪽(할 일). 뒤로가기는 chevron |
+| Reduced motion | 크로스페이드 없이 릴리스 정지 프레임 유지, 탭이 마운트 시 자동재생을 강제하지 않음 |
+| Materials | 반투명 바는 `expo-blur` 미설치라 도입하지 않음(의존성 추가는 별도 결정). 헤어라인 분리선 유지 |
+
+**재생 창(뷰어)**: 헤더·모드 패널·퍼센트 배지·라벨 마커 행·큰 재생 버튼·범례·샘플 노트 제거. stage 탭 =
+재생/일시정지(일시정지 중에만 재생 글리프), 모서리에 시점 점 3개, stage 아래 얇은 진행선 + 앵커 점 5개
+(탭 스냅), 스크린리더 안내는 `AccessibilityInfo.announceForAccessibility`. 슬라이더·시점·앵커의 접근성
+계약과 라이프사이클은 그대로.
+
+**바**: 상단 `TopBar`(44pt, 중앙 제목 17/600, 헤어라인) — 홈은 워드마크, 탐색 "탐색", 프로필 "내 슛폼",
+분석 "‹ 대표 슛폼", 촬영 "슛폼 촬영 · 닫기". 하단 바는 같은 무게의 아이콘 4개(촬영은 `plus-box-outline`),
+볼트 캡슐 제거.
+
+**피드 루프**: 홈 카드·프로필 hero도 stage 탭으로 일시정지(`LoopStage`).
+
 ## 5. 다음 단계
 
 1. ~~소유자가 A/B/C 중 하나를 고른다~~ → A 확정 (2026-09-06).

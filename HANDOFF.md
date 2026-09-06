@@ -34,6 +34,15 @@ contracts, flag meaning, route names, accessibility contracts, the boundary stri
 520 tests + 1 skipped · `expo export --platform web` 20 routes. Explore, Profile (signed out) and Home
 were reviewed on the exported web build at 375 pt; the signed-in Profile and Analysis need a device.
 
+### 2026-09-06 follow-up: Instagram-style player and bars, Apple design foundations
+Owner asked for a simpler, post-like skeleton player, simpler top and bottom bars, and the
+apple-design skill (emilkowalski/skills) applied across the UI. Commits `83f2e33` (player: tap the
+stage to pause, 1:1 scrub line with anchor dots, no text chrome) and the bars/type commit (TopBar on
+every screen, flat icon tab bar, system font with size-specific tracking, tap-to-pause loops,
+touch-down feedback). Pinned by `tests/ui-apple-design.test.ts`. Translucent bars were not added
+because `expo-blur` is not a dependency; that is a separate decision. Record:
+`docs/uiux/2026-09-06-screen-inventory-and-visual-directions.md` §4.7.
+
 ### Follow-ups deliberately left
 Profile PROGRESS/SAVED tabs and compare/save actions (features do not exist; nothing fake was drawn),
 Archivo display face (Barlow Condensed kept), other users' skeleton feed (needs a public opt-in
