@@ -103,7 +103,7 @@ export function ProfileHero({ width, state, record, view, onViewChange }: Profil
 
 const styles = StyleSheet.create({
   frame: { backgroundColor: tokens.stage, overflow: "hidden", position: "relative" },
-  placeholder: { alignItems: "center", justifyContent: "center" },
+  placeholder: { alignItems: "center", justifyContent: "flex-end", paddingBottom: 22 },
   silhouette: { left: 0, opacity: 0.16, position: "absolute", top: 0 },
   placeholderText: { color: tokens.mutedForeground, fontSize: 13 },
   badge: { backgroundColor: tokens.mutedForeground, borderRadius: 5, height: 10, position: "absolute", right: 12, top: 12, width: 10 },
