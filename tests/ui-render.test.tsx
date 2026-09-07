@@ -17,6 +17,7 @@ const authState: { user: { uid: string; email: string } | null; loading: boolean
   profileSync: null,
 };
 let latestState: unknown = { status: "signed-out" };
+const flags = { captureV2: true, profileV2: true, representative4DViewer: true, realVideoEvaluation: false };
 
 vi.mock("expo-router", () => ({
   useRouter: () => ({ push, navigate, replace, back: vi.fn(), canGoBack: () => true }),
@@ -55,9 +56,7 @@ vi.mock("@/lib/firebase-shooting-profiles", () => ({
 vi.mock("@/hooks/use-latest-representative-profile", () => ({
   useLatestRepresentativeProfile: () => latestState,
 }));
-vi.mock("@/lib/feature-flags", () => ({
-  FORMPATH_FLAGS: { captureV2: true, profileV2: true, representative4DViewer: true, realVideoEvaluation: false },
-}));
+vi.mock("@/lib/feature-flags", () => ({ FORMPATH_FLAGS: flags }));
 // Native pose capture pulls in expo-modules-core, which has no jsdom runtime.
 vi.mock("@/components/private-pose-capture", () => ({ PrivatePoseCapture: () => null }));
 vi.mock("@/components/pose-motion-viewer", () => ({ PoseMotionViewer: () => null }));
@@ -108,6 +107,8 @@ beforeEach(() => {
   authState.user = null;
   authState.loading = false;
   latestState = { status: "signed-out" };
+  flags.profileV2 = true;
+  flags.representative4DViewer = true;
   vi.mocked(shootingProfiles.listShootingProfilesV2).mockReset().mockImplementation(async () => []);
   vi.mocked(shootingProfiles.getShootingProfileV2).mockReset().mockImplementation(async () => null);
 });
@@ -237,6 +238,30 @@ describe("profile", () => {
     expect(labelsContaining("위상 결합 4D 추정 · 실측 3D 아님")).toHaveLength(3);
     expect(vi.mocked(shootingProfiles.getShootingProfileV2).mock.calls.map(([, id]) => id)).toEqual(["abc123", "def456", "ghi789"]);
   });
+
+  it("representative viewer off: tiles stay visible but disabled, with the reason in the label", async () => {
+    flags.representative4DViewer = false;
+    authState.user = { uid: "owner-1", email: "owner@example.com" };
+    vi.mocked(shootingProfiles.listShootingProfilesV2).mockImplementation(async () => [summary("abc123")]);
+    vi.mocked(shootingProfiles.getShootingProfileV2).mockImplementation(async () => ({ profile, shootingHand: "right", confidence: 0.65 }));
+    await render(<ProfileScreen />);
+    await settle(() => vi.mocked(shootingProfiles.getShootingProfileV2).mock.calls.length);
+
+    const tile = labelsContaining("대표 뷰어 꺼짐")[0];
+    expect(tile?.getAttribute("aria-disabled")).toBe("true");
+    await click(tile);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("profile persistence off: no list read, no grid, an intentional empty hero", async () => {
+    flags.profileV2 = false;
+    authState.user = { uid: "owner-1", email: "owner@example.com" };
+    await render(<ProfileScreen />);
+
+    expect(vi.mocked(shootingProfiles.listShootingProfilesV2)).not.toHaveBeenCalled();
+    expect(labelsContaining("위상 결합 4D 추정")).toHaveLength(0);
+    expect(byLabel("첫 슛폼을 촬영해 보세요")).not.toBeNull();
+  });
 });
 
 describe("motion grid", () => {
@@ -310,6 +335,20 @@ describe("home", () => {
     expect(byLabel("내 슛폼 프로필 열기")).not.toBeNull();
     await click(byLabel("내 대표 슛폼 분석 열기"));
     expect(push).toHaveBeenCalledWith("/private-analysis/abc123");
+  });
+
+  it("ready with the representative viewer off: no analysis action (the route would only redirect), profile action kept", async () => {
+    flags.representative4DViewer = false;
+    authState.user = { uid: "owner-1", email: "owner@example.com" };
+    latestState = {
+      status: "ready",
+      summary: { id: "abc123", mode: "basic_1_plus_1", shootingHand: "right", confidence: 0.65, createdAt: { toDate: () => new Date() } },
+      record: { profile, shootingHand: "right", confidence: 0.65 },
+    };
+    await render(<HomeScreen />);
+
+    expect(byLabel("내 대표 슛폼 분석 열기")).toBeNull();
+    expect(byLabel("내 슛폼 프로필 열기")).not.toBeNull();
   });
 });
 

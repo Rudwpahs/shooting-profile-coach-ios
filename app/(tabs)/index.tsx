@@ -15,6 +15,7 @@ import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
 import { useLatestRepresentativeProfile } from "@/hooks/use-latest-representative-profile";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
+import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { relativeDayLabel } from "@/lib/format/relative-day";
 import { useProfile } from "@/lib/profile-store";
@@ -78,7 +79,11 @@ export default function HomeScreen() {
         {latest.status === "ready" ? (
           <FeedCard
             actions={[
-              { icon: "arrow-expand", label: "내 대표 슛폼 분석 열기", onPress: () => router.push(`/private-analysis/${latest.summary.id}` as never) },
+              // The analysis route redirects to the profile while the viewer flag
+              // is off; the profile grid disables its tiles for the same reason.
+              ...(FORMPATH_FLAGS.representative4DViewer
+                ? [{ icon: "arrow-expand" as const, label: "내 대표 슛폼 분석 열기", onPress: () => router.push(`/private-analysis/${latest.summary.id}` as never) }]
+                : []),
               { icon: "human", label: "내 슛폼 프로필 열기", onPress: openProfile },
             ]}
             caption={focus.title}
