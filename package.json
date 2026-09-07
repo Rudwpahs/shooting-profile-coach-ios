@@ -16,6 +16,7 @@
     "test:unit": "vitest run --exclude tests/firebase-configuration.test.ts",
     "test:rules": "firebase emulators:exec --only firestore --project demo-formpath \"vitest run --config vitest.rules.config.ts\"",
     "test:integration:firebase-live": "vitest run tests/firebase-configuration.test.ts",
+    "eval:two-view": "tsx --tsconfig tsconfig.json scripts/evaluate-two-view-landmark-pair.ts",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "android": "expo start --android",
     "ios": "expo start --ios",

@@ -14,6 +14,12 @@ export type SyntheticDualViewSessionOptions = {
   thirdTakeRotationRadians?: number;
   observationNoiseAmplitude?: number;
   anchorTimingJitterNormalized?: number;
+  /**
+   * Moves every intermediate shooting-side anchor (deepestDip, rise,
+   * releaseProxy) later by this fraction of the take, leaving the frames on
+   * the same phase grid. Isolates cross-view phase-timing disagreement.
+   */
+  sideAnchorShiftNormalized?: number;
 };
 
 export type SyntheticDualViewSession = {
@@ -199,6 +205,7 @@ function syntheticAttempt(
   directionSpikeRadians = 0.60,
   observationNoiseAmplitude = 0.00002,
   anchorTimingJitterNormalized = 0,
+  anchorShiftNormalized = 0,
 ): NormalizedViewAttemptV2 {
   const durationMs = 900 + takeIndex * 170 + (view === "shooting_side" ? 230 : 0);
   const offsetMs = 100 + takeIndex * 1_700 + (view === "shooting_side" ? 12_000 : 0);
@@ -208,7 +215,9 @@ function syntheticAttempt(
       const takeJitterSign = takeIndex === 0 ? -1 : takeIndex === 2 ? 1 : 0;
       const normalizedTimestamp = index === 0 || index === ANCHOR_IDS.length - 1
         ? ANCHOR_PHASES[index]
-        : ANCHOR_PHASES[index] + takeJitterSign * anchorTimingJitterNormalized;
+        : ANCHOR_PHASES[index]
+          + takeJitterSign * anchorTimingJitterNormalized
+          + anchorShiftNormalized;
       return {
         id: anchorId,
         phase: ANCHOR_PHASES[index],
@@ -282,6 +291,7 @@ export function syntheticDualViewSession(
         ?? (options.directionSpikeAtPhaseIndex === undefined ? 0 : 0.60),
       options.observationNoiseAmplitude,
       options.anchorTimingJitterNormalized,
+      view === "shooting_side" ? options.sideAnchorShiftNormalized ?? 0 : 0,
     )
   ));
   return {

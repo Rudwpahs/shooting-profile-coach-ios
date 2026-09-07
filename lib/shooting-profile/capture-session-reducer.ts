@@ -109,6 +109,8 @@ export type CaptureSessionState = {
   confidence?: number;
   savedProfileId?: string;
   errorMessage?: string;
+  /** Stable machine-readable recapture reason from the two-view pipeline, never user copy. */
+  recaptureReasonCode?: string;
   recoveryStatus?: CaptureSessionRecoveryStatus;
 };
 
@@ -313,6 +315,7 @@ export type CaptureSessionAction =
     type: "AGGREGATE_RECAPTURE_REQUIRED";
     sessionGeneration: number;
     reason: string;
+    reasonCode?: string;
   }
   | { type: "SAVE_STARTED" }
   | { type: "SAVE_SUCCEEDED"; sessionGeneration: number; profileId: string }
@@ -573,6 +576,7 @@ export function captureSessionReducer(
         ...clearDerivedSession(state),
         status: "error",
         errorMessage: action.reason,
+        ...(action.reasonCode === undefined ? {} : { recaptureReasonCode: action.reasonCode }),
         recoveryStatus: "collecting",
       };
     case "SAVE_STARTED":

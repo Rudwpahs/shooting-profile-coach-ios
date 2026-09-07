@@ -14,9 +14,7 @@ import {
   type CaptureSaveOperationTokenV2,
   type RetainedNormalizedAttemptsV2,
 } from "@/lib/shooting-profile/capture-session-reducer";
-import { detectPhaseAnchors, resampleAttemptToPhaseGrid } from "@/lib/shooting-profile/phase-normalization";
-import { buildRepresentativeSequence } from "@/lib/shooting-profile/representative-sequence";
-import type { NormalizedViewAttemptV2 } from "@/lib/shooting-profile/repeated-shot";
+import { buildTwoViewRepresentativeProfile } from "@/lib/shooting-profile/two-view-pipeline";
 import type {
   CaptureProtocolV2,
   ShootingHandV2,
@@ -85,6 +83,15 @@ function detectorFailureReason(status: string, reason: string): string {
 function recaptureReason(reason: string): string {
   if (reason === "no_complete_agreeing_subset") {
     return "반복 슛 사이의 일치도가 충분하지 않습니다. 평소 슛폼으로 해당 클립을 다시 촬영하세요.";
+  }
+  if (reason === "cross_view_phase_mismatch") {
+    return "정면 클립과 측면 클립의 슛 타이밍(딥·상승·릴리스)이 서로 다릅니다. 두 시점 모두 같은 리듬의 슛으로 다시 촬영하세요.";
+  }
+  if (reason === "phase_detection_failed") {
+    return "클립에서 준비·딥·릴리스·팔로우스루 위상을 찾지 못했습니다. 전신이 보이는 한 번의 완결된 슛으로 다시 촬영하세요.";
+  }
+  if (reason === "uncertainty_exceeds_limit") {
+    return "두 시점에서 추정한 관절 방향의 불확실성이 허용 범위를 넘었습니다. 카메라를 정면과 측면에 더 정확히 두고 다시 촬영하세요.";
   }
   return "두 시점의 위상 결합 품질이 부족합니다. 안내를 확인하고 필요한 클립을 다시 촬영하세요.";
 }
@@ -323,23 +330,17 @@ export function useShootingProfileCapture(
     dispatch({ type: "AGGREGATE_STARTED" });
     normalizedAttemptsRef.current = null;
     try {
-      const attempts = acceptedSlots.map((slot): NormalizedViewAttemptV2 => {
-        const sequence = slot.sequence;
-        if (!sequence) throw new Error("accepted slot is missing its derived sequence");
-        const phaseAnchors = detectPhaseAnchors(sequence);
-        return {
-          id: slot.id,
-          phaseAnchors,
-          frames: resampleAttemptToPhaseGrid(sequence, phaseAnchors),
-        };
-      });
-      const result = buildRepresentativeSequence({
+      const result = buildTwoViewRepresentativeProfile({
         mode: state.mode,
-        frontAttempts: attempts.filter((attempt) => attempt.frames[0]?.view === "front"),
-        shootingSideAttempts: attempts.filter((attempt) => attempt.frames[0]?.view === "shooting_side"),
-        rootMotion: { status: "unavailable" },
+        shootingHand: state.shootingHand,
+        attempts: acceptedSlots.map((slot) => {
+          const sequence = slot.sequence;
+          if (!sequence) throw new Error("accepted slot is missing its derived sequence");
+          return { id: slot.id, sequence };
+        }),
       });
       if (result.status === "complete") {
+        const attempts = result.normalizedAttempts;
         normalizedAttemptsRef.current = {
           sessionGeneration,
           mode: state.mode,
@@ -358,6 +359,7 @@ export function useShootingProfileCapture(
           type: "AGGREGATE_RECAPTURE_REQUIRED",
           sessionGeneration,
           reason: recaptureReason(result.reason),
+          reasonCode: result.reason,
         });
       }
     } catch {

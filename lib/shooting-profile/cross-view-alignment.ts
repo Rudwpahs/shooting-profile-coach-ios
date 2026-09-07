@@ -2,6 +2,7 @@ import type { NormalizedViewAttemptV2 } from "@/lib/shooting-profile/repeated-sh
 
 const CANONICAL_ANCHOR_COUNT = 5;
 const EPSILON = 1e-12;
+const PENALTY_NOISE_FLOOR = 1e-9;
 
 /**
  * Provisional engineering limits for deciding whether separately recorded
@@ -16,6 +17,23 @@ export const CROSS_VIEW_PHASE_ALIGNMENT_V1 = Object.freeze({
   validationStatus: "provisional_unvalidated_engineering_gate" as const,
   maximumIntermediateAnchorDelta: 0.10,
   maximumPhaseIntervalRmse: 0.08,
+  /**
+   * How an accepted-but-imperfect alignment widens the fused estimate's
+   * uncertainty and lowers its confidence. Every term is linear in
+   * `1 - confidence`, so more front/side timing disagreement can never shrink
+   * uncertainty or raise confidence. Provisional engineering defaults, not
+   * validated coverage levels.
+   */
+  uncertaintyPropagation: Object.freeze({
+    /**
+     * Added to every observed bone's evidence cone, which the 25-degree
+     * admission gate inspects, so a poorly conditioned bone whose views also
+     * disagree in timing tips into recapture instead of being fused.
+     */
+    coneDegreesAtLimit: 3,
+    varianceAtLimit: 0.015,
+    confidencePenaltyAtLimit: 0.5,
+  }),
 });
 
 export type CrossViewPhaseAlignmentReasonV1 =
@@ -43,8 +61,25 @@ export type CrossViewPhaseAlignmentResultV1 =
     comparedPairCount: number;
   };
 
+export type CrossViewPhaseAlignmentAcceptedV1 = Extract<
+  CrossViewPhaseAlignmentResultV1,
+  { status: "accepted" }
+>;
+
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
+}
+
+/**
+ * 0 for perfectly aligned views, rising linearly to 1 at the provisional
+ * rejection limit; a rejected or malformed result is treated as the limit.
+ */
+export function crossViewAlignmentPenalty(result: CrossViewPhaseAlignmentResultV1): number {
+  if (result.status !== "accepted" || !Number.isFinite(result.confidence)) return 1;
+  const penalty = clamp(1 - result.confidence, 0, 1);
+  // Re-timing a take (offset/speed change) leaves sub-1e-9 rounding residue in
+  // the normalized anchor positions; that is not evidence of disagreement.
+  return penalty < PENALTY_NOISE_FLOOR ? 0 : penalty;
 }
 
 function normalizedAnchorPositions(attempt: NormalizedViewAttemptV2): number[] | undefined {

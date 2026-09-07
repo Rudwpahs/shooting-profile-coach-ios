@@ -1,0 +1,115 @@
+{
+  "version": "two_view_evaluation_report_v1",
+  "sourceClass": "synthetic_fixture",
+  "mode": "basic_1_plus_1",
+  "shootingHand": "right",
+  "boundary": "representative_phase_fused_4d_estimate_not_actual_3d",
+  "attempts": [
+    {
+      "attemptId": "front-0",
+      "view": "front",
+      "takeIndex": 0,
+      "frameCount": 59,
+      "acceptedFrameRatio": 1,
+      "nominalFrameRate": 30,
+      "frameRateMode": "constant",
+      "medianRequiredJointVisibility": 0.95,
+      "lowerDecileRequiredJointVisibility": 0.95,
+      "phaseDetection": {
+        "status": "detected",
+        "normalizedAnchorPositions": [
+          0,
+          0.11406518010291596,
+          0.5428816466552315,
+          0.885934819897084,
+          1
+        ]
+      }
+    },
+    {
+      "attemptId": "shooting_side-0",
+      "view": "shooting_side",
+      "takeIndex": 0,
+      "frameCount": 59,
+      "acceptedFrameRatio": 1,
+      "nominalFrameRate": 30,
+      "frameRateMode": "constant",
+      "medianRequiredJointVisibility": 0.95,
+      "lowerDecileRequiredJointVisibility": 0.95,
+      "phaseDetection": {
+        "status": "detected",
+        "normalizedAnchorPositions": [
+          0,
+          0.11406518010291596,
+          0.5428816466552315,
+          0.885934819897084,
+          1
+        ]
+      }
+    }
+  ],
+  "crossViewAlignment": {
+    "status": "accepted",
+    "version": "cross_view_phase_alignment_v1",
+    "confidence": 1,
+    "maximumIntermediateAnchorDelta": 0,
+    "phaseIntervalRmse": 0,
+    "comparedPairCount": 1
+  },
+  "pipeline": {
+    "status": "complete",
+    "confidence": 0.65,
+    "selectedAttemptsByView": {
+      "front": [
+        "front-0"
+      ],
+      "shooting_side": [
+        "shooting_side-0"
+      ]
+    }
+  },
+  "evidenceSummary": {
+    "meanConditioning": 0.9241418126087475,
+    "minimumConditioning": 0.7805333785993578,
+    "meanAvailability": 0.9500000000000216,
+    "minimumAvailability": 0.95,
+    "maximumRetainedSpreadDegrees": 0,
+    "retainedAnchorDispersion": 0,
+    "maximumDirectionalSensitivityDegrees": 5.848280803086797,
+    "maximumDirectionalConeDegrees": 8.62826567081413
+  },
+  "reconstruction": {
+    "boneLengthDriftMax": 4.440892098500626e-16,
+    "boneLengthDriftWithinTolerance": true,
+    "jointAngleVelocityDegreesPerPhase": {
+      "mean": 33.65677191509082,
+      "p95": 235.9203491428676,
+      "max": 472.4384599526456
+    },
+    "discontinuityCount": 0,
+    "uncertainty": {
+      "coneDegrees": {
+        "min": 7.775250513862706,
+        "median": 8.20180982832594,
+        "p90": 8.628218625119104,
+        "max": 8.62826567081413
+      },
+      "covarianceTrace": {
+        "min": 0.021705810954010956,
+        "median": 0.024961943560175292,
+        "p90": 0.02499422269085943,
+        "max": 0.03061097816623412
+      }
+    }
+  },
+  "runtime": {
+    "processingMs": 96.38099999999997,
+    "peakHeapBytes": 28666000
+  },
+  "privacy": {
+    "containsRawMedia": false,
+    "containsLandmarks": false,
+    "containsTimestamps": false,
+    "containsFilenames": false
+  }
+}
