@@ -2,6 +2,9 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Tells React 19 this is a test environment so act() does not warn on every update.
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
 import type { RepresentativePose4DV2 } from "@/lib/shooting-profile/types";
 
 const push = vi.fn();
