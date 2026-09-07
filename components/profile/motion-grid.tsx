@@ -75,6 +75,9 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
           const deleting = deletingProfileId === record.id;
           const validId = isOpaqueShootingProfileIdV2(record.id);
           const disabled = !canOpen || deleting || !validId;
+          // One delete at a time, as the route enforces: a long press elsewhere
+          // while one is in flight would only open a confirm that goes nowhere.
+          const canDelete = validId && deletingProfileId === null;
           const full = glyphs[record.id];
           const confidence = full ? representativeConfidence(full.profile) : record.mode === "high_accuracy_3_plus_3" ? "high" : "basic";
           const band = confidence === "recapture" ? "재촬영 필요" : confidence === "high" ? "High" : "Basic";
@@ -94,11 +97,11 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
               disabled={disabled}
               focusable
               onAccessibilityAction={(event) => {
-                if (event.nativeEvent.actionName === "longpress" && validId && !deleting) onDelete(record.id);
+                if (event.nativeEvent.actionName === "longpress" && canDelete) onDelete(record.id);
               }}
               onBlur={() => setFocusedControl((current) => current === focusKey ? null : current)}
               onFocus={() => setFocusedControl(focusKey)}
-              onLongPress={() => { if (validId && !deleting) onDelete(record.id); }}
+              onLongPress={() => { if (canDelete) onDelete(record.id); }}
               onPress={() => onOpen(record.id)}
               style={({ pressed }) => [
                 styles.tile,

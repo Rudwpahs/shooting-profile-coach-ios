@@ -134,6 +134,13 @@ async function settle(probe: () => number) {
   }
 }
 
+/** A long press the way react-native-web produces one: press, hold past the delay, release. */
+async function longPress(el: HTMLElement) {
+  await act(async () => { el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 })); });
+  await act(async () => { vi.advanceTimersByTime(1000); });
+  await act(async () => { el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, button: 0 })); });
+}
+
 const byRole = (role: string) => Array.from(container.querySelectorAll(`[role="${role}"]`)) as HTMLElement[];
 const byLabel = (label: string) => container.querySelector(`[aria-label="${label}"]`) as HTMLElement | null;
 const labelsContaining = (fragment: string) => Array.from(container.querySelectorAll("[aria-label]")).filter((el) => (el.getAttribute("aria-label") ?? "").includes(fragment)) as HTMLElement[];
@@ -253,6 +260,27 @@ describe("motion grid", () => {
     expect(container.textContent).toContain("첫 슛폼을 촬영하면 여기에 쌓입니다");
     await render(<MotionGrid canOpen deletingProfileId={null} error="연결 오류" glyphs={{}} loading={false} onDelete={vi.fn()} onOpen={vi.fn()} records={[]} width={375} />);
     expect(container.querySelector('[aria-live="assertive"]')?.textContent).toBe("연결 오류");
+  });
+
+  it("offers one delete at a time: a long press on another tile is ignored while a delete is in flight", async () => {
+    vi.useFakeTimers();
+    try {
+      const onDelete = vi.fn();
+      const records = [summary("abc123"), summary("def456")];
+      const grid = (deletingProfileId: string | null) => (
+        <MotionGrid canOpen deletingProfileId={deletingProfileId} error={null} glyphs={{}} loading={false} onDelete={onDelete} onOpen={vi.fn()} records={records} width={375} />
+      );
+
+      await render(grid(null));
+      await longPress(labelsContaining("대표 스냅샷")[0]);
+      expect(onDelete).toHaveBeenCalledWith("abc123");
+
+      await render(grid("def456"));
+      await longPress(labelsContaining("대표 스냅샷")[0]);
+      expect(onDelete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
