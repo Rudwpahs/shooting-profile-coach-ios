@@ -13,11 +13,24 @@ from .schemas import CoachRequest, CoachResponse
 
 
 class FormPathCoach:
+    """Base causal LM plus an optional local LoRA adapter, producing CoachResponse JSON.
+
+    Constructing an instance loads (and, if not cached, downloads) the base model.
+    Nothing is loaded at import time.
+    """
+
     def __init__(
         self,
         base_model: str = "Qwen/Qwen3-4B",
         adapter_path: str | Path | None = None,
     ) -> None:
+        if not isinstance(base_model, str) or not base_model.strip():
+            raise ValueError("base_model must be a non-empty model id or local path")
+        if adapter_path is not None:
+            adapter_path = Path(adapter_path)
+            if not adapter_path.is_dir():
+                raise ValueError(f"adapter_path must be an existing local directory: {adapter_path}")
+
         self.tokenizer = AutoTokenizer.from_pretrained(base_model, use_fast=True)
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -28,7 +41,7 @@ class FormPathCoach:
 
         model = AutoModelForCausalLM.from_pretrained(
             base_model,
-            torch_dtype=dtype,
+            dtype=dtype,  # `dtype` replaced `torch_dtype` in transformers 4.56 (#39782)
             device_map="auto" if torch.cuda.is_available() else None,
         )
         if adapter_path is not None:
@@ -43,6 +56,11 @@ class FormPathCoach:
         max_new_tokens: int = 1400,
         temperature: float = 0.2,
     ) -> CoachResponse:
+        if max_new_tokens < 1:
+            raise ValueError("max_new_tokens must be >= 1")
+        if temperature < 0:
+            raise ValueError("temperature must be >= 0")
+
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -78,10 +96,14 @@ class FormPathCoach:
 
 def _extract_json_object(text: str) -> dict[str, Any]:
     try:
-        return json.loads(text)
+        payload = json.loads(text)
     except json.JSONDecodeError:
         start = text.find("{")
         end = text.rfind("}")
         if start < 0 or end <= start:
             raise ValueError(f"model did not return JSON: {text[:300]!r}")
-        return json.loads(text[start : end + 1])
+        payload = json.loads(text[start : end + 1])
+    if not isinstance(payload, dict):
+        # Model output problems are ValueErrors, like the no-JSON case above.
+        raise ValueError(f"model did not return a JSON object: {text[:300]!r}")  # noqa: TRY004
+    return payload

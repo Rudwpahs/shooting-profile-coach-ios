@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 EvidenceTier = Literal["A", "A-", "B+", "B", "C", "D", "H"]
 Confidence = Literal["very_low", "low", "medium", "high", "very_high"]
 

@@ -5,8 +5,10 @@ from pathlib import Path
 from typing import Any
 
 import torch
+from pydantic import ValidationError
 from torch.utils.data import Dataset
 
+from .schemas import CoachRequest, CoachResponse
 
 SYSTEM_PROMPT = """You are FormPath Coach, an evidence-aware basketball development model.
 
@@ -24,19 +26,40 @@ Rules:
 
 
 class ScenarioDataset(Dataset):
-    """JSONL dataset of {"request": {...}, "response": {...}} examples."""
+    """JSONL dataset of {"request": {...}, "response": {...}} examples.
+
+    Every non-empty line must be a JSON object whose ``request`` validates as
+    :class:`CoachRequest` and whose ``response`` validates as :class:`CoachResponse`.
+    Rows are kept as the raw dictionaries so the collator serialises exactly what
+    was written. An empty file is an error: there is nothing to train on.
+    """
 
     def __init__(self, path: str | Path):
+        self.path = Path(path)
         self.rows: list[dict[str, Any]] = []
-        with Path(path).open("r", encoding="utf-8") as f:
+        with self.path.open("r", encoding="utf-8") as f:
             for line_no, line in enumerate(f, start=1):
                 line = line.strip()
                 if not line:
                     continue
-                row = json.loads(line)
+                where = f"{self.path}: line {line_no}"
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise ValueError(f"{where}: malformed JSON: {exc.msg}") from exc
+                if not isinstance(row, dict):
+                    # Every bad line is a ValueError so callers have one exception to handle.
+                    raise ValueError(f"{where}: expected a JSON object")  # noqa: TRY004
                 if "request" not in row or "response" not in row:
-                    raise ValueError(f"line {line_no}: expected request and response")
+                    raise ValueError(f"{where}: expected request and response")
+                try:
+                    CoachRequest.model_validate(row["request"])
+                    CoachResponse.model_validate(row["response"])
+                except ValidationError as exc:
+                    raise ValueError(f"{where}: {exc}") from exc
                 self.rows.append(row)
+        if not self.rows:
+            raise ValueError(f"{self.path}: no scenarios found")
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -46,7 +69,14 @@ class ScenarioDataset(Dataset):
 
 
 def make_collate_fn(tokenizer, max_length: int = 4096):
+    """Build a collator that masks the prompt to -100 and trains on the assistant turn only."""
+    if max_length < 1:
+        raise ValueError("max_length must be >= 1")
+
     def collate(rows: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
+        if not rows:
+            raise ValueError("cannot collate an empty batch")
+
         input_ids_batch: list[torch.Tensor] = []
         labels_batch: list[torch.Tensor] = []
 
@@ -60,19 +90,37 @@ def make_collate_fn(tokenizer, max_length: int = 4096):
             ]
             full_messages = prompt_messages + [{"role": "assistant", "content": response_text}]
 
-            prompt_ids = tokenizer.apply_chat_template(
-                prompt_messages,
-                tokenize=True,
-                add_generation_prompt=True,
+            # return_dict=False pins the list[int] return shape across transformers versions.
+            prompt_ids = list(
+                tokenizer.apply_chat_template(
+                    prompt_messages,
+                    tokenize=True,
+                    add_generation_prompt=True,
+                    return_dict=False,
+                )
             )
-            full_ids = tokenizer.apply_chat_template(
-                full_messages,
-                tokenize=True,
-                add_generation_prompt=False,
+            full_ids = list(
+                tokenizer.apply_chat_template(
+                    full_messages,
+                    tokenize=True,
+                    add_generation_prompt=False,
+                    return_dict=False,
+                )
             )
+
+            if full_ids[: len(prompt_ids)] != prompt_ids:
+                raise ValueError(
+                    "chat template: the generation prompt is not a prefix of the full "
+                    "conversation, so prompt masking would be wrong for this tokenizer"
+                )
 
             full_ids = full_ids[:max_length]
             prompt_len = min(len(prompt_ids), len(full_ids))
+            if prompt_len == len(full_ids):
+                raise ValueError(
+                    f"no trainable response tokens after truncation to max_length={max_length} "
+                    f"(prompt is {len(prompt_ids)} tokens); raise max_length or shorten the scenario"
+                )
             labels = [-100] * prompt_len + full_ids[prompt_len:]
 
             input_ids_batch.append(torch.tensor(full_ids, dtype=torch.long))

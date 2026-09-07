@@ -13,7 +13,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from .dataset import ScenarioDataset, make_collate_fn
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--model", default="Qwen/Qwen3-4B")
     p.add_argument("--train-jsonl", required=True)
@@ -26,11 +26,34 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--warmup-ratio", type=float, default=0.03)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--no-qlora", action="store_true")
-    return p.parse_args()
+    return validate_args(p.parse_args(argv))
+
+
+def validate_args(args: argparse.Namespace) -> argparse.Namespace:
+    """Reject configurations that would otherwise fail late or silently."""
+    if args.epochs < 1:
+        raise ValueError("--epochs must be >= 1")
+    if args.batch_size < 1:
+        raise ValueError("--batch-size must be >= 1")
+    if args.grad_accum < 1:
+        raise ValueError("--grad-accum must be >= 1")
+    if args.max_length < 1:
+        raise ValueError("--max-length must be >= 1")
+    if args.lr <= 0:
+        raise ValueError("--lr must be > 0")
+    if not 0.0 <= args.warmup_ratio <= 1.0:
+        raise ValueError("--warmup-ratio must be within [0, 1]")
+    if not Path(args.train_jsonl).is_file():
+        raise ValueError(f"--train-jsonl not found: {args.train_jsonl}")
+    return args
 
 
 def main() -> None:
     args = parse_args()
+
+    # Validate the data before any model download so a bad JSONL fails in seconds.
+    dataset = ScenarioDataset(args.train_jsonl)
+
     torch.manual_seed(args.seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
@@ -55,7 +78,8 @@ def main() -> None:
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
         quantization_config=quant_config,
-        torch_dtype=(torch.bfloat16 if use_cuda and torch.cuda.is_bf16_supported() else None),
+        # `dtype` replaced `torch_dtype` in transformers 4.56 (#39782).
+        dtype=(torch.bfloat16 if use_cuda and torch.cuda.is_bf16_supported() else None),
         device_map="auto" if use_cuda else None,
     )
 
@@ -82,7 +106,6 @@ def main() -> None:
     model.print_trainable_parameters()
     model.train()
 
-    dataset = ScenarioDataset(args.train_jsonl)
     loader = DataLoader(
         dataset,
         batch_size=args.batch_size,
