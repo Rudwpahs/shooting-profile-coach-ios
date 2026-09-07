@@ -94,7 +94,7 @@ describe("private V2 capture persistence wiring", () => {
 
 describe("V1-independent V2 profile UI", () => {
   it("keeps every changed profile action labelled, stateful, focusable, and at least 44 points", () => {
-    for (const source of [read("app/(tabs)/profile.tsx"), read("components/shooting-profile/profile-list.tsx")]) {
+    for (const source of [read("app/(tabs)/profile.tsx"), read("components/profile/motion-grid.tsx")]) {
       const pressables = [...source.matchAll(/<Pressable\b[\s\S]*?<\/Pressable>/g)].map((match) => match[0]);
       expect(pressables.length).toBeGreaterThan(0);
       for (const pressable of pressables) {
@@ -111,25 +111,27 @@ describe("V1-independent V2 profile UI", () => {
     }
   });
 
-  it("keeps the list component presentational, honest, accessible, and deletion-aware", () => {
-    const list = read("components/shooting-profile/profile-list.tsx");
-    expect(list).toContain("ShootingProfileSummaryV2[]");
-    expect(list).toContain("onOpen:");
-    expect(list).toContain("onDelete:");
-    expect(list).not.toContain("useFirebaseAuth");
-    expect(list).not.toContain("listShootingProfilesV2(");
-    expect(list).not.toContain("deleteShootingProfileV2(");
-    expect(list).toContain("대표 스냅샷 추정 · 반복성 측정 아님");
-    expect(list).toContain("3회 반복 대표 슛폼");
-    expect(list).toContain("위상 결합 4D 추정 · 실측 3D 아님");
-    expect(list).toContain("isOpaqueShootingProfileIdV2(record.id)");
-    expect(list).toContain("기록 식별자가 유효하지 않아 열거나 삭제할 수 없습니다");
-    expect(list).toContain('accessibilityLiveRegion="polite"');
-    expect(list).toContain("minHeight: 72");
-    expect(list).toContain("minWidth: 44");
-    expect(list).toContain("minHeight: 52");
-    expect(list).toContain("minWidth: 52");
-    expect(list).toContain("outlineStyle");
+  it("keeps the grid component presentational, honest, accessible, and deletion-aware", () => {
+    const grid = read("components/profile/motion-grid.tsx");
+    expect(grid).toContain("readonly ShootingProfileSummaryV2[]");
+    expect(grid).toContain("onOpen:");
+    expect(grid).toContain("onDelete:");
+    expect(grid).not.toContain("useFirebaseAuth");
+    expect(grid).not.toContain("listShootingProfilesV2(");
+    expect(grid).not.toContain("deleteShootingProfileV2(");
+    expect(grid).not.toContain("getShootingProfileV2(");
+    // Honesty moves into the accessibility label of every tile.
+    expect(grid).toContain("대표 스냅샷 추정 · 반복성 측정 아님");
+    expect(grid).toContain("3회 반복 대표 슛폼");
+    expect(grid).toContain("위상 결합 4D 추정 · 실측 3D 아님");
+    expect(grid).toContain("isOpaqueShootingProfileIdV2(record.id)");
+    expect(grid).toContain("기록 식별자가 유효하지 않아 열거나 삭제할 수 없습니다");
+    expect(grid).toContain('accessibilityLiveRegion="polite"');
+    expect(grid).toContain('accessibilityLiveRegion="assertive"');
+    expect(grid).toContain("accessibilityState={{ disabled, busy: deleting }}");
+    expect(grid).toContain("minHeight: 72");
+    expect(grid).toContain("minWidth: 52");
+    expect(grid).toContain("getRepresentativeFocusStyle");
   });
 
   it("resumes deletion before V2 listing and guards results by exact owner", () => {
@@ -183,7 +185,9 @@ describe("V1-independent V2 profile UI", () => {
       "hooks/use-shooting-profile-capture.ts",
       "components/shooting-profile/capture-session.tsx",
       "components/shooting-profile/quality-summary.tsx",
-      "components/shooting-profile/profile-list.tsx",
+      "components/profile/motion-grid.tsx",
+      "components/profile/profile-hero.tsx",
+      "components/profile/account-panel.tsx",
       "components/private-pose-capture.tsx",
     ].map(read).join("\n");
     expect(changedSources).not.toMatch(/console\.(log|warn|error)/);

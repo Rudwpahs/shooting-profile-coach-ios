@@ -1,5 +1,6 @@
 import type { PropsWithChildren, ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { tokens } from "@/constants/tokens";
 
 export function ScreenTitle({ eyebrow, title, detail }: { eyebrow?: string; title: string; detail?: string }) {
   return (
@@ -37,14 +38,14 @@ export function SecondaryButton({ label, onPress, destructive = false }: { label
 }
 
 export const palette = {
-  navy: "#1E3A5F",
-  sand: "#F4F7FB",
-  orange: "#F97316",
-  teal: "#16A34A",
-  steel: "#64748B",
-  mist: "#DBE3EE",
-  ink: "#0F172A",
-  white: "#FFFFFF",
+  navy: tokens.elevatedSurface,
+  sand: tokens.elevatedSurface,
+  orange: tokens.primary,
+  teal: tokens.positive,
+  steel: tokens.mutedForeground,
+  mist: tokens.border,
+  ink: tokens.foreground,
+  white: tokens.surface,
 };
 
 const styles = StyleSheet.create({
@@ -54,18 +55,18 @@ const styles = StyleSheet.create({
   detail: { color: palette.steel, fontSize: 15, lineHeight: 22 },
   card: { backgroundColor: palette.white, borderColor: palette.mist, borderRadius: 0, borderWidth: 2, padding: 18, gap: 12 },
   navyCard: { backgroundColor: palette.navy, borderColor: palette.navy },
-  sandCard: { backgroundColor: palette.sand, borderColor: "#EEE4D3" },
+  sandCard: { backgroundColor: palette.sand, borderColor: tokens.border },
   pill: { alignSelf: "flex-start", backgroundColor: palette.white, borderColor: palette.mist, borderRadius: 0, borderWidth: 2, paddingHorizontal: 10, paddingVertical: 5 },
-  warningPill: { backgroundColor: "#FFF0E9" },
-  successPill: { backgroundColor: "#E4F5F0" },
+  warningPill: { backgroundColor: tokens.warningSoft },
+  successPill: { backgroundColor: tokens.positiveSoft },
   pillText: { color: palette.steel, fontSize: 12, fontWeight: "700" },
-  warningText: { color: "#B9421E" },
+  warningText: { color: tokens.warning },
   successText: { color: palette.teal },
   primaryButton: { alignItems: "center", backgroundColor: palette.teal, borderRadius: 0, flexDirection: "row", justifyContent: "center", minHeight: 48, paddingHorizontal: 18, gap: 8 },
   primaryLabel: { color: palette.white, fontFamily: "BarlowCondensed-Bold", fontSize: 17, letterSpacing: 0.7, textTransform: "uppercase" },
   secondaryButton: { alignItems: "center", borderColor: palette.navy, borderRadius: 0, borderWidth: 2, justifyContent: "center", minHeight: 48, paddingHorizontal: 16 },
-  destructiveButton: { borderColor: "#F7C9BC" },
+  destructiveButton: { borderColor: tokens.destructive },
   secondaryLabel: { color: palette.ink, fontSize: 15, fontWeight: "700" },
-  destructiveLabel: { color: "#C24122" },
+  destructiveLabel: { color: tokens.destructive },
   pressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
 });

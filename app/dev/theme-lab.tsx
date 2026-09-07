@@ -19,7 +19,7 @@ function ColorSwatch({ name, value }: { name: PaletteName; value: string }) {
         <View className="h-6 w-6 rounded-full border border-border" style={{ backgroundColor: value }} />
         <Text className="text-sm font-semibold text-foreground">{name}</Text>
       </View>
-      <Text className="text-xs font-mono text-muted">{value}</Text>
+      <Text className="text-xs font-mono text-mutedForeground">{value}</Text>
     </View>
   );
 }
@@ -44,7 +44,7 @@ export default function ThemeLabScreen() {
       background: SchemeColors[scheme].background,
       border: SchemeColors[scheme].border,
       text: SchemeColors[scheme].foreground,
-      subText: SchemeColors[scheme].muted,
+      subText: SchemeColors[scheme].mutedForeground,
       activeBackground: SchemeColors[scheme].primary,
       activeText: SchemeColors[scheme].background,
     });
@@ -114,7 +114,7 @@ export default function ThemeLabScreen() {
             <Text className="text-lg font-bold text-foreground">
               Tailwind tokens
             </Text>
-            <Text className="mt-1 text-sm text-muted">
+            <Text className="mt-1 text-sm text-mutedForeground">
               Buttons and badges driven by global {colorScheme} palette
             </Text>
 
@@ -143,7 +143,7 @@ export default function ThemeLabScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 className="rounded-full px-4 py-2"
-                style={{ backgroundColor: SchemeColors[colorScheme].success }}
+                style={{ backgroundColor: SchemeColors[colorScheme].positive }}
                 onPress={() => {
                   setPressCount((count) => count + 1);
                   setLastAction("Pressed Success token");
@@ -167,7 +167,7 @@ export default function ThemeLabScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 className="rounded-full px-4 py-2"
-                style={{ backgroundColor: SchemeColors[colorScheme].error }}
+                style={{ backgroundColor: SchemeColors[colorScheme].destructive }}
                 onPress={() => {
                   setPressCount((count) => count + 1);
                   setLastAction("Pressed Error token");
@@ -183,10 +183,10 @@ export default function ThemeLabScreen() {
               <Text className="text-base font-semibold text-foreground">
                 useColors()
               </Text>
-              <Text className="mt-1 text-sm text-muted">
+              <Text className="mt-1 text-sm text-mutedForeground">
                 Background: {colors.background} • Text: {colors.text} • Tint: {colors.tint}
               </Text>
-              <Text className="text-xs text-muted">
+              <Text className="text-xs text-mutedForeground">
                 (Pressable uses style; Tailwind on Pressable is disabled via remap)
               </Text>
               <View className="mt-3 gap-2">
@@ -196,7 +196,7 @@ export default function ThemeLabScreen() {
                     Press count: {pressCount}
                   </Text>
                 </View>
-                <Text className="text-sm text-muted">
+                <Text className="text-sm text-mutedForeground">
                   Last action: {lastAction}
                 </Text>
               </View>
@@ -207,7 +207,7 @@ export default function ThemeLabScreen() {
             <Text className="text-lg font-bold text-foreground">
               Palette values
             </Text>
-            <Text className="mt-1 text-sm text-muted">
+            <Text className="mt-1 text-sm text-mutedForeground">
               Live values for the selected scheme
             </Text>
             <View className="mt-3 gap-2">
