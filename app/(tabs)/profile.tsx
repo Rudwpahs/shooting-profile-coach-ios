@@ -93,9 +93,11 @@ export default function PersonalProfileTab() {
   const v1LoadGenerationRef = useRef(0);
   const v2LoadGenerationRef = useRef(0);
   const v2GlyphGenerationRef = useRef(0);
+  const v2GlyphEnvelopeRef = useRef(v2GlyphEnvelope);
   const v2DeleteInFlightRef = useRef<OwnerOperationToken | null>(null);
   const v2DeleteTokenRef = useRef(0);
   currentOwnerUidRef.current = user?.uid ?? null;
+  v2GlyphEnvelopeRef.current = v2GlyphEnvelope;
 
   const currentOwnerUid = user?.uid ?? null;
   const poses = valueForExactOwner(currentOwnerUid, v1RecordEnvelope) ?? [];
@@ -226,16 +228,21 @@ export default function PersonalProfileTab() {
     void loadV2(user);
   }, [loadV2, loading, user]);
 
+  // Keyed on the record list, not on the glyph envelope this fills: re-running
+  // on every loaded tile restarted the loop and read the next id twice (once per
+  // superseded generation). The envelope is read through a ref so already
+  // loaded tiles are still skipped.
   useEffect(() => {
     if (!user || v2RecordEnvelope?.ownerUid !== user.uid) return;
-    const loaded = v2GlyphEnvelope?.ownerUid === user.uid ? v2GlyphEnvelope.value : {};
+    const glyphEnvelope = v2GlyphEnvelopeRef.current;
+    const loaded = glyphEnvelope?.ownerUid === user.uid ? glyphEnvelope.value : {};
     const missing = v2RecordEnvelope.value
       .slice(0, GLYPH_FETCH_LIMIT)
       .map((record) => record.id)
       .filter((profileId) => !(profileId in loaded));
     if (missing.length === 0) return;
     void loadV2Glyphs(user, missing);
-  }, [loadV2Glyphs, user, v2GlyphEnvelope, v2RecordEnvelope]);
+  }, [loadV2Glyphs, user, v2RecordEnvelope]);
 
   const submit = async () => {
     if (!email.trim() || password.length < 6) {

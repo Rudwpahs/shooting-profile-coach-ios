@@ -71,6 +71,7 @@ vi.mock("@/components/screen-container", () => ({
   },
 }));
 
+const shootingProfiles = await import("@/lib/firebase-shooting-profiles");
 const { HoopHubTabBar } = await import("@/components/hoophub-tab-bar");
 const { default: ExploreScreen } = await import("@/app/(tabs)/explore");
 const { default: HomeScreen } = await import("@/app/(tabs)/index");
@@ -91,6 +92,9 @@ function syntheticProfile(): RepresentativePose4DV2 {
   return result.profile;
 }
 const profile = syntheticProfile();
+const summary = (id: string, mode: "basic_1_plus_1" | "high_accuracy_3_plus_3" = "basic_1_plus_1") => ({
+  id, mode, shootingHand: "right" as const, confidence: 0.65, createdAt: { toDate: () => new Date(2026, 8, 6) } as never,
+});
 
 let container: HTMLDivElement;
 let root: Root;
@@ -104,6 +108,8 @@ beforeEach(() => {
   authState.user = null;
   authState.loading = false;
   latestState = { status: "signed-out" };
+  vi.mocked(shootingProfiles.listShootingProfilesV2).mockReset().mockImplementation(async () => []);
+  vi.mocked(shootingProfiles.getShootingProfileV2).mockReset().mockImplementation(async () => null);
 });
 
 afterEach(async () => {
@@ -114,6 +120,18 @@ afterEach(async () => {
 async function render(element: React.ReactElement) {
   await act(async () => root.render(element));
   await act(async () => { await Promise.resolve(); });
+}
+
+/** Flushes chained async effects until `probe` stops changing (five quiet rounds). */
+async function settle(probe: () => number) {
+  let quiet = 0;
+  let last = probe();
+  for (let round = 0; round < 40 && quiet < 5; round += 1) {
+    await act(async () => { await Promise.resolve(); });
+    const next = probe();
+    quiet = next === last ? quiet + 1 : 0;
+    last = next;
+  }
 }
 
 const byRole = (role: string) => Array.from(container.querySelectorAll(`[role="${role}"]`)) as HTMLElement[];
@@ -191,13 +209,30 @@ describe("profile", () => {
     expect(container.textContent).toContain("owner@example.com");
     expect(byLabel("계정 로그아웃")).not.toBeNull();
   });
+
+  it("signed in with records: fetches each tile's full record exactly once", async () => {
+    authState.user = { uid: "owner-1", email: "owner@example.com" };
+    vi.mocked(shootingProfiles.listShootingProfilesV2).mockImplementation(async () => [summary("abc123"), summary("def456"), summary("ghi789")]);
+    // Each read resolves only when the test says so, so React renders between
+    // reads the way it does behind real Firestore latency.
+    const pending: (() => void)[] = [];
+    vi.mocked(shootingProfiles.getShootingProfileV2).mockImplementation(() => new Promise((resolve) => {
+      pending.push(() => resolve({ profile, shootingHand: "right", confidence: 0.65 }));
+    }));
+    await render(<ProfileScreen />);
+    await settle(() => pending.length);
+    for (let guard = 0; guard < 12 && pending.length > 0; guard += 1) {
+      const resolveNext = pending.shift()!;
+      await act(async () => { resolveNext(); });
+      await settle(() => pending.length);
+    }
+
+    expect(labelsContaining("위상 결합 4D 추정 · 실측 3D 아님")).toHaveLength(3);
+    expect(vi.mocked(shootingProfiles.getShootingProfileV2).mock.calls.map(([, id]) => id)).toEqual(["abc123", "def456", "ghi789"]);
+  });
 });
 
 describe("motion grid", () => {
-  const summary = (id: string, mode: "basic_1_plus_1" | "high_accuracy_3_plus_3" = "basic_1_plus_1") => ({
-    id, mode, shootingHand: "right" as const, confidence: 0.65, createdAt: { toDate: () => new Date(2026, 8, 6) } as never,
-  });
-
   it("labels every tile with mode, date, band and the boundary, and marks a deleting tile busy", async () => {
     const records = [summary("abc123"), summary("def456", "high_accuracy_3_plus_3")];
     await render(<MotionGrid canOpen deletingProfileId="def456" error={null} glyphs={{ abc123: { profile, shootingHand: "right", confidence: 0.65 } }} loading={false} onDelete={vi.fn()} onOpen={vi.fn()} records={records} width={375} />);
