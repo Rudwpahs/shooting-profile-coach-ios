@@ -9,7 +9,7 @@ import {
 } from "@/components/shooting-profile/sequence-viewer";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import type { PoseMotion } from "@/lib/pose-motion";
-import { glyphBounds, poseMotionGlyph, type GlyphHand, type GlyphView } from "@/lib/skeleton/pose-motion-glyph";
+import { glyphBounds, poseMotionGlyph, type GlyphBounds, type GlyphHand, type GlyphView } from "@/lib/skeleton/pose-motion-glyph";
 
 const LOOP_MS = 1850;
 const RELEASE_PROGRESS = 0.75;
@@ -24,6 +24,8 @@ type PoseMotionLoopProps = {
   accessibilityLabel: string;
   /** Held on the release still while true (a viewer tapped the stage). */
   paused?: boolean;
+  /** Fit against these bounds instead of the loop's own, so a still drawn by the parent lines up. */
+  bounds?: GlyphBounds;
 };
 
 /**
@@ -31,7 +33,7 @@ type PoseMotionLoopProps = {
  * phases over a short cycle, under the same lifecycle rules as every other
  * loop (background pause, Reduce Motion holds the release still).
  */
-export function PoseMotionLoop({ motion, view, hand = "right", width, height, accessibilityLabel, paused = false }: PoseMotionLoopProps) {
+export function PoseMotionLoop({ motion, view, hand = "right", width, height, accessibilityLabel, paused = false, bounds: boundsOverride }: PoseMotionLoopProps) {
   const [progress, setProgress] = useState(RELEASE_PROGRESS);
   const [lifecycle, setLifecycle] = useState(createRepresentativePlaybackLifecycle);
   const lifecycleRef = useRef(lifecycle);
@@ -49,9 +51,9 @@ export function PoseMotionLoop({ motion, view, hand = "right", width, height, ac
     reducedMotion: lifecycle.reducedMotion ?? true,
   });
 
-  const bounds = useMemo(() => glyphBounds(
+  const bounds = useMemo(() => boundsOverride ?? glyphBounds(
     Array.from({ length: BOUNDS_SAMPLES }, (_, index) => poseMotionGlyph(motion, { view, hand, progress: index / (BOUNDS_SAMPLES - 1) }).points),
-  ), [motion, view, hand]);
+  ), [boundsOverride, motion, view, hand]);
   const glyph = useMemo(() => poseMotionGlyph(motion, { view, hand, progress }), [motion, view, hand, progress]);
 
   useEffect(() => {

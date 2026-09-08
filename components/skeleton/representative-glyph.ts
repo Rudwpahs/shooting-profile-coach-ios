@@ -1,6 +1,8 @@
 import {
   DISPLAY_BONES,
+  getRepresentativeViewPresets,
   projectRepresentativeJoints,
+  projectRepresentativeJointsAtYaw,
   type RepresentativeViewId,
 } from "@/components/shooting-profile/sequence-viewer";
 import type { SkeletonConfidence } from "@/components/skeleton/skeleton-glyph";
@@ -13,16 +15,10 @@ import type {
 
 const DERIVED_JOINTS = ["head", "neck", "spine", "pelvis"] as const;
 
-/**
- * Glyph data for one stored frame of a representative profile, projected with
- * the same yaw and pitch the sequence viewer uses. Screen y grows downward.
- */
-export function representativeGlyph(
-  frame: RepresentativePoseFrameV2,
-  view: RepresentativeViewId,
-  shootingHand: ShootingHandV2,
-): SkeletonGlyphData {
-  const projected = projectRepresentativeJoints(frame, view, shootingHand);
+type Projected = Readonly<Record<string, { x: number; y: number }>>;
+
+/** Screen y grows downward; the projection's y grows upward. */
+function toGlyph(projected: Projected, shootingHand: ShootingHandV2): SkeletonGlyphData {
   const points = Object.fromEntries(Object.entries(projected).map(([joint, point]) => [joint, { x: point.x, y: -point.y }]));
   const side = shootingHand === "left" ? "left" : "right";
   return {
@@ -32,6 +28,34 @@ export function representativeGlyph(
     derivedJoints: DERIVED_JOINTS,
     headJoint: "head",
   };
+}
+
+/**
+ * Glyph data for one stored frame of a representative profile, projected with
+ * the same yaw and pitch the sequence viewer uses. Screen y grows downward.
+ */
+export function representativeGlyph(
+  frame: RepresentativePoseFrameV2,
+  view: RepresentativeViewId,
+  shootingHand: ShootingHandV2,
+): SkeletonGlyphData {
+  return toGlyph(projectRepresentativeJoints(frame, view, shootingHand), shootingHand);
+}
+
+/** The same glyph at any yaw in degrees, for a held rotate between the presets. */
+export function representativeGlyphAtYaw(
+  frame: RepresentativePoseFrameV2,
+  yawDegrees: number,
+  shootingHand: ShootingHandV2,
+): SkeletonGlyphData {
+  return toGlyph(projectRepresentativeJointsAtYaw(frame, yawDegrees, shootingHand), shootingHand);
+}
+
+/** The yaw a named view stands for, so a rotate can start from it. */
+export function representativeViewYaw(view: RepresentativeViewId, shootingHand: ShootingHandV2): number {
+  const preset = getRepresentativeViewPresets(shootingHand).find((item) => item.id === view);
+  if (!preset) throw new Error("representative view preset is unavailable");
+  return preset.yaw;
 }
 
 /** Bounds over every stored frame so a loop keeps one anchor and scale. */

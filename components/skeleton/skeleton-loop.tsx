@@ -12,6 +12,7 @@ import {
 import { representativeGlyph, representativeReleaseFrameIndex, representativeSequenceBounds } from "@/components/skeleton/representative-glyph";
 import { SkeletonGlyph, type SkeletonConfidence } from "@/components/skeleton/skeleton-glyph";
 import type { RepresentativePose4DV2, ShootingHandV2 } from "@/lib/shooting-profile/types";
+import type { GlyphBounds } from "@/lib/skeleton/pose-motion-glyph";
 
 const FRAME_INTERVAL_MS = 40;
 
@@ -25,6 +26,8 @@ type SkeletonLoopProps = {
   accessibilityLabel: string;
   /** Held on the release still while true (a viewer tapped the stage). */
   paused?: boolean;
+  /** Fit against these bounds instead of the loop's own, so a still drawn by the parent lines up. */
+  bounds?: GlyphBounds;
 };
 
 /**
@@ -33,7 +36,7 @@ type SkeletonLoopProps = {
  * holds the release-proxy frame under Reduce Motion). Purely visual; it never
  * exposes controls, so anything interactive lives in the parent.
  */
-export function SkeletonLoop({ profile, shootingHand, view, width, height, confidence, accessibilityLabel, paused = false }: SkeletonLoopProps) {
+export function SkeletonLoop({ profile, shootingHand, view, width, height, confidence, accessibilityLabel, paused = false, bounds: boundsOverride }: SkeletonLoopProps) {
   const releaseIndex = useMemo(() => representativeReleaseFrameIndex(profile), [profile]);
   const [frameIndex, setFrameIndex] = useState(releaseIndex);
   const [lifecycle, setLifecycle] = useState(createRepresentativePlaybackLifecycle);
@@ -52,7 +55,10 @@ export function SkeletonLoop({ profile, shootingHand, view, width, height, confi
     reducedMotion: lifecycle.reducedMotion ?? true,
   });
 
-  const bounds = useMemo(() => representativeSequenceBounds(profile, view, shootingHand), [profile, view, shootingHand]);
+  const bounds = useMemo(
+    () => boundsOverride ?? representativeSequenceBounds(profile, view, shootingHand),
+    [boundsOverride, profile, view, shootingHand],
+  );
   const glyphs = useMemo(
     () => profile.frames.map((frame) => representativeGlyph(frame, view, shootingHand)),
     [profile, view, shootingHand],

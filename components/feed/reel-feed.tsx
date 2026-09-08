@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { FlatList, type NativeScrollEvent, type NativeSyntheticEvent, type ViewToken } from "react-native";
 
 import type { ReelAction } from "@/components/feed/reel-chrome";
-import { ReelItem } from "@/components/feed/reel-item";
+import { ReelItem, type ReelSavedMoment } from "@/components/feed/reel-item";
+import type { MotionLiftPhase } from "@/lib/feed/motion-lift-state";
 import {
   createReelFeedState,
   reelIndexFromOffset,
@@ -14,6 +15,7 @@ import {
 import type { ReelItem as ReelItemModel } from "@/lib/feed/reel-model";
 
 const VIEWABILITY = { itemVisiblePercentThreshold: 60, minimumViewTime: 0 };
+const noop = () => {};
 
 type ReelFeedProps = {
   items: readonly ReelItemModel[];
@@ -21,19 +23,22 @@ type ReelFeedProps = {
   /** The viewport height; every item is exactly this tall. */
   height: number;
   reducedMotion: boolean;
-  /** A held interaction on the active item may lock feed scrolling. */
-  scrollLocked?: boolean;
   actionsFor: (item: ReelItemModel) => readonly ReelAction[];
   onStateChange?: (state: ReelFeedState) => void;
+  /** A held Motion Lift released while armed keeps this moment. */
+  onSave?: (moment: ReelSavedMoment) => void;
+  onLiftPhase?: (phase: MotionLiftPhase) => void;
 };
 
 /**
  * The vertical, one-item-per-viewport feed. Snapping is native paging; the
  * active index settles through viewability and through the VoiceOver actions
- * alike, and only the active item plays.
+ * alike, and only the active item plays. A grabbed Motion Lift locks the
+ * scroll until release, so a held drag never changes the Reel.
  */
-export function ReelFeed({ items, width, height, reducedMotion, scrollLocked = false, actionsFor, onStateChange }: ReelFeedProps) {
+export function ReelFeed({ items, width, height, reducedMotion, actionsFor, onStateChange, onSave = noop, onLiftPhase }: ReelFeedProps) {
   const [state, dispatch] = useReducer(transitionReelFeedState, items.length, createReelFeedState);
+  const [scrollLocked, setScrollLocked] = useState(false);
   const listRef = useRef<FlatList<ReelItemModel>>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -45,6 +50,11 @@ export function ReelFeed({ items, width, height, reducedMotion, scrollLocked = f
   useEffect(() => {
     onStateChange?.(state);
   }, [onStateChange, state]);
+
+  // A new Reel always starts unlocked, whatever the previous one was doing.
+  useEffect(() => {
+    setScrollLocked(false);
+  }, [state.activeIndex]);
 
   const goTo = useCallback((index: number) => {
     const target = Math.max(0, Math.min(stateRef.current.count - 1, index));
@@ -73,14 +83,18 @@ export function ReelFeed({ items, width, height, reducedMotion, scrollLocked = f
       height={height}
       index={index}
       item={item}
+      onLiftPhase={onLiftPhase}
+      onLockScroll={setScrollLocked}
       onNext={() => goTo(stateRef.current.activeIndex + 1)}
       onPrevious={() => goTo(stateRef.current.activeIndex - 1)}
+      onSave={onSave}
       onTogglePlayback={() => dispatch({ type: "toggle-playback" })}
       paused={index === state.activeIndex && state.paused}
+      reducedMotion={reducedMotion}
       role={reelMediaRole(index, state.activeIndex)}
       width={width}
     />
-  ), [actionsFor, goTo, height, state.activeIndex, state.count, state.paused, width]);
+  ), [actionsFor, goTo, height, onLiftPhase, onSave, reducedMotion, state.activeIndex, state.count, state.paused, width]);
 
   if (!(height > 0) || !(width > 0)) return null;
 

@@ -270,12 +270,27 @@ export function projectRepresentativeJoints(
 ): Record<RepresentativeDisplayJointName, ProjectedJoint> {
   const preset = getRepresentativeViewPresets(shootingHand).find((item) => item.id === view);
   if (!preset) throw new Error("representative view preset is unavailable");
-  const yaw = preset.yaw * Math.PI / 180;
+  return projectRepresentativeJointsAtYaw(frame, preset.yaw, shootingHand);
+}
+
+/**
+ * The same projection at any yaw in degrees; the presets are named yaws of
+ * this function. A left-handed profile is mirrored before the rotation so
+ * the shooting side reads the same way for both hands.
+ */
+export function projectRepresentativeJointsAtYaw(
+  frame: RepresentativePoseFrameV2,
+  yawDegrees: number,
+  shootingHand: ShootingHandV2,
+): Record<RepresentativeDisplayJointName, ProjectedJoint> {
+  if (!Number.isFinite(yawDegrees)) throw new Error("representative yaw must be finite");
+  const mirrorX = shootingHand === "left";
+  const yaw = yawDegrees * Math.PI / 180;
   const pitch = 8 * Math.PI / 180;
   const display = buildRepresentativeDisplayJoints(frame);
   return Object.fromEntries(DISPLAY_JOINTS.map((joint) => {
     const point = display[joint];
-    const sourceX = preset.mirrorX ? -point.x : point.x;
+    const sourceX = mirrorX ? -point.x : point.x;
     const rotatedX = sourceX * Math.cos(yaw) - point.z * Math.sin(yaw);
     const depth = sourceX * Math.sin(yaw) + point.z * Math.cos(yaw);
     const rotatedY = point.y * Math.cos(pitch) - depth * Math.sin(pitch);

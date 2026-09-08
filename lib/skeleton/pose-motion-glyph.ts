@@ -31,17 +31,25 @@ export type PoseMotionGlyphOptions = {
   /** 0 (ready) … 1 (follow-through) along the motion's display timeline. */
   progress?: number;
   hand?: GlyphHand;
+  /** Camera yaw in degrees; overrides the yaw of `view` for a held rotate. */
+  yaw?: number;
 };
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+/** The yaw a named view stands for on this motion, so a rotate can start from it. */
+export function poseMotionViewYaw(motion: PoseMotion, view: GlyphView, hand: GlyphHand = "right"): number {
+  const presets = getPoseCameraPresets(motion, hand);
+  return (presets.find((candidate) => candidate.id === view) ?? presets[1]).yaw;
+}
 
 /** Projects one display frame of an anonymous reference `PoseMotion` the way the viewer does. */
 export function poseMotionGlyph(motion: PoseMotion, options: PoseMotionGlyphOptions = {}): SkeletonGlyphData {
   const view = options.view ?? "side";
   const hand = options.hand ?? "right";
   const progress = clamp01(options.progress ?? 0.75);
-  const presets = getPoseCameraPresets(motion, hand);
-  const preset = presets.find((candidate) => candidate.id === view) ?? presets[1];
+  const yaw = options.yaw ?? poseMotionViewYaw(motion, view, hand);
+  if (!Number.isFinite(yaw)) throw new Error("glyph yaw must be finite");
   const transform = getPoseDisplayTransform(motion);
   const frame = interpolatePoseFrame(motion, progress);
   const points = Object.fromEntries(Object.entries(frame.joints).map(([joint, point]) => {
@@ -51,7 +59,7 @@ export function poseMotionGlyph(motion: PoseMotion, options: PoseMotionGlyphOpti
       z: point.z * transform.scale,
     };
     const oriented = hand === "left" ? { ...normalized, x: -normalized.x } : normalized;
-    const projected = projectPosePoint(oriented, preset.yaw, 8, 330, 300, 1);
+    const projected = projectPosePoint(oriented, yaw, 8, 330, 300, 1);
     if (!Number.isFinite(projected.x) || !Number.isFinite(projected.y)) {
       throw new Error(`${joint} glyph point must be finite`);
     }
