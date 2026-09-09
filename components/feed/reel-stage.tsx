@@ -19,6 +19,8 @@ type ReelStageProps = {
   liftYaw: number | null;
   /** 0 (resting) to 1 (held): dims the ground and lifts the figure. */
   lift: Animated.Value;
+  /** Joints to ring on the lifted still: where the coach cue points. */
+  highlightJoints?: readonly string[];
 };
 
 /**
@@ -27,7 +29,7 @@ type ReelStageProps = {
  * further away holds nothing. Loop, still and lifted still share one fit so
  * the figure never jumps between them.
  */
-export function ReelStage({ item, fit, width, height, role, paused, liftYaw, lift }: ReelStageProps) {
+export function ReelStage({ item, fit, width, height, role, paused, liftYaw, lift, highlightJoints }: ReelStageProps) {
   const padding = Math.round(Math.min(width, height) * 0.08);
 
   if (role === "idle") {
@@ -81,7 +83,7 @@ export function ReelStage({ item, fit, width, height, role, paused, liftYaw, lif
           )
         ) : (
           <View testID="reel-stage-lifted">
-            <SkeletonGlyph accessible={false} accessibilityLabel="" bounds={fit.bounds} confidence={fit.confidence} data={fit.glyphAtYaw(liftYaw)} height={height} padding={padding} width={width} />
+            <SkeletonGlyph accessible={false} accessibilityLabel="" bounds={fit.bounds} confidence={fit.confidence} data={fit.glyphAtYaw(liftYaw)} height={height} highlightJoints={highlightJoints} padding={padding} width={width} />
           </View>
         )}
       </Animated.View>

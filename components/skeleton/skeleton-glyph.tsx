@@ -27,6 +27,8 @@ type SkeletonGlyphProps = {
   padding?: number;
   /** Fit against these bounds (e.g. a whole loop) instead of this frame alone. */
   bounds?: GlyphBounds;
+  /** Joints drawn with an accent ring: the app-measured observation a coach cue points at. */
+  highlightJoints?: readonly string[];
 };
 
 /**
@@ -44,6 +46,7 @@ export function SkeletonGlyph({
   ground = true,
   padding,
   bounds,
+  highlightJoints,
 }: SkeletonGlyphProps) {
   const fitted = useMemo(
     () => fitGlyphPoints(data.points, width, height, padding ?? Math.max(4, Math.min(width, height) * 0.1), bounds),
@@ -132,6 +135,22 @@ export function SkeletonGlyph({
               r={(arm.has(joint) ? 3.6 : 3.1) * weight}
               fill={arm.has(joint) ? tokens.skeletonSecondary : tokens.skeletonPrimary}
               opacity={opacity}
+            />
+          );
+        })}
+        {(highlightJoints ?? []).map((joint) => {
+          const point = fitted.points[joint];
+          if (!point) return null;
+          return (
+            <Circle
+              key={`ring-${joint}`}
+              cx={point.x}
+              cy={point.y}
+              r={7.5 * weight}
+              fill="none"
+              stroke={tokens.primary}
+              strokeWidth={2 * weight}
+              opacity={0.95}
             />
           );
         })}

@@ -1,10 +1,11 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AccessibilityInfo, StyleSheet, View } from "react-native";
+import { AccessibilityInfo, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 import {
   MOTION_LIFT,
   createMotionLiftState,
@@ -29,6 +30,10 @@ type MotionLiftLayerProps = {
   /** A press released before the hold is a tap: the Reel resumes. */
   onTap: () => void;
   onLockScroll: (locked: boolean) => void;
+  /** The primary visual cue label, shown while inspecting; the joints it points at are ringed by the stage. */
+  cueLabel?: string | null;
+  /** Whether the reel is being inspected: held, or holding a turned pose. */
+  showCue?: boolean;
 };
 
 function haptic(kind: "grab" | "arm" | "save") {
@@ -65,7 +70,7 @@ function announce(message: string) {
  *
  * VoiceOver ignores this layer; the Reel item underneath keeps the actions.
  */
-export function MotionLiftLayer({ width, height, baseYaw, reducedMotion, onPhase, onYaw, onSave, onTap, onLockScroll }: MotionLiftLayerProps) {
+export function MotionLiftLayer({ width, height, baseYaw, reducedMotion, onPhase, onYaw, onSave, onTap, onLockScroll, cueLabel = null, showCue = false }: MotionLiftLayerProps) {
   const stateRef = useRef<MotionLiftState>(createMotionLiftState(baseYaw));
   const [phase, setPhase] = useState<MotionLiftPhase>("idle");
   const [armProgress, setArmProgress] = useState(0);
@@ -121,6 +126,18 @@ export function MotionLiftLayer({ width, height, baseYaw, reducedMotion, onPhase
       if (effect.type === "lock-scroll") callbacks.current.onLockScroll(effect.locked);
     }
   }, []);
+
+  // A cue is announced once when it appears; the layer itself is hidden from assistive technology.
+  const announcedCue = useRef<string | null>(null);
+  useEffect(() => {
+    if (!showCue || !cueLabel) {
+      announcedCue.current = null;
+      return;
+    }
+    if (announcedCue.current === cueLabel) return;
+    announcedCue.current = cueLabel;
+    announce(cueLabel);
+  }, [cueLabel, showCue]);
 
   const gesture = useMemo(() => Gesture.Pan()
     .manualActivation(true)
@@ -191,6 +208,11 @@ export function MotionLiftLayer({ width, height, baseYaw, reducedMotion, onPhase
             color={armed || saved ? tokens.primaryForeground : tokens.stageForeground}
           />
         </View>
+        {showCue && cueLabel ? (
+          <View style={styles.cue} testID="motion-lift-cue">
+            <Text numberOfLines={1} style={styles.cueText}>{cueLabel}</Text>
+          </View>
+        ) : null}
       </View>
     </GestureDetector>
   );
@@ -212,4 +234,19 @@ const styles = StyleSheet.create({
     width: AFFORDANCE,
   },
   affordanceArmed: { backgroundColor: tokens.primary, borderColor: tokens.primary },
+  // One small pill in the bottom-left padding zone, never over the figure.
+  cue: {
+    backgroundColor: tokens.elevatedSurface,
+    borderColor: tokens.primary,
+    borderRadius: 14,
+    borderWidth: 1,
+    bottom: 12,
+    left: 12,
+    maxWidth: "70%",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    pointerEvents: "none",
+    position: "absolute",
+  },
+  cueText: { ...typography.label, color: tokens.foreground },
 });

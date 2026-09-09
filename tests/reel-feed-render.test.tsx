@@ -10,7 +10,7 @@ const gesture = vi.hoisted(() => ({ handlers: {} as Record<string, TouchHandler>
 
 vi.mock("react-native-svg", () => ({
   default: ({ children, ...props }: { children?: React.ReactNode; width?: number; height?: number }) => <svg data-testid="skeleton-svg" width={props.width} height={props.height}>{children}</svg>,
-  Circle: () => <circle />,
+  Circle: (props: { stroke?: string; fill?: string }) => <circle data-stroke={props.stroke} data-fill={props.fill} />,
   Line: () => <line />,
 }));
 vi.mock("@expo/vector-icons/MaterialCommunityIcons", () => ({
@@ -45,6 +45,7 @@ const { REEL_CHROME_BOTTOM_HEIGHT, REEL_RAIL_WIDTH } = await import("@/component
 const { MOTION_LIFT } = await import("@/lib/feed/motion-lift-state");
 const { reelLabFixtures } = await import("@/lib/feed/reel-fixtures");
 const { reelLabel } = await import("@/lib/feed/reel-model");
+const { tokens } = await import("@/constants/tokens");
 
 // Tells React 19 this is a test environment so act() does not warn on every update.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -301,5 +302,80 @@ describe("motion lift over a paused reel", () => {
     expect(byTestIdPrefix("motion-lift-layer")).toHaveLength(0);
     expect(byTestId("reel-stage-lifted")).toHaveLength(0);
     expect(byTestId("reel-stage-active")).toHaveLength(1);
+  });
+});
+
+describe("motion lift primary visual cue", () => {
+  const manager: GestureManager = { begin: vi.fn(), activate: vi.fn(), fail: vi.fn(), end: vi.fn() };
+  const touch = (x: number, y: number) => ({ allTouches: [{ x, y }] });
+  const down = (x: number, y: number) => act(async () => { gesture.handlers.onTouchesDown(touch(x, y), manager); });
+  const moveTo = (x: number, y: number) => act(async () => { gesture.handlers.onTouchesMove(touch(x, y), manager); });
+  const up = () => act(async () => { gesture.handlers.onTouchesUp(touch(0, 0), manager); });
+  const wait = (ms: number) => act(async () => { vi.advanceTimersByTime(ms); });
+  const rings = () => Array.from(container.querySelectorAll(`circle[data-stroke="${tokens.primary}"][data-fill="none"]`));
+
+  const render = (item: (typeof items)[number]) => act(async () => {
+    root.render(
+      <ReelItem
+        actions={[]}
+        count={3}
+        height={HEIGHT}
+        index={1}
+        item={item}
+        onLockScroll={noop}
+        onNext={noop}
+        onPrevious={noop}
+        onSave={noop}
+        onTogglePlayback={noop}
+        paused
+        reducedMotion
+        role="active"
+        width={WIDTH}
+      />,
+    );
+  });
+
+  it("shows the cue label and highlights only the frozen observation's joints while a coach reel is inspected", async () => {
+    vi.useFakeTimers();
+    const coach = items[1];
+    if (coach.kind !== "coach" || coach.cueAnchor?.kind !== "joints") throw new Error("fixture coach reel with a joints anchor");
+    await render(coach);
+    expect(byTestId("motion-lift-cue")).toHaveLength(0);
+    expect(rings()).toHaveLength(0);
+    await down(180, 300);
+    await wait(MOTION_LIFT.holdMs);
+    expect(byTestId("motion-lift-cue")).toHaveLength(1);
+    expect(byTestId("motion-lift-cue")[0].textContent).toBe(coach.cueAnchor.label);
+    await moveTo(230, 300);
+    expect(byTestId("reel-stage-lifted")).toHaveLength(1);
+    expect(rings()).toHaveLength(coach.cueAnchor.joints.length);
+    await up();
+    await wait(0);
+    // The inspected pose and its cue stay until the reel resumes.
+    expect(byTestId("motion-lift-cue")).toHaveLength(1);
+    expect(rings()).toHaveLength(coach.cueAnchor.joints.length);
+  });
+
+  it("shows no coach cue on a user reel: the default reel stays free of analysis", async () => {
+    vi.useFakeTimers();
+    await render(items[0]);
+    await down(180, 300);
+    await wait(MOTION_LIFT.holdMs);
+    await moveTo(230, 300);
+    expect(byTestId("reel-stage-lifted")).toHaveLength(1);
+    expect(byTestId("motion-lift-cue")).toHaveLength(0);
+    expect(rings()).toHaveLength(0);
+  });
+
+  it("renders a text-only anchor as the label alone, with no joint highlighted", async () => {
+    vi.useFakeTimers();
+    const coach = items[1];
+    if (coach.kind !== "coach") throw new Error("fixture coach reel");
+    await render({ ...coach, cueAnchor: { kind: "text_only", observation_id: "obs_capture_quality", label: "촬영 품질" } });
+    await down(180, 300);
+    await wait(MOTION_LIFT.holdMs);
+    await moveTo(230, 300);
+    expect(byTestId("motion-lift-cue")[0].textContent).toBe("촬영 품질");
+    expect(rings()).toHaveLength(0);
   });
 });

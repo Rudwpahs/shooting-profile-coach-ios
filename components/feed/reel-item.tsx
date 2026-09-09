@@ -49,6 +49,9 @@ export function ReelItem({
   const [phase, setPhase] = useState<MotionLiftPhase>("idle");
   const [liftYaw, setLiftYaw] = useState<number | null>(null);
   const lifting = active && paused;
+  // Only a coach reel carries a cue, and only the frozen observation it names is ever pointed at.
+  const cue = item.kind === "coach" ? item.cueAnchor : null;
+  const inspecting = phase !== "idle" || liftYaw !== null;
 
   // Resuming or leaving the Reel drops the inspected pose.
   useEffect(() => {
@@ -94,7 +97,7 @@ export function ReelItem({
       style={{ width, height }}
       testID={`reel-item-${item.kind}`}
     >
-      <ReelStage fit={fit} height={stageHeight} item={item} lift={lift} liftYaw={liftYaw} paused={paused} role={role} width={width} />
+      <ReelStage fit={fit} height={stageHeight} highlightJoints={cue?.kind === "joints" ? cue.joints : undefined} item={item} lift={lift} liftYaw={liftYaw} paused={paused} role={role} width={width} />
       <Pressable
         accessibilityActions={[
           { name: "activate", label: paused ? "재생" : "일시정지" },
@@ -116,8 +119,10 @@ export function ReelItem({
       {lifting ? (
         <MotionLiftLayer
           baseYaw={fit.baseYaw}
+          cueLabel={cue?.label ?? null}
           height={stageHeight}
           onLockScroll={onLockScroll}
+          showCue={inspecting}
           onPhase={onPhase}
           onSave={onMomentSaved}
           onTap={onTogglePlayback}
