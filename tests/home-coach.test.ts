@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { COACH_OBSERVATION_ID_PATTERN, COACH_REQUEST_ID_PATTERN, parseCoachRequestV1 } from "@/lib/coach/contract";
 import { deterministicCoachResponse } from "@/lib/coach/deterministic-provider";
+import "@/lib/coach/authenticated-transport";
 import { COACH_FEED_EVENT_ID_PATTERN, parseCoachFeedEventV1 } from "@/lib/coach/feed-event";
 import { buildHomeCoachRequest, homeCoachReel, opaqueId } from "@/lib/feed/home-coach";
 import { createHomeCoachProvider } from "@/lib/feed/home-coach-provider";
@@ -58,5 +59,31 @@ describe("home coach chain", () => {
     expect(createHomeCoachProvider({ coachUrl: null }).id).toBe("deterministic_v1");
     expect(createHomeCoachProvider({ coachUrl: "  " }).id).toBe("deterministic_v1");
     expect(createHomeCoachProvider({ coachUrl: "https://coach.example.test/v1/coach" }).id).toBe("remote_formpath_coach_v1");
+  });
+
+  it("puts the authenticated transport behind the frozen remote provider: a bearer ID token per call, HTTPS only, never a service key", async () => {
+    const request = buildHomeCoachRequest({ latest, userProfile, requestId: "req_home000000000001" });
+    const calls: { url: string; headers: Record<string, string> }[] = [];
+    const fetcher = (async (url: string, init: { headers: Record<string, string> }) => {
+      calls.push({ url, headers: init.headers });
+      return new Response(JSON.stringify({ ...deterministicCoachResponse(request), provider: { id: "remote_formpath_coach_v1", revision: "service-2026-09" } }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const { createAuthenticatedCoachTransport } = await import("@/lib/coach/authenticated-transport");
+    const { RemoteCoachProvider } = await import("@/lib/coach/remote-provider");
+    const url = "https://coach.example.test/v1/coach";
+    const provider = new RemoteCoachProvider({ url, transport: createAuthenticatedCoachTransport({ endpoint: url, getIdToken: async () => "firebase-id-token", fetcher }) });
+    const result = await provider.coach(request);
+    expect(result.status).toBe("ok");
+    expect(calls[0].url).toBe(url);
+    expect(calls[0].headers.authorization).toBe("Bearer firebase-id-token");
+
+    const unusable = createHomeCoachProvider({ coachUrl: "http://192.168.0.10/v1/coach", getIdToken: async () => "token" });
+    expect(unusable.id).toBe("remote_formpath_coach_v1");
+    expect(await unusable.coach(request)).toEqual({ status: "unavailable", reason: "not_configured", retryable: false, detail: "coach endpoint invalid" });
+
+    const signedOut = createHomeCoachProvider({ coachUrl: url, getIdToken: async () => null });
+    const withoutUser = await signedOut.coach(request);
+    expect(withoutUser.status).toBe("unavailable");
+    expect(withoutUser).not.toMatchObject({ status: "ok" });
   });
 });
