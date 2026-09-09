@@ -47,14 +47,15 @@ suite in `tests/` (79 tests, no network, no model download).
 | LoRA/QLoRA configuration scaffold | `train_sft.py` | PEFT `LoraConfig` (r=32, alpha=64, all attention and MLP projections) and a `BitsAndBytesConfig` NF4 double-quant 4-bit path that is enabled only when CUDA is available and `--no-qlora` is not passed. |
 | Inference scaffold | `inference.py` `FormPathCoach` | Loads a base causal LM plus an optional **local** LoRA adapter directory, builds the same chat prompt as training, generates, extracts the JSON object and validates it as `CoachResponse`. Configuration (`base_model`, `adapter_path`, `max_new_tokens`, `temperature`) is validated before anything is loaded. |
 | FastAPI scaffold | `api.py` | `GET /health` (never loads a model, reports `model_loaded`) and `POST /v1/coach` (lazy model construction on first call; 422 on schema violation, 503 when the model cannot be loaded, 500 when generation fails). |
+| Corpus package, read-only (B2-A) | `corpus/knowledge-machine-v2/`, `corpus.py` | The FormPath Knowledge Machine v2 vendored byte-exact (940 units, RU-0061..RU-1000, normalized codes, checksummed manifest). `corpus.py` opens it read-only, answers with machine codes (stats; by domain, metric, policy; FTS hits) and returns text only for one explicitly named unit; `validate_corpus()` checks checksums, range, ids, vocabulary, counts and sources. No embedding, retrieval or training. |
 
 ## PLANNED / NOT IMPLEMENTED
 
 None of the following exists in this repository. Do not read any file here as
 evidence that it does.
 
-- FormPath 1000 research corpus ingestion
-- canonical research ledger
+- research corpus **ingestion into retrieval** (the v2 package itself is vendored and validated, see IMPLEMENTED; nothing indexes or embeds it)
+- canonical research ledger and the evidence-code mapping to `CoachEvidenceItemV1` (the corpus uses `A, B, C, D, E, U`; the frozen contract uses `A, A-, B+, B, C, D, H`)
 - training scenarios (there is no `data/` directory and no scenario JSONL yet; the
   loader has only been exercised on synthetic rows generated in the tests)
 - RAG, embedding model, vector database / index, reranker
