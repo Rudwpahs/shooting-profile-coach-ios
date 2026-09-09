@@ -39,7 +39,8 @@ Recorded: 2026-09-09 (Asia/Seoul)
 ## Uncommitted changes before this handoff
 
 - Before B1 implementation, the worktree was clean after preservation commit `3bb1f13` (`docs: preserve Codex quota handoff and execution plan`) and its push.
-- At finalization, only the B1 codec, focused tests, codec document, and this handoff update are expected to be staged; no unrelated app/AI files are in scope.
+- B1 final commit: `e99869bae34fe906d894e8b7be002328b2a5faeb`; pushed successfully to `origin/work/codex-hoop-hub-system-ai`.
+- Current uncommitted changes: none; the worktree is clean. No unrelated app/AI files were changed.
 
 ## Next task after preservation commit
 
