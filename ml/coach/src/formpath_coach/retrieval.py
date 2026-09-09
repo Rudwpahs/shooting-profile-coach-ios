@@ -7,8 +7,8 @@ Knowledge Machine v2 DOMAIN / METRIC / POLICY vocabulary.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 from formpath_coach.schemas import CoachRequestV1
 
