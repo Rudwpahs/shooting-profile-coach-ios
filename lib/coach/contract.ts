@@ -37,7 +37,7 @@ export const COACH_METRICS_V1 = [
   "release_elbow_lateral_offset_sb",
   "release_shoulder_line_yaw_deg",
   "deepest_dip_knee_angle_deg",
-  "rise_to_release_phase_span",
+  "follow_through_elbow_angle_deg",
   "follow_through_wrist_over_head_sb",
   "capture_quality",
 ] as const;
@@ -50,7 +50,7 @@ export type CoachObservationSourceV1 = (typeof COACH_OBSERVATION_SOURCES)[number
 export const COACH_OBSERVATION_BOUNDARIES = [REPRESENTATIVE_BOUNDARY] as const;
 export type CoachObservationBoundaryV1 = (typeof COACH_OBSERVATION_BOUNDARIES)[number];
 
-export const COACH_UNITS = ["deg", "shoulder_breadths", "phase_fraction", "label"] as const;
+export const COACH_UNITS = ["deg", "shoulder_breadths", "label"] as const;
 export type CoachUnitV1 = (typeof COACH_UNITS)[number];
 
 /** Each metric has one unit; a value is a bounded number for a measured unit and a code for a label. */
@@ -60,7 +60,7 @@ export const COACH_METRIC_UNITS_V1: Readonly<Record<CoachMetricV1, CoachUnitV1>>
   release_elbow_lateral_offset_sb: "shoulder_breadths",
   release_shoulder_line_yaw_deg: "deg",
   deepest_dip_knee_angle_deg: "deg",
-  rise_to_release_phase_span: "phase_fraction",
+  follow_through_elbow_angle_deg: "deg",
   follow_through_wrist_over_head_sb: "shoulder_breadths",
   capture_quality: "label",
 });
@@ -68,7 +68,6 @@ export const COACH_METRIC_UNITS_V1: Readonly<Record<CoachMetricV1, CoachUnitV1>>
 export const COACH_UNIT_BOUNDS_V1: Readonly<Record<Exclude<CoachUnitV1, "label">, readonly [number, number]>> = Object.freeze({
   deg: [-360, 360],
   shoulder_breadths: [-10, 10],
-  phase_fraction: [0, 1],
 });
 
 export const COACH_HANDEDNESS = ["left", "right", "unknown"] as const;

@@ -44,11 +44,11 @@ describe("CoachObservationV1", () => {
       "release_elbow_lateral_offset_sb",
       "release_shoulder_line_yaw_deg",
       "deepest_dip_knee_angle_deg",
-      "rise_to_release_phase_span",
+      "follow_through_elbow_angle_deg",
       "follow_through_wrist_over_head_sb",
       "capture_quality",
     ]);
-    for (const metric of ["ground_reaction_force_n", "joint_torque_nm", "muscle_activation", "actual_3d_wrist_position_m", "release_velocity_mps"]) {
+    for (const metric of ["ground_reaction_force_n", "joint_torque_nm", "muscle_activation", "actual_3d_wrist_position_m", "release_velocity_mps", "rise_to_release_phase_span"]) {
       rejects({ ...observation(), metric }, "metric");
     }
   });
@@ -70,22 +70,22 @@ describe("CoachObservationV1", () => {
       release_elbow_lateral_offset_sb: "shoulder_breadths",
       release_shoulder_line_yaw_deg: "deg",
       deepest_dip_knee_angle_deg: "deg",
-      rise_to_release_phase_span: "phase_fraction",
+      follow_through_elbow_angle_deg: "deg",
       follow_through_wrist_over_head_sb: "shoulder_breadths",
       capture_quality: "label",
     });
     rejects(observation({ unit: "shoulder_breadths" }), "unit");
     rejects({ ...observation(), unit: null }, "unit");
+    rejects({ ...observation(), unit: "phase_fraction" }, "unit");
     rejects(observation({ value: "ninety" }), "value");
     rejects(observation({ value: 361 }), "value");
     rejects(observation({ value: Number.NaN }), "value");
     rejects(observation({ metric: "release_wrist_height_sb", unit: "shoulder_breadths", value: 11 }), "value");
-    rejects(observation({ metric: "rise_to_release_phase_span", unit: "phase_fraction", value: 1.2 }), "value");
     rejects(quality({ value: 3 }), "value");
     rejects(quality({ value: "Not a code" }), "value");
     rejects(quality({ unit: "deg", value: 1 }), "unit");
     accepts(observation({ metric: "release_wrist_height_sb", unit: "shoulder_breadths", value: -0.4 }));
-    accepts(observation({ metric: "rise_to_release_phase_span", unit: "phase_fraction", value: 0.25 }));
+    accepts(observation({ metric: "follow_through_elbow_angle_deg", unit: "deg", value: 171.5, phase_anchor: "followThrough" }));
     accepts(quality());
   });
 
