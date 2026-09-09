@@ -47,6 +47,11 @@ describe("home as a vertical reel feed", () => {
   it("builds coaching moments only from the frozen feed event and skips them when the coach is unavailable", () => {
     expect(coachHook).toContain("homeCoachReel(");
     expect(coachHook).toContain("controller.abort()");
+    // Public reels and persisted saves enter through their own boundaries; Home reads no private profile of others.
+    expect(home).toContain("useHomePublicReels(");
+    expect(home).toContain("syncSavedMoment(");
+    expect(home).toContain("syncUnsavedMoment(");
+    expect(home).not.toMatch(/getDocsFromServer|firebase\/firestore|firebase\/storage|decodeMotionPacketV1/);
     expect(homeCoach).toContain("buildCoachFeedEvent(");
     expect(homeCoach).toContain("buildCoachRequest(");
     expect(adapter).toContain("if (!event.eligibility.eligible");

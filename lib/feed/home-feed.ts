@@ -63,9 +63,12 @@ export function insertCoachReel(items: readonly ReelItem[], coach: CoachReel | n
 export type HomeFeedInput = {
   own: UserReel | null;
   coach: CoachReel | null;
+  /** Other shooters' public posts, already turned into reels; empty when the backend is unavailable. */
+  publicReels?: readonly UserReel[];
   references: readonly ReferenceReel[];
 };
 
-export function buildHomeFeed({ own, coach, references }: HomeFeedInput): ReelItem[] {
-  return insertCoachReel([...(own ? [own] : []), ...references], coach);
+export function buildHomeFeed({ own, coach, publicReels = [], references }: HomeFeedInput): ReelItem[] {
+  // A coaching moment is about my profile; it never rides on someone else's public reel.
+  return insertCoachReel([...(own ? [own] : []), ...publicReels, ...references], own ? coach : null);
 }

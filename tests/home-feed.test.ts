@@ -49,6 +49,13 @@ describe("home feed composition", () => {
     expect(buildHomeFeed({ own: null, coach: null, references: refs }).map((item) => item.kind)).toEqual(["reference"]);
   });
 
+  it("places public reels after my reel and the coaching moment, before the references, and never coaches on a stranger's reel", () => {
+    const publicReels = [own("post-post00001"), own("post-post00002")];
+    expect(buildHomeFeed({ own: own(), coach, publicReels, references: refs }).map((item) => item.id)).toEqual([own().id, coach.id, "post-post00001", "post-post00002", refs[0].id]);
+    expect(buildHomeFeed({ own: null, coach, publicReels, references: refs }).map((item) => item.kind)).toEqual(["user", "user", "reference"]);
+    expect(buildHomeFeed({ own: null, coach: null, publicReels: [], references: refs }).map((item) => item.kind)).toEqual(["reference"]);
+  });
+
   it("inserts the coaching moment after the first user reel and never leads with it", () => {
     const items: ReelItem[] = [own("user-1"), own("user-2"), refs[0]];
     expect(insertCoachReel(items, coach).map((item) => item.id)).toEqual(["user-1", coach.id, "user-2", refs[0].id]);

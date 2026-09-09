@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CoachRequestV1 } from "@/lib/coach/contract";
 import type { CoachProviderResult } from "@/lib/coach/provider";
+import type { UserReel } from "@/lib/feed/reel-model";
 import type { RepresentativePose4DV2 } from "@/lib/shooting-profile/types";
 
 // Tells React 19 this is a test environment so act() does not warn on every update.
@@ -51,6 +52,17 @@ vi.mock("@/lib/feed/home-coach-provider", () => ({
     id: "deterministic_v1",
     coach: async (request: CoachRequestV1) => coachResult ?? { status: "ok", response: deterministicCoachResponse(request) },
   }),
+}));
+// Public reels and the saved-post store enter Home through one dependency object; the tests decide what it holds.
+vi.mock("expo-video", () => ({
+  useVideoPlayer: () => ({ play: () => undefined, pause: () => undefined, loop: false, muted: false }),
+  VideoView: () => <div data-testid="video-view" />,
+}));
+const publicReelsState = { status: "unavailable" as "unavailable" | "ready", reels: [] as UserReel[], savedPostIds: [] as string[] };
+const social = { saveReelMoment: vi.fn(async () => undefined), unsaveReel: vi.fn(async () => undefined) };
+vi.mock("@/hooks/use-home-public-reels", () => ({
+  useHomePublicReels: () => publicReelsState,
+  homeSocialDependencies: () => ({ social, media: { fetchMotionPacket: async () => null, resolveVideoUri: async () => null } }),
 }));
 vi.mock("@expo/vector-icons/MaterialIcons", () => ({
   default: ({ name }: { name: string }) => <span data-icon={name} />,
@@ -405,6 +417,32 @@ describe("home", () => {
       expect(container.textContent, state).toContain(line);
       expect(activeKind(), state).toBe("reference");
       expect(feedCount(), state).toBe("1 / 1");
+    }
+  });
+
+  it("public reels from the backend follow my reel and the coaching moment; saving my own reel stays session-only", async () => {
+    coachResult = null;
+    ready();
+    publicReelsState.status = "ready";
+    publicReelsState.reels = [
+      { kind: "user", id: "post-post00001", author: "공개 슛폼", meta: "어제", caption: "공개 게시물 · 영상", motion: { source: "public", postId: "post00001", durationMs: 12000, packet: null, video: { uri: "https://storage.example.test/video.mp4" } } },
+      { kind: "user", id: "post-post00002", author: "공개 슛폼", meta: "어제", caption: "공개 게시물 · 미디어 준비 중", motion: { source: "public", postId: "post00002", durationMs: 8000, packet: null, video: null } },
+    ];
+    publicReelsState.savedPostIds = ["post00002"];
+    social.saveReelMoment.mockClear();
+    try {
+      await render(<HomeScreen />);
+      await settle(() => container.innerHTML.length);
+      expect(activeKind()).toBe("user");
+      expect(feedCount()).toBe("1 / 5");
+      expect(container.textContent).toContain("내 슛폼 · 오늘");
+      await click(byLabel("저장"));
+      expect(byLabel("저장 취소")).not.toBeNull();
+      expect(social.saveReelMoment).not.toHaveBeenCalled();
+    } finally {
+      publicReelsState.status = "unavailable";
+      publicReelsState.reels = [];
+      publicReelsState.savedPostIds = [];
     }
   });
 });
