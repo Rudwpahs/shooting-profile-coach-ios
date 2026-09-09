@@ -155,7 +155,7 @@ def test_final_selection_is_deterministic_bounded_and_contract_valid():
 
 
 def test_selection_loads_text_only_for_final_ids(monkeypatch: pytest.MonkeyPatch):
-    import formpath_coach.retrieval as retrieval
+    from formpath_coach import retrieval
 
     candidates = [
         synthetic_unit(903, provenance="LINKED", metrics=("JOINT_ANGLE",)),
@@ -194,7 +194,7 @@ def test_selection_loads_text_only_for_final_ids(monkeypatch: pytest.MonkeyPatch
 def test_selection_preserves_a_safety_unit_when_candidates_have_one(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    import formpath_coach.retrieval as retrieval
+    from formpath_coach import retrieval
 
     candidates = [
         synthetic_unit(903, provenance="LINKED", metrics=("JOINT_ANGLE",)),
