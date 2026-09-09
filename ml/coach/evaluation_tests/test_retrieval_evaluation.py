@@ -9,7 +9,6 @@ import pytest
 
 from formpath_coach.schemas import CoachEvidenceItemV1
 
-
 FROZEN_METRICS = {
     "release_elbow_angle_deg",
     "release_wrist_height_sb",
