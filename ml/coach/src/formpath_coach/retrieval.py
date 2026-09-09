@@ -1,15 +1,27 @@
 """Deterministic machine-code evidence retrieval for Coach contract V1.
 
-B2-B.1 never loads the 940-unit corpus as natural language.  The first stage
-turns the frozen Coach request into a small query plan expressed only in the
-Knowledge Machine v2 DOMAIN / METRIC / POLICY vocabulary.
+B2-B.1 never loads the 940-unit corpus as natural language.  It turns a frozen
+Coach request into a machine-code query plan, gathers bounded code-only corpus
+candidates and ranks them deterministically. Natural-language text is reserved
+for the final selected evidence units in a later stage.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 
+from formpath_coach.corpus import (
+    CANONICAL_UNIT_COUNT,
+    CORPUS_DIR,
+    CorpusUnitCodes,
+    search_units,
+    units_by_domain,
+    units_by_metric,
+    units_by_policy,
+)
+from formpath_coach.corpus_mapping import TIER_STRENGTH, map_evidence_tier
 from formpath_coach.schemas import CoachRequestV1
 
 
@@ -19,6 +31,16 @@ class EvidenceQueryPlan:
     metrics: tuple[str, ...]
     policies: tuple[str, ...]
     fts_terms: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class RankedEvidenceCandidate:
+    unit: CorpusUnitCodes
+    score: int
+    metric_matches: tuple[str, ...]
+    domain_matches: tuple[str, ...]
+    policy_matches: tuple[str, ...]
+    lexical_match: bool
 
 
 # Frozen Coach metric -> Knowledge Machine v2 codes.  Only direct, defensible
@@ -80,3 +102,87 @@ def build_evidence_query_plan(request: CoachRequestV1) -> EvidenceQueryPlan:
         policies=_SAFETY_POLICIES,
         fts_terms=_ACTION_FTS_TERMS[request.context.action],
     )
+
+
+def rank_evidence_candidates(
+    plan: EvidenceQueryPlan,
+    candidates: Iterable[CorpusUnitCodes],
+    lexical_hit_ids: frozenset[int] = frozenset(),
+) -> list[RankedEvidenceCandidate]:
+    """Rank code-only units with fixed weights and a stable research-unit tie break."""
+    ranked: list[RankedEvidenceCandidate] = []
+    plan_metrics = set(plan.metrics)
+    plan_domains = set(plan.domains)
+    plan_policies = set(plan.policies)
+    seen: set[int] = set()
+
+    for unit in candidates:
+        if unit.n in seen:
+            continue
+        seen.add(unit.n)
+        metric_matches = tuple(code for code in unit.metrics if code in plan_metrics)
+        domain_matches = tuple(code for code in unit.domains if code in plan_domains)
+        policy_matches = tuple(code for code in unit.policies if code in plan_policies)
+        lexical_match = unit.n in lexical_hit_ids
+        evidence_strength = TIER_STRENGTH[map_evidence_tier(unit.evidence)]
+        linked_bonus = 4 if unit.provenance == "LINKED" else 0
+        score = (
+            100 * len(metric_matches)
+            + 30 * len(domain_matches)
+            + 10 * len(policy_matches)
+            + 2 * evidence_strength
+            + linked_bonus
+            + (8 if lexical_match else 0)
+        )
+        ranked.append(
+            RankedEvidenceCandidate(
+                unit=unit,
+                score=score,
+                metric_matches=metric_matches,
+                domain_matches=domain_matches,
+                policy_matches=policy_matches,
+                lexical_match=lexical_match,
+            )
+        )
+
+    ranked.sort(
+        key=lambda item: (
+            -item.score,
+            -(1 if item.unit.provenance == "LINKED" else 0),
+            -TIER_STRENGTH[map_evidence_tier(item.unit.evidence)],
+            item.unit.n,
+        )
+    )
+    return ranked
+
+
+def retrieve_candidate_units(
+    plan: EvidenceQueryPlan,
+    candidate_limit: int = 40,
+    corpus_dir: Path = CORPUS_DIR,
+) -> list[CorpusUnitCodes]:
+    """Gather and rank a bounded set without touching any natural-language payload."""
+    if candidate_limit < 1:
+        raise ValueError("candidate_limit must be >= 1")
+
+    by_id: dict[int, CorpusUnitCodes] = {}
+
+    def add(units: Iterable[CorpusUnitCodes]) -> None:
+        for unit in units:
+            by_id.setdefault(unit.n, unit)
+
+    for code in plan.metrics:
+        add(units_by_metric(code, CANONICAL_UNIT_COUNT, corpus_dir))
+    for code in plan.domains:
+        add(units_by_domain(code, CANONICAL_UNIT_COUNT, corpus_dir))
+    for code in plan.policies:
+        add(units_by_policy(code, CANONICAL_UNIT_COUNT, corpus_dir))
+
+    lexical_ids: set[int] = set()
+    for term in plan.fts_terms:
+        hits = search_units(term, min(CANONICAL_UNIT_COUNT, max(candidate_limit * 2, 20)), corpus_dir)
+        lexical_ids.update(unit.n for unit in hits)
+        add(hits)
+
+    ranked = rank_evidence_candidates(plan, by_id.values(), frozenset(lexical_ids))
+    return [item.unit for item in ranked[:candidate_limit]]
