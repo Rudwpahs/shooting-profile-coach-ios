@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from formpath_coach.corpus import CorpusUnitCodes
-from formpath_coach.schemas import CoachRequestV1
+from formpath_coach.schemas import CoachEvidenceItemV1, CoachRequestV1
 
 
 def request_with_metrics(*metrics: str, quality_passed: bool = True) -> CoachRequestV1:
@@ -136,3 +136,113 @@ def test_candidate_limit_is_strict():
     with pytest.raises(ValueError, match="candidate_limit"):
         retrieve_candidate_units(plan, candidate_limit=0)
     assert len(retrieve_candidate_units(plan, candidate_limit=7)) <= 7
+
+
+def test_final_selection_is_deterministic_bounded_and_contract_valid():
+    from formpath_coach.retrieval import select_coach_evidence
+
+    request = request_with_metrics("release_elbow_angle_deg")
+    first = select_coach_evidence(request, limit=8, candidate_limit=40)
+    second = select_coach_evidence(request, limit=8, candidate_limit=40)
+
+    assert 0 < len(first) <= 8
+    assert [item["research_unit_id"] for item in first] == [
+        item["research_unit_id"] for item in second
+    ]
+    assert len({item["research_unit_id"] for item in first}) == len(first)
+    for item in first:
+        CoachEvidenceItemV1.model_validate(item)
+
+
+def test_selection_loads_text_only_for_final_ids(monkeypatch: pytest.MonkeyPatch):
+    import formpath_coach.retrieval as retrieval
+
+    candidates = [
+        synthetic_unit(903, provenance="LINKED", metrics=("JOINT_ANGLE",)),
+        synthetic_unit(902, metrics=("JOINT_ANGLE",)),
+        synthetic_unit(901),
+    ]
+    loaded: list[int] = []
+
+    monkeypatch.setattr(retrieval, "retrieve_candidate_units", lambda *args, **kwargs: candidates)
+
+    def fake_convert(unit_nos, corpus_dir):
+        loaded.extend(unit_nos)
+        return [
+            {
+                "research_unit_id": n,
+                "claim": f"claim {n}",
+                "evidence_tier": "B",
+                "source_title": None,
+                "supported_inferences": [],
+                "forbidden_inferences": [],
+                "limitations": [],
+                "contradiction_group": None,
+            }
+            for n in unit_nos
+        ]
+
+    monkeypatch.setattr(retrieval, "coach_evidence_items", fake_convert)
+    items = retrieval.select_coach_evidence(
+        request_with_metrics("release_elbow_angle_deg"), limit=2, candidate_limit=3
+    )
+
+    assert loaded == [903, 902]
+    assert [item["research_unit_id"] for item in items] == loaded
+
+
+def test_selection_preserves_a_safety_unit_when_candidates_have_one(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import formpath_coach.retrieval as retrieval
+
+    candidates = [
+        synthetic_unit(903, provenance="LINKED", metrics=("JOINT_ANGLE",)),
+        synthetic_unit(902, metrics=("JOINT_ANGLE",)),
+        synthetic_unit(901, policies=("DO_NOT_OVERINFER",), evidence="C"),
+    ]
+    loaded: list[int] = []
+    monkeypatch.setattr(retrieval, "retrieve_candidate_units", lambda *args, **kwargs: candidates)
+
+    def fake_convert(unit_nos, corpus_dir):
+        loaded.extend(unit_nos)
+        return [
+            {
+                "research_unit_id": n,
+                "claim": f"claim {n}",
+                "evidence_tier": "C",
+                "source_title": None,
+                "supported_inferences": [],
+                "forbidden_inferences": ["DO_NOT_OVERINFER"] if n == 901 else [],
+                "limitations": [],
+                "contradiction_group": None,
+            }
+            for n in unit_nos
+        ]
+
+    monkeypatch.setattr(retrieval, "coach_evidence_items", fake_convert)
+    retrieval.select_coach_evidence(
+        request_with_metrics("release_elbow_angle_deg"), limit=2, candidate_limit=3
+    )
+
+    assert loaded == [903, 901]
+
+
+def test_selection_fails_open_to_empty_evidence_when_corpus_is_unavailable(tmp_path):
+    from formpath_coach.retrieval import select_coach_evidence
+
+    missing = tmp_path / "no-corpus-here"
+    assert select_coach_evidence(
+        request_with_metrics("release_elbow_angle_deg"), corpus_dir=missing
+    ) == []
+
+
+def test_final_limit_respects_frozen_contract_maximum():
+    from formpath_coach.retrieval import select_coach_evidence
+
+    request = request_with_metrics("release_elbow_angle_deg")
+    assert select_coach_evidence(request, limit=0) == []
+    with pytest.raises(ValueError, match="limit"):
+        select_coach_evidence(request, limit=-1)
+    with pytest.raises(ValueError, match="16"):
+        select_coach_evidence(request, limit=17)
