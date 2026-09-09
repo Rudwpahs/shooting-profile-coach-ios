@@ -67,8 +67,20 @@ function tokenizeRuleExpression(source: string): RuleToken[] {
       continue;
     }
     if (source.startsWith("/databases/", index)) {
+      // A path literal ends at whitespace, a semicolon, or, outside its own `$(...)`
+      // segments, at the parenthesis, comma or member dot that belongs to the caller
+      // (`getAfter(/databases/.../$(postId)).data, uid`).
       const start = index;
-      while (index < source.length && !/[;\s]/.test(source[index])) index += 1;
+      let depth = 0;
+      while (index < source.length && !/[;\s]/.test(source[index])) {
+        const current = source[index];
+        if (current === "(") depth += 1;
+        else if (current === ")") {
+          if (depth === 0) break;
+          depth -= 1;
+        } else if (depth === 0 && (current === "," || current === ".")) break;
+        index += 1;
+      }
       tokens.push({ kind: "literal", value: source.slice(start, index) });
       continue;
     }
