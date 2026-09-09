@@ -30,5 +30,29 @@ jobs:
           PYTHONPATH: ml/coach/src
         run: python -m pytest ml/coach/evaluation_tests/test_retrieval_evaluation.py -q
 
+      - name: Emit B2-B.2 metric summary
+        env:
+          PYTHONPATH: ml/coach/src
+        run: |
+          python - <<'PY'
+          import json
+          from formpath_coach.retrieval_eval import run_retrieval_evaluation
+
+          report = run_retrieval_evaluation()
+          print(json.dumps({
+              "case_count": report.case_count,
+              "plan_alignment_rate": report.plan_alignment_rate,
+              "relevance_hit_rate": report.relevance_hit_rate,
+              "safety_preservation_rate": report.safety_preservation_rate,
+              "determinism_rate": report.determinism_rate,
+              "bounded_rate": report.bounded_rate,
+              "contract_valid_rate": report.contract_valid_rate,
+              "linked_selection_count": report.linked_selection_count,
+              "row_only_selection_count": report.row_only_selection_count,
+              "acceptance_passed": report.acceptance_passed,
+              "acceptance_failures": list(report.acceptance_failures),
+          }, sort_keys=True))
+          PY
+
       - name: Ruff evaluation files
         run: python -m ruff check ml/coach/evaluation_tests/test_retrieval_evaluation.py ml/coach/src/formpath_coach/retrieval_eval.py
