@@ -48,6 +48,7 @@ suite in `tests/` (79 tests, no network, no model download).
 | Inference scaffold | `inference.py` `FormPathCoach` | Loads a base causal LM plus an optional **local** LoRA adapter directory, builds the same chat prompt as training, generates, extracts the JSON object and validates it as `CoachResponse`. Configuration (`base_model`, `adapter_path`, `max_new_tokens`, `temperature`) is validated before anything is loaded. |
 | FastAPI scaffold | `api.py` | `GET /health` (never loads a model, reports `model_loaded`) and `POST /v1/coach` (lazy model construction on first call; 422 on schema violation, 503 when the model cannot be loaded, 500 when generation fails). |
 | Corpus package, read-only (B2-A) | `corpus/knowledge-machine-v2/`, `corpus.py` | The FormPath Knowledge Machine v2 vendored byte-exact (940 units, RU-0061..RU-1000, normalized codes, checksummed manifest). `corpus.py` opens it read-only, answers with machine codes (stats; by domain, metric, policy; FTS hits) and returns text only for one explicitly named unit; `validate_corpus()` checks checksums, range, ids, vocabulary, counts and sources. No embedding, retrieval or training. |
+| Corpus compatibility adapter (B2-A.1) | `corpus_mapping.py` | Runtime-only bridge between the immutable corpus and the frozen contract: the three fallback sentinels (`UNCLASSIFIED`, `UNMAPPED_METRIC`, `GENERAL_GUIDANCE`) are official runtime codes; the 14 corpus evidence codes map onto the 7 frozen tiers by a conservative downgrade (`A+->A, A-, B+, B, B-->C, C+->C, C-->D, D+->D, D-->H, E->H, U->H`); provenance policy (`LINKED` normal evidence, `ROW_ONLY` retrieval candidate with `source_title=null`, never sole prescription evidence, Coach confidence capped at `medium`); `CorpusUnit -> CoachEvidenceItemV1` conversion validated against the frozen model. Neither the corpus files nor the contract change. |
 
 ## PLANNED / NOT IMPLEMENTED
 
@@ -55,7 +56,7 @@ None of the following exists in this repository. Do not read any file here as
 evidence that it does.
 
 - research corpus **ingestion into retrieval** (the v2 package itself is vendored and validated, see IMPLEMENTED; nothing indexes or embeds it)
-- canonical research ledger and the evidence-code mapping to `CoachEvidenceItemV1` (the corpus uses `A, B, C, D, E, U`; the frozen contract uses `A, A-, B+, B, C, D, H`)
+- canonical research ledger and retrieval over it (the evidence-code mapping itself is IMPLEMENTED in `corpus_mapping.py`; nothing selects units for a request yet)
 - training scenarios (there is no `data/` directory and no scenario JSONL yet; the
   loader has only been exercised on synthetic rows generated in the tests)
 - RAG, embedding model, vector database / index, reranker
