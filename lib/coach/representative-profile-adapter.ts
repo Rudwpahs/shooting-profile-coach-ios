@@ -1,10 +1,10 @@
+import { observationConfidence } from "@/lib/coach/confidence-map";
 import {
   COACH_METRIC_UNITS_V1,
   COACH_PHASE_ANCHORS,
   COACH_SCHEMA_VERSION,
   REPRESENTATIVE_BOUNDARY,
   parseCoachRequestV1,
-  type CoachConfidenceV1,
   type CoachEvidenceItemV1,
   type CoachJointV1,
   type CoachLocaleV1,
@@ -143,20 +143,13 @@ export function representativeFrameAt(profile: RepresentativePose4DV2, anchor: C
   return profile.frames[Math.max(0, Math.min(last, Math.round(found.phase * last)))];
 }
 
-/**
- * Provisional confidence policy: the quality gate alone. The uncertainty
- * cone mapping replaces this once it exists; the contract does not change.
- */
-function provisionalConfidence(profile: RepresentativePose4DV2): CoachConfidenceV1 {
-  return profile.quality.passed ? "medium" : "low";
-}
-
 export function buildCoachObservations(profile: RepresentativePose4DV2, shootingHand: ShootingHandV2): CoachObservationV1[] {
   assertRepresentative(profile);
   const side: Side = shootingHand;
   const caveats = [BOUNDARY_CAVEAT, MODE_CAVEAT[profile.mode]];
   const measured = (Object.entries(MEASUREMENTS) as [Exclude<CoachMetricV1, "capture_quality">, Measurement][]).map(([metric, measurement]): CoachObservationV1 => {
     const frame = representativeFrameAt(profile, measurement.anchor);
+    const joints = measurement.joints(side);
     const value = round2(measurement.compute(frame.joints, side, shootingHand));
     if (!Number.isFinite(value)) throw new Error(`${metric} must be finite`);
     return {
@@ -165,11 +158,12 @@ export function buildCoachObservations(profile: RepresentativePose4DV2, shooting
       value,
       unit: COACH_METRIC_UNITS_V1[metric],
       reference: measurement.reference,
-      measurement_confidence: provisionalConfidence(profile),
+      // The widest cone among the joints used, capped by the capture mode and the quality gate.
+      measurement_confidence: observationConfidence(profile, frame, joints),
       source: "representative_phase_fused_4d",
       boundary: REPRESENTATIVE_BOUNDARY,
       phase_anchor: measurement.anchor,
-      joints: measurement.joints(side),
+      joints,
       caveats: [...caveats, ...(measurement.caveats ?? [])],
     };
   });
