@@ -251,7 +251,7 @@ class CoachObservationV1(_ContractModel):
 
     @field_validator("value")
     @classmethod
-    def _value_matches_unit(cls, value: int | float | str, info: ValidationInfo) -> int | float | str:
+    def _value_matches_unit(cls, value: float | str, info: ValidationInfo) -> float | str:
         unit = info.data.get("unit")
         if unit is None:
             return value

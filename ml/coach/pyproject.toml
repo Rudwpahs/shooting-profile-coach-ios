@@ -27,6 +27,8 @@ dev = [
   "ruff>=0.12",
   # FastAPI's TestClient is implemented on top of httpx.
   "httpx>=0.28",
+  # JSON Schema validation of the exported contract files in the parity gate.
+  "jsonschema>=4.23",
 ]
 
 [tool.setuptools.packages.find]

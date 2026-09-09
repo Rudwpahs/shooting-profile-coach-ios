@@ -1,0 +1,407 @@
+{
+  "$defs": {
+    "CoachEvidenceItemV1": {
+      "additionalProperties": false,
+      "properties": {
+        "claim": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Claim",
+          "type": "string"
+        },
+        "contradiction_group": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contradiction Group"
+        },
+        "evidence_tier": {
+          "enum": [
+            "A",
+            "A-",
+            "B+",
+            "B",
+            "C",
+            "D",
+            "H"
+          ],
+          "title": "Evidence Tier",
+          "type": "string"
+        },
+        "forbidden_inferences": {
+          "items": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Forbidden Inferences",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "maxLength": 160,
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "research_unit_id": {
+          "minimum": 1,
+          "title": "Research Unit Id",
+          "type": "integer"
+        },
+        "source_title": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Title"
+        },
+        "supported_inferences": {
+          "items": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Supported Inferences",
+          "type": "array"
+        }
+      },
+      "required": [
+        "research_unit_id",
+        "claim",
+        "evidence_tier",
+        "source_title",
+        "supported_inferences",
+        "forbidden_inferences",
+        "limitations",
+        "contradiction_group"
+      ],
+      "title": "CoachEvidenceItemV1",
+      "type": "object"
+    },
+    "CoachObservationV1": {
+      "additionalProperties": false,
+      "properties": {
+        "boundary": {
+          "const": "representative_phase_fused_4d_estimate_not_actual_3d",
+          "title": "Boundary",
+          "type": "string"
+        },
+        "caveats": {
+          "items": {
+            "maxLength": 160,
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Caveats",
+          "type": "array"
+        },
+        "id": {
+          "maxLength": 64,
+          "pattern": "^obs_[a-z0-9]+(?:_[a-z0-9]+)*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "joints": {
+          "items": {
+            "enum": [
+              "leftShoulder",
+              "leftElbow",
+              "leftWrist",
+              "rightShoulder",
+              "rightElbow",
+              "rightWrist",
+              "leftHip",
+              "leftKnee",
+              "leftAnkle",
+              "rightHip",
+              "rightKnee",
+              "rightAnkle"
+            ],
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Joints",
+          "type": "array"
+        },
+        "measurement_confidence": {
+          "enum": [
+            "very_low",
+            "low",
+            "medium",
+            "high",
+            "very_high"
+          ],
+          "title": "Measurement Confidence",
+          "type": "string"
+        },
+        "metric": {
+          "enum": [
+            "release_elbow_angle_deg",
+            "release_wrist_height_sb",
+            "release_elbow_lateral_offset_sb",
+            "release_shoulder_line_yaw_deg",
+            "deepest_dip_knee_angle_deg",
+            "follow_through_elbow_angle_deg",
+            "follow_through_wrist_over_head_sb",
+            "capture_quality"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "phase_anchor": {
+          "anyOf": [
+            {
+              "enum": [
+                "ready",
+                "deepestDip",
+                "rise",
+                "releaseProxy",
+                "followThrough"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Phase Anchor"
+        },
+        "reference": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reference"
+        },
+        "source": {
+          "const": "representative_phase_fused_4d",
+          "title": "Source",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "deg",
+            "shoulder_breadths",
+            "label"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "maxLength": 64,
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "id",
+        "metric",
+        "unit",
+        "value",
+        "reference",
+        "measurement_confidence",
+        "source",
+        "boundary",
+        "phase_anchor",
+        "joints",
+        "caveats"
+      ],
+      "title": "CoachObservationV1",
+      "type": "object"
+    },
+    "CoachPlayerContextV1": {
+      "additionalProperties": false,
+      "properties": {
+        "handedness": {
+          "enum": [
+            "left",
+            "right",
+            "unknown"
+          ],
+          "title": "Handedness",
+          "type": "string"
+        },
+        "skill_level": {
+          "anyOf": [
+            {
+              "enum": [
+                "beginner",
+                "developing",
+                "advanced"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Skill Level"
+        },
+        "training_goal": {
+          "anyOf": [
+            {
+              "enum": [
+                "consistency",
+                "range",
+                "release",
+                "rhythm"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Training Goal"
+        }
+      },
+      "required": [
+        "handedness",
+        "skill_level",
+        "training_goal"
+      ],
+      "title": "CoachPlayerContextV1",
+      "type": "object"
+    },
+    "CoachShotContextV1": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "set_shot",
+            "jump_shot",
+            "free_throw",
+            "unknown"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "capture_protocol": {
+          "enum": [
+            "basic_1_plus_1",
+            "high_accuracy_3_plus_3"
+          ],
+          "title": "Capture Protocol",
+          "type": "string"
+        },
+        "quality_passed": {
+          "title": "Quality Passed",
+          "type": "boolean"
+        },
+        "quality_reasons": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Quality Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "action",
+        "capture_protocol",
+        "quality_passed",
+        "quality_reasons"
+      ],
+      "title": "CoachShotContextV1",
+      "type": "object"
+    }
+  },
+  "$id": "coach-request-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "context": {
+      "$ref": "#/$defs/CoachShotContextV1"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/CoachEvidenceItemV1"
+      },
+      "maxItems": 16,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "locale": {
+      "enum": [
+        "ko",
+        "en"
+      ],
+      "title": "Locale",
+      "type": "string"
+    },
+    "observations": {
+      "items": {
+        "$ref": "#/$defs/CoachObservationV1"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Observations",
+      "type": "array"
+    },
+    "player": {
+      "$ref": "#/$defs/CoachPlayerContextV1"
+    },
+    "recent_history": {
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+        "type": "string"
+      },
+      "maxItems": 10,
+      "title": "Recent History",
+      "type": "array"
+    },
+    "request_id": {
+      "pattern": "^req_[a-z0-9]{8,64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "request_id",
+    "locale",
+    "player",
+    "context",
+    "observations",
+    "evidence",
+    "recent_history"
+  ],
+  "title": "CoachRequestV1",
+  "type": "object"
+}
