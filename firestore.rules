@@ -321,9 +321,93 @@ service cloud.firestore {
         && allObservationDocumentsAbsent(userId, head.captureSessionId, head.mode);
     }
 
+    function validReelId(value) {
+      return value is string && value.matches('^[A-Za-z0-9_-]{8,64}$');
+    }
+
+    function validReelMedia(data, ownerUid, postId) {
+      return (data.video == null || (
+          validExactKeys(data.video, ['objectPath', 'contentType'])
+          && data.video.contentType == 'video/mp4'
+          && data.video.objectPath == 'reels/' + ownerUid + '/' + postId + '/video.mp4'
+        ))
+        && (data.motion == null || (
+          validExactKeys(data.motion, ['objectPath', 'format'])
+          && data.motion.format == 'motion_packet_v1'
+          && data.motion.objectPath == 'reels/' + ownerUid + '/' + postId + '/motion.v1.bin'
+        ))
+        && (data.video != null || data.motion != null);
+    }
+
+    function validReelPost(data, postId) {
+      return signedInOwner(data.ownerUid) && data.postId == postId
+        && data.keys().hasOnly([
+          'schemaVersion', 'postId', 'ownerUid', 'privacy', 'publicOptIn',
+          'durationMs', 'video', 'motion', 'createdAt', 'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.privacy == 'public'
+        && data.publicOptIn == true
+        && data.durationMs is int
+        && data.durationMs >= 1 && data.durationMs <= 180000
+        && data.createdAt is timestamp && data.updatedAt is timestamp
+        && validReelMedia(data, data.ownerUid, postId);
+    }
+
+    function validReelPrivacyUpdate(postId) {
+      return request.auth != null
+        && request.auth.uid == resource.data.ownerUid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'privacy', 'publicOptIn', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+        && ((request.resource.data.privacy == 'private'
+            && request.resource.data.publicOptIn == false)
+          || (request.resource.data.privacy == 'public'
+            && request.resource.data.publicOptIn == true));
+    }
+
+    function readableReel(data, uid) {
+      return data.privacy == 'public' || (uid != null && data.ownerUid == uid);
+    }
+
+    function validSavedReel(data, userId, postId) {
+      return validExactKeys(data, ['schemaVersion', 'postId', 'timeMs', 'savedAt'])
+        && data.schemaVersion == 1
+        && validReelId(postId)
+        && data.postId == postId
+        && data.timeMs is int && data.timeMs >= 0 && data.timeMs <= 180000
+        && data.savedAt is timestamp && data.savedAt == request.time
+        && signedInOwner(userId)
+        && existsAfter(/databases/$(database)/documents/reelPosts/$(postId))
+        && readableReel(
+          getAfter(/databases/$(database)/documents/reelPosts/$(postId)).data,
+          userId
+        )
+        && data.timeMs <= getAfter(
+          /databases/$(database)/documents/reelPosts/$(postId)
+        ).data.durationMs;
+    }
+
     // Access-call maxima: observation create 2; capture create Basic 7 / High 7;
     // revision create 2; publication create 1; subordinate delete 3 or fewer;
     // profile-head delete Basic 4 / High 8.
+
+    match /reelPosts/{postId} {
+      allow get: if resource.data.privacy == 'public'
+        || signedInOwner(resource.data.ownerUid);
+      allow list: if request.query.limit != null
+        && request.query.limit <= 25
+        && resource.data.privacy == 'public';
+      allow create: if signedInOwner(request.resource.data.ownerUid)
+        && validReelPost(request.resource.data, postId)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if validReelPrivacyUpdate(postId);
+      allow delete: if signedInOwner(resource.data.ownerUid)
+        && validReelId(postId);
+    }
 
     match /users/{userId} {
       allow read: if signedInOwner(userId);
@@ -331,6 +415,17 @@ service cloud.firestore {
         && request.resource.data.email is string
         && request.resource.data.email.size() <= 320;
       allow delete: if signedInOwner(userId);
+
+      match /savedReels/{postId} {
+        allow get: if signedInOwner(userId);
+        allow list: if signedInOwner(userId)
+          && request.query.limit != null
+          && request.query.limit <= 25;
+        allow create, update: if validSavedReel(request.resource.data, userId, postId)
+          && (request.method == 'create'
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timeMs', 'savedAt']));
+        allow delete: if signedInOwner(userId) && validReelId(postId);
+      }
 
       // Legacy V1 records are read-only history. Their payload predates the V2
       // minimisation contract and carries face landmarks, native z, per-frame
