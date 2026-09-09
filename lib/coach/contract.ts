@@ -43,14 +43,33 @@ export const COACH_METRICS_V1 = [
 ] as const;
 export type CoachMetricV1 = (typeof COACH_METRICS_V1)[number];
 
-export const COACH_OBSERVATION_SOURCES = ["representative_phase_fused_4d", "user_report", "manual_tag"] as const;
+/** V1 has exactly one source of observations; a new source is a schema migration, not a new enum value. */
+export const COACH_OBSERVATION_SOURCES = ["representative_phase_fused_4d"] as const;
 export type CoachObservationSourceV1 = (typeof COACH_OBSERVATION_SOURCES)[number];
 
-export const COACH_OBSERVATION_BOUNDARIES = [REPRESENTATIVE_BOUNDARY, "self_report_not_measured", "manual_tag_not_measured"] as const;
+export const COACH_OBSERVATION_BOUNDARIES = [REPRESENTATIVE_BOUNDARY] as const;
 export type CoachObservationBoundaryV1 = (typeof COACH_OBSERVATION_BOUNDARIES)[number];
 
 export const COACH_UNITS = ["deg", "shoulder_breadths", "phase_fraction", "label"] as const;
 export type CoachUnitV1 = (typeof COACH_UNITS)[number];
+
+/** Each metric has one unit; a value is a bounded number for a measured unit and a code for a label. */
+export const COACH_METRIC_UNITS_V1: Readonly<Record<CoachMetricV1, CoachUnitV1>> = Object.freeze({
+  release_elbow_angle_deg: "deg",
+  release_wrist_height_sb: "shoulder_breadths",
+  release_elbow_lateral_offset_sb: "shoulder_breadths",
+  release_shoulder_line_yaw_deg: "deg",
+  deepest_dip_knee_angle_deg: "deg",
+  rise_to_release_phase_span: "phase_fraction",
+  follow_through_wrist_over_head_sb: "shoulder_breadths",
+  capture_quality: "label",
+});
+
+export const COACH_UNIT_BOUNDS_V1: Readonly<Record<Exclude<CoachUnitV1, "label">, readonly [number, number]>> = Object.freeze({
+  deg: [-360, 360],
+  shoulder_breadths: [-10, 10],
+  phase_fraction: [0, 1],
+});
 
 export const COACH_HANDEDNESS = ["left", "right", "unknown"] as const;
 export const COACH_SKILL_LEVELS = ["beginner", "developing", "advanced"] as const satisfies readonly SkillLevel[];
@@ -88,8 +107,8 @@ const uniqueEvidenceIds = unique<{ research_unit_id: number }>((item) => item.re
 export const CoachObservationV1Schema = z.strictObject({
   id: z.string().max(64).regex(COACH_OBSERVATION_ID_PATTERN),
   metric: z.enum(COACH_METRICS_V1),
-  value: z.union([z.number(), z.string().max(COACH_LIMITS.labelValueLength), z.boolean(), z.null()]),
-  unit: z.enum(COACH_UNITS).nullable(),
+  value: z.union([z.number(), z.string().max(COACH_LIMITS.labelValueLength)]),
+  unit: z.enum(COACH_UNITS),
   reference: z.string().max(COACH_LIMITS.referenceLength).nullable(),
   measurement_confidence: z.enum(COACH_CONFIDENCE),
   source: z.enum(COACH_OBSERVATION_SOURCES),
@@ -97,6 +116,25 @@ export const CoachObservationV1Schema = z.strictObject({
   phase_anchor: z.enum(COACH_PHASE_ANCHORS).nullable(),
   joints: z.array(z.enum(COACH_JOINTS)).max(COACH_JOINTS.length).refine((joints) => new Set(joints).size === joints.length, { message: "joints must be unique" }),
   caveats: z.array(z.string().max(COACH_LIMITS.caveatLength)).max(COACH_LIMITS.caveats),
+}).superRefine((observation, ctx) => {
+  const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
+  const expectedUnit = COACH_METRIC_UNITS_V1[observation.metric];
+  if (observation.unit !== expectedUnit) issue("unit", `${observation.metric} is measured in ${expectedUnit}`);
+  if (observation.unit === "label") {
+    if (typeof observation.value !== "string" || !COACH_CODE_PATTERN.test(observation.value)) issue("value", "a label value is a stable code");
+  } else {
+    const [min, max] = COACH_UNIT_BOUNDS_V1[observation.unit];
+    if (typeof observation.value !== "number" || observation.value < min || observation.value > max) {
+      issue("value", `${observation.unit} values are numbers within ${min}..${max}`);
+    }
+  }
+  if (observation.metric === "capture_quality") {
+    if (observation.phase_anchor !== null) issue("phase_anchor", "the quality label is not a pose and has no phase anchor");
+    if (observation.joints.length > 0) issue("joints", "the quality label is not a pose and names no joints");
+  } else {
+    if (observation.phase_anchor === null) issue("phase_anchor", "a measurement names the phase anchor it was taken at");
+    if (observation.joints.length === 0) issue("joints", "a measurement names at least one joint it was taken from");
+  }
 });
 export type CoachObservationV1 = z.infer<typeof CoachObservationV1Schema>;
 
