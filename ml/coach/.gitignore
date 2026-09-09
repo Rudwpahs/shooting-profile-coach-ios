@@ -1,0 +1,9 @@
+# Local Python environment and tool caches for the coach scaffold.
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+
+# Training outputs (adapters, tokenizers) are never committed.
+outputs/

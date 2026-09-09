@@ -1,0 +1,13 @@
+{
+  "id": "obs_capture_quality",
+  "metric": "capture_quality",
+  "value": "passed",
+  "unit": "label",
+  "reference": "reconstruction quality gate of the representative profile",
+  "measurement_confidence": "high",
+  "source": "representative_phase_fused_4d",
+  "boundary": "representative_phase_fused_4d_estimate_not_actual_3d",
+  "phase_anchor": null,
+  "joints": [],
+  "caveats": []
+}
