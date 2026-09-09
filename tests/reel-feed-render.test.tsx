@@ -44,6 +44,7 @@ const { ReelItem } = await import("@/components/feed/reel-item");
 const { REEL_CHROME_BOTTOM_HEIGHT, REEL_RAIL_WIDTH } = await import("@/components/feed/reel-chrome");
 const { MOTION_LIFT } = await import("@/lib/feed/motion-lift-state");
 const { reelLabFixtures } = await import("@/lib/feed/reel-fixtures");
+const { reelLabel } = await import("@/lib/feed/reel-model");
 
 // Tells React 19 this is a test environment so act() does not warn on every update.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -154,7 +155,8 @@ describe("reel item roles", () => {
     const chrome = byTestId("reel-chrome")[0];
     const leaves = Array.from(chrome.querySelectorAll("*")).filter((node) => node.children.length === 0);
     const lines = leaves.map((node) => node.textContent?.trim() ?? "").filter((text) => text.length > 0);
-    expect(lines).toEqual(["코치 · 릴리스 추정", items[1].kind === "coach" ? items[1].message : ""]);
+    // Label and message both come from the frozen Coach contract chain behind the fixture.
+    expect(lines).toEqual([reelLabel(items[1]), items[1].kind === "coach" ? items[1].message : ""]);
     expect(chrome.textContent).not.toMatch(/[0-9%]/);
     expect(container.querySelector('[aria-label="내 슛폼 프로필 열기"]')).not.toBeNull();
     expect(byTestId("reel-pause-mark")).toHaveLength(1);

@@ -72,7 +72,8 @@ describe("reelLabFixtures", () => {
     const coach = items[1];
     expect(coach.kind).toBe("coach");
     expect(reelLine(coach)).not.toMatch(/[0-9%]/);
-    expect(reelLabel(coach)).toBe("코치 · 릴리스 추정");
+    // The label is the cue label the frozen Coach contract resolved, never fixture prose.
+    expect(reelLabel(coach)).toBe("코치 · 릴리스 팔꿈치 정렬");
   });
 
   it("never names a real athlete", () => {

@@ -1,7 +1,11 @@
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
+import type { CoachRequestV1, CoachResponseV1 } from "@/lib/coach/contract";
+import { deterministicCoachResponse } from "@/lib/coach/deterministic-provider";
+import { buildCoachFeedEvent, type CoachFeedEventV1 } from "@/lib/coach/feed-event";
+import { buildCoachRequest } from "@/lib/coach/representative-profile-adapter";
+import { coachReelFromFeedEvent } from "@/lib/feed/coach-reel-adapter";
 import type { ReelItem } from "@/lib/feed/reel-model";
 import { interpolatePoseFrame, type PoseMotion, type Vector3 } from "@/lib/pose-motion";
-import { getPracticeFocus } from "@/lib/recommendation";
 import {
   PERSISTED_JOINT_NAMES_V2,
   type CaptureProtocolV2,
@@ -21,9 +25,14 @@ import {
  * touching capture, the pipeline or persistence. It is a UI fixture: it never
  * claims to be a measured profile, it lives only behind the dev route, and it
  * keeps the boundary literal the product uses everywhere else.
+ *
+ * The coaching moment goes through the frozen C2 contract end to end:
+ * profile → `buildCoachRequest` → deterministic Coach → `buildCoachFeedEvent`
+ * → `coachReelFromFeedEvent`. No fixture text is invented for the coach.
  */
 const FRAME_COUNT = 101;
-const FIXTURE_CONE_DEGREES = 18;
+/** Narrow enough for a medium band under the Basic cap, so the fixture yields an eligible coaching moment. */
+const FIXTURE_CONE_DEGREES = 8;
 const FIXTURE_COVARIANCE: JointUncertaintyV2["covariance"] = [0.01, 0, 0, 0.01, 0, 0.01];
 const PHASE_ANCHORS = [
   { id: "ready", phase: 0 },
@@ -32,6 +41,11 @@ const PHASE_ANCHORS = [
   { id: "releaseProxy", phase: 0.75 },
   { id: "followThrough", phase: 1 },
 ] as const;
+/** Fixed so the fixture event is deterministic; the harness is not a clock. */
+export const FIXTURE_NOW_MS = 1_800_000_000_000;
+export const FIXTURE_REQUEST_ID = "req_fixture0000000001";
+export const FIXTURE_EVENT_ID = "evt_fixture0000000001";
+export const FIXTURE_PROFILE_ID = "fixture-profile-0001";
 
 function midpoint(a: Vector3, b: Vector3): Vector3 {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 };
@@ -80,32 +94,55 @@ export function representativeFixtureFromMotion(
   };
 }
 
+/** The frozen-contract chain the harness coach reel is built from, exposed so tests can pin each link. */
+export type ReelLabCoachChain = {
+  request: CoachRequestV1;
+  response: CoachResponseV1;
+  event: CoachFeedEventV1;
+};
+
+export function reelLabCoachChain(profile: RepresentativePose4DV2, shootingHand: ShootingHandV2): ReelLabCoachChain {
+  const request = buildCoachRequest({
+    profile,
+    shootingHand,
+    requestId: FIXTURE_REQUEST_ID,
+    locale: "ko",
+    player: { skillLevel: "developing", trainingGoal: "consistency" },
+    action: "jump_shot",
+  });
+  const response = deterministicCoachResponse(request);
+  const event = buildCoachFeedEvent({
+    eventId: FIXTURE_EVENT_ID,
+    profileId: FIXTURE_PROFILE_ID,
+    request,
+    result: { status: "ok", response },
+    now: FIXTURE_NOW_MS,
+  });
+  return { request, response, event };
+}
+
 /**
  * The three Reel families the harness shows: own loop, coaching moment,
  * anonymous reference. The shooting hand is the one the reference motion is
- * audited for; the coach line is the deterministic practice focus until the
- * frozen coach feed event replaces it.
+ * audited for. The coaching moment exists only if the frozen feed event is
+ * eligible, exactly as Home will behave.
  */
 export function reelLabFixtures(): ReelItem[] {
   const reference = ANONYMOUS_POSE_REFERENCES[0];
   const shootingHand: ShootingHandV2 = "right";
   const profile = representativeFixtureFromMotion(reference.motion, shootingHand);
-  const focus = getPracticeFocus("consistency");
+  const motion = { source: "representative", profile, shootingHand } as const;
+  const { request, event } = reelLabCoachChain(profile, shootingHand);
+  const coach = coachReelFromFeedEvent({ event, request, motion });
   return [
     {
       kind: "user",
       id: "fixture-user-reel",
       author: "내 슛폼",
       caption: "오늘 대표 슛폼 · 픽스처",
-      motion: { source: "representative", profile, shootingHand },
+      motion,
     },
-    {
-      kind: "coach",
-      id: "fixture-coach-reel",
-      message: focus.title,
-      observationLabel: "릴리스 추정",
-      motion: { source: "representative", profile, shootingHand },
-    },
+    ...(coach ? [coach] : []),
     {
       kind: "reference",
       id: `fixture-reference-${reference.id}`,

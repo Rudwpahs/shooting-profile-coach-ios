@@ -1,3 +1,4 @@
+import type { CoachCueAnchorV1 } from "@/lib/coach/contract";
 import type { PoseMotion } from "@/lib/pose-motion";
 import type { RepresentativePose4DV2, ShootingHandV2 } from "@/lib/shooting-profile/types";
 import type { GlyphHand } from "@/lib/skeleton/pose-motion-glyph";
@@ -5,10 +6,11 @@ import type { GlyphHand } from "@/lib/skeleton/pose-motion-glyph";
 /**
  * UI view model for one Reel.
  *
- * This is not a wire contract. The public motion packet, the coach feed event
- * and the provider shapes belong to the system/AI lane; until they are frozen
- * the harness fills this model from typed fixtures, and afterwards a single
- * adapter maps the frozen shapes into it. Nothing here is persisted.
+ * This is not a wire contract. The frozen C2 Coach contract
+ * (`lib/coach/contract.ts`, `lib/coach/feed-event.ts`) is mapped into it by
+ * `lib/feed/coach-reel-adapter.ts`; the public motion packet will be mapped
+ * into `ReelMotion` by its own adapter once it exists. Nothing here is
+ * persisted.
  */
 export type ReelKind = "user" | "coach" | "reference";
 
@@ -30,13 +32,15 @@ export type UserReel = ReelBase & {
 
 /**
  * A coaching moment: the dominant skeleton plus one short message. The
- * observation label names the app-measured phase or joint the message is
- * about; `null` means the message is text only and anchors nothing.
+ * observation label names the app-measured observation the message is
+ * about and the cue anchor says where it lives (joints and phase anchor,
+ * or text only); both come from the frozen Coach contract, never from prose.
  */
 export type CoachReel = ReelBase & {
   kind: "coach";
   message: string;
   observationLabel: string | null;
+  cueAnchor: CoachCueAnchorV1 | null;
 };
 
 /** An anonymous reference motion with its attribution. */
