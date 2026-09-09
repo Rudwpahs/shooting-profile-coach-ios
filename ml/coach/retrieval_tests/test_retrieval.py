@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from formpath_coach.corpus import CorpusUnitCodes
 from formpath_coach.schemas import CoachRequestV1
 
 
@@ -45,6 +46,28 @@ def request_with_metrics(*metrics: str, quality_passed: bool = True) -> CoachReq
     )
 
 
+def synthetic_unit(
+    n: int,
+    *,
+    provenance: str = "ROW_ONLY",
+    domains: tuple[str, ...] = ("SHOOTING",),
+    metrics: tuple[str, ...] = (),
+    policies: tuple[str, ...] = (),
+    evidence: str = "B",
+) -> CorpusUnitCodes:
+    return CorpusUnitCodes(
+        n=n,
+        id=f"RU-{n:04d}",
+        effect="ASSOCIATION",
+        evidence=evidence,
+        provenance=provenance,
+        domains=domains,
+        metrics=metrics,
+        policies=policies,
+        sources=("SRC-TEST",) if provenance == "LINKED" else (),
+    )
+
+
 def test_query_plan_maps_frozen_metrics_to_machine_codes():
     try:
         from formpath_coach.retrieval import build_evidence_query_plan
@@ -59,3 +82,57 @@ def test_query_plan_maps_frozen_metrics_to_machine_codes():
     assert {"JOINT_ANGLE", "POSE_ERROR"} <= set(plan.metrics)
     assert "DO_NOT_OVERINFER" in plan.policies
     assert "CONFIDENCE_GATE" in plan.policies
+
+
+def test_rank_prefers_exact_metric_then_linked_provenance_and_is_deterministic():
+    from formpath_coach.retrieval import (
+        build_evidence_query_plan,
+        rank_evidence_candidates,
+    )
+
+    plan = build_evidence_query_plan(request_with_metrics("release_elbow_angle_deg"))
+    domain_only_linked = synthetic_unit(901, provenance="LINKED", domains=("SHOOTING",))
+    exact_row = synthetic_unit(902, metrics=("JOINT_ANGLE",), domains=("SHOOTING",))
+    exact_linked = synthetic_unit(
+        903,
+        provenance="LINKED",
+        metrics=("JOINT_ANGLE",),
+        domains=("SHOOTING",),
+    )
+    candidates = [domain_only_linked, exact_row, exact_linked]
+
+    first = rank_evidence_candidates(plan, candidates)
+    second = rank_evidence_candidates(plan, list(reversed(candidates)))
+
+    assert [item.unit.n for item in first] == [903, 902, 901]
+    assert [item.unit.n for item in second] == [903, 902, 901]
+    assert first[0].metric_matches == ("JOINT_ANGLE",)
+    assert first[0].score > first[1].score > first[2].score
+
+
+def test_candidate_retrieval_is_bounded_machine_code_only_and_relevant():
+    from formpath_coach.retrieval import (
+        build_evidence_query_plan,
+        retrieve_candidate_units,
+    )
+
+    plan = build_evidence_query_plan(request_with_metrics("capture_quality"))
+    first = retrieve_candidate_units(plan, candidate_limit=30)
+    second = retrieve_candidate_units(plan, candidate_limit=30)
+
+    assert 0 < len(first) <= 30
+    assert [unit.n for unit in first] == [unit.n for unit in second]
+    assert len({unit.n for unit in first}) == len(first)
+    assert all(isinstance(unit, CorpusUnitCodes) for unit in first)
+    assert all(not hasattr(unit, "claim") for unit in first)
+    assert any("POSE_ERROR" in unit.metrics for unit in first[:10])
+    assert any("POSE_VALIDATION" in unit.domains for unit in first[:10])
+
+
+def test_candidate_limit_is_strict():
+    from formpath_coach.retrieval import build_evidence_query_plan, retrieve_candidate_units
+
+    plan = build_evidence_query_plan(request_with_metrics("release_elbow_angle_deg"))
+    with pytest.raises(ValueError, match="candidate_limit"):
+        retrieve_candidate_units(plan, candidate_limit=0)
+    assert len(retrieve_candidate_units(plan, candidate_limit=7)) <= 7
