@@ -71,12 +71,15 @@ export const COACH_UNIT_BOUNDS_V1: Readonly<Record<Exclude<CoachUnitV1, "label">
 });
 
 export const COACH_HANDEDNESS = ["left", "right", "unknown"] as const;
+export type CoachHandednessV1 = (typeof COACH_HANDEDNESS)[number];
 export const COACH_SKILL_LEVELS = ["beginner", "developing", "advanced"] as const satisfies readonly SkillLevel[];
 export const COACH_TRAINING_GOALS = ["consistency", "range", "release", "rhythm"] as const satisfies readonly TrainingGoal[];
 export const COACH_SHOT_ACTIONS = ["set_shot", "jump_shot", "free_throw", "unknown"] as const;
+export type CoachShotActionV1 = (typeof COACH_SHOT_ACTIONS)[number];
 export const COACH_CAPTURE_PROTOCOLS = ["basic_1_plus_1", "high_accuracy_3_plus_3"] as const satisfies readonly CaptureProtocolV2[];
 export const COACH_EVIDENCE_TIERS = ["A", "A-", "B+", "B", "C", "D", "H"] as const;
 export const COACH_LOCALES = ["ko", "en"] as const;
+export type CoachLocaleV1 = (typeof COACH_LOCALES)[number];
 
 export const COACH_REQUEST_ID_PATTERN = /^req_[a-z0-9]{8,64}$/;
 export const COACH_OBSERVATION_ID_PATTERN = /^obs_[a-z0-9]+(?:_[a-z0-9]+)*$/;
