@@ -92,16 +92,16 @@ describe("CoachObservationV1", () => {
   it("anchors every measurement to a phase and at least one joint; the quality label is not a pose", () => {
     rejects(observation({ phase_anchor: null }), "phase_anchor");
     rejects(observation({ joints: [] }), "joints");
-    rejects(observation({ phase_anchor: "release" }), "phase_anchor");
+    rejects({ ...observation(), phase_anchor: "release" }, "phase_anchor");
     rejects(observation({ joints: ["rightElbow", "rightElbow"] }), "joints");
-    rejects(observation({ joints: ["nose"] }), "joints.0");
+    rejects({ ...observation(), joints: ["nose"] }, "joints.0");
     rejects(quality({ phase_anchor: "ready" }), "phase_anchor");
     rejects(quality({ joints: ["rightElbow"] }), "joints");
     accepts(quality({ value: "recapture_needed" }));
   });
 
   it("keeps confidence to the five bands, caveats short, and private fields out", () => {
-    rejects(observation({ measurement_confidence: "certain" }), "measurement_confidence");
+    rejects({ ...observation(), measurement_confidence: "certain" }, "measurement_confidence");
     rejects(observation({ caveats: Array.from({ length: 9 }, () => "c") }), "caveats");
     rejects(observation({ caveats: ["x".repeat(161)] }), "caveats.0");
     rejects(observation({ reference: "x".repeat(121) }), "reference");
