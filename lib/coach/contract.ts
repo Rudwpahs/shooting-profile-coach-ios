@@ -269,3 +269,69 @@ export function parseCoachObservationV1(value: unknown): CoachParseResult<CoachO
 export function parseCoachResponseV1(value: unknown): CoachParseResult<CoachResponseV1> {
   return parseWith(CoachResponseV1Schema, value);
 }
+
+/**
+ * Grounding: a response is only valid for the request it answers. Every
+ * observation it names, and every research unit it cites, must exist in that
+ * request. This is the rule that keeps a model from pointing at a body part
+ * the app never measured.
+ */
+export type CoachGroundingReasonV1 =
+  | { code: "request_id_mismatch"; expected: string; received: string }
+  | { code: "cue_observation_unknown"; observation_id: string }
+  | { code: "hypothesis_observation_unknown"; hypothesis_index: number; observation_id: string }
+  | { code: "evidence_unknown"; research_unit_id: number };
+
+export type CoachGroundingResult = { ok: true } | { ok: false; reasons: CoachGroundingReasonV1[] };
+
+export function validateCoachResponseForRequest(request: CoachRequestV1, response: CoachResponseV1): CoachGroundingResult {
+  const reasons: CoachGroundingReasonV1[] = [];
+  if (response.request_id !== request.request_id) {
+    reasons.push({ code: "request_id_mismatch", expected: request.request_id, received: response.request_id });
+  }
+  const observations = new Set(request.observations.map((item) => item.id));
+  if (response.primary_visual_cue && !observations.has(response.primary_visual_cue.observation_id)) {
+    reasons.push({ code: "cue_observation_unknown", observation_id: response.primary_visual_cue.observation_id });
+  }
+  response.hypotheses.forEach((hypothesis, index) => {
+    for (const id of hypothesis.supporting_observation_ids) {
+      if (!observations.has(id)) reasons.push({ code: "hypothesis_observation_unknown", hypothesis_index: index, observation_id: id });
+    }
+  });
+  const evidence = new Set(request.evidence.map((item) => item.research_unit_id));
+  for (const id of response.evidence_used) {
+    if (!evidence.has(id)) reasons.push({ code: "evidence_unknown", research_unit_id: id });
+  }
+  return reasons.length === 0 ? { ok: true } : { ok: false, reasons };
+}
+
+export type CoachResponseParseOutcome =
+  | { status: "ok"; response: CoachResponseV1 }
+  | { status: "schema_invalid"; issues: string[] }
+  | { status: "grounding_invalid"; reasons: CoachGroundingReasonV1[] };
+
+/** Schema first, grounding second: a provider reply is usable only when both pass. */
+export function parseCoachResponseForRequest(request: CoachRequestV1, raw: unknown): CoachResponseParseOutcome {
+  const parsed = parseCoachResponseV1(raw);
+  if (!parsed.ok) return { status: "schema_invalid", issues: parsed.issues };
+  const grounded = validateCoachResponseForRequest(request, parsed.value);
+  return grounded.ok ? { status: "ok", response: parsed.value } : { status: "grounding_invalid", reasons: grounded.reasons };
+}
+
+/**
+ * Where a cue lives, resolved from the observation the app measured. The UI
+ * highlights these joints at this phase anchor; an observation without a pose
+ * (the quality label) yields a text-only cue.
+ */
+export type CoachCueAnchorV1 =
+  | { kind: "joints"; observation_id: string; label: string; joints: CoachJointV1[]; phase_anchor: CoachPhaseAnchorV1 }
+  | { kind: "text_only"; observation_id: string; label: string };
+
+export function resolveCoachCueAnchor(request: CoachRequestV1, cue: PrimaryVisualCueV1): CoachCueAnchorV1 | null {
+  const observation = request.observations.find((item) => item.id === cue.observation_id);
+  if (!observation) return null;
+  if (observation.joints.length === 0 || observation.phase_anchor === null) {
+    return { kind: "text_only", observation_id: cue.observation_id, label: cue.label };
+  }
+  return { kind: "joints", observation_id: cue.observation_id, label: cue.label, joints: [...observation.joints], phase_anchor: observation.phase_anchor };
+}
