@@ -5,7 +5,6 @@ import {
   projectRepresentativeJointsAtYaw,
   type RepresentativeViewId,
 } from "@/components/shooting-profile/sequence-viewer";
-import type { SkeletonConfidence } from "@/components/skeleton/skeleton-glyph";
 import { glyphBounds, type GlyphBounds, type SkeletonGlyphData } from "@/lib/skeleton/pose-motion-glyph";
 import type {
   RepresentativePose4DV2,
@@ -75,11 +74,5 @@ export function representativeReleaseFrameIndex(profile: RepresentativePose4DV2)
   return Math.max(0, Math.min(last, Math.round(phase * last)));
 }
 
-/**
- * Confidence shown as form, never as a number: a failed quality gate draws
- * dashed, High mode is the accent band, Basic is the plain band.
- */
-export function representativeConfidence(profile: RepresentativePose4DV2): SkeletonConfidence {
-  if (!profile.quality.passed) return "recapture";
-  return profile.mode === "high_accuracy_3_plus_3" ? "high" : "basic";
-}
+/** Confidence shown as form, never as a number; decided in the pure module so feed logic can share it. */
+export { representativeConfidence } from "@/lib/skeleton/representative-confidence";

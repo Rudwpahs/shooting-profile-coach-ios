@@ -23,10 +23,11 @@ type ReelBase = {
   motion: ReelMotion;
 };
 
-/** A shooter's own representative loop with one caption line. */
+/** A shooter's own representative loop with one caption line; `meta` is the honest recency next to the name. */
 export type UserReel = ReelBase & {
   kind: "user";
   author: string;
+  meta?: string;
   caption: string;
 };
 
@@ -68,7 +69,7 @@ export function reelLine(item: ReelItem): string {
 
 /** The small label above the line: who or what this is. */
 export function reelLabel(item: ReelItem): string {
-  if (item.kind === "user") return item.author;
+  if (item.kind === "user") return item.meta ? `${item.author} · ${item.meta}` : item.author;
   if (item.kind === "coach") return item.observationLabel ? `코치 · ${item.observationLabel}` : "코치";
   return item.attribution;
 }

@@ -8,9 +8,12 @@ import { fitGlyphPoints, type GlyphBounds, type SkeletonGlyphData } from "@/lib/
 /**
  * How much the skeleton may be trusted, shown in form rather than as a number:
  * `recapture` draws dashed, dimmed bones so a session that needs a retake is
- * distinct from a saved one even at thumbnail size.
+ * distinct from a saved one even at thumbnail size. The band itself is decided
+ * in the pure `representative-confidence` module.
  */
-export type SkeletonConfidence = "high" | "basic" | "recapture";
+import type { SkeletonConfidence } from "@/lib/skeleton/representative-confidence";
+
+export type { SkeletonConfidence };
 
 type SkeletonGlyphProps = {
   data: SkeletonGlyphData;
