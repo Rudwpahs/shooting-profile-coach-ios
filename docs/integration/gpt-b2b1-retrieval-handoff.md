@@ -8,7 +8,7 @@ Status: **B2-B.1 STRUCTURED RETRIEVAL READY**
 
 - Branch: `work/gpt-hoop-hub-b2b1-retrieval`
 - Base: `work/claude-hoop-hub-b2a1-compat` at `3534746eea552cf113fb2d90114b05d7e60d36c1`
-- Implementation head before this handoff: `0caf19cc836ef019b1fe6dea79c4cde1aef058f7`
+- Verified implementation head: `0caf19cc836ef019b1fe6dea79c4cde1aef058f7`
 - Draft integration PR: #6
 - Frozen Coach contract and vendored Knowledge Machine v2 were not modified.
 
@@ -111,15 +111,14 @@ contract evidence limit.
 
 ## Verification
 
-At implementation head `0caf19c`:
+At verified implementation head `0caf19c`:
 
 - Focused B2-B.1 retrieval suite: **9 passed**
 - Focused ruff: **clean**
 - Full Coach suite including retrieval: **301 passed**
 - Full Coach ruff (`ml/coach/src`, existing tests, retrieval tests): **clean**
-- Existing Representative 4D CI at the same code state: typecheck, lint, hermetic
-  unit tests and Firestore Rules emulator steps passed; Expo web export was still
-  running when this handoff file was written.
+- Representative 4D CI: **success** — typecheck, lint, hermetic unit tests,
+  Firestore Rules emulator and Expo web export all completed successfully.
 - `3534746..0caf19c` changed only the B2-B.1 workflow, retrieval implementation
   and retrieval tests. No `ml/coach/corpus/**` file and no frozen contract file
   changed.
