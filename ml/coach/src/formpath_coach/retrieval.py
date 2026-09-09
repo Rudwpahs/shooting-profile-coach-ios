@@ -1,28 +1,37 @@
 """Deterministic machine-code evidence retrieval for Coach contract V1.
 
-B2-B.1 never loads the 940-unit corpus as natural language.  It turns a frozen
+B2-B.1 never loads the 940-unit corpus as natural language. It turns a frozen
 Coach request into a machine-code query plan, gathers bounded code-only corpus
-candidates and ranks them deterministically. Natural-language text is reserved
-for the final selected evidence units in a later stage.
+candidates, ranks them deterministically, then loads text only for the final
+selected research-unit ids before frozen-contract validation.
 """
 
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from formpath_coach.corpus import (
     CANONICAL_UNIT_COUNT,
     CORPUS_DIR,
+    CorpusError,
     CorpusUnitCodes,
     search_units,
     units_by_domain,
     units_by_metric,
     units_by_policy,
 )
-from formpath_coach.corpus_mapping import TIER_STRENGTH, map_evidence_tier
-from formpath_coach.schemas import CoachRequestV1
+from formpath_coach.corpus_mapping import (
+    TIER_STRENGTH,
+    coach_evidence_items,
+    map_evidence_tier,
+)
+from formpath_coach.schemas import CoachEvidenceItemV1, CoachRequestV1
+
+COACH_EVIDENCE_MAX = 16
 
 
 @dataclass(frozen=True)
@@ -43,7 +52,7 @@ class RankedEvidenceCandidate:
     lexical_match: bool
 
 
-# Frozen Coach metric -> Knowledge Machine v2 codes.  Only direct, defensible
+# Frozen Coach metric -> Knowledge Machine v2 codes. Only direct, defensible
 # correspondences are included; a missing metric code is safer than inventing
 # one that changes the meaning of the observation.
 _METRIC_QUERY_CODES: Mapping[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
@@ -64,7 +73,7 @@ _ACTION_FTS_TERMS: Mapping[str, tuple[str, ...]] = {
     "unknown": (),
 }
 
-# Safety evidence is part of the retrieval intent, not an afterthought.  These
+# Safety evidence is part of the retrieval intent, not an afterthought. These
 # codes already exist in the immutable corpus and are therefore safe query keys.
 _SAFETY_POLICIES = (
     "DO_NOT_OVERINFER",
@@ -180,9 +189,71 @@ def retrieve_candidate_units(
 
     lexical_ids: set[int] = set()
     for term in plan.fts_terms:
-        hits = search_units(term, min(CANONICAL_UNIT_COUNT, max(candidate_limit * 2, 20)), corpus_dir)
+        hits = search_units(
+            term,
+            min(CANONICAL_UNIT_COUNT, max(candidate_limit * 2, 20)),
+            corpus_dir,
+        )
         lexical_ids.update(unit.n for unit in hits)
         add(hits)
 
     ranked = rank_evidence_candidates(plan, by_id.values(), frozenset(lexical_ids))
     return [item.unit for item in ranked[:candidate_limit]]
+
+
+def _is_safety_unit(unit: CorpusUnitCodes, plan: EvidenceQueryPlan) -> bool:
+    plan_policies = set(plan.policies)
+    return any(policy in plan_policies for policy in unit.policies)
+
+
+def _select_final_units(
+    plan: EvidenceQueryPlan,
+    candidates: list[CorpusUnitCodes],
+    limit: int,
+) -> list[CorpusUnitCodes]:
+    selected = list(candidates[:limit])
+    if not selected or any(_is_safety_unit(unit, plan) for unit in selected):
+        return selected
+
+    safety = next(
+        (unit for unit in candidates[limit:] if _is_safety_unit(unit, plan)),
+        None,
+    )
+    if safety is not None:
+        selected[-1] = safety
+    return selected
+
+
+def select_coach_evidence(
+    request: CoachRequestV1,
+    limit: int = 8,
+    candidate_limit: int = 40,
+    corpus_dir: Path = CORPUS_DIR,
+) -> list[dict[str, Any]]:
+    """Return frozen Coach evidence; corpus unavailability degrades to no evidence.
+
+    Candidate search and ranking use machine codes only. Natural-language claims
+    are loaded by ``coach_evidence_items`` only after final research-unit ids are
+    selected. Unexpected schema/code errors remain strict rather than being
+    hidden as availability failures.
+    """
+    if limit < 0:
+        raise ValueError("limit must be >= 0")
+    if limit > COACH_EVIDENCE_MAX:
+        raise ValueError(f"limit must be <= {COACH_EVIDENCE_MAX}")
+    if limit == 0:
+        return []
+
+    plan = build_evidence_query_plan(request)
+    try:
+        candidates = retrieve_candidate_units(plan, candidate_limit, corpus_dir)
+        selected = _select_final_units(plan, candidates, limit)
+        unit_nos = [unit.n for unit in selected]
+        items = coach_evidence_items(unit_nos, corpus_dir)
+    except (CorpusError, OSError, sqlite3.Error):
+        return []
+
+    return [
+        CoachEvidenceItemV1.model_validate(item).model_dump(mode="json")
+        for item in items
+    ]
