@@ -24,6 +24,10 @@ vi.mock("expo-haptics", () => ({
   ImpactFeedbackStyle: { Light: "light", Medium: "medium", Heavy: "heavy", Rigid: "rigid", Soft: "soft" },
   NotificationFeedbackType: { Success: "success", Warning: "warning", Error: "error" },
 }));
+vi.mock("expo-video", () => ({
+  useVideoPlayer: () => ({ play: () => undefined, pause: () => undefined, loop: false, muted: false }),
+  VideoView: () => <div data-testid="video-view" />,
+}));
 vi.mock("react-native-gesture-handler", () => {
   const builder: Record<string, (arg?: unknown) => unknown> = {};
   for (const name of ["manualActivation", "maxPointers", "shouldCancelWhenOutside", "runOnJS", "onTouchesDown", "onTouchesMove", "onTouchesUp", "onTouchesCancelled"]) {
@@ -44,6 +48,7 @@ const { ReelItem } = await import("@/components/feed/reel-item");
 const { REEL_CHROME_BOTTOM_HEIGHT, REEL_RAIL_WIDTH } = await import("@/components/feed/reel-chrome");
 const { MOTION_LIFT } = await import("@/lib/feed/motion-lift-state");
 const { reelLabFixtures } = await import("@/lib/feed/reel-fixtures");
+const { buildMotionPacketV1, decodeMotionPacketV1, encodeMotionPacketV1 } = await import("@/lib/reels/motion-packet-v1");
 const { reelLabel } = await import("@/lib/feed/reel-model");
 const { tokens } = await import("@/constants/tokens");
 
@@ -302,6 +307,71 @@ describe("motion lift over a paused reel", () => {
     expect(byTestIdPrefix("motion-lift-layer")).toHaveLength(0);
     expect(byTestId("reel-stage-lifted")).toHaveLength(0);
     expect(byTestId("reel-stage-active")).toHaveLength(1);
+  });
+});
+
+describe("public reels: video, packet, and nothing yet", () => {
+  const manager: GestureManager = { begin: vi.fn(), activate: vi.fn(), fail: vi.fn(), end: vi.fn() };
+  const touch = (x: number, y: number) => ({ allTouches: [{ x, y }] });
+  const down = (x: number, y: number) => act(async () => { gesture.handlers.onTouchesDown(touch(x, y), manager); });
+  const moveTo = (x: number, y: number) => act(async () => { gesture.handlers.onTouchesMove(touch(x, y), manager); });
+  const wait = (ms: number) => act(async () => { vi.advanceTimersByTime(ms); });
+  const own = items[0];
+  if (own.motion.source !== "representative") throw new Error("fixture");
+  const packet = decodeMotionPacketV1(encodeMotionPacketV1(buildMotionPacketV1(own.motion.profile, own.motion.shootingHand)));
+  const publicReel = (motion: Extract<(typeof items)[number]["motion"], { source: "public" }>) => ({
+    kind: "user" as const, id: `post-${motion.postId}`, author: "공개 슛폼", meta: "어제", caption: "공개 게시물", motion,
+  });
+  const render = (item: (typeof items)[number], paused: boolean) => act(async () => {
+    root.render(
+      <ReelItem actions={[]} count={3} height={HEIGHT} index={0} item={item} onLockScroll={noop} onNext={noop} onPrevious={noop} onSave={noop} onTogglePlayback={noop} paused={paused} reducedMotion role="active" width={WIDTH} />,
+    );
+  });
+
+  it("a video-only post plays its video, pauses, and offers no Motion Lift", async () => {
+    const item = publicReel({ source: "public", postId: "post00001", durationMs: 12000, packet: null, video: { uri: "https://storage.example.test/video.mp4" } });
+    await render(item, false);
+    expect(byTestId("video-stage")).toHaveLength(1);
+    expect(byTestId("skeleton-svg")).toHaveLength(0);
+    await render(item, true);
+    expect(byTestId("reel-pause-mark")).toHaveLength(1);
+    expect(byTestIdPrefix("motion-lift-layer")).toHaveLength(0);
+    expect(tap().getAttribute("aria-label")).toContain("공개 슛폼 릴, 1/3, 일시정지됨");
+  });
+
+  it("a post with a packet draws the same skeleton renderer and lifts under a hold", async () => {
+    vi.useFakeTimers();
+    const item = publicReel({ source: "public", postId: "post00002", durationMs: 12000, packet, video: null });
+    await render(item, true);
+    expect(byTestId("skeleton-svg")).toHaveLength(1);
+    expect(byTestId("video-stage")).toHaveLength(0);
+    expect(byTestId("motion-lift-layer-idle")).toHaveLength(1);
+    await down(180, 300);
+    await wait(MOTION_LIFT.holdMs);
+    await moveTo(240, 300);
+    expect(byTestId("reel-stage-lifted")).toHaveLength(1);
+  });
+
+  it("a post with video and a packet plays the video and lifts the packet skeleton over it", async () => {
+    vi.useFakeTimers();
+    const item = publicReel({ source: "public", postId: "post00003", durationMs: 12000, packet, video: { uri: "https://storage.example.test/video.mp4" } });
+    await render(item, true);
+    expect(byTestId("video-stage")).toHaveLength(1);
+    expect(byTestId("motion-lift-layer-idle")).toHaveLength(1);
+    await down(180, 300);
+    await wait(MOTION_LIFT.holdMs);
+    await moveTo(240, 300);
+    expect(byTestId("reel-stage-lifted")).toHaveLength(1);
+    expect(byTestId("video-stage")).toHaveLength(1);
+  });
+
+  it("a post with no media yet is still a reel: one honest line, no lift, the swipe continues", async () => {
+    const item = publicReel({ source: "public", postId: "post00004", durationMs: 8000, packet: null, video: null });
+    await render(item, true);
+    expect(byTestId("reel-stage-placeholder")).toHaveLength(1);
+    expect(byTestId("reel-stage-placeholder")[0].textContent).toBe("미디어 준비 중");
+    expect(byTestIdPrefix("motion-lift-layer")).toHaveLength(0);
+    expect(tap().getAttribute("aria-valuetext")).toBe("1 / 3");
   });
 });
 

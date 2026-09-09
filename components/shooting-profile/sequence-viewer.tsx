@@ -226,8 +226,11 @@ export function canRenderShootingProfileViewerRecord(
   return status === "ready" && currentKey !== null && stateKey === currentKey;
 }
 
+/** Any frame with the 12 persisted joints: the private profile frame or a decoded public packet frame. */
+type SkeletonFrameLike = Pick<RepresentativePoseFrameV2, "joints">;
+
 export function buildRepresentativeDisplayJoints(
-  frame: RepresentativePoseFrameV2,
+  frame: SkeletonFrameLike,
 ): Record<RepresentativeDisplayJointName, DisplayJoint> {
   const observed = Object.fromEntries(PERSISTED_JOINTS.map((joint) => [
     joint,
@@ -264,7 +267,7 @@ export function getRepresentativeViewPresets(shootingHand: ShootingHandV2): read
 }
 
 export function projectRepresentativeJoints(
-  frame: RepresentativePoseFrameV2,
+  frame: SkeletonFrameLike,
   view: RepresentativeViewId,
   shootingHand: ShootingHandV2,
 ): Record<RepresentativeDisplayJointName, ProjectedJoint> {
@@ -279,7 +282,7 @@ export function projectRepresentativeJoints(
  * the shooting side reads the same way for both hands.
  */
 export function projectRepresentativeJointsAtYaw(
-  frame: RepresentativePoseFrameV2,
+  frame: SkeletonFrameLike,
   yawDegrees: number,
   shootingHand: ShootingHandV2,
 ): Record<RepresentativeDisplayJointName, ProjectedJoint> {

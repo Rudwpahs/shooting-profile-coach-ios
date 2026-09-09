@@ -77,6 +77,7 @@ describe("continuous yaw projection", () => {
 describe("buildReelStageFit", () => {
   it("fits the loop, the still and every rotation into one box for the representative fixture", () => {
     const fit = buildReelStageFit(own);
+    if (!fit) throw new Error("a representative reel always has a fit");
     expect(fit.baseYaw).toBe(-45);
     expect(fit.confidence).toBe("basic");
     expect(fit.still).toEqual(representativeGlyph(frame, "oblique", "right"));
@@ -98,6 +99,7 @@ describe("buildReelStageFit", () => {
 
   it("does the same for the reference reel from its own oblique yaw", () => {
     const fit = buildReelStageFit(items[2]);
+    if (!fit) throw new Error("a reference reel always has a fit");
     expect(fit.baseYaw).toBe(poseMotionViewYaw(reference.motion, "oblique", "right"));
     expect(fit.still).toEqual(poseMotionGlyph(reference.motion, { view: "oblique", hand: "right", progress: 0.75 }));
     expectClose(fit.glyphAtYaw(fit.baseYaw).points, fit.still.points);

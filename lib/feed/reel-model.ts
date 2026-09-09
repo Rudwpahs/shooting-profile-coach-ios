@@ -1,5 +1,6 @@
 import type { CoachCueAnchorV1 } from "@/lib/coach/contract";
 import type { PoseMotion } from "@/lib/pose-motion";
+import type { MotionPacketV1 } from "@/lib/reels/motion-packet-v1";
 import type { RepresentativePose4DV2, ShootingHandV2 } from "@/lib/shooting-profile/types";
 import type { GlyphHand } from "@/lib/skeleton/pose-motion-glyph";
 
@@ -16,7 +17,9 @@ export type ReelKind = "user" | "coach" | "reference";
 
 export type ReelMotion =
   | { source: "representative"; profile: RepresentativePose4DV2; shootingHand: ShootingHandV2 }
-  | { source: "reference"; motion: PoseMotion; hand: GlyphHand };
+  | { source: "reference"; motion: PoseMotion; hand: GlyphHand }
+  /** A public post: video and/or a decoded MotionPacket, never the private profile. */
+  | { source: "public"; postId: string; durationMs: number; packet: MotionPacketV1 | null; video: { uri: string } | null };
 
 type ReelBase = {
   id: string;

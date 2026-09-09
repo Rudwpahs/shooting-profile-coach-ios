@@ -11,13 +11,15 @@ import {
 } from "@/components/shooting-profile/sequence-viewer";
 import { representativeGlyph, representativeReleaseFrameIndex, representativeSequenceBounds } from "@/components/skeleton/representative-glyph";
 import { SkeletonGlyph, type SkeletonConfidence } from "@/components/skeleton/skeleton-glyph";
-import type { RepresentativePose4DV2, ShootingHandV2 } from "@/lib/shooting-profile/types";
+import type { ShootingHandV2 } from "@/lib/shooting-profile/types";
 import type { GlyphBounds } from "@/lib/skeleton/pose-motion-glyph";
+import type { SkeletonSequenceLike } from "@/lib/skeleton/skeleton-sequence";
 
 const FRAME_INTERVAL_MS = 40;
 
 type SkeletonLoopProps = {
-  profile: RepresentativePose4DV2;
+  /** The private representative profile or a decoded public packet: frames and anchors are all the loop reads. */
+  profile: SkeletonSequenceLike;
   shootingHand: ShootingHandV2;
   view: RepresentativeViewId;
   width: number;

@@ -49,7 +49,8 @@ export function ReelItem({
   const lift = useRef(new Animated.Value(0)).current;
   const [phase, setPhase] = useState<MotionLiftPhase>("idle");
   const [liftYaw, setLiftYaw] = useState<number | null>(null);
-  const lifting = active && paused;
+  // No skeleton (a video-only or media-less public post) means no Motion Lift; the video still plays and pauses.
+  const lifting = active && paused && fit !== null;
   // Only a coach reel carries a cue, and only the frozen observation it names is ever pointed at.
   const cue = item.kind === "coach" ? item.cueAnchor : null;
   const inspecting = phase !== "idle" || liftYaw !== null;
@@ -117,7 +118,7 @@ export function ReelItem({
         style={({ pressed }) => [styles.tap, { height: stageHeight, width }, pressed && styles.pressed]}
         testID="reel-tap"
       />
-      {lifting ? (
+      {lifting && fit ? (
         <MotionLiftLayer
           baseYaw={fit.baseYaw}
           cueLabel={cue?.label ?? null}

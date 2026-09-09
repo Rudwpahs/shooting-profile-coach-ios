@@ -9,6 +9,11 @@ type GestureManager = { begin: () => void; activate: () => void; fail: () => voi
 const gesture = vi.hoisted(() => ({ handlers: {} as Record<string, TouchHandler> }));
 
 vi.mock("react-native-svg", () => ({ default: () => <svg data-testid="skeleton-svg" />, Circle: () => <circle />, Line: () => <line /> }));
+// The stage now knows how to play a public video; the player needs a native runtime.
+vi.mock("expo-video", () => ({
+  useVideoPlayer: () => ({ play: () => undefined, pause: () => undefined, loop: false, muted: false }),
+  VideoView: () => <div data-testid="video-view" />,
+}));
 vi.mock("@expo/vector-icons/MaterialCommunityIcons", () => ({ default: ({ name }: { name: string }) => <span data-icon={name} /> }));
 vi.mock("expo-haptics", () => ({
   selectionAsync: vi.fn(async () => undefined),

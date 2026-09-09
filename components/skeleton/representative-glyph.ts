@@ -5,12 +5,9 @@ import {
   projectRepresentativeJointsAtYaw,
   type RepresentativeViewId,
 } from "@/components/shooting-profile/sequence-viewer";
+import type { ShootingHandV2 } from "@/lib/shooting-profile/types";
 import { glyphBounds, type GlyphBounds, type SkeletonGlyphData } from "@/lib/skeleton/pose-motion-glyph";
-import type {
-  RepresentativePose4DV2,
-  RepresentativePoseFrameV2,
-  ShootingHandV2,
-} from "@/lib/shooting-profile/types";
+import type { SkeletonFrameLike, SkeletonSequenceLike } from "@/lib/skeleton/skeleton-sequence";
 
 const DERIVED_JOINTS = ["head", "neck", "spine", "pelvis"] as const;
 
@@ -34,7 +31,7 @@ function toGlyph(projected: Projected, shootingHand: ShootingHandV2): SkeletonGl
  * the same yaw and pitch the sequence viewer uses. Screen y grows downward.
  */
 export function representativeGlyph(
-  frame: RepresentativePoseFrameV2,
+  frame: SkeletonFrameLike,
   view: RepresentativeViewId,
   shootingHand: ShootingHandV2,
 ): SkeletonGlyphData {
@@ -43,7 +40,7 @@ export function representativeGlyph(
 
 /** The same glyph at any yaw in degrees, for a held rotate between the presets. */
 export function representativeGlyphAtYaw(
-  frame: RepresentativePoseFrameV2,
+  frame: SkeletonFrameLike,
   yawDegrees: number,
   shootingHand: ShootingHandV2,
 ): SkeletonGlyphData {
@@ -59,7 +56,7 @@ export function representativeViewYaw(view: RepresentativeViewId, shootingHand: 
 
 /** Bounds over every stored frame so a loop keeps one anchor and scale. */
 export function representativeSequenceBounds(
-  profile: RepresentativePose4DV2,
+  profile: SkeletonSequenceLike,
   view: RepresentativeViewId,
   shootingHand: ShootingHandV2,
 ): GlyphBounds {
@@ -67,7 +64,7 @@ export function representativeSequenceBounds(
 }
 
 /** Index of the release-proxy anchor frame, the still every thumbnail shows. */
-export function representativeReleaseFrameIndex(profile: RepresentativePose4DV2): number {
+export function representativeReleaseFrameIndex(profile: SkeletonSequenceLike): number {
   const last = profile.frames.length - 1;
   const anchor = profile.phaseAnchors.find((candidate) => candidate.id === "releaseProxy");
   const phase = anchor ? anchor.phase : 0.75;
