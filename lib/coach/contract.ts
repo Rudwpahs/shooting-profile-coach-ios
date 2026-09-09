@@ -139,6 +139,69 @@ export const CoachRequestV1Schema = z.strictObject({
 });
 export type CoachRequestV1 = z.infer<typeof CoachRequestV1Schema>;
 
+/** What no response may claim to know from a representative profile; every response declares them. */
+export const COACH_DO_NOT_INFER_V1 = ["ground_reaction_force", "joint_torque", "muscle_activation", "actual_metric_3d_position"] as const;
+
+export const COACH_PROVIDER_IDS = ["deterministic_v1", "remote_formpath_coach_v1"] as const;
+export type CoachProviderIdV1 = (typeof COACH_PROVIDER_IDS)[number];
+
+const observationId = z.string().max(64).regex(COACH_OBSERVATION_ID_PATTERN);
+const uniqueStrings = (items: readonly string[]) => new Set(items).size === items.length;
+const singleLine = (max: number) => z.string().min(1).max(max).refine((text) => !/[\r\n]/.test(text), { message: "must be one line" });
+
+export const CoachHypothesisV1Schema = z.strictObject({
+  statement: z.string().min(1).max(240),
+  confidence: z.enum(COACH_CONFIDENCE),
+  supporting_observation_ids: z.array(observationId).min(1).max(8).refine(uniqueStrings, { message: "observation ids must be unique" }),
+  competing_explanations: z.array(z.string().max(160)).max(4),
+});
+export type CoachHypothesisV1 = z.infer<typeof CoachHypothesisV1Schema>;
+
+export const CoachDrillV1Schema = z.strictObject({
+  name: z.string().min(1).max(80),
+  purpose: z.string().min(1).max(200),
+  constraints: z.array(z.string().max(120)).max(6),
+  success_criteria: z.array(z.string().max(120)).max(6),
+  retest: z.string().min(1).max(200),
+});
+export type CoachDrillV1 = z.infer<typeof CoachDrillV1Schema>;
+
+/**
+ * The only way a response may point at the body: by naming one observation
+ * the request already contained. The app resolves where that observation
+ * lives (its joints and phase anchor); the model never emits a position.
+ */
+export const PrimaryVisualCueV1Schema = z.strictObject({
+  observation_id: observationId,
+  label: z.string().min(1).max(40),
+});
+export type PrimaryVisualCueV1 = z.infer<typeof PrimaryVisualCueV1Schema>;
+
+export const CoachProviderStampV1Schema = z.strictObject({
+  id: z.enum(COACH_PROVIDER_IDS),
+  revision: z.string().min(1).max(64),
+});
+export type CoachProviderStampV1 = z.infer<typeof CoachProviderStampV1Schema>;
+
+export const CoachResponseV1Schema = z.strictObject({
+  schema_version: z.literal(COACH_SCHEMA_VERSION),
+  request_id: z.string().regex(COACH_REQUEST_ID_PATTERN),
+  observation_summary: z.array(z.string().min(1).max(160)).min(1).max(6),
+  hypotheses: z.array(CoachHypothesisV1Schema).max(3),
+  confidence: z.enum(COACH_CONFIDENCE),
+  coaching_comment: singleLine(140),
+  do_not_infer: z.array(code).min(1).max(12).refine(
+    (items) => COACH_DO_NOT_INFER_V1.every((item) => items.includes(item)),
+    { message: "must include ground_reaction_force, joint_torque, muscle_activation and actual_metric_3d_position" },
+  ),
+  drills: z.array(CoachDrillV1Schema).max(2),
+  retest_plan: z.array(z.string().min(1).max(160)).max(4),
+  evidence_used: z.array(z.number().int().min(1)).max(COACH_LIMITS.evidence).refine((items) => new Set(items).size === items.length, { message: "research unit ids must be unique" }),
+  primary_visual_cue: PrimaryVisualCueV1Schema.nullable(),
+  provider: CoachProviderStampV1Schema,
+});
+export type CoachResponseV1 = z.infer<typeof CoachResponseV1Schema>;
+
 export type CoachParseResult<T> = { ok: true; value: T } | { ok: false; issues: string[] };
 
 /** One line per issue, `dotted.path: message`; unknown keys are named individually. */
@@ -163,4 +226,8 @@ export function parseCoachRequestV1(value: unknown): CoachParseResult<CoachReque
 
 export function parseCoachObservationV1(value: unknown): CoachParseResult<CoachObservationV1> {
   return parseWith(CoachObservationV1Schema, value);
+}
+
+export function parseCoachResponseV1(value: unknown): CoachParseResult<CoachResponseV1> {
+  return parseWith(CoachResponseV1Schema, value);
 }
