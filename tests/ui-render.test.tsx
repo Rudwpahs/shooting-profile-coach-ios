@@ -2,6 +2,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { CoachRequestV1 } from "@/lib/coach/contract";
+import type { CoachProviderResult } from "@/lib/coach/provider";
 import type { RepresentativePose4DV2 } from "@/lib/shooting-profile/types";
 
 // Tells React 19 this is a test environment so act() does not warn on every update.
@@ -36,6 +38,19 @@ vi.mock("react-native-svg", () => ({
 }));
 vi.mock("@expo/vector-icons/MaterialCommunityIcons", () => ({
   default: ({ name }: { name: string }) => <span data-icon={name} />,
+}));
+// Home mounts the Motion Lift layer only while paused; the gesture library needs a native runtime, so a stub builder stands in.
+vi.mock("react-native-gesture-handler", () => {
+  const builder: Record<string, unknown> = new Proxy({}, { get: () => () => builder });
+  return { Gesture: { Pan: () => builder }, GestureDetector: ({ children }: { children?: React.ReactNode }) => <>{children}</> };
+});
+// The coach behind Home is swappable; the tests decide whether it answers or is unavailable.
+let coachResult: CoachProviderResult | null = null;
+vi.mock("@/lib/feed/home-coach-provider", () => ({
+  createHomeCoachProvider: () => ({
+    id: "deterministic_v1",
+    coach: async (request: CoachRequestV1) => coachResult ?? { status: "ok", response: deterministicCoachResponse(request) },
+  }),
 }));
 vi.mock("@expo/vector-icons/MaterialIcons", () => ({
   default: ({ name }: { name: string }) => <span data-icon={name} />,
@@ -78,6 +93,7 @@ const { default: ProfileScreen } = await import("@/app/(tabs)/profile");
 const { AnalysisDetails, AnalysisEvidence, AnalysisSummaryLine } = await import("@/components/analysis/analysis-layers");
 const { MotionGrid } = await import("@/components/profile/motion-grid");
 const { buildTwoViewRepresentativeProfile } = await import("@/lib/shooting-profile/two-view-pipeline");
+const { deterministicCoachResponse } = await import("@/lib/coach/deterministic-provider");
 const { syntheticLandmarkSession } = await import("@/tests/fixtures/synthetic-landmark-sequence");
 
 function syntheticProfile(): RepresentativePose4DV2 {
@@ -310,45 +326,86 @@ describe("motion grid", () => {
 });
 
 describe("home", () => {
-  it("signed out: capture story, silhouette prompt, reference loop, one caption each", async () => {
-    await render(<HomeScreen />);
-
-    expect(byLabel("슛폼 촬영")).not.toBeNull();
-    expect(byLabel("MOTION 01 참조 모션 열기")).not.toBeNull();
-    expect(byLabel("로그인 후 촬영")).not.toBeNull();
-    expect(container.textContent).toContain("목표 · 일관성");
-    expect(container.textContent).toContain("높은 릴리스 · 연속 팔로우스루");
-    expect(container.textContent).not.toMatch(/Curry|Paul George|TODAY|NEXT UP/);
-  });
-
-  it("ready: my latest skeleton with an honest recency label and a band, and an open action", async () => {
+  const ready = () => {
     authState.user = { uid: "owner-1", email: "owner@example.com" };
     latestState = {
       status: "ready",
-      summary: { id: "abc123", mode: "basic_1_plus_1", shootingHand: "right", confidence: 0.65, createdAt: { toDate: () => new Date() } },
+      summary: { id: "abc123def456", mode: "basic_1_plus_1", shootingHand: "right", confidence: 0.65, createdAt: { toDate: () => new Date() } },
       record: { profile, shootingHand: "right", confidence: 0.65 },
     };
-    await render(<HomeScreen />);
+  };
+  const tap = () => container.querySelector('[data-testid="reel-tap"]') as HTMLElement | null;
+  const feedCount = () => tap()?.getAttribute("aria-valuetext") ?? "";
+  const activeKind = () => (container.querySelector('[data-testid^="reel-item-"]')?.getAttribute("data-testid") ?? "").replace("reel-item-", "");
 
-    expect(container.textContent).toContain("오늘");
-    expect(byLabel("신뢰도 밴드 Basic")).not.toBeNull();
+  it("signed out: one status line, one capture action, and the reference reel playing full height", async () => {
+    coachResult = null;
+    await render(<HomeScreen />);
+    await settle(() => container.innerHTML.length);
+
+    expect(byLabel("슛폼 촬영")).not.toBeNull();
+    expect(container.textContent).toContain("로그인 후 촬영");
+    expect(activeKind()).toBe("reference");
+    expect(feedCount()).toBe("1 / 1");
+    expect(tap()?.getAttribute("aria-label")).toContain("MOTION 01 참조 릴, 1/1, 재생 중");
+    await click(byLabel("MOTION 01 참조 모션 열기"));
+    expect(push).toHaveBeenCalledWith("/library");
+    expect(container.textContent).not.toMatch(/Curry|Paul George|TODAY|NEXT UP|목표 ·/);
+    expect(container.querySelector('[data-testid="reel-chrome"]')?.textContent).not.toMatch(/\d+\s*%|코치/);
+  });
+
+  it("ready: my reel leads with honest recency and band, the coaching moment follows, then the reference", async () => {
+    coachResult = null;
+    ready();
+    await render(<HomeScreen />);
+    await settle(() => container.innerHTML.length);
+
+    expect(activeKind()).toBe("user");
+    expect(container.textContent).toContain("내 슛폼 · 오늘");
+    expect(container.textContent).toContain("Basic · 4D 추정 · 실측 3D 아님");
+    expect(container.textContent).not.toContain("로그인 후 촬영");
+    expect(feedCount()).toBe("1 / 3");
     expect(byLabel("내 슛폼 프로필 열기")).not.toBeNull();
+    expect(byLabel("저장")).not.toBeNull();
     await click(byLabel("내 대표 슛폼 분석 열기"));
-    expect(push).toHaveBeenCalledWith("/private-analysis/abc123");
+    expect(push).toHaveBeenCalledWith("/private-analysis/abc123def456");
+    // The default reel carries no analysis: no coach text, no percentages on its chrome.
+    expect(container.querySelector('[data-testid="reel-chrome"]')?.textContent).not.toMatch(/\d+\s*%|코치/);
+  });
+
+  it("ready while the coach is unavailable: the coaching moment is skipped and the feed is simply the reels", async () => {
+    coachResult = { status: "unavailable", reason: "offline", retryable: true, detail: null };
+    ready();
+    await render(<HomeScreen />);
+    await settle(() => container.innerHTML.length);
+
+    expect(activeKind()).toBe("user");
+    expect(feedCount()).toBe("1 / 2");
+    expect(container.textContent).not.toContain("코치");
   });
 
   it("ready with the representative viewer off: no analysis action (the route would only redirect), profile action kept", async () => {
+    coachResult = null;
     flags.representative4DViewer = false;
-    authState.user = { uid: "owner-1", email: "owner@example.com" };
-    latestState = {
-      status: "ready",
-      summary: { id: "abc123", mode: "basic_1_plus_1", shootingHand: "right", confidence: 0.65, createdAt: { toDate: () => new Date() } },
-      record: { profile, shootingHand: "right", confidence: 0.65 },
-    };
+    ready();
     await render(<HomeScreen />);
+    await settle(() => container.innerHTML.length);
 
     expect(byLabel("내 대표 슛폼 분석 열기")).toBeNull();
     expect(byLabel("내 슛폼 프로필 열기")).not.toBeNull();
+  });
+
+  it("every other state keeps the feed video-first with one honest line", async () => {
+    coachResult = null;
+    for (const [state, line] of [["loading", "내 슛폼을 불러오는 중"], ["empty", "첫 슛폼을 촬영해 보세요"], ["error", "내 슛폼을 불러오지 못했습니다"]] as const) {
+      authState.user = { uid: "owner-1", email: "owner@example.com" };
+      latestState = { status: state };
+      await render(<HomeScreen />);
+      await settle(() => container.innerHTML.length);
+      expect(container.textContent, state).toContain(line);
+      expect(activeKind(), state).toBe("reference");
+      expect(feedCount(), state).toBe("1 / 1");
+    }
   });
 });
 

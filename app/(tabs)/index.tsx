@@ -1,158 +1,137 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
-import { FeedCard } from "@/components/home/feed-card";
-import { StoryStrip, type StoryItem } from "@/components/home/story-strip";
+import type { ReelAction } from "@/components/feed/reel-chrome";
+import { ReelFeed } from "@/components/feed/reel-feed";
+import type { ReelSavedMoment } from "@/components/feed/reel-item";
 import { ScreenContainer } from "@/components/screen-container";
-import { LoopStage } from "@/components/skeleton/loop-stage";
-import { PoseMotionLoop } from "@/components/skeleton/pose-motion-loop";
-import { representativeConfidence, representativeGlyph, representativeReleaseFrameIndex } from "@/components/skeleton/representative-glyph";
-import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
-import { SkeletonLoop } from "@/components/skeleton/skeleton-loop";
-import { TopBar } from "@/components/ui/top-bar";
+import { TOP_BAR_HEIGHT, TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
+import { useHomeCoachReel } from "@/hooks/use-home-coach-reel";
 import { useLatestRepresentativeProfile } from "@/hooks/use-latest-representative-profile";
+import { useReduceMotion } from "@/hooks/use-reduce-motion";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
+import { buildHomeFeed, homeStatusLine, referenceReels, userReelFromLatest } from "@/lib/feed/home-feed";
+import type { ReelItem } from "@/lib/feed/reel-model";
+import { isMomentSaved, saveMoment, toggleSavedMoment, type SavedMoment } from "@/lib/feed/saved-moments";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
-import { relativeDayLabel } from "@/lib/format/relative-day";
 import { useProfile } from "@/lib/profile-store";
-import { getPracticeFocus } from "@/lib/recommendation";
-import { poseMotionGlyph } from "@/lib/skeleton/pose-motion-glyph";
 
-const FALLBACK_WIDTH = 375;
-const MAX_WIDTH = 680;
-const GOAL_LABELS = { consistency: "일관성", range: "거리", release: "릴리스", rhythm: "리듬" } as const;
+/** Estimates used only until the viewport is measured: the flat tab bar and the one status line. */
+const TAB_BAR_ESTIMATE = 56;
+const STATUS_LINE_HEIGHT = 32;
+const COMPACT_FALLBACK = { width: 375, height: 812 };
 
 /**
- * 홈 answers three things in one glance: what I can do now (촬영), what my
- * motion looks like now (my latest skeleton), and what to look at next (the
- * anonymous reference). Every card is a skeleton loop with one caption line.
+ * Home is one vertical feed of full-height reels: my latest representative
+ * loop, the coaching moment right after it when the frozen feed event says
+ * there is one, then the anonymous reference. The default reel carries no
+ * analysis; tap pauses, hold lifts, sideways turns, up keeps. Capture stays
+ * one action in the bar, and a state without my reel is one honest line.
  */
 export default function HomeScreen() {
   const router = useRouter();
-  const { profile } = useProfile();
+  const { profile: userProfile } = useProfile();
   const { user, loading: authLoading } = useFirebaseAuth();
   const latest = useLatestRepresentativeProfile(user, authLoading);
-  const [measuredWidth, setMeasuredWidth] = useState(0);
-  const width = Math.min(measuredWidth || FALLBACK_WIDTH, MAX_WIDTH);
-  const stageHeight = Math.round(width * 0.9);
-  const reference = ANONYMOUS_POSE_REFERENCES[0];
-  const focus = getPracticeFocus(profile.goal);
-  const goalLabel = GOAL_LABELS[profile.goal];
+  const coach = useHomeCoachReel(latest, userProfile);
+  const reducedMotion = useReduceMotion();
+  const window = useWindowDimensions();
+  const [measured, setMeasured] = useState({ width: 0, height: 0 });
+  const [saved, setSaved] = useState<SavedMoment[]>([]);
 
-  const referenceAvatar = useMemo(() => poseMotionGlyph(reference.motion, { view: "side", progress: 0.75 }), [reference.motion]);
-  const silhouette = useMemo(() => poseMotionGlyph(reference.motion, { view: "oblique", progress: 0.75 }), [reference.motion]);
-  const ownAvatar = latest.status === "ready"
-    ? representativeGlyph(latest.record.profile.frames[representativeReleaseFrameIndex(latest.record.profile)], "side", latest.record.shootingHand)
-    : null;
+  const own = useMemo(() => userReelFromLatest(latest), [latest]);
+  const references = useMemo(() => referenceReels(ANONYMOUS_POSE_REFERENCES), []);
+  const items = useMemo(() => buildHomeFeed({ own, coach: coach.reel, references }), [own, coach.reel, references]);
+  const status = homeStatusLine(latest);
+  const profileId = latest.status === "ready" ? latest.summary.id : null;
 
-  const openCapture = () => router.push("/private-capture" as never);
-  const openProfile = () => router.navigate("/profile" as never);
-  const openReference = () => router.push("/library" as never);
+  const openCapture = useCallback(() => router.push("/private-capture" as never), [router]);
+  const openProfile = useCallback(() => router.navigate("/profile" as never), [router]);
+  const openLibrary = useCallback(() => router.push("/library" as never), [router]);
+  const openAnalysis = useCallback(() => {
+    if (profileId) router.push(`/private-analysis/${profileId}` as never);
+  }, [profileId, router]);
 
-  const stories: StoryItem[] = [
-    { key: "capture", kind: "capture", label: "촬영", accessibilityLabel: "슛폼 촬영", onPress: openCapture },
-    ...(ownAvatar ? [{ key: "own", kind: "glyph" as const, glyph: ownAvatar, accent: true, label: "내 슛폼", accessibilityLabel: "내 슛폼 프로필 열기", onPress: openProfile }] : []),
-    { key: "reference", kind: "glyph", glyph: referenceAvatar, label: reference.shortLabel, accessibilityLabel: `${reference.shortLabel} 참조 모션 열기`, onPress: openReference },
-  ];
+  // Saved moments are session state until the saved-post boundary exists.
+  const onSave = useCallback((moment: ReelSavedMoment) => {
+    setSaved((current) => saveMoment(current, { itemId: moment.itemId, yaw: moment.yaw, savedAtMs: Date.now() }));
+  }, []);
+  const toggleSave = useCallback((itemId: string) => {
+    setSaved((current) => toggleSavedMoment(current, { itemId, yaw: 0, savedAtMs: Date.now() }));
+  }, []);
 
-  const placeholderLine = latest.status === "signed-out"
-    ? "로그인 후 촬영"
-    : latest.status === "error"
-      ? "내 슛폼을 불러오지 못했습니다"
-      : latest.status === "disabled"
-        ? "대표 슛폼 저장이 꺼져 있습니다"
-        : "첫 슛폼을 촬영해 보세요";
+  const actionsFor = useCallback((item: ReelItem): readonly ReelAction[] => {
+    if (item.kind === "reference") return [{ icon: "arrow-expand", label: `${item.label} 참조 모션 열기`, onPress: openLibrary }];
+    const isSaved = isMomentSaved(saved, item.id);
+    const bookmark: ReelAction = { icon: isSaved ? "bookmark" : "bookmark-outline", label: isSaved ? "저장 취소" : "저장", onPress: () => toggleSave(item.id) };
+    // The analysis route redirects while the viewer flag is off; do not offer a door that goes nowhere.
+    const detail: ReelAction[] = FORMPATH_FLAGS.representative4DViewer && profileId
+      ? [{ icon: "arrow-expand", label: item.kind === "coach" ? "코치 설명 자세히" : "내 대표 슛폼 분석 열기", onPress: openAnalysis }]
+      : [];
+    if (item.kind === "coach") return [...detail, bookmark];
+    return [...detail, { icon: "human", label: "내 슛폼 프로필 열기", onPress: openProfile }, bookmark];
+  }, [openAnalysis, openLibrary, openProfile, profileId, saved, toggleSave]);
+
+  // Until the viewport is measured, web uses the window (or a compact-iPhone estimate when even that is unknown); native waits for layout.
+  const windowWidth = window.width > 0 ? Math.round(window.width) : COMPACT_FALLBACK.width;
+  const windowHeight = window.height > 0 ? Math.round(window.height) : COMPACT_FALLBACK.height;
+  const width = measured.width > 0 ? measured.width : windowWidth;
+  const height = measured.height > 0
+    ? measured.height
+    : Platform.OS === "web"
+      ? Math.max(1, windowHeight - TOP_BAR_HEIGHT - TAB_BAR_ESTIMATE - (status ? STATUS_LINE_HEIGHT : 0))
+      : 0;
 
   return (
-    <ScreenContainer
-      containerClassName="bg-background"
-      onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}
-    >
-      <TopBar wordmark="Hoop Hub" />
-      <ScrollView contentContainerStyle={[styles.page, { width }]} showsVerticalScrollIndicator={false}>
-        <StoryStrip items={stories} />
-
-        {latest.status === "ready" ? (
-          <FeedCard
-            actions={[
-              // The analysis route redirects to the profile while the viewer flag
-              // is off; the profile grid disables its tiles for the same reason.
-              ...(FORMPATH_FLAGS.representative4DViewer
-                ? [{ icon: "arrow-expand" as const, label: "내 대표 슛폼 분석 열기", onPress: () => router.push(`/private-analysis/${latest.summary.id}` as never) }]
-                : []),
-              { icon: "human", label: "내 슛폼 프로필 열기", onPress: openProfile },
-            ]}
-            caption={focus.title}
-            captionLead={`목표 · ${goalLabel}`}
-            confidence={representativeConfidence(latest.record.profile)}
-            meta={relativeDayLabel(latest.summary.createdAt.toDate())}
-            stage={(
-              <LoopStage accessibilityLabel="내 최근 대표 슛폼 skeleton" height={stageHeight} width={width}>
-                {(paused) => (
-                  <SkeletonLoop
-                    accessibilityLabel="내 최근 대표 슛폼 skeleton, 사선 시점 재생"
-                    confidence={representativeConfidence(latest.record.profile)}
-                    height={stageHeight}
-                    paused={paused}
-                    profile={latest.record.profile}
-                    shootingHand={latest.record.shootingHand}
-                    view="oblique"
-                    width={width}
-                  />
-                )}
-              </LoopStage>
-            )}
-            title="내 슛폼"
-          />
-        ) : (
-          <FeedCard
-            actions={[{ icon: "video", label: "슛폼 촬영", onPress: openCapture }]}
-            caption={focus.title}
-            captionLead={`목표 · ${goalLabel}`}
-            stage={(
-              <View accessible accessibilityLabel={latest.status === "loading" ? "내 슛폼을 불러오는 중" : placeholderLine} style={[styles.placeholder, { width, height: stageHeight }]}>
-                <View pointerEvents="none" style={styles.silhouette}>
-                  <SkeletonGlyph accessible={false} accessibilityLabel="" data={silhouette} ground={false} height={stageHeight} padding={Math.round(stageHeight * 0.14)} width={width} />
-                </View>
-                {latest.status === "loading" ? <ActivityIndicator color={tokens.mutedForeground} /> : <Text style={styles.placeholderText}>{placeholderLine}</Text>}
-              </View>
-            )}
-            title="내 슛폼"
-          />
+    <ScreenContainer containerClassName="bg-background">
+      <TopBar
+        right={(
+          <Pressable
+            accessibilityLabel="슛폼 촬영"
+            accessibilityRole="button"
+            onPress={openCapture}
+            style={({ pressed }) => [styles.barAction, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="video-outline" size={26} color={tokens.foreground} />
+          </Pressable>
         )}
-
-        <FeedCard
-          actions={[{ icon: "arrow-expand", label: `${reference.shortLabel} 참조 모션 열기`, onPress: openReference }]}
-          caption={reference.styleTitle}
-          meta="CMU optical mocap"
-          stage={(
-            <LoopStage accessibilityLabel={`${reference.shortLabel} 참조 skeleton`} height={stageHeight} width={width}>
-              {(paused) => (
-                <PoseMotionLoop
-                  accessibilityLabel={`${reference.shortLabel} 참조 skeleton, 사선 시점 재생`}
-                  height={stageHeight}
-                  motion={reference.motion}
-                  paused={paused}
-                  view="oblique"
-                  width={width}
-                />
-              )}
-            </LoopStage>
-          )}
-          title={reference.shortLabel}
-        />
-      </ScrollView>
+        wordmark="Hoop Hub"
+      />
+      {status ? (
+        <Text accessibilityLiveRegion={latest.status === "error" ? "assertive" : "polite"} numberOfLines={1} style={styles.status}>
+          {status}
+        </Text>
+      ) : null}
+      <View
+        onLayout={(event) => {
+          const { width: w, height: h } = event.nativeEvent.layout;
+          setMeasured({ width: Math.round(w), height: Math.round(h) });
+        }}
+        style={styles.viewport}
+      >
+        {height > 0 && width > 0 ? (
+          <ReelFeed
+            actionsFor={actionsFor}
+            height={height}
+            items={items}
+            onSave={onSave}
+            reducedMotion={reducedMotion ?? true}
+            width={width}
+          />
+        ) : null}
+      </View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { alignSelf: "center", paddingBottom: 32 },
-  placeholder: { alignItems: "center", backgroundColor: tokens.stage, justifyContent: "flex-end", overflow: "hidden", paddingBottom: 22 },
-  silhouette: { left: 0, opacity: 0.16, position: "absolute", top: 0 },
-  placeholderText: { ...typography.callout, color: tokens.mutedForeground },
+  viewport: { flex: 1 },
+  barAction: { alignItems: "center", height: 44, justifyContent: "center", width: 44 },
+  pressed: { opacity: 0.5 },
+  status: { ...typography.callout, color: tokens.mutedForeground, paddingHorizontal: 14, paddingVertical: 6 },
 });

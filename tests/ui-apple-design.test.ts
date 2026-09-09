@@ -12,8 +12,8 @@ const REDESIGNED = [
   "app/private-analysis/[id].tsx",
   "components/hoophub-tab-bar.tsx",
   "components/ui/top-bar.tsx",
-  "components/home/feed-card.tsx",
-  "components/home/story-strip.tsx",
+  "components/feed/reel-chrome.tsx",
+  "components/feed/reel-item.tsx",
   "components/profile/profile-hero.tsx",
   "components/profile/profile-stats.tsx",
   "components/profile/motion-grid.tsx",
@@ -70,10 +70,13 @@ describe("apple design foundations", () => {
     const loopStage = read("components/skeleton/loop-stage.tsx");
     expect(loopStage).toContain("setPaused((value) => !value)");
     expect(loopStage).toContain('position: "absolute"');
-    for (const file of ["app/(tabs)/index.tsx", "components/profile/profile-hero.tsx"]) {
-      expect(read(file), file).toContain("<LoopStage");
-      expect(read(file), file).toContain("paused={paused}");
-    }
+    expect(read("components/profile/profile-hero.tsx")).toContain("<LoopStage");
+    expect(read("components/profile/profile-hero.tsx")).toContain("paused={paused}");
+    // Home is a reel feed: the whole stage of the active reel is the tap target, and tap toggles playback.
+    expect(read("app/(tabs)/index.tsx")).toContain("<ReelFeed");
+    const reelItem = read("components/feed/reel-item.tsx");
+    expect(reelItem).toContain("onPress={onTogglePlayback}");
+    expect(reelItem).toContain('position: "absolute"');
     for (const loop of ["components/skeleton/skeleton-loop.tsx", "components/skeleton/pose-motion-loop.tsx"]) {
       const source = read(loop);
       expect(source).toContain("paused?: boolean;");

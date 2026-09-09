@@ -35,7 +35,8 @@ export function buildHomeCoachRequest({ latest, userProfile, requestId, locale =
     shootingHand: latest.record.shootingHand,
     requestId,
     locale,
-    player: { skillLevel: userProfile.skillLevel, trainingGoal: userProfile.goal },
+    // The contract wants an explicit null, never an absent value.
+    player: { skillLevel: userProfile.skillLevel ?? null, trainingGoal: userProfile.goal ?? null },
     action: "unknown",
   });
 }

@@ -5,6 +5,7 @@ import { MotionLiftLayer } from "@/components/feed/motion-lift-layer";
 import { REEL_CHROME_BOTTOM_HEIGHT, ReelChrome, type ReelAction } from "@/components/feed/reel-chrome";
 import { ReelStage } from "@/components/feed/reel-stage";
 import { buildReelStageFit } from "@/components/feed/reel-stage-fit";
+import { tokens } from "@/constants/tokens";
 import { MOTION_LIFT, type MotionLiftPhase } from "@/lib/feed/motion-lift-state";
 import type { ReelMediaRole } from "@/lib/feed/reel-feed-state";
 import { reelAccessibilityName, reelLine, type ReelItem as ReelItemModel } from "@/lib/feed/reel-model";
@@ -113,7 +114,7 @@ export function ReelItem({
         disabled={!active}
         onAccessibilityAction={onAccessibilityAction}
         onPress={onTogglePlayback}
-        style={[styles.tap, { height: stageHeight, width }]}
+        style={({ pressed }) => [styles.tap, { height: stageHeight, width }, pressed && styles.pressed]}
         testID="reel-tap"
       />
       {lifting ? (
@@ -138,4 +139,6 @@ export function ReelItem({
 
 const styles = StyleSheet.create({
   tap: { left: 0, position: "absolute", top: 0 },
+  // Touch-down feedback on an otherwise invisible target: the stage dims a little under the finger.
+  pressed: { backgroundColor: tokens.background, opacity: 0.12 },
 });
