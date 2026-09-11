@@ -423,6 +423,55 @@ describe("detectPhaseAnchors", () => {
 
     expectPhaseFailure(attempt, "invalid_source_dimensions");
   });
+
+  // A real shooting-side clip occludes whichever arm is further from the
+  // camera. Both offline real-video side clips stopped exactly here: the
+  // shooting-side wrist sat below the observation floor for most frames while
+  // the near-side wrist stayed near 0.98, so the shot was never measurable.
+  it("refuses a shot whose shooting-side wrist is occluded, however visible the other arm is", () => {
+    const visible = motionAttempt(cadenceTimestamps(30));
+    expect(detectPhaseAnchors(visible).map((anchor) => anchor.id)).toEqual(ANCHOR_IDS);
+
+    const occludedShootingWrist = mapAttemptLandmarks(visible, (point, landmarkIndex) => {
+      if (landmarkIndex === 16) return { ...point, visibility: 0.49 };
+      if (landmarkIndex === 15) return { ...point, visibility: 0.99 };
+      return point;
+    });
+    const occludedShootingElbow = mapAttemptLandmarks(visible, (point, landmarkIndex) => (
+      landmarkIndex === 14 ? { ...point, visibility: 0.49 } : point
+    ));
+
+    expectPhaseFailure(occludedShootingWrist, "invalid_phase_observation");
+    expectPhaseFailure(occludedShootingElbow, "invalid_phase_observation");
+  });
+
+  it("admits a shooting-side wrist exactly at the observation floor and refuses an absent one", () => {
+    const visible = motionAttempt(cadenceTimestamps(30));
+    const atFloor = mapAttemptLandmarks(visible, (point, landmarkIndex) => (
+      landmarkIndex === 16 ? { ...point, visibility: 0.5 } : point
+    ));
+    const absent = mapAttemptLandmarks(visible, (point, landmarkIndex) => {
+      if (landmarkIndex !== 16) return point;
+      return { x: point.x, y: point.y, z: point.z };
+    });
+
+    expect(detectPhaseAnchors(atFloor).map((anchor) => anchor.id)).toEqual(ANCHOR_IDS);
+    expectPhaseFailure(absent, "invalid_phase_observation");
+  });
+
+  // One frame is enough: the detector measures every frame, so a single
+  // occluded sample in the middle of an otherwise clean take rejects the clip.
+  it("refuses a take whose shooting-side wrist is occluded in only one frame", () => {
+    const visible = motionAttempt(cadenceTimestamps(30));
+    const middleFrameIndex = Math.floor(visible.frames.length / 2);
+    const oneOccludedFrame = mapAttemptLandmarks(visible, (point, landmarkIndex, frameIndex) => (
+      landmarkIndex === 16 && frameIndex === middleFrameIndex
+        ? { ...point, visibility: 0.2 }
+        : point
+    ));
+
+    expectPhaseFailure(oneOccludedFrame, "invalid_phase_observation");
+  });
 });
 
 describe("phaseAtTimestamp", () => {
