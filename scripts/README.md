@@ -31,3 +31,17 @@
 The capture command sequence and thresholds are documented in [`../docs/authorized-multiview-capture-kit.md`](../docs/authorized-multiview-capture-kit.md).
 
 Known-geometry benchmarks cannot bypass commercial source policy. Before any external fixture is downloaded or used in a product-adjacent regression run, execute `select-commercial-known-geometry-fixture.py` against [`../data/known_geometry_fixture_manifest.json`](../data/known_geometry_fixture_manifest.json). A `blocked_no_commercial_fixture` result is the expected safe state until a rightsholder permission record or authorized self-capture input is available.
+
+## Offline MP4 into the product contract (dev/test only)
+
+`extract-offline-landmark-sequence-v2.py` turns one local MP4 into the frozen `LandmarkSequenceV2`
+so a real clip can enter the existing `pnpm eval:two-view` path on a machine that cannot run the iOS
+native module. It mirrors `modules/formpath-pose/ios/FormpathPoseModule.swift` and
+`PoseSamplingPolicy.swift` and loads the same `pose_landmarker_full.task` the app ships: the same
+locator pass, stable person ROI, release proxy, merged coarse/dense sampling, attempt bookkeeping
+and quality reasons.
+
+It is **not** a capture path and **not** native-extraction evidence. Output is labelled
+`offline_adapter`; external MP4 stays `library_source_not_admissible` for release provenance. Raw
+video and raw landmark JSON stay outside git — write them to a gitignored `.private/`. Results from
+the two bundled test pairs are in [`../docs/REAL_VIDEO_TEST_RESULTS.md`](../docs/REAL_VIDEO_TEST_RESULTS.md).

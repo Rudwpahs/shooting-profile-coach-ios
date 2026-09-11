@@ -80,3 +80,7 @@ graphify-out/
 
 # Research skill local cache/scratch. Durable validated findings belong in docs/research/.
 .research/
+
+# Private local real-video test media and raw landmark evidence.
+# Raw MP4 and raw LandmarkSequenceV2 never enter git; only derived reports do.
+.private/
