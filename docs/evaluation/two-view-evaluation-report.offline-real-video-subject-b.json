@@ -1,0 +1,57 @@
+{
+  "version": "two_view_evaluation_report_v1",
+  "sourceClass": "internal_test_capture",
+  "mode": "basic_1_plus_1",
+  "shootingHand": "right",
+  "boundary": "representative_phase_fused_4d_estimate_not_actual_3d",
+  "attempts": [
+    {
+      "attemptId": "front-0",
+      "view": "front",
+      "takeIndex": 0,
+      "frameCount": 60,
+      "acceptedFrameRatio": 1,
+      "nominalFrameRate": 30,
+      "frameRateMode": "constant",
+      "medianRequiredJointVisibility": 0.9887030124664307,
+      "lowerDecileRequiredJointVisibility": 0.872746342420578,
+      "phaseDetection": {
+        "status": "failed",
+        "reason": "missing_rise"
+      }
+    },
+    {
+      "attemptId": "shooting_side-0",
+      "view": "shooting_side",
+      "takeIndex": 0,
+      "frameCount": 67,
+      "acceptedFrameRatio": 1,
+      "nominalFrameRate": 30,
+      "frameRateMode": "constant",
+      "medianRequiredJointVisibility": 0.990588366985321,
+      "lowerDecileRequiredJointVisibility": 0.5304869413375854,
+      "phaseDetection": {
+        "status": "failed",
+        "reason": "invalid_phase_observation"
+      }
+    }
+  ],
+  "pipeline": {
+    "status": "recapture_required",
+    "reason": "attempt_set_invalid",
+    "affectedAttemptIds": [
+      "shooting_side-0"
+    ],
+    "affectedBones": []
+  },
+  "runtime": {
+    "processingMs": 3.0406000000000404,
+    "peakHeapBytes": 18845008
+  },
+  "privacy": {
+    "containsRawMedia": false,
+    "containsLandmarks": false,
+    "containsTimestamps": false,
+    "containsFilenames": false
+  }
+}
