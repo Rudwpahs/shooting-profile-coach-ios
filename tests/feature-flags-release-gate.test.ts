@@ -86,6 +86,36 @@ describe("resolveFormPathFlags", () => {
     });
   });
 
+  it("rejects a structurally valid certificate when a required validation gate failed", () => {
+    const resolution = resolveFormPathFlags(env({
+      EXPO_PUBLIC_FORMPATH_RELEASE_VALIDATION_CERTIFICATE: JSON.stringify(certificate({
+        preRegisteredAccuracyGatePassed: false,
+      })),
+    }));
+
+    expect(resolution.flags.captureV2).toBe(false);
+    expect(resolution.rollout).toEqual({
+      status: "blocked",
+      reasons: ["pre_registered_accuracy_gate_failed"],
+    });
+  });
+
+  it("rejects a partial V2 flag request even with otherwise valid rollout evidence", () => {
+    const resolution = resolveFormPathFlags(env({
+      EXPO_PUBLIC_FORMPATH_REPRESENTATIVE_4D: undefined,
+    }));
+
+    expect(resolution.flags).toEqual({
+      captureV2: false,
+      profileV2: false,
+      representative4DViewer: false,
+    });
+    expect(resolution.rollout).toEqual({
+      status: "blocked",
+      reasons: ["feature_flags_incomplete"],
+    });
+  });
+
   it("rejects malformed certificate JSON instead of silently enabling V2", () => {
     const resolution = resolveFormPathFlags(env({
       EXPO_PUBLIC_FORMPATH_RELEASE_VALIDATION_CERTIFICATE: "{not-json",
