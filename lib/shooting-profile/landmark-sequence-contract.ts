@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { restoreSourcePoint } from "@/lib/shooting-profile/coordinate-space";
 import type { LandmarkSequenceV2 } from "@/lib/shooting-profile/types";
+import { getCriticalLandmarkIndices } from "@/lib/shooting-profile/view-quality-policy";
 
 /**
  * Pure, platform-independent contract for on-device clip analysis output.
@@ -26,8 +27,6 @@ export const POSE_V2_ENGINEERING_DEFAULTS = Object.freeze({
   minimumCriticalJointVisibility: 0.5,
   maximumReleaseProxyDetectionGapMs: 150,
 });
-
-const CRITICAL_LANDMARK_INDICES = [11, 12, 15, 16, 23, 24, 25, 26, 27, 28] as const;
 
 const landmarkSchema = z.object({
   x: finiteNumber,
@@ -213,7 +212,10 @@ const landmarkSequenceSchema = z.object({
   if (detectionRatio < POSE_V2_ENGINEERING_DEFAULTS.minimumFinalDetectionRatio) {
     expectedQualityReasons.push("low_detection_ratio");
   }
-  const hasLowCriticalCoverage = CRITICAL_LANDMARK_INDICES.some((landmarkIndex) => {
+  // The final semantic quality gate is view-aware: a side view need not see the
+  // far arm, but must see the shooting arm. Thresholds are unchanged.
+  const criticalLandmarkIndices = getCriticalLandmarkIndices(sequence.view, sequence.shootingHand);
+  const hasLowCriticalCoverage = criticalLandmarkIndices.some((landmarkIndex) => {
     if (frames.length === 0) return true;
     const visibleFrames = frames.filter((frame) => (
       (frame.modelLandmarks[landmarkIndex].visibility ?? 0)

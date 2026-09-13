@@ -19,6 +19,7 @@ import {
   buildRepresentativeSequence,
   type RepresentativeSequenceRecaptureReasonV1,
   type RepresentativeSequenceResultV1,
+  type SessionCameraViewsV1,
 } from "@/lib/shooting-profile/representative-sequence";
 import type {
   CaptureProtocolV2,
@@ -37,6 +38,14 @@ export type TwoViewPipelineInputV1 = Readonly<{
   mode: CaptureProtocolV2;
   shootingHand: ShootingHandV2;
   attempts: readonly TwoViewPipelineAttemptV1[];
+  /**
+   * Optional shooter-centric camera yaw for this session. Omitting it keeps the
+   * legacy geometry: front 0 degrees and the shooting side at +/-90. An oblique
+   * capture declares `shooting_oblique` with its actual yaw, which is carried
+   * through verbatim and never snapped to a nominal angle. Nothing here is
+   * persisted; the cloud payload is unchanged.
+   */
+  cameraViews?: SessionCameraViewsV1;
 }>;
 
 export type TwoViewPipelineRecaptureReasonV1 =
@@ -215,6 +224,7 @@ export function buildTwoViewRepresentativeProfile(
     frontAttempts,
     shootingSideAttempts,
     rootMotion: { status: "unavailable" },
+    ...(input.cameraViews === undefined ? {} : { cameraViews: input.cameraViews }),
   });
   if (result.status !== "complete") {
     return recapture(result.reason, normalizedAttempts.map((attempt) => attempt.id), {
