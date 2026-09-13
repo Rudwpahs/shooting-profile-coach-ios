@@ -190,7 +190,21 @@ private enum PoseV2EngineeringDefaults {
   static let minimumCriticalJointCoverage = 0.85
   static let minimumCriticalJointVisibility = 0.5
   static let maximumReleaseProxyDetectionGapMs = 150
-  static let criticalLandmarkIndices = [11, 12, 15, 16, 23, 24, 25, 26, 27, 28]
+  // Locator ROI: finds a whole person in the full frame. Deliberately separate
+  // from the final semantic quality gate below, which serves another purpose.
+  static let locatorCriticalLandmarkIndices = [11, 12, 15, 16, 23, 24, 25, 26, 27, 28]
+  // Final semantic quality, mirrored from lib/shooting-profile/view-quality-policy.ts.
+  // A side view must see the shooting arm; it need not see the far arm.
+  static let frontCriticalLandmarkIndices = [11, 12, 15, 16, 23, 24, 25, 26, 27, 28]
+  static let rightShootingSideCriticalLandmarkIndices = [12, 14, 16, 23, 24, 25, 26, 27, 28]
+  static let leftShootingSideCriticalLandmarkIndices = [11, 13, 15, 23, 24, 25, 26, 27, 28]
+
+  static func finalQualityCriticalLandmarkIndices(view: String, shootingHand: String) -> [Int] {
+    if view == "front" {
+      return frontCriticalLandmarkIndices
+    }
+    return shootingHand == "right" ? rightShootingSideCriticalLandmarkIndices : leftShootingSideCriticalLandmarkIndices
+  }
 }
 
 public class FormpathPoseModule: Module {
@@ -363,7 +377,9 @@ public class FormpathPoseModule: Module {
     sendProgress(request.requestId, stage: "quality", completed: 0, total: 1)
     let qualityReasons = qualityReasons(
       for: output,
-      releaseProxyTimestampMs: releaseProxyTimestampMs
+      releaseProxyTimestampMs: releaseProxyTimestampMs,
+      view: request.view,
+      shootingHand: request.shootingHand
     )
     let outputPayload: [String: Any] = [
       "version": 2,
@@ -823,7 +839,7 @@ public class FormpathPoseModule: Module {
       )
     }
 
-    let criticalCount = PoseV2EngineeringDefaults.criticalLandmarkIndices.filter {
+    let criticalCount = PoseV2EngineeringDefaults.locatorCriticalLandmarkIndices.filter {
       visiblePixelPoint($0) != nil
     }.count
     guard
@@ -1075,7 +1091,9 @@ public class FormpathPoseModule: Module {
 
   private func qualityReasons(
     for output: OutputDetectionPassResult,
-    releaseProxyTimestampMs: Int
+    releaseProxyTimestampMs: Int,
+    view: String,
+    shootingHand: String
   ) -> [String] {
     var reasons: [String] = []
     if output.counters.detectedFrames < PoseV2EngineeringDefaults.minimumDetectedFrames {
@@ -1088,7 +1106,11 @@ public class FormpathPoseModule: Module {
       reasons.append("low_detection_ratio")
     }
 
-    let hasLowCriticalCoverage = PoseV2EngineeringDefaults.criticalLandmarkIndices.contains { index in
+    let criticalLandmarkIndices = PoseV2EngineeringDefaults.finalQualityCriticalLandmarkIndices(
+      view: view,
+      shootingHand: shootingHand
+    )
+    let hasLowCriticalCoverage = criticalLandmarkIndices.contains { index in
       guard !output.frames.isEmpty else {
         return true
       }

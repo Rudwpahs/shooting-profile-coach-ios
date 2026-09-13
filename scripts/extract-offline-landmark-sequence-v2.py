@@ -70,8 +70,16 @@ MINIMUM_CRITICAL_JOINT_COVERAGE = 0.85
 MINIMUM_CRITICAL_JOINT_VISIBILITY = 0.5
 MAXIMUM_RELEASE_PROXY_DETECTION_GAP_MS = 150
 
-CRITICAL_LANDMARK_INDICES = (11, 12, 15, 16, 23, 24, 25, 26, 27, 28)
+# Locator ROI: finds a whole person in the full frame. Deliberately separate
+# from the final semantic quality gate below, which serves another purpose.
+LOCATOR_CRITICAL_LANDMARK_INDICES = (11, 12, 15, 16, 23, 24, 25, 26, 27, 28)
+# Final semantic quality, mirrored from lib/shooting-profile/view-quality-policy.ts.
+# A side view must see the shooting arm; it need not see the far arm.
+FRONT_CRITICAL_LANDMARK_INDICES = (11, 12, 15, 16, 23, 24, 25, 26, 27, 28)
+RIGHT_SHOOTING_SIDE_CRITICAL_LANDMARK_INDICES = (12, 14, 16, 23, 24, 25, 26, 27, 28)
+LEFT_SHOOTING_SIDE_CRITICAL_LANDMARK_INDICES = (11, 13, 15, 23, 24, 25, 26, 27, 28)
 MOTION_LANDMARK_INDICES = (13, 14, 15, 16)
+REPORTED_COVERAGE_LANDMARK_INDICES = (11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28)
 
 MIN_POSE_DETECTION_CONFIDENCE = 0.55
 MIN_POSE_PRESENCE_CONFIDENCE = 0.55
@@ -320,7 +328,7 @@ def _body_evidence(frame: DetectedFrame, width: int, height: int) -> BodyEvidenc
             return None
         return (min(max(point.x, 0.0), 1.0) * width, min(max(point.y, 0.0), 1.0) * height)
 
-    critical = sum(1 for index in CRITICAL_LANDMARK_INDICES if visible(index) is not None)
+    critical = sum(1 for index in LOCATOR_CRITICAL_LANDMARK_INDICES if visible(index) is not None)
     left_shoulder, right_shoulder = visible(11), visible(12)
     left_hip, right_hip = visible(23), visible(24)
     if critical < MINIMUM_LOCATOR_CRITICAL_LANDMARKS_PER_FRAME:
@@ -409,7 +417,14 @@ def derive_stable_roi(locator: PassResult, width: int, height: int) -> tuple[int
 # --------------------------------------------------------------------------- sequence assembly
 
 
-def quality_reasons(output: PassResult, release_proxy_ms: int) -> list[str]:
+def final_quality_critical_landmark_indices(view: str, shooting_hand: str) -> tuple[int, ...]:
+    """Port of `getCriticalLandmarkIndices(view, shootingHand)`."""
+    if view == "front":
+        return FRONT_CRITICAL_LANDMARK_INDICES
+    return RIGHT_SHOOTING_SIDE_CRITICAL_LANDMARK_INDICES if shooting_hand == "right" else LEFT_SHOOTING_SIDE_CRITICAL_LANDMARK_INDICES
+
+
+def quality_reasons(output: PassResult, release_proxy_ms: int, view: str, shooting_hand: str) -> list[str]:
     reasons: list[str] = []
     if output.detected < MINIMUM_DETECTED_FRAMES:
         reasons.append("too_few_detected_frames")
@@ -417,7 +432,7 @@ def quality_reasons(output: PassResult, release_proxy_ms: int) -> list[str]:
     if ratio < MINIMUM_FINAL_DETECTION_RATIO:
         reasons.append("low_detection_ratio")
     low_coverage = False
-    for index in CRITICAL_LANDMARK_INDICES:
+    for index in final_quality_critical_landmark_indices(view, shooting_hand):
         if not output.frames:
             low_coverage = True
             break
@@ -454,7 +469,7 @@ def build_sequence(
     take_index: int,
 ) -> dict[str, Any]:
     x, y, roi_width, roi_height = roi
-    reasons = quality_reasons(output, release_proxy_ms)
+    reasons = quality_reasons(output, release_proxy_ms, view, shooting_hand)
     frames = []
     for frame in output.frames:
         source_landmarks = []
@@ -571,8 +586,9 @@ def extract(
                 if output.frames
                 else 0.0
             )
-            for index in CRITICAL_LANDMARK_INDICES
+            for index in REPORTED_COVERAGE_LANDMARK_INDICES
         },
+        "requiredCriticalLandmarks": list(final_quality_critical_landmark_indices(view, shooting_hand)),
         "quality": sequence["quality"],
     }
     return sequence, diagnostics
