@@ -110,6 +110,12 @@ def diagnose(path: Path) -> dict[str, Any]:
         wrist_velocity.append((timestamps[index], rise))
         extension_velocity.append((timestamps[index], (extension_now - extension_before) / body_scale / seconds))
 
+    if not wrist_velocity or not extension_velocity:
+        # A clip rejected for too few frames is exactly the kind worth
+        # diagnosing, so report that instead of failing on an empty series.
+        report["stopsAt"] = "insufficient_detected_frames"
+        return report
+
     peak_wrist = max(wrist_velocity, key=lambda item: item[1])
     peak_extension = max(extension_velocity, key=lambda item: item[1])
     highest_wrist_index = min(range(len(points)), key=lambda index: points[index][0][1])

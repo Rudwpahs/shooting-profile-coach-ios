@@ -46,7 +46,6 @@ import {
   type PersistedJointMapV2,
   type PersistedJointNameV2,
   type RepresentativePose4DV2,
-  type ShootingHandV2,
 } from "@/lib/shooting-profile/types";
 import {
   buildDeterministicUncertaintyScenarioPlan,
@@ -194,11 +193,15 @@ function validProjectedEvidence(evidence: AggregatedProjectedBoneV1 | undefined)
     && evidence.retainedSpreadRadians >= 0;
 }
 
+/**
+ * Handedness is not a parameter here: it reaches the solver only as the sign of
+ * the shooting-side camera yaw, which `buildRepresentativeSequence` resolves and
+ * checks against the session's shooting hand before any bone is reconstructed.
+ */
 function reconstructObservedBone(
   frontFrame: AggregatedPhaseSampleFrameV1,
   sideFrame: AggregatedPhaseSampleFrameV1,
   bone: (typeof OBSERVED_BONES_V1)[number],
-  shootingHand: ShootingHandV2,
   cameraViews: SessionCameraViewsV1,
 ): DirectionEvidenceV1 | { rejected: DirectionRejectionReason } {
   const front = frontFrame.bones[bone.id];
@@ -640,7 +643,6 @@ function reconstructScenarioTrajectory(
   frontPhaseIndexShift: number,
   shootingSidePhaseIndexShift: number,
   pattern: DeterministicPerturbationPatternV1,
-  shootingHand: ShootingHandV2,
   cameraViews: SessionCameraViewsV1,
 ): ScenarioTrajectoryResultV1 {
   const evidenceFrames: DirectionEvidenceMapV1[] = [];
@@ -674,7 +676,7 @@ function reconstructScenarioTrajectory(
     if (side.status === "rejected") return { status: "rejected", affectedBone: side.boneId };
     const evidence = {} as DirectionEvidenceMapV1;
     for (const bone of OBSERVED_BONES_V1) {
-      const reconstructed = reconstructObservedBone(front.frame, side.frame, bone, shootingHand, cameraViews);
+      const reconstructed = reconstructObservedBone(front.frame, side.frame, bone, cameraViews);
       if ("rejected" in reconstructed) return { status: "rejected", affectedBone: bone.id };
       evidence[bone.id] = reconstructed;
     }
@@ -983,6 +985,14 @@ export function buildRepresentativeSequence(
     front: resolveLegacyCameraViewMetadata("front", aggregated.front.shootingHand),
     shootingSide: resolveLegacyCameraViewMetadata("shooting_side", aggregated.front.shootingHand),
   };
+  // Positive yaw moves toward the shooter's anatomical right, so the shooting
+  // side sits at positive yaw for a right hand and negative for a left one. A
+  // contradicting sign would put the camera across the body and mirror depth
+  // while still producing a confident-looking profile, so it fails closed.
+  const expectedSideYawSign = aggregated.front.shootingHand === "right" ? 1 : -1;
+  if (Math.sign(cameraViews.shootingSide.yawDegrees) !== expectedSideYawSign) {
+    return recapture("invalid_attempt", OBSERVED_BONES_V1.map((bone) => bone.id));
+  }
 
   const retainedFrontAttempts = selectedAttempts(input.frontAttempts, aggregated.front.attemptIds);
   const retainedSideAttempts = selectedAttempts(
@@ -1014,7 +1024,6 @@ export function buildRepresentativeSequence(
         aggregated.front.frames[frameIndex],
         aggregated.side.frames[frameIndex],
         bone,
-        aggregated.front.shootingHand,
         cameraViews,
       );
       if ("rejected" in result) return recapture(result.rejected, [bone.id], crossViewAlignment);
@@ -1095,7 +1104,6 @@ export function buildRepresentativeSequence(
         scenario.frontPhaseIndexShift,
         scenario.shootingSidePhaseIndexShift,
         scenario.pattern,
-        aggregated.front.shootingHand,
         cameraViews,
       );
       if (result.status === "closure_rejected") {

@@ -110,6 +110,26 @@ describe("oblique-aware product reconstruction", () => {
     expect(declaredAsOblique.profile).toEqual(inferred.profile);
   });
 
+  it("refuses a shooting-side yaw whose sign contradicts the shooting hand", () => {
+    // The convention is frozen: positive yaw moves toward the shooter's
+    // anatomical right, so a left-hander's side camera is negative. A wrong
+    // sign puts the camera on the far side of the body and mirrors depth, and
+    // the result must not come back as a confident profile.
+    const wrongForLeft = profileFor("left", obliqueMetadata(90));
+    const wrongForRight = profileFor("right", obliqueMetadata(-60));
+    const noSide = profileFor("right", obliqueMetadata(0));
+
+    for (const result of [wrongForLeft, wrongForRight, noSide]) {
+      expect(result.status).toBe("recapture_required");
+      if (result.status === "recapture_required") expect(result.reason).toBe("invalid_attempt");
+    }
+  });
+
+  it("still admits a correctly signed oblique yaw for either hand", () => {
+    expect(completeProfile(profileFor("right", obliqueMetadata(60))).confidence).toBeGreaterThan(0);
+    expect(completeProfile(profileFor("left", obliqueMetadata(-60))).confidence).toBeGreaterThan(0);
+  });
+
   it("refuses malformed camera metadata instead of silently falling back to legacy yaw", () => {
     const session = syntheticLandmarkSession({ mode: "basic_1_plus_1", shootingHand: "right" });
     const malformed = [
