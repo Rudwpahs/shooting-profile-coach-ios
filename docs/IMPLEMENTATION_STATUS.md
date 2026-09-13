@@ -45,6 +45,28 @@
 - 이전에 추적되던 `web-dist/` 생성물을 저장소 트리에서 제거하고 다시 들어오지 않도록 제외했으며, pnpm workspace build 설정 위치, ESLint CommonJS 구성, 미사용 코드와 배열 타입 경고도 정리했습니다.
 - 웹 정적 내보내기가 18개 라우트를 완성하도록 복구했습니다.
 
+## 2026-09-06 UI/UX 개편 — Direction A (Graphite / Volt), Instagram 밀도
+
+핸드오프 `HoopHub_UIUX_Claude_Handoff_2026-09-06`을 브랜치 `feat/uiux-skeleton-social-redesign`(PR #5, draft)에서
+핸드오프의 커밋 순서 그대로 구현했다. 소유자는 방향 A를 골랐고, 글자가 많은 첫 mock을 거부했다 — 그 지적이
+팔레트보다 우선하는 규칙(카드당 한 줄, 아이콘 탭바, 경계 문구는 분석 화면에만)이 됐다.
+근거 문서: [uiux/2026-09-06-screen-inventory-and-visual-directions.md](uiux/2026-09-06-screen-inventory-and-visual-directions.md).
+
+- **토큰:** `theme.config.js` 23개 시맨틱 토큰(양 scheme), `constants/tokens.ts`가 dark(A)를 화면에 공급.
+  `app/`·`components/`의 색 리터럴 480개 → 0. 앱은 dark 고정(`userInterfaceStyle: "dark"`, ThemeProvider 기본 dark).
+- **내비:** 아이콘 전용 바 홈 · 탐색 · [촬영] · 프로필. motion/assessment/library/settings 라우트는 숨김 유지.
+- **탐색:** 익명 CMU 참조 모션의 위상별 skeleton 타일 그리드(선수 이름 콘텐츠 없음).
+- **프로필:** 최신 대표 슛폼 skeleton 루프가 identity. 숫자 2개, 목표 한 줄, 3열 skeleton 그리드(탭 열기, 길게 눌러 삭제).
+  글자 아바타·이메일 이름·PRIVATE VAULT·계정 폼 상주 제거. owner-bound 데이터 로직은 그대로.
+- **홈:** 스토리 스트립(촬영 · 내 슛폼 · 참조) + skeleton 피드 카드(내 최신 슛폼 / 참조), 캡션 한 줄.
+- **분석:** 1층 skeleton + 밴드 + 발견 한 줄(가장 불확실한 관절·콘), 2층 숫자(접힘), 3층 관절별 콘·경계(접힘).
+- **테스트:** 정적 계약 + jsdom/react-native-web 렌더 테스트 10건. 전체 520 tests 통과.
+- 바뀌지 않은 것: 재구성 수식·게이트, `lib/shooting-profile/*`, Firebase/개인정보 경계, 라우트 이름, 접근성 계약, 경계 문구.
+
+남은 후속(별도 결정): 프로필 PROGRESS/SAVED 탭·비교/저장 기능(존재하지 않는 기능은 만들지 않았다), display 서체
+Archivo 도입(현재 Barlow Condensed 유지), 다른 사용자 skeleton 피드(공개 opt-in 계약 후), PR #4 병합 후 rebase,
+물리 iPhone에서의 화면 검토(소유자).
+
 ## 아직 통과해야 하는 외부 gate
 
 - Firebase Security Rules compiler 및 Emulator의 실제 allow/deny·복구·삭제 테스트

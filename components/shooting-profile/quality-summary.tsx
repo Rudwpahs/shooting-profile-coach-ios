@@ -6,6 +6,7 @@ import type {
   CaptureProtocolV2,
   RepresentativePose4DV2,
 } from "@/lib/shooting-profile/types";
+import { tokens } from "@/constants/tokens";
 
 type QualitySummaryProps = {
   mode: CaptureProtocolV2;
@@ -35,7 +36,7 @@ export function QualitySummary({
     <View style={styles.card}>
       <View style={styles.heading}>
         <View style={styles.iconWrap}>
-          <MaterialIcons name="view-in-ar" size={24} color="#F97316" />
+          <MaterialIcons name="view-in-ar" size={24} color={tokens.primary} />
         </View>
         <View style={styles.headingCopy}>
           <Text style={styles.title}>대표 슛폼 검토</Text>
@@ -58,7 +59,7 @@ export function QualitySummary({
         <MaterialIcons
           name={profile.quality.passed ? "check-circle" : "error-outline"}
           size={19}
-          color={profile.quality.passed ? "#166534" : "#C24122"}
+          color={profile.quality.passed ? tokens.positive : tokens.destructive}
         />
         <Text accessibilityLiveRegion="polite" style={styles.statusText}>{qualityLabel}</Text>
       </View>
@@ -68,7 +69,7 @@ export function QualitySummary({
       </Text>
 
       <View style={styles.saveBoundary}>
-        <MaterialIcons name="lock-outline" size={18} color="#102235" />
+        <MaterialIcons name="lock-outline" size={18} color={tokens.foreground} />
         <Text style={styles.saveBoundaryText}>
           {saving
             ? "12개 허용 관절의 위상 정규화 2D 관찰값과 대표 추정치만 비공개로 저장하는 중입니다. 원본 영상, 파일명, 원본 MediaPipe 깊이값은 업로드하지 않습니다. 아직 저장 완료로 표시하지 않습니다."
@@ -93,7 +94,7 @@ export function QualitySummary({
           pressed && !saveDisabled && styles.pressed,
         ]}
       >
-        <MaterialIcons name="lock" size={18} color="#FFFFFF" />
+        <MaterialIcons name="lock" size={18} color={tokens.primaryForeground} />
         <Text accessibilityLiveRegion="polite" style={styles.saveText}>{saving ? "저장 중" : canSave ? "비공개 저장" : "비공개 저장 준비 중"}</Text>
       </Pressable>
     </View>
@@ -104,11 +105,11 @@ function focusStyle(focused: boolean): ViewStyle {
   if (!focused) return {};
   return {
     elevation: 8,
-    outlineColor: "#FFFFFF",
+    outlineColor: tokens.focusRing,
     outlineOffset: 2,
     outlineStyle: "solid",
     outlineWidth: 3,
-    shadowColor: "#102235",
+    shadowColor: tokens.background,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 4,
@@ -116,24 +117,24 @@ function focusStyle(focused: boolean): ViewStyle {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 20, borderWidth: 1, padding: 17 },
+  card: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 20, borderWidth: 1, padding: 17 },
   heading: { alignItems: "center", flexDirection: "row", gap: 11 },
-  iconWrap: { alignItems: "center", backgroundColor: "#FFF0E8", borderRadius: 13, height: 46, justifyContent: "center", width: 46 },
+  iconWrap: { alignItems: "center", backgroundColor: tokens.primarySoft, borderRadius: 13, height: 46, justifyContent: "center", width: 46 },
   headingCopy: { flex: 1 },
-  title: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 24 },
-  boundary: { color: "#C24122", fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17, marginTop: 2 },
-  metricRow: { backgroundColor: "#102235", borderRadius: 14, flexDirection: "row", marginTop: 16, paddingVertical: 13 },
+  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 24 },
+  boundary: { color: tokens.warning, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17, marginTop: 2 },
+  metricRow: { backgroundColor: tokens.elevatedSurface, borderRadius: 14, flexDirection: "row", marginTop: 16, paddingVertical: 13 },
   metric: { alignItems: "center", flex: 1 },
-  metricValue: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 22 },
-  metricLabel: { color: "#B6C2CD", fontFamily: "Barlow", fontSize: 11, marginTop: 1 },
+  metricValue: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 22 },
+  metricLabel: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 11, marginTop: 1 },
   statusRow: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 15 },
-  statusText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  evidence: { color: "#C24122", fontFamily: "Barlow-SemiBold", fontSize: 13, lineHeight: 19, marginTop: 10 },
-  detail: { color: "#61738A", fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 4 },
-  saveBoundary: { alignItems: "flex-start", backgroundColor: "#EEF4F8", borderRadius: 12, flexDirection: "row", gap: 7, marginTop: 14, padding: 11 },
-  saveBoundaryText: { color: "#102235", flex: 1, fontFamily: "Barlow", fontSize: 12, lineHeight: 18 },
-  saveButton: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 13, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
-  saveText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  statusText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  evidence: { color: tokens.primary, fontFamily: "Barlow-SemiBold", fontSize: 13, lineHeight: 19, marginTop: 10 },
+  detail: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 4 },
+  saveBoundary: { alignItems: "flex-start", backgroundColor: tokens.elevatedSurface, borderRadius: 12, flexDirection: "row", gap: 7, marginTop: 14, padding: 11 },
+  saveBoundaryText: { color: tokens.foreground, flex: 1, fontFamily: "Barlow", fontSize: 12, lineHeight: 18 },
+  saveButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 13, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
+  saveText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
   disabled: { opacity: 0.44 },
   pressed: { opacity: 0.74 },
 });

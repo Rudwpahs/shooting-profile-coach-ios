@@ -257,7 +257,7 @@ export default function OAuthCallback() {
         )}
         {status === "error" && (
           <>
-            <Text className="mb-2 text-xl font-bold leading-7 text-error">
+            <Text className="mb-2 text-xl font-bold leading-7 text-destructive">
               Authentication failed
             </Text>
             <Text className="text-base leading-6 text-center text-foreground">
