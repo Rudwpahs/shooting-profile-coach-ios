@@ -1,0 +1,303 @@
+{
+  "version": "yaw_conditioning_sweep_v1",
+  "note": "Synthetic geometry only. Not evidence about any real capture angle.",
+  "conditioningFloor": 0.1,
+  "sampleCount": 4001,
+  "sampling": "deterministic Fibonacci lattice over the upper hemisphere",
+  "pairs": [
+    {
+      "yawPair": "0 / 30",
+      "separationDegrees": 30,
+      "sampled": 4001,
+      "accepted": 3643,
+      "rejectionRate": 0.0895,
+      "rejectionReasons": {
+        "ill_conditioned_projection_constraints": 358
+      },
+      "conditioning": {
+        "median": 0.4742,
+        "p25": 0.3245,
+        "p10": 0.1954,
+        "p05": 0.1482,
+        "minimum": 0.1001
+      },
+      "reconstructionErrorDegrees": {
+        "median": 0,
+        "p95": 0,
+        "maximum": 0
+      },
+      "worstOrientations": [
+        {
+          "elevationDegrees": 1,
+          "azimuthDegrees": 128,
+          "conditioning": 0.1001
+        },
+        {
+          "elevationDegrees": 10,
+          "azimuthDegrees": 30.4,
+          "conditioning": 0.1001
+        },
+        {
+          "elevationDegrees": 8.7,
+          "azimuthDegrees": 169.7,
+          "conditioning": 0.1001
+        },
+        {
+          "elevationDegrees": 9.7,
+          "azimuthDegrees": -147.2,
+          "conditioning": 0.1002
+        },
+        {
+          "elevationDegrees": 10.2,
+          "azimuthDegrees": -152,
+          "conditioning": 0.1003
+        }
+      ]
+    },
+    {
+      "yawPair": "0 / 45",
+      "separationDegrees": 45,
+      "sampled": 4001,
+      "accepted": 3775,
+      "rejectionRate": 0.0565,
+      "rejectionReasons": {
+        "ill_conditioned_projection_constraints": 226
+      },
+      "conditioning": {
+        "median": 0.6705,
+        "p25": 0.4589,
+        "p10": 0.2556,
+        "p05": 0.1798,
+        "minimum": 0.1002
+      },
+      "reconstructionErrorDegrees": {
+        "median": 0,
+        "p95": 0,
+        "maximum": 0
+      },
+      "worstOrientations": [
+        {
+          "elevationDegrees": 6.9,
+          "azimuthDegrees": -151.3,
+          "conditioning": 0.1002
+        },
+        {
+          "elevationDegrees": 2.7,
+          "azimuthDegrees": 69,
+          "conditioning": 0.1013
+        },
+        {
+          "elevationDegrees": 1.2,
+          "azimuthDegrees": 115.6,
+          "conditioning": 0.1014
+        },
+        {
+          "elevationDegrees": 5.7,
+          "azimuthDegrees": 178.1,
+          "conditioning": 0.1016
+        },
+        {
+          "elevationDegrees": 6.2,
+          "azimuthDegrees": 3.4,
+          "conditioning": 0.102
+        }
+      ]
+    },
+    {
+      "yawPair": "0 / 60",
+      "separationDegrees": 60,
+      "sampled": 4001,
+      "accepted": 3837,
+      "rejectionRate": 0.041,
+      "rejectionReasons": {
+        "ill_conditioned_projection_constraints": 164
+      },
+      "conditioning": {
+        "median": 0.8183,
+        "p25": 0.5781,
+        "p10": 0.3174,
+        "p05": 0.2095,
+        "minimum": 0.1013
+      },
+      "reconstructionErrorDegrees": {
+        "median": 0,
+        "p95": 0,
+        "maximum": 0
+      },
+      "worstOrientations": [
+        {
+          "elevationDegrees": 4.7,
+          "azimuthDegrees": 17.6,
+          "conditioning": 0.1013
+        },
+        {
+          "elevationDegrees": 5,
+          "azimuthDegrees": 25.2,
+          "conditioning": 0.1021
+        },
+        {
+          "elevationDegrees": 3.3,
+          "azimuthDegrees": -0.7,
+          "conditioning": 0.1027
+        },
+        {
+          "elevationDegrees": 1.1,
+          "azimuthDegrees": -41.9,
+          "conditioning": 0.103
+        },
+        {
+          "elevationDegrees": 3.9,
+          "azimuthDegrees": -175.4,
+          "conditioning": 0.1033
+        }
+      ]
+    },
+    {
+      "yawPair": "0 / 75",
+      "separationDegrees": 75,
+      "sampled": 4001,
+      "accepted": 3862,
+      "rejectionRate": 0.0347,
+      "rejectionReasons": {
+        "ill_conditioned_projection_constraints": 139
+      },
+      "conditioning": {
+        "median": 0.9055,
+        "p25": 0.6682,
+        "p10": 0.367,
+        "p05": 0.2375,
+        "minimum": 0.1002
+      },
+      "reconstructionErrorDegrees": {
+        "median": 0,
+        "p95": 0,
+        "maximum": 0
+      },
+      "worstOrientations": [
+        {
+          "elevationDegrees": 3.4,
+          "azimuthDegrees": 51.8,
+          "conditioning": 0.1002
+        },
+        {
+          "elevationDegrees": 3.8,
+          "azimuthDegrees": -142.9,
+          "conditioning": 0.102
+        },
+        {
+          "elevationDegrees": 2.3,
+          "azimuthDegrees": 126.2,
+          "conditioning": 0.1031
+        },
+        {
+          "elevationDegrees": 2.9,
+          "azimuthDegrees": -165.9,
+          "conditioning": 0.1038
+        },
+        {
+          "elevationDegrees": 3.6,
+          "azimuthDegrees": -130.5,
+          "conditioning": 0.104
+        }
+      ]
+    },
+    {
+      "yawPair": "0 / 90",
+      "separationDegrees": 90,
+      "sampled": 4001,
+      "accepted": 3878,
+      "rejectionRate": 0.0307,
+      "rejectionReasons": {
+        "ill_conditioned_projection_constraints": 123
+      },
+      "conditioning": {
+        "median": 0.934,
+        "p25": 0.6971,
+        "p10": 0.3808,
+        "p05": 0.244,
+        "minimum": 0.1014
+      },
+      "reconstructionErrorDegrees": {
+        "median": 0,
+        "p95": 0,
+        "maximum": 0
+      },
+      "worstOrientations": [
+        {
+          "elevationDegrees": 2.8,
+          "azimuthDegrees": 36.5,
+          "conditioning": 0.1014
+        },
+        {
+          "elevationDegrees": 2.5,
+          "azimuthDegrees": 28.8,
+          "conditioning": 0.1023
+        },
+        {
+          "elevationDegrees": 2.9,
+          "azimuthDegrees": 141.6,
+          "conditioning": 0.1026
+        },
+        {
+          "elevationDegrees": 0.6,
+          "azimuthDegrees": -174.7,
+          "conditioning": 0.1042
+        },
+        {
+          "elevationDegrees": 0.5,
+          "azimuthDegrees": -4.7,
+          "conditioning": 0.1042
+        }
+      ]
+    },
+    {
+      "yawPair": "-45 / 45",
+      "separationDegrees": 90,
+      "sampled": 4001,
+      "accepted": 3870,
+      "rejectionRate": 0.0327,
+      "rejectionReasons": {
+        "ill_conditioned_projection_constraints": 131
+      },
+      "conditioning": {
+        "median": 0.9341,
+        "p25": 0.7,
+        "p10": 0.3873,
+        "p05": 0.2493,
+        "minimum": 0.1005
+      },
+      "reconstructionErrorDegrees": {
+        "median": 0,
+        "p95": 0,
+        "maximum": 0
+      },
+      "worstOrientations": [
+        {
+          "elevationDegrees": 2.9,
+          "azimuthDegrees": 4,
+          "conditioning": 0.1005
+        },
+        {
+          "elevationDegrees": 2.2,
+          "azimuthDegrees": 21.2,
+          "conditioning": 0.1028
+        },
+        {
+          "elevationDegrees": 2.2,
+          "azimuthDegrees": 158.7,
+          "conditioning": 0.1039
+        },
+        {
+          "elevationDegrees": 2.8,
+          "azimuthDegrees": -101,
+          "conditioning": 0.104
+        },
+        {
+          "elevationDegrees": 2.9,
+          "azimuthDegrees": -80.9,
+          "conditioning": 0.1057
+        }
+      ]
+    }
+  ]
+}
