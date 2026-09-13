@@ -74,6 +74,18 @@ describe("resolveFormPathFlags", () => {
     });
   });
 
+  it("rejects rollout when the build commit identity was not embedded", () => {
+    const resolution = resolveFormPathFlags(env({
+      EXPO_PUBLIC_FORMPATH_BUILD_COMMIT_SHA: undefined,
+    }));
+
+    expect(resolution.flags.profileV2).toBe(false);
+    expect(resolution.rollout).toEqual({
+      status: "blocked",
+      reasons: ["build_commit_sha_missing"],
+    });
+  });
+
   it("rejects malformed certificate JSON instead of silently enabling V2", () => {
     const resolution = resolveFormPathFlags(env({
       EXPO_PUBLIC_FORMPATH_RELEASE_VALIDATION_CERTIFICATE: "{not-json",
@@ -84,6 +96,21 @@ describe("resolveFormPathFlags", () => {
       profileV2: false,
       representative4DViewer: false,
     });
+    expect(resolution.rollout).toEqual({
+      status: "blocked",
+      reasons: ["validation_certificate_invalid"],
+    });
+  });
+
+  it("rejects structurally invalid certificate JSON", () => {
+    const resolution = resolveFormPathFlags(env({
+      EXPO_PUBLIC_FORMPATH_RELEASE_VALIDATION_CERTIFICATE: JSON.stringify({
+        version: "representative_release_validation_certificate_v1",
+        independentGroundTruth: "yes",
+      }),
+    }));
+
+    expect(resolution.flags.representative4DViewer).toBe(false);
     expect(resolution.rollout).toEqual({
       status: "blocked",
       reasons: ["validation_certificate_invalid"],
