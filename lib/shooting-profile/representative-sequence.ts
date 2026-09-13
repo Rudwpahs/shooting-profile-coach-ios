@@ -9,11 +9,18 @@ import {
   type CrossViewPhaseAlignmentResultV1,
 } from "@/lib/shooting-profile/cross-view-alignment";
 import {
+  resolveLegacyCameraViewMetadata,
+  validateCameraViewMetadata,
+  type CameraViewMetadataV2,
+} from "@/lib/shooting-profile/camera-view-metadata";
+import {
   angleBetweenDirections,
-  reconstructBoneDirection,
   type DirectionRejectionReason,
   type DirectionSign,
 } from "@/lib/shooting-profile/direction-reconstruction";
+import {
+  reconstructBoneDirectionFromYawViews,
+} from "@/lib/shooting-profile/generalized-direction-reconstruction";
 import { ENGINEERING_THRESHOLDS_V1 } from "@/lib/shooting-profile/engineering-thresholds";
 import {
   KINEMATIC_TREE_V1,
@@ -82,11 +89,22 @@ type DirectionEvidenceV1 = {
 
 type DirectionEvidenceMapV1 = Record<ObservedBoneIdV1, DirectionEvidenceV1>;
 
+export type SessionCameraViewsV1 = Readonly<{
+  front: CameraViewMetadataV2;
+  shootingSide: CameraViewMetadataV2;
+}>;
+
 export type RepresentativeSequenceInputV1 = {
   mode: CaptureProtocolV2;
   frontAttempts: readonly NormalizedViewAttemptV2[];
   shootingSideAttempts: readonly NormalizedViewAttemptV2[];
   rootMotion?: { status: "unavailable" };
+  /**
+   * Shooter-centric camera yaw for each view. Legacy callers and persisted
+   * payloads omit it and resolve to the frozen legacy geometry: front at 0
+   * degrees and the shooting side at +90 (right hand) or -90 (left hand).
+   */
+  cameraViews?: SessionCameraViewsV1;
 };
 
 export type SelectedAttemptsByViewV1 = Readonly<{
@@ -181,6 +199,7 @@ function reconstructObservedBone(
   sideFrame: AggregatedPhaseSampleFrameV1,
   bone: (typeof OBSERVED_BONES_V1)[number],
   shootingHand: ShootingHandV2,
+  cameraViews: SessionCameraViewsV1,
 ): DirectionEvidenceV1 | { rejected: DirectionRejectionReason } {
   const front = frontFrame.bones[bone.id];
   const side = sideFrame.bones[bone.id];
@@ -202,15 +221,20 @@ function reconstructObservedBone(
   if (frontVerticalSign !== undefined
     && sideVerticalSign !== undefined
     && frontVerticalSign !== sideVerticalSign) {
-    const rejected = reconstructBoneDirection({
-      alpha: Math.atan2(frontHorizontal, frontVertical),
-      beta: Math.atan2(sideHorizontal, sideVertical),
+    const rejected = reconstructBoneDirectionFromYawViews({
+      first: {
+        yawDegrees: cameraViews.front.yawDegrees,
+        angleRadians: Math.atan2(frontHorizontal, frontVertical),
+        verticalSign: frontVerticalSign,
+        projectionLength: frontLength,
+      },
+      second: {
+        yawDegrees: cameraViews.shootingSide.yawDegrees,
+        angleRadians: Math.atan2(sideHorizontal, sideVertical),
+        verticalSign: sideVerticalSign,
+        projectionLength: sideLength,
+      },
       verticalSign: frontVerticalSign,
-      sideAxisSign: shootingHand === "right" ? 1 : -1,
-      frontVerticalSign,
-      sideVerticalSign,
-      frontProjectionLength: frontLength,
-      sideProjectionLength: sideLength,
     });
     return rejected.status === "rejected"
       ? { rejected: rejected.reason }
@@ -229,15 +253,20 @@ function reconstructObservedBone(
     ?? sideVerticalSign
     ?? (frontReliability >= sideReliability ? sign(frontVertical) : sign(sideVertical))
     ?? 1;
-  const result = reconstructBoneDirection({
-    alpha: Math.atan2(frontHorizontal, frontVertical),
-    beta: Math.atan2(sideHorizontal, sideVertical),
+  const result = reconstructBoneDirectionFromYawViews({
+    first: {
+      yawDegrees: cameraViews.front.yawDegrees,
+      angleRadians: Math.atan2(frontHorizontal, frontVertical),
+      ...(frontVerticalSign === undefined ? {} : { verticalSign: frontVerticalSign }),
+      projectionLength: frontLength,
+    },
+    second: {
+      yawDegrees: cameraViews.shootingSide.yawDegrees,
+      angleRadians: Math.atan2(sideHorizontal, sideVertical),
+      ...(sideVerticalSign === undefined ? {} : { verticalSign: sideVerticalSign }),
+      projectionLength: sideLength,
+    },
     verticalSign,
-    sideAxisSign: shootingHand === "right" ? 1 : -1,
-    frontVerticalSign,
-    sideVerticalSign,
-    frontProjectionLength: frontLength,
-    sideProjectionLength: sideLength,
   });
   if (result.status === "rejected") return { rejected: result.reason };
   return {
@@ -383,11 +412,24 @@ function validateSequenceInput(
       return recapture("invalid_root_motion_signal");
     }
   }
+  let cameraViews: SessionCameraViewsV1 | undefined;
+  if (value.cameraViews !== undefined) {
+    if (!isRecord(value.cameraViews)) return recapture("invalid_attempt");
+    try {
+      cameraViews = {
+        front: validateCameraViewMetadata(value.cameraViews.front),
+        shootingSide: validateCameraViewMetadata(value.cameraViews.shootingSide),
+      };
+    } catch {
+      return recapture("invalid_attempt");
+    }
+  }
   return {
     mode: value.mode,
     frontAttempts: value.frontAttempts as NormalizedViewAttemptV2[],
     shootingSideAttempts: value.shootingSideAttempts as NormalizedViewAttemptV2[],
     ...(value.rootMotion === undefined ? {} : { rootMotion: { status: "unavailable" } }),
+    ...(cameraViews === undefined ? {} : { cameraViews }),
   };
 }
 
@@ -599,6 +641,7 @@ function reconstructScenarioTrajectory(
   shootingSidePhaseIndexShift: number,
   pattern: DeterministicPerturbationPatternV1,
   shootingHand: ShootingHandV2,
+  cameraViews: SessionCameraViewsV1,
 ): ScenarioTrajectoryResultV1 {
   const evidenceFrames: DirectionEvidenceMapV1[] = [];
   const rawDirections: BoneDirectionMapV1[] = [];
@@ -631,7 +674,7 @@ function reconstructScenarioTrajectory(
     if (side.status === "rejected") return { status: "rejected", affectedBone: side.boneId };
     const evidence = {} as DirectionEvidenceMapV1;
     for (const bone of OBSERVED_BONES_V1) {
-      const reconstructed = reconstructObservedBone(front.frame, side.frame, bone, shootingHand);
+      const reconstructed = reconstructObservedBone(front.frame, side.frame, bone, shootingHand, cameraViews);
       if ("rejected" in reconstructed) return { status: "rejected", affectedBone: bone.id };
       evidence[bone.id] = reconstructed;
     }
@@ -933,6 +976,14 @@ export function buildRepresentativeSequence(
   const aggregated = aggregateSessionViews(input);
   if ("status" in aggregated) return aggregated;
 
+  // Legacy sessions carry no camera metadata; they are the frozen front 0 plus
+  // shooting-side +/-90 geometry, which the generalized solver reproduces
+  // exactly.
+  const cameraViews: SessionCameraViewsV1 = input.cameraViews ?? {
+    front: resolveLegacyCameraViewMetadata("front", aggregated.front.shootingHand),
+    shootingSide: resolveLegacyCameraViewMetadata("shooting_side", aggregated.front.shootingHand),
+  };
+
   const retainedFrontAttempts = selectedAttempts(input.frontAttempts, aggregated.front.attemptIds);
   const retainedSideAttempts = selectedAttempts(
     input.shootingSideAttempts,
@@ -964,6 +1015,7 @@ export function buildRepresentativeSequence(
         aggregated.side.frames[frameIndex],
         bone,
         aggregated.front.shootingHand,
+        cameraViews,
       );
       if ("rejected" in result) return recapture(result.rejected, [bone.id], crossViewAlignment);
       evidence[bone.id] = result;
@@ -1044,6 +1096,7 @@ export function buildRepresentativeSequence(
         scenario.shootingSidePhaseIndexShift,
         scenario.pattern,
         aggregated.front.shootingHand,
+        cameraViews,
       );
       if (result.status === "closure_rejected") {
         return recapture("inconsistent_skeleton_closure", ["shoulder_line"], crossViewAlignment);

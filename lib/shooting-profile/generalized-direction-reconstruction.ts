@@ -58,16 +58,44 @@ function verticalSignFromAngle(angleRadians: number): DirectionSign | undefined 
   return vertical < 0 ? -1 : 1;
 }
 
+/**
+ * Exact cosine/sine at quadrant yaws.
+ *
+ * `Math.cos(Math.PI / 2)` is 6.1e-17 rather than 0, which would leave a
+ * last-bit residue in every legacy front/side reconstruction and silently move
+ * existing profiles. The quadrants are exact in the geometry, so they are
+ * exact here too.
+ */
+function yawTrigonometry(yawDegrees: number): { cosine: number; sine: number } {
+  const wrapped = ((yawDegrees % 360) + 360) % 360;
+  if (wrapped === 0) return { cosine: 1, sine: 0 };
+  if (wrapped === 90) return { cosine: 0, sine: 1 };
+  if (wrapped === 180) return { cosine: -1, sine: 0 };
+  if (wrapped === 270) return { cosine: 0, sine: -1 };
+  const yawRadians = yawDegrees * Math.PI / 180;
+  return { cosine: Math.cos(yawRadians), sine: Math.sin(yawRadians) };
+}
+
 function projectionConstraint(
   observation: YawProjectionObservationV1,
 ): Vector3 {
-  const yawRadians = observation.yawDegrees * Math.PI / 180;
+  const { cosine: yawCosine, sine: yawSine } = yawTrigonometry(observation.yawDegrees);
   const cosine = Math.cos(observation.angleRadians);
   return {
-    x: Math.cos(yawRadians) * cosine,
+    x: yawCosine * cosine,
     y: -Math.sin(observation.angleRadians),
-    z: Math.sin(yawRadians) * cosine,
+    z: yawSine * cosine,
   };
+}
+
+/**
+ * How much of a reconstructed direction survives in one view's image plane.
+ * A bone parallel to a view's camera axis leaves no usable projection there,
+ * which is the yaw-general form of the legacy collapsed-projection guards.
+ */
+function inPlaneProjectionLength(direction: Vector3, yawDegrees: number): number {
+  const { cosine, sine } = yawTrigonometry(yawDegrees);
+  return Math.hypot(cosine * direction.x + sine * direction.z, direction.y);
 }
 
 function validateObservation(
@@ -141,6 +169,12 @@ export function reconstructBoneDirectionFromYawViews(
   }
 
   const normalized = scale(raw, 1 / rawLength);
+  if (inPlaneProjectionLength(normalized, input.first.yawDegrees) <= EPSILON) {
+    return reject("collapsed_front_projection");
+  }
+  if (inPlaneProjectionLength(normalized, input.second.yawDegrees) <= EPSILON) {
+    return reject("collapsed_side_projection");
+  }
   const direction = Math.sign(normalized.y) === input.verticalSign
     ? normalized
     : scale(normalized, -1);
