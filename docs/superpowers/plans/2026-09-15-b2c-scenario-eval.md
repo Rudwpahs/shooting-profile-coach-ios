@@ -18,12 +18,12 @@ Schema, grounding, boundedness, safety and deterministic reproducibility targets
 
 ## Tasks
 
-- [ ] Audit: `scenarios/audit.py`, `scenario_tests/test_audit.py`. First assert 940 units, byte immutability, duplicate/missing-field detection and corrupt/empty rejection; run RED; implement read-only SQL/code audit; rerun GREEN; emit JSON/Markdown before generation.
-- [ ] Partition/generate: `scenarios/splits.py`, `specs.py`, `gold.py`, `build.py`; test stable IDs, group isolation, request/response schema, low-quality/ROW_ONLY caps and contradictions before implementation. Target 300–600 meaningful cases; report actual coverage rather than pad. Keep evidence metadata separate, never rewrite claims to create contradictions.
-- [ ] Loader: explicitly dispatch versioned request/response pairs to V1 validation plus grounding while preserving legacy rows. Tests reject mixed/unknown versions and pass existing collator prompt masking.
-- [ ] Evaluate: `scenarios/evaluate.py`; RED tests for unknown IDs, bad biomechanics (English/Korean), missing retest, confidence violations, invalid schema and fabricated source claims. Implement independent structural checks with conservative text probes and documented limits; compare repeated provider outputs and paired confidence perturbations.
-- [ ] Artifacts/CLI: `scenario_cli.py` implements audit/build/check/evaluate. Deterministic UTF-8 LF JSONL, separate metadata, manifest of inputs/config/generator source hash/artifact hashes; check regenerates bytes and rejects tampering/leakage. Test repeated builds and corrupt manifests.
-- [ ] CI/docs: isolated B2-C workflow runs full Coach/retrieval/evaluation tests, Ruff, deterministic regeneration, leakage and baseline evaluation offline after dependency install. Record results and precise B3 plan, then independent review and commit/push only this branch.
+- [x] Audit: `scenarios/audit.py`, `scenario_tests/test_audit.py`. First assert 940 units, byte immutability, duplicate/missing-field detection and corrupt/empty rejection; run RED; implement read-only SQL/code audit; rerun GREEN; emit JSON/Markdown before generation.
+- [x] Partition/generate: `scenarios/splits.py`, `specs.py`, `gold.py`, `build.py`; test stable IDs, group isolation, request/response schema, low-quality/ROW_ONLY caps and contradictions before implementation. Target 300–600 meaningful cases; report actual coverage rather than pad. Keep evidence metadata separate, never rewrite claims to create contradictions.
+- [x] Loader: explicitly dispatch versioned request/response pairs to V1 validation plus grounding while preserving legacy rows. Tests reject mixed/unknown versions and pass existing collator prompt masking.
+- [x] Evaluate: `scenarios/evaluate.py`; RED tests for unknown IDs, bad biomechanics (English/Korean), missing retest, confidence violations, invalid schema and fabricated source claims. Implement independent structural checks with conservative text probes and documented limits; compare repeated provider outputs and paired confidence perturbations.
+- [x] Artifacts/CLI: `scenario_cli.py` implements audit/build/check/evaluate. Deterministic UTF-8 LF JSONL, separate metadata, manifest of inputs/config/generator source hash/artifact hashes; check regenerates bytes and rejects tampering/leakage. Test repeated builds and corrupt manifests.
+- [x] CI/docs: isolated B2-C workflow runs full Coach/retrieval/evaluation tests, Ruff, deterministic regeneration, leakage and baseline evaluation offline after dependency install. Record results and precise B3 plan, then independent review and commit/push only this branch.
 
 ## Commands
 
@@ -41,3 +41,16 @@ python -m formpath_coach.scenario_cli evaluate --output ml/coach/data/seed-v1
 ## Completion
 
 Verify retrieval's 40 fixed cases retain their original metrics and honest provenance counts. Record exact base, source commit and final head; preserve raw per-case evaluation and limitations. B3 remains a separately approved task.
+
+## Execution record
+
+All six implementation tasks above were completed with test-first checks. Final
+source-frozen suite: 347 passed (306 existing + 41 new), Ruff clean, deterministic
+regeneration and all known split-overlap gates passed. Independent review findings
+were reproduced and fixed. Implementation committed/pushed at
+`8f7c5afa91654cf988975dfbfacc6a79bc5dc56f`; final handoff is
+`docs/integration/b2c-scenario-eval-handoff.md`.
+
+The unchanged deterministic provider fails several newly measured safety/retest
+targets. Therefore software ready for owner review does not mean all-green B3
+readiness. No model trained, no UI/main modification, no automatic B3 execution.
