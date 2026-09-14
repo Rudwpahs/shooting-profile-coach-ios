@@ -20,6 +20,9 @@ describe("capture: stand, camera, shoot, accept or recapture", () => {
     expect(session).not.toMatch(/reasonCode ===|recaptureReasonCode ===/);
     expect(slot).toContain("slot.rejectionReason");
     expect(hook).toContain("recaptureReason(result.reason)");
+    // The reason gets the card's full width under the take row, not the sliver beside two action pills.
+    expect(slot.lastIndexOf("slot.rejectionReason")).toBeGreaterThan(slot.lastIndexOf("</Pressable>"));
+    expect(slot).toMatch(/numberOfLines=\{2\} style=\{styles\.reason\}/);
   });
 
   it("renders guidance from protocol data, never from a hard-coded view layout or a yaw number", () => {
@@ -49,6 +52,8 @@ describe("capture: stand, camera, shoot, accept or recapture", () => {
     expect(review).toContain("confidenceBandCopy(profile)");
     expect(review).toContain("representativeConfidence(profile)");
     expect(review).not.toMatch(/정규화 위상|101/);
+    // The evidence line may wrap once; at 375 points one line cuts "실측 3D 아님" off.
+    expect(review).toMatch(/numberOfLines=\{2\} style=\{styles\.evidence\}/);
   });
 
   it("labels every control for assistive technology with a 44-point target and touch-down feedback", () => {

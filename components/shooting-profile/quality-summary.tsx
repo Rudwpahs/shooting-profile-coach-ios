@@ -55,7 +55,7 @@ export function QualitySummary({ mode, profile, confidence, shootingHand, canSav
         <View style={[styles.dot, band.band === "high" && styles.dotHigh, !profile.quality.passed && styles.dotRecapture]} />
         <Text numberOfLines={1} style={styles.bandText}>{band.title} · <Text style={profile.quality.passed ? styles.pass : styles.recapture}>{band.quality}</Text></Text>
       </View>
-      <Text numberOfLines={1} style={styles.evidence}>{evidence} · 위상 결합 4D 추정 · 실측 3D 아님</Text>
+      <Text numberOfLines={2} style={styles.evidence}>{evidence} · 위상 결합 4D 추정 · 실측 3D 아님</Text>
       <View style={styles.consent}>
         <MaterialCommunityIcons name="lock-outline" size={18} color={tokens.mutedForeground} />
         <Text style={styles.consentText}>

@@ -53,14 +53,12 @@ export function CaptureSlotCard({ slot, title, onCamera, onLibrary, onRetake, di
   const retakeDisabled = disabled || working;
 
   return (
-    <View style={[styles.row, !slot.enabled && slot.status !== "accepted" && styles.waiting]}>
+    <View style={[styles.card, !slot.enabled && slot.status !== "accepted" && styles.waiting]}>
+      <View style={styles.row}>
       <StatusDot slot={slot} />
       <View style={styles.copy}>
         <Text numberOfLines={1} style={styles.label}>{label}</Text>
         <Text accessibilityLiveRegion="polite" numberOfLines={1} style={styles.status}>{statusCopy(slot)}</Text>
-        {slot.rejectionReason ? (
-          <Text accessibilityLiveRegion="assertive" numberOfLines={2} style={styles.reason}>{slot.rejectionReason}</Text>
-        ) : null}
       </View>
       {slot.status === "accepted" ? (
         <Pressable
@@ -100,12 +98,17 @@ export function CaptureSlotCard({ slot, title, onCamera, onLibrary, onRetake, di
           </Pressable>
         </>
       )}
+      </View>
+      {slot.rejectionReason ? (
+        <Text accessibilityLiveRegion="assertive" numberOfLines={2} style={styles.reason}>{slot.rejectionReason}</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { alignItems: "center", backgroundColor: tokens.surface, borderRadius: 14, flexDirection: "row", gap: 10, minHeight: 64, paddingHorizontal: 12, paddingVertical: 8 },
+  card: { backgroundColor: tokens.surface, borderRadius: 14, gap: 6, minHeight: 64, paddingHorizontal: 12, paddingVertical: 8 },
+  row: { alignItems: "center", flexDirection: "row", gap: 10, minHeight: 48 },
   waiting: { opacity: 0.55 },
   dot: { borderRadius: 4, height: 8, width: 8 },
   copy: { flex: 1, gap: 1 },
