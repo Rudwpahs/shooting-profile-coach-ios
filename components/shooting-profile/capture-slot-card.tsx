@@ -1,78 +1,65 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 import type { CaptureSessionSlot } from "@/lib/shooting-profile/capture-session-reducer";
 
 type CaptureSlotCardProps = {
   slot: CaptureSessionSlot;
+  /** The view's guidance title, e.g. 정면 or 슈팅 측면. */
+  title: string;
   onCamera: () => void;
   onLibrary: () => void;
   onRetake: () => void;
   disabled?: boolean;
 };
 
-function slotLabel(slot: CaptureSessionSlot): string {
-  const view = slot.view === "front" ? "정면" : "슈팅 측면";
-  return `${view} ${slot.takeIndex + 1}회`;
+function slotLabel(slot: CaptureSessionSlot, title: string): string {
+  return `${title} ${slot.takeIndex + 1}회`;
 }
 
 function statusCopy(slot: CaptureSessionSlot): string {
   if (slot.status === "acquiring") return "권한 확인 및 영상 선택 중";
   if (slot.status === "analyzing") {
     const progress = slot.progress;
-    return progress && progress.total > 0
-      ? `기기 내 포즈 분석 중 · ${progress.completed}/${progress.total}`
-      : "기기 내 포즈 분석 준비 중";
+    return progress && progress.total > 0 ? `기기 내 포즈 분석 중 · ${progress.completed}/${progress.total}` : "기기 내 포즈 분석 준비 중";
   }
-  if (slot.status === "accepted") return "통과 · 다음 클립으로 진행할 수 있습니다";
+  if (slot.status === "accepted") return "통과";
   if (slot.status === "rejected") return "재촬영 필요";
-  if (slot.status === "cancelled") return "선택 취소 · 다시 시작할 수 있습니다";
-  return slot.enabled ? "촬영 가능" : "이전 클립 통과 후 촬영 가능";
+  if (slot.status === "cancelled") return "선택 취소";
+  return slot.enabled ? "촬영 가능" : "이전 클립 통과 후";
 }
 
-function statusIcon(slot: CaptureSessionSlot) {
-  if (slot.status === "accepted") return <MaterialIcons name="check-circle" size={21} color="#166534" />;
-  if (slot.status === "rejected") return <MaterialIcons name="error-outline" size={21} color="#C24122" />;
-  if (slot.status === "acquiring" || slot.status === "analyzing") {
-    return <MaterialIcons name="hourglass-top" size={21} color="#F97316" />;
-  }
-  if (slot.status === "cancelled") return <MaterialIcons name="cancel" size={21} color="#61738A" />;
-  return <MaterialIcons name={slot.enabled ? "radio-button-unchecked" : "lock-outline"} size={21} color="#61738A" />;
+function StatusDot({ slot }: { slot: CaptureSessionSlot }) {
+  const color = slot.status === "accepted"
+    ? tokens.positive
+    : slot.status === "rejected"
+      ? tokens.warning
+      : slot.status === "acquiring" || slot.status === "analyzing"
+        ? tokens.primary
+        : tokens.mutedForeground;
+  return <View style={[styles.dot, { backgroundColor: color }]} />;
 }
 
-export function CaptureSlotCard({
-  slot,
-  onCamera,
-  onLibrary,
-  onRetake,
-  disabled = false,
-}: CaptureSlotCardProps) {
-  const label = slotLabel(slot);
+/**
+ * One take: a status line, then the actions that apply. Rejection copy is the
+ * typed reason the hook already translated; it never grows into a paragraph.
+ */
+export function CaptureSlotCard({ slot, title, onCamera, onLibrary, onRetake, disabled = false }: CaptureSlotCardProps) {
+  const label = slotLabel(slot, title);
   const working = slot.status === "acquiring" || slot.status === "analyzing";
   const captureDisabled = disabled || !slot.enabled || working || slot.status === "accepted";
   const retakeDisabled = disabled || working;
 
   return (
-    <View style={[styles.card, !slot.enabled && slot.status !== "accepted" && styles.waitingCard]}>
-      <View style={styles.heading}>
-        <View style={styles.headingCopy}>
-          <Text style={styles.label}>{label}</Text>
-          <Text accessibilityLiveRegion="polite" style={styles.status}>
-            {statusCopy(slot)}
-          </Text>
-        </View>
-        {statusIcon(slot)}
+    <View style={[styles.card, !slot.enabled && slot.status !== "accepted" && styles.waiting]}>
+      <View style={styles.row}>
+      <StatusDot slot={slot} />
+      <View style={styles.copy}>
+        <Text numberOfLines={1} style={styles.label}>{label}</Text>
+        <Text accessibilityLiveRegion="polite" numberOfLines={1} style={styles.status}>{statusCopy(slot)}</Text>
       </View>
-
-      {slot.rejectionReason ? (
-        <View style={styles.errorBox}>
-          <MaterialIcons name="info-outline" size={18} color="#C24122" />
-          <Text accessibilityLiveRegion="assertive" style={styles.errorText}>
-            {slot.rejectionReason}
-          </Text>
-        </View>
-      ) : null}
-
       {slot.status === "accepted" ? (
         <Pressable
           accessibilityLabel={`${label} 클립 다시 촬영 또는 선택`}
@@ -80,31 +67,23 @@ export function CaptureSlotCard({
           accessibilityState={{ disabled: retakeDisabled }}
           disabled={retakeDisabled}
           onPress={onRetake}
-          style={({ pressed }) => [
-            styles.retakeButton,
-            retakeDisabled && styles.disabled,
-            pressed && !retakeDisabled && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.action, styles.secondaryAction, retakeDisabled && styles.disabled, pressed && !retakeDisabled && styles.pressed]}
         >
-          <MaterialIcons name="refresh" size={18} color="#102235" />
-          <Text style={styles.retakeText}>이 클립 다시 선택</Text>
+          <MaterialCommunityIcons name="refresh" size={18} color={tokens.foreground} />
+          <Text style={styles.actionText}>다시</Text>
         </Pressable>
       ) : (
-        <View style={styles.actions}>
+        <>
           <Pressable
             accessibilityLabel={`${label} 카메라로 로컬 슈팅 클립 촬영`}
             accessibilityRole="button"
             accessibilityState={{ disabled: captureDisabled }}
             disabled={captureDisabled}
             onPress={onCamera}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              captureDisabled && styles.disabled,
-              pressed && !captureDisabled && styles.pressed,
-            ]}
+            style={({ pressed }) => [styles.action, styles.primaryAction, captureDisabled && styles.disabled, pressed && !captureDisabled && styles.pressed]}
           >
-            <MaterialIcons name="videocam" size={18} color="#FFFFFF" />
-            <Text style={styles.primaryText}>카메라 촬영</Text>
+            <MaterialCommunityIcons name="video" size={18} color={tokens.primaryForeground} />
+            <Text style={[styles.actionText, styles.primaryActionText]}>촬영</Text>
           </Pressable>
           <Pressable
             accessibilityLabel={`${label} 기기 보관함에서 슈팅 영상 선택`}
@@ -112,37 +91,35 @@ export function CaptureSlotCard({
             accessibilityState={{ disabled: captureDisabled }}
             disabled={captureDisabled}
             onPress={onLibrary}
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              captureDisabled && styles.disabled,
-              pressed && !captureDisabled && styles.pressed,
-            ]}
+            style={({ pressed }) => [styles.action, styles.secondaryAction, captureDisabled && styles.disabled, pressed && !captureDisabled && styles.pressed]}
           >
-            <MaterialIcons name="video-library" size={18} color="#102235" />
-            <Text style={styles.secondaryText}>영상 선택</Text>
+            <MaterialCommunityIcons name="folder-play-outline" size={18} color={tokens.foreground} />
+            <Text style={styles.actionText}>보관함</Text>
           </Pressable>
-        </View>
+        </>
       )}
+      </View>
+      {slot.rejectionReason ? (
+        <Text accessibilityLiveRegion="assertive" numberOfLines={2} style={styles.reason}>{slot.rejectionReason}</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 16, borderWidth: 1, padding: 14 },
-  waitingCard: { backgroundColor: "#F1F3F3" },
-  heading: { alignItems: "center", flexDirection: "row", gap: 10, justifyContent: "space-between" },
-  headingCopy: { flex: 1 },
-  label: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 19 },
-  status: { color: "#61738A", fontFamily: "Barlow", fontSize: 12, lineHeight: 17, marginTop: 2 },
-  errorBox: { alignItems: "flex-start", backgroundColor: "#FFF0E8", borderRadius: 11, flexDirection: "row", gap: 7, marginTop: 11, padding: 10 },
-  errorText: { color: "#9A3412", flex: 1, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18 },
-  actions: { flexDirection: "row", gap: 8, marginTop: 12 },
-  primaryButton: { alignItems: "center", backgroundColor: "#C24122", borderRadius: 12, flex: 1, flexDirection: "row", gap: 6, justifyContent: "center", minHeight: 44, paddingHorizontal: 8 },
-  primaryText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
-  secondaryButton: { alignItems: "center", borderColor: "#102235", borderRadius: 12, borderWidth: 1, flex: 1, flexDirection: "row", gap: 6, justifyContent: "center", minHeight: 44, paddingHorizontal: 8 },
-  secondaryText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
-  retakeButton: { alignItems: "center", borderColor: "#B8C2CA", borderRadius: 12, borderWidth: 1, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 44, paddingHorizontal: 12 },
-  retakeText: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
+  card: { backgroundColor: tokens.surface, borderRadius: 14, gap: 6, minHeight: 64, paddingHorizontal: 12, paddingVertical: 8 },
+  row: { alignItems: "center", flexDirection: "row", gap: 10, minHeight: 48 },
+  waiting: { opacity: 0.55 },
+  dot: { borderRadius: 4, height: 8, width: 8 },
+  copy: { flex: 1, gap: 1 },
+  label: { ...typography.headline, color: tokens.foreground },
+  status: { ...typography.caption, color: tokens.mutedForeground },
+  reason: { ...typography.caption, color: tokens.warning },
+  action: { alignItems: "center", borderRadius: 22, flexDirection: "row", gap: 5, height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 12 },
+  actionText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
+  primaryAction: { backgroundColor: tokens.primary },
+  primaryActionText: { color: tokens.primaryForeground },
+  secondaryAction: { backgroundColor: tokens.elevatedSurface },
   disabled: { opacity: 0.42 },
-  pressed: { opacity: 0.72 },
+  pressed: { opacity: 0.7 },
 });

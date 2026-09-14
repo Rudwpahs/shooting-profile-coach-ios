@@ -36,6 +36,15 @@
 | V2와 선수 스타일 데이터 비교 | 미구현 | source 권리·provenance·호환 metric 검증 이후 Project 3로 진행 |
 | 사용자 간 공유·peer range | 미구현 | 동의·최소화·privacy threshold 설계 이후 Project 4로 진행 |
 
+## 2026-09-15 Hoop Hub UI v1 (`work/hoophub-ui-v1-final`, 소유자 리뷰 대기)
+
+`main` @ `c9da820` 위에 PR #5의 승인된 방향(Graphite / Volt, skeleton identity)을 선별 이식하고 촬영 화면을 다시 만들었다.
+23개 semantic token과 시스템 서체만으로 칠하며(`tests/ui-tokens.test.ts`), 하나의 skeleton renderer가 타일·피드·히어로·플레이어를 그린다.
+홈은 모션 피드, 탐색은 익명 참조 skeleton 그리드, 촬영은 "서는 곳·카메라·촬영·확인" 네 단계(guidance는 `lib/shooting-profile/capture-guidance.ts`의 데이터, yaw 요구값 없음),
+분석은 한 줄 결론 + skeleton 강조 + 접힌 수치·증거, 프로필은 skeleton 히어로·숫자 둘·목표 한 줄·그리드.
+재구성 수학, 임계값, privacy 경계, Firestore rules, rollout gate, consent/provenance는 변경하지 않았다.
+시각 증거: `artifacts/ui-v1-final/`, 감사: `docs/uiux/2026-09-15-ui-v1-final-audit.md`, 시각 QA: `docs/uiux/2026-09-15-ui-v1-final-visual-qa.md`.
+
 ## 2026-08-31 저장소 동기화에서 고친 오류
 
 - 손상된 로컬 `node_modules`를 pnpm 9.12.0 frozen lockfile 설치로 복구해 `react-native-css-interop/jsx-runtime` 해석 오류를 제거했습니다. 의존성 선언 결함이 아니어서 중복 direct dependency는 추가하지 않았습니다.

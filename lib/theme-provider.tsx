@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { Appearance, View, useColorScheme as useSystemColorScheme } from "react-native";
+import { Appearance, View } from "react-native";
 import { colorScheme as nativewindColorScheme, vars } from "nativewind";
 
 import { SchemeColors, type ColorScheme } from "@/constants/theme";
@@ -12,8 +12,10 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemScheme = useSystemColorScheme() ?? "light";
-  const [colorScheme, setColorSchemeState] = useState<ColorScheme>(systemScheme);
+  // Hoop Hub ships Direction A (Graphite / Volt) as one visual world; the
+  // system appearance setting does not switch it. The theme lab can still
+  // preview the light counterpart through setColorScheme.
+  const [colorScheme, setColorSchemeState] = useState<ColorScheme>("dark");
 
   const applyScheme = useCallback((scheme: ColorScheme) => {
     nativewindColorScheme.set(scheme);
@@ -39,18 +41,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [applyScheme, colorScheme]);
 
   const themeVariables = useMemo(
-    () =>
-      vars({
-        "color-primary": SchemeColors[colorScheme].primary,
-        "color-background": SchemeColors[colorScheme].background,
-        "color-surface": SchemeColors[colorScheme].surface,
-        "color-foreground": SchemeColors[colorScheme].foreground,
-        "color-muted": SchemeColors[colorScheme].muted,
-        "color-border": SchemeColors[colorScheme].border,
-        "color-success": SchemeColors[colorScheme].success,
-        "color-warning": SchemeColors[colorScheme].warning,
-        "color-error": SchemeColors[colorScheme].error,
-      }),
+    () => vars(Object.fromEntries(
+      Object.entries(SchemeColors[colorScheme]).map(([token, value]) => [`color-${token}`, value]),
+    )),
     [colorScheme],
   );
 

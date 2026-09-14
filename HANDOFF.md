@@ -1,6 +1,14 @@
 # FormPath repository handoff
 
-Last updated: 2026-09-02 UTC
+Last updated: 2026-09-15 UTC
+
+## Hoop Hub UI v1 handoff - 2026-09-15
+
+- Branch `work/hoophub-ui-v1-final` from `main` `c9da820`; not merged, not pushed to `main`; PR #5 stays open as the design donor.
+- Plan `docs/superpowers/plans/2026-09-15-hoophub-ui-v1-final.md`, spec `docs/superpowers/specs/2026-09-15-hoophub-ui-v1-final-spec.md`, audit `docs/uiux/2026-09-15-ui-v1-final-audit.md`, visual QA `docs/uiux/2026-09-15-ui-v1-final-visual-qa.md`.
+- Representative V2 stays default-off; the UI reads `FORMPATH_FLAGS` through the rollout gate unchanged and shows honest disabled/empty states.
+- A development-only demo route (`/dev/ui-demo`, gated by a development bundle plus `EXPO_PUBLIC_HOOPHUB_UI_DEMO=1`) renders the real presentational components with synthetic fixtures for screenshots; `tests/ui-demo-isolation.test.ts` keeps it out of production paths.
+- Owner decisions still open: device review of the screenshots and the capture flow; whether `expo-blur` bars are wanted later (none added).
 
 ## P1 Two-View 3D/4D Handoff - 2026-09-02 08:20 UTC
 
