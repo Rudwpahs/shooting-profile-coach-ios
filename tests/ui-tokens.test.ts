@@ -80,8 +80,7 @@ describe("semantic colour tokens", () => {
     }
   });
 
-  // Re-enabled in Task 8 once every surviving screen paints with tokens.
-  it.skip("leaves no colour literal in app/ or components/ (every screen paints with tokens)", () => {
+  it("leaves no colour literal in app/ or components/ (every screen paints with tokens)", () => {
     const offenders: string[] = [];
     for (const root of ["app", "components"]) {
       for (const file of sourceFiles(join(process.cwd(), root))) {

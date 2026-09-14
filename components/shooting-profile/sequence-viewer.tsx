@@ -21,6 +21,7 @@ import type {
   ShootingHandV2,
 } from "@/lib/shooting-profile/types";
 import { tokens } from "@/constants/tokens";
+import { JOINT_LABELS_KO } from "@/lib/skeleton/analysis-evidence";
 
 type Point3 = { x: number; y: number; z: number };
 
@@ -60,6 +61,8 @@ type SequenceViewerProps = {
   /** Accepted for callers that pass the record whole; the percentage is shown by the analysis route's detail layer, not here. */
   confidence?: number;
   shootingHand?: ShootingHandV2;
+  /** One joint to ring in the accent: the joint behind layer 1's finding. */
+  highlightJoint?: PersistedJointNameV2;
 };
 
 type ViewPreset = {
@@ -293,6 +296,7 @@ function phaseLabel(id: string): string {
 export function SequenceViewer({
   profile,
   shootingHand = "right",
+  highlightJoint,
 }: SequenceViewerProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [view, setView] = useState<RepresentativeViewId>("oblique");
@@ -438,7 +442,7 @@ export function SequenceViewer({
     <View style={styles.player}>
       <View
         accessible
-        accessibilityLabel={`${selectedView.label}, ${frameIndex}% 위상 대표 골격 이미지, 관측 관절 12개와 표시용 파생 관절 4개`}
+        accessibilityLabel={`${selectedView.label}, ${frameIndex}% 위상 대표 골격 이미지, 관측 관절 12개와 표시용 파생 관절 4개${highlightJoint ? `, ${JOINT_LABELS_KO[highlightJoint]} 강조` : ""}`}
         accessibilityRole="image"
         style={styles.stage}
       >
@@ -475,6 +479,18 @@ export function SequenceViewer({
               />
             );
           })}
+          {highlightJoint ? (
+            <Circle
+              cx={canvasPoints[highlightJoint].x}
+              cy={canvasPoints[highlightJoint].y}
+              r={13}
+              fill="none"
+              stroke={tokens.primary}
+              strokeWidth={2}
+              strokeDasharray="3 3"
+              opacity={0.95}
+            />
+          ) : null}
         </Svg>
       </View>
 
