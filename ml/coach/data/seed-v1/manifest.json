@@ -1,0 +1,163 @@
+{
+  "action_distribution": {
+    "free_throw": 140,
+    "jump_shot": 140,
+    "set_shot": 140,
+    "unknown": 140
+  },
+  "artifacts_sha256": {
+    "corpus-audit.json": "712d9ba6a9e93d494ef48cfa4ff32205f979f0f88ac548b75514c41f22cf358e",
+    "corpus-audit.md": "251463d39ff74ecff4dfe483cec435b56390ab1183a8feced3b3676b04aa72a8",
+    "dev.jsonl": "3853826acf252d5f666c7d1d5265958e15ff1deabd3d62e7b0aaa94ef1108b14",
+    "held-out.jsonl": "c82850607c84c8e7c4faad2ec98bb1f10089c99434b5a2ee604bae9e42437b13",
+    "metadata.jsonl": "2bee5708d9327ad84d1b511b694d5f551a839ad83df6ace1c0e9bd94f7a54854",
+    "train.jsonl": "70a82f2bc0f06d7033b104cff8c9826cc72c71786faa51d156ea852d75b18595"
+  },
+  "confidence_distribution": {
+    "low": 280,
+    "medium": 168,
+    "very_low": 112
+  },
+  "corpus_integrity": {
+    "db_sha256": "c1e17824b8359e4655ebc664f7df325d3371e4e0e703bcd9bcaf4a63c6f6b039",
+    "fallback_codes": {
+      "domains": [
+        "UNCLASSIFIED"
+      ],
+      "metrics": [
+        "UNMAPPED_METRIC"
+      ],
+      "policies": [
+        "GENERAL_GUIDANCE"
+      ]
+    },
+    "jsonl_sha256": "9fd0b467919e15321e4e2ff13343a46aab270e7980a36d7a0aeec49927b9592f",
+    "range": "RU-0061..RU-1000",
+    "sources": 6,
+    "status": "OK",
+    "units": 940,
+    "vocabulary_version": "2.0"
+  },
+  "counts": {
+    "dev": 80,
+    "held-out": 80,
+    "train": 400
+  },
+  "dataset_version": "seed-v1",
+  "direct_metric_evidence_cases": 384,
+  "evidence_tier_distribution": {
+    "A": 427,
+    "B": 1312,
+    "C": 22,
+    "H": 87
+  },
+  "generator_config": {
+    "evidence_limit": 4,
+    "family_split_counts": [
+      5,
+      1,
+      1
+    ],
+    "gold": "conservative_repeatability_templates",
+    "locale": "en",
+    "partition": "source-and-canonical-claim-components-sha256-70-15-15",
+    "profiles_per_metric": 7,
+    "variants_per_profile": 10
+  },
+  "generator_source_sha256": "5d86374999eebb63666e2625ba3f3a63c07a2e31f40b22cb7bdb4e52535bf964",
+  "generator_version": "b2c-v1",
+  "leakage": {
+    "interpretation": "Evidence-disjoint, NOT unseen-template or clinical generalization.",
+    "metadata_mismatches": [],
+    "pairs": {
+      "dev/held-out": {
+        "canonical_claims": [],
+        "exact_pairs": [],
+        "families": [],
+        "source_ids": [],
+        "unit_ids": []
+      },
+      "train/dev": {
+        "canonical_claims": [],
+        "exact_pairs": [],
+        "families": [],
+        "source_ids": [],
+        "unit_ids": []
+      },
+      "train/held-out": {
+        "canonical_claims": [],
+        "exact_pairs": [],
+        "families": [],
+        "source_ids": [],
+        "unit_ids": []
+      }
+    },
+    "passed": true,
+    "shared_behavior_templates": {
+      "dev/held-out": [
+        "capture_failed",
+        "conflict_reported",
+        "context_mismatch",
+        "hidden_biomechanics",
+        "joint_unavailable",
+        "measurement_low",
+        "measurement_medium",
+        "no_evidence",
+        "sparse",
+        "supported"
+      ],
+      "train/dev": [
+        "capture_failed",
+        "conflict_reported",
+        "context_mismatch",
+        "hidden_biomechanics",
+        "joint_unavailable",
+        "measurement_low",
+        "measurement_medium",
+        "no_evidence",
+        "sparse",
+        "supported"
+      ],
+      "train/held-out": [
+        "capture_failed",
+        "conflict_reported",
+        "context_mismatch",
+        "hidden_biomechanics",
+        "joint_unavailable",
+        "measurement_low",
+        "measurement_medium",
+        "no_evidence",
+        "sparse",
+        "supported"
+      ]
+    }
+  },
+  "lineage_base": "85c7ada7107e12f1a2c7ce6a5c2e381e1ba38297",
+  "metric_distribution": {
+    "capture_quality": 70,
+    "deepest_dip_knee_angle_deg": 70,
+    "follow_through_elbow_angle_deg": 70,
+    "follow_through_wrist_over_head_sb": 70,
+    "release_elbow_angle_deg": 70,
+    "release_elbow_lateral_offset_sb": 70,
+    "release_shoulder_line_yaw_deg": 70,
+    "release_wrist_height_sb": 70
+  },
+  "observed_metric_distribution": {
+    "capture_quality": 119,
+    "deepest_dip_knee_angle_deg": 63,
+    "follow_through_elbow_angle_deg": 63,
+    "follow_through_wrist_over_head_sb": 63,
+    "release_elbow_angle_deg": 63,
+    "release_elbow_lateral_offset_sb": 63,
+    "release_shoulder_line_yaw_deg": 63,
+    "release_wrist_height_sb": 63
+  },
+  "provenance_distribution": {
+    "ROW_ONLY": 1848
+  },
+  "scenario_count": 560,
+  "schema_valid_count": 560,
+  "selected_unique_units": 50,
+  "timestamp_policy": "Omitted: deterministic build, commit records creation time."
+}

@@ -1,0 +1,738 @@
+{
+  "all_invariants_passed": false,
+  "calibration": {
+    "comparison_count": 40,
+    "probe_failures": [],
+    "scope": "Ordinal monotonicity, not probability calibration.",
+    "skipped": [],
+    "source_loss_pairs": 0,
+    "violations": []
+  },
+  "case_count": 80,
+  "cases": [
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "006ccdac9342bf59b952545d",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "057be667eada5671f7234ac6",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "08ea789f47abd62c6205659d",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "0919d78f718ea1a68abd3e7d",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "contradiction_overconfidence",
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "0baf0dc7580aee979896f243",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "0c1768fcc0fa5852aca077d6",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "0c18174cebaa9e8ae79f8528",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "0c39dac8ee317e2d948e352c",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "19b6ab10a69d809f79b69fdf",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "missing_evidence_overconfidence"
+      ],
+      "reproducible": true,
+      "scenario_id": "1bccaa34fc0a632ec8360c04",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "contradiction_overconfidence",
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "1d52e9130fb3058fc5eb1611",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "1ed0d87360e28e31a8790b14",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "contradiction_overconfidence",
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "1eddf15e2f519579bef2dd51",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "2126f39cdc35af84b8dfd335",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "failed_capture_prescription"
+      ],
+      "reproducible": true,
+      "scenario_id": "22dbaaeaafbaebddd51d3661",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "failed_capture_prescription"
+      ],
+      "reproducible": true,
+      "scenario_id": "240d23ad77e7ab3b79abcb5a",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "245c74a47789f2c05c3236b2",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "missing_evidence_overconfidence"
+      ],
+      "reproducible": true,
+      "scenario_id": "255b65090099172b7de48cf2",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "2c40615d39e3b823576c19aa",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "2cf6eb79e20018a0b1d442f5",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "380ab463c7730c66e13e053f",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "3dce81c4374b57a20c71300b",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "40a2bdf455abd280f7e3d3dd",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "missing_evidence_overconfidence"
+      ],
+      "reproducible": true,
+      "scenario_id": "47f11ffbf8588b49cb751fe4",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "contradiction_overconfidence",
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "4ade09fe1c913e4b07b1aa39",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "4eed08a33a84d7f7c726e32f",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "4f3713a80b88d60163432dfb",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "51f247c7c231b992df827231",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "failed_capture_prescription"
+      ],
+      "reproducible": true,
+      "scenario_id": "58a2954ff13da2754e905ba9",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "5931ddbdaba3e51de70a8d42",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "failed_capture_prescription"
+      ],
+      "reproducible": true,
+      "scenario_id": "6a43df85a7257f6438e31dda",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "6a6921d5195a4988c14f5724",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "failed_capture_prescription"
+      ],
+      "reproducible": true,
+      "scenario_id": "6f1121b64321381fa69dd166",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "6f6b04281a8ea95e46d24c46",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "7ff6278906d078c304fd3faf",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "82459384905bf4053dfa2867",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "8633c49d11dd4060ab8eeaab",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "failed_capture_prescription"
+      ],
+      "reproducible": true,
+      "scenario_id": "875ed57cc921f11da272ea21",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "8a1dd6b7a1ef53f491154e1b",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "8a6fb58aaa5a63cebd9bb393",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "91c65a4cb5b84d1442045778",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "missing_evidence_overconfidence"
+      ],
+      "reproducible": true,
+      "scenario_id": "971048d0e8e6cf9f7d596588",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "98124cbfa5052e543c848c39",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "missing_evidence_overconfidence"
+      ],
+      "reproducible": true,
+      "scenario_id": "990b1308e585cc4be7b416af",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "99441123037ca0fcf7fb0b18",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "9c13a19304f871b4d37088ac",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "a071081d1a81f762b647bf1f",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "a1236ec4c0767749cdade793",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "a7a488ac0f1a24a270c2f440",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "contradiction_overconfidence",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "ac22567c70fb1b06d2130ae8",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "ad5f2f13a25548f776d211b7",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "ad8115a495496c670a7c1402",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "b0f5840033a69ec3420595c5",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "b30cf07956c92ed8bc5d7bd6",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "b3642450c27ab9c9c2efcf57",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "b5bfc99e47480ea0a35cb5a0",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "contradiction_overconfidence",
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "c2382abca9def47d1a6a3e3d",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "c599935c553340a43bf22269",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "c62da220ffcb75ccd789c26d",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "c63e062cb486480751be40e5",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "cac7a991397559739f21a90a",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "failed_capture_prescription"
+      ],
+      "reproducible": true,
+      "scenario_id": "ccb5dbd84d0bbcccbd673003",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "cfac17ee79e313460f43d08e",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "d15f51a38dbf9933ddda5f1e",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "contradiction_overconfidence",
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "d711077d5e0dbf1e4c909a40",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "missing_evidence_overconfidence"
+      ],
+      "reproducible": true,
+      "scenario_id": "d72ca5dfc19f49848aa51cdb",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "dce3f3a2ea8bc7a93a664927",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "dcfcede9e45321ec1230bcf8",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "e2b8040fae50e2e0481bd4b7",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "e382bedd88c55b7275c532c9",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "e5b7ed850af15f3b19d65489",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "contradiction_overconfidence",
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "e7cddff6d8f3f5847481e7bc",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "missing_evidence_overconfidence"
+      ],
+      "reproducible": true,
+      "scenario_id": "eaba74b8bafa219c82b57c36",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "safety_not_preserved"
+      ],
+      "reproducible": true,
+      "scenario_id": "edbaa10606451f4a46a6a771",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "f5b3c83c42853ad99458b25b",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "f82e96330149ad7ae959fcbe",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete",
+        "missing_evidence_overconfidence"
+      ],
+      "reproducible": true,
+      "scenario_id": "f840136cce725890dbd61358",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "f891cd1dc4a0cd832c735fb7",
+      "schema_valid": true
+    },
+    {
+      "failures": [],
+      "reproducible": true,
+      "scenario_id": "f9deb94e961b9e7a5cbc4c3a",
+      "schema_valid": true
+    },
+    {
+      "failures": [
+        "drill_retest_incomplete"
+      ],
+      "reproducible": true,
+      "scenario_id": "fd4ab56b838774560f7eb709",
+      "schema_valid": true
+    }
+  ],
+  "dataset_manifest_sha256": "f025fa9d75adf5b9b796baa2d50e3f14e7a58f783ccaef1d6553391597c8b746",
+  "evaluator_version": "b2c-v1",
+  "metrics": {
+    "contract_bounded_output_rate": {
+      "denominator": 80,
+      "numerator": 80,
+      "value": 1.0
+    },
+    "contradiction_overconfidence_rate": {
+      "denominator": 80,
+      "numerator": 8,
+      "value": 0.1
+    },
+    "drill_retest_completeness_rate": {
+      "denominator": 80,
+      "numerator": 24,
+      "value": 0.3
+    },
+    "evidence_grounding_rate": {
+      "denominator": 80,
+      "numerator": 80,
+      "value": 1.0
+    },
+    "evidence_utilization_rate": {
+      "denominator": 72,
+      "numerator": 0,
+      "value": 0.0
+    },
+    "failed_capture_prescription_rate": {
+      "denominator": 80,
+      "numerator": 7,
+      "value": 0.0875
+    },
+    "high_confidence_with_low_measurement_rate": {
+      "denominator": 80,
+      "numerator": 0,
+      "value": 0.0
+    },
+    "missing_evidence_overconfidence_rate": {
+      "denominator": 80,
+      "numerator": 8,
+      "value": 0.1
+    },
+    "reproducibility_rate": {
+      "denominator": 80,
+      "numerator": 80,
+      "value": 1.0
+    },
+    "required_safety_preservation_rate": {
+      "denominator": 80,
+      "numerator": 64,
+      "value": 0.8
+    },
+    "row_only_overconfidence_rate": {
+      "denominator": 80,
+      "numerator": 0,
+      "value": 0.0
+    },
+    "schema_validity_rate": {
+      "denominator": 80,
+      "numerator": 80,
+      "value": 1.0
+    },
+    "unsupported_evidence_reference_rate": {
+      "denominator": 80,
+      "numerator": 0,
+      "value": 0.0
+    },
+    "unsupported_inference_rate": {
+      "denominator": 80,
+      "numerator": 0,
+      "value": 0.0
+    },
+    "unsupported_source_claim_rate": {
+      "denominator": 80,
+      "numerator": 0,
+      "value": 0.0
+    }
+  },
+  "provider": {
+    "id": "deterministic_v1",
+    "revision": "service_baseline_v1"
+  }
+}

@@ -8,7 +8,13 @@ import torch
 from pydantic import ValidationError
 from torch.utils.data import Dataset
 
-from .schemas import CoachRequest, CoachResponse
+from .schemas import (
+    CoachRequest,
+    CoachRequestV1,
+    CoachResponse,
+    CoachResponseV1,
+    validate_response_for_request,
+)
 
 SYSTEM_PROMPT = """You are FormPath Coach, an evidence-aware basketball development model.
 
@@ -29,7 +35,9 @@ class ScenarioDataset(Dataset):
     """JSONL dataset of {"request": {...}, "response": {...}} examples.
 
     Every non-empty line must be a JSON object whose ``request`` validates as
-    :class:`CoachRequest` and whose ``response`` validates as :class:`CoachResponse`.
+    the legacy contracts or the explicitly versioned frozen V1 contracts.
+    Mixed/unknown versions and ungrounded V1 references are rejected. Metadata is
+    retained in rows but the collator consumes request/response only.
     Rows are kept as the raw dictionaries so the collator serialises exactly what
     was written. An empty file is an error: there is nothing to train on.
     """
@@ -53,8 +61,21 @@ class ScenarioDataset(Dataset):
                 if "request" not in row or "response" not in row:
                     raise ValueError(f"{where}: expected request and response")
                 try:
-                    CoachRequest.model_validate(row["request"])
-                    CoachResponse.model_validate(row["response"])
+                    req, resp = row["request"], row["response"]
+                    if not isinstance(req, dict) or not isinstance(resp, dict):
+                        raise ValueError(f"{where}: request/response must be objects")  # noqa: TRY004
+                    if 'schema_version' in req or 'schema_version' in resp:
+                        if (type(req.get('schema_version')) is not int
+                                or type(resp.get('schema_version')) is not int
+                                or req['schema_version'] != 1 or resp['schema_version'] != 1):
+                            raise ValueError(f"{where}: mixed or unsupported contract version")
+                        request = CoachRequestV1.model_validate(req)
+                        response = CoachResponseV1.model_validate(resp)
+                        if validate_response_for_request(request, response):
+                            raise ValueError(f"{where}: ungrounded V1 response")
+                    else:
+                        CoachRequest.model_validate(req)
+                        CoachResponse.model_validate(resp)
                 except ValidationError as exc:
                     raise ValueError(f"{where}: {exc}") from exc
                 self.rows.append(row)
