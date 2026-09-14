@@ -1,7 +1,10 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   AppState,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -17,6 +20,7 @@ import type {
   RepresentativePoseFrameV2,
   ShootingHandV2,
 } from "@/lib/shooting-profile/types";
+import { tokens } from "@/constants/tokens";
 
 type Point3 = { x: number; y: number; z: number };
 
@@ -53,6 +57,7 @@ export type RepresentativeFocusSurface = "light" | "selected-navy" | "play";
 
 type SequenceViewerProps = {
   profile: RepresentativePose4DV2;
+  /** Accepted for callers that pass the record whole; the percentage is shown by the analysis route's detail layer, not here. */
   confidence?: number;
   shootingHand?: ShootingHandV2;
 };
@@ -77,7 +82,7 @@ const DISPLAY_JOINTS: readonly RepresentativeDisplayJointName[] = [
   ...PERSISTED_JOINTS,
   "head", "neck", "spine", "pelvis",
 ];
-const DISPLAY_BONES: readonly (readonly [RepresentativeDisplayJointName, RepresentativeDisplayJointName])[] = [
+export const DISPLAY_BONES: readonly (readonly [RepresentativeDisplayJointName, RepresentativeDisplayJointName])[] = [
   ["head", "neck"], ["neck", "spine"], ["spine", "pelvis"],
   ["neck", "leftShoulder"], ["leftShoulder", "leftElbow"], ["leftElbow", "leftWrist"],
   ["neck", "rightShoulder"], ["rightShoulder", "rightElbow"], ["rightElbow", "rightWrist"],
@@ -140,14 +145,14 @@ export function getRepresentativeFocusStyle(
   surface: RepresentativeFocusSurface,
 ): ViewStyle {
   if (!focused) return {};
-  let outlineColor = "#102235";
-  let shadowColor = "#F97316";
+  let outlineColor = tokens.focusRing;
+  let shadowColor = tokens.primary;
   if (surface === "play") {
-    outlineColor = "#FFFFFF";
-    shadowColor = "#102235";
+    outlineColor = tokens.focusRing;
+    shadowColor = tokens.background;
   } else if (surface === "selected-navy") {
-    outlineColor = "#F97316";
-    shadowColor = "#FFFFFF";
+    outlineColor = tokens.primary;
+    shadowColor = tokens.foreground;
   }
   return {
     elevation: 8,
@@ -287,17 +292,18 @@ function phaseLabel(id: string): string {
 
 export function SequenceViewer({
   profile,
-  confidence,
   shootingHand = "right",
 }: SequenceViewerProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [view, setView] = useState<RepresentativeViewId>("oblique");
   const [lifecycle, setLifecycle] = useState(createRepresentativePlaybackLifecycle);
-  const [announcement, setAnnouncement] = useState("대표 동작 뷰어 준비됨");
   const [sliderWidth, setSliderWidth] = useState(1);
   const [focusedControl, setFocusedControl] = useState<string | null>(null);
   const animationFrame = useRef<number | null>(null);
   const lifecycleRef = useRef(lifecycle);
+  const announce = useCallback((message: string) => {
+    AccessibilityInfo.announceForAccessibility(message);
+  }, []);
   const applyLifecycleEvent = useCallback((event: RepresentativePlaybackLifecycleEvent) => {
     const next = transitionRepresentativePlaybackLifecycle(lifecycleRef.current, event);
     lifecycleRef.current = next;
@@ -335,13 +341,6 @@ export function SequenceViewer({
   }])) as Record<RepresentativeDisplayJointName, ProjectedJoint>, [bounds, projected]);
   const presets = getRepresentativeViewPresets(shootingHand);
   const selectedView = presets.find((preset) => preset.id === view) ?? presets[1];
-  const modeCopy = validatedProfile.mode === "basic_1_plus_1"
-    ? "Basic · 대표 스냅샷"
-    : "High accuracy · 반복 일치";
-  const qualityCopy = validatedProfile.quality.passed ? "품질 통과" : "재촬영 필요";
-  const confidenceCopy = confidence !== undefined && Number.isFinite(confidence)
-    ? ` · 신뢰도 ${Math.round(Math.max(0, Math.min(1, confidence)) * 100)}%`
-    : "";
 
   useEffect(() => {
     const reconcileAppState = (nextState: AppStateStatus) => {
@@ -349,7 +348,7 @@ export function SequenceViewer({
     };
     const subscription = AppState.addEventListener("change", reconcileAppState);
     reconcileAppState(AppState.currentState);
-    return () => subscription.remove();
+    return () => subscription?.remove?.();
   }, [applyLifecycleEvent]);
 
   useEffect(() => {
@@ -363,7 +362,7 @@ export function SequenceViewer({
     const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", updateReducedMotion);
     return () => {
       mounted = false;
-      subscription.remove();
+      subscription?.remove?.();
     };
   }, [applyLifecycleEvent]);
 
@@ -407,60 +406,47 @@ export function SequenceViewer({
     setFrameIndex(clamped);
     applyLifecycleEvent({ type: "pause" });
     const message = label ?? `${clamped}% 위상`;
-    setAnnouncement(`${message}(으)로 이동`);
-  }, [applyLifecycleEvent]);
+    announce(`${message}(으)로 이동`);
+  }, [announce, applyLifecycleEvent]);
 
   const togglePlayback = useCallback(() => {
     if (isPlaying) {
       applyLifecycleEvent({ type: "pause" });
-      setAnnouncement(`${frameIndex}% 위상에서 일시정지`);
+      announce(`${frameIndex}% 위상에서 일시정지`);
       return;
     }
     applyLifecycleEvent({ type: "explicit-play" });
-    setAnnouncement("대표 동작 재생");
-  }, [applyLifecycleEvent, frameIndex, isPlaying]);
+    announce("대표 동작 재생");
+  }, [announce, applyLifecycleEvent, frameIndex, isPlaying]);
 
   const seekFromTrack = useCallback((locationX: number) => {
     seekToIndex(Math.round(Math.max(0, Math.min(1, locationX / Math.max(1, sliderWidth))) * LAST_FRAME_INDEX));
   }, [seekToIndex, sliderWidth]);
 
+  const anchorMarkers = validatedProfile.phaseAnchors.map((anchor) => ({
+    id: anchor.id,
+    label: phaseLabel(anchor.id),
+    index: clampFrameIndex(anchor.phase * LAST_FRAME_INDEX),
+  }));
+  const progressPercent = Math.round((frameIndex / LAST_FRAME_INDEX) * 100);
+  const snapToAnchor = (index: number, label: string) => {
+    if (Platform.OS !== "web") void Haptics.selectionAsync();
+    seekToIndex(index, label);
+  };
+
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>REPRESENTATIVE SEQUENCE</Text>
-          <Text style={styles.title}>대표 슛폼 101</Text>
-          <Text style={styles.boundary}>위상 결합 4D 추정 · 실측 3D 아님</Text>
-        </View>
-        <View style={styles.percentBadge}>
-          <Text style={styles.percentValue}>{frameIndex}%</Text>
-          <Text style={styles.percentLabel}>현재 위상</Text>
-        </View>
-      </View>
-
-      <View style={styles.metaPanel}>
-        <Text style={styles.mode}>{modeCopy}</Text>
-        <Text style={styles.meta}>저장 위상 {validatedProfile.frames.length}개 · {selectedView.label}{confidenceCopy}</Text>
-        <Text style={validatedProfile.quality.passed ? styles.qualityPass : styles.qualityRecapture}>
-          {qualityCopy}{validatedProfile.quality.reasons.length ? ` · ${validatedProfile.quality.reasons.join(", ")}` : ""}
-        </Text>
-        <Text style={styles.mirrorConvention}>
-          {shootingHand === "left"
-            ? "왼손 슈터 · 표시 x축을 미러해 슈팅 측면을 정규화"
-            : "오른손 슈터 · 원본 x축 기준으로 슈팅 측면 표시"}
-        </Text>
-      </View>
-
+    <View style={styles.player}>
       <View
         accessible
         accessibilityLabel={`${selectedView.label}, ${frameIndex}% 위상 대표 골격 이미지, 관측 관절 12개와 표시용 파생 관절 4개`}
         accessibilityRole="image"
         style={styles.stage}
       >
-        <Svg width="100%" height={300} viewBox="0 0 330 300">
-          <Line x1="20" y1="280" x2="310" y2="280" stroke="#607487" strokeWidth="1" strokeDasharray="5 6" />
+        <Svg width="100%" height={STAGE_HEIGHT} viewBox={`0 0 330 ${STAGE_HEIGHT}`}>
+          <Line x1="20" y1="280" x2="310" y2="280" stroke={tokens.skeletonDerived} strokeWidth="1" strokeDasharray="5 6" />
           {DISPLAY_BONES.map(([from, to]) => {
             const derived = canvasPoints[from].source === "derived" || canvasPoints[to].source === "derived";
+            const arm = ARM_JOINTS[shootingHand].includes(from) && ARM_JOINTS[shootingHand].includes(to);
             return (
               <Line
                 key={`${from}-${to}`}
@@ -468,119 +454,29 @@ export function SequenceViewer({
                 y1={canvasPoints[from].y}
                 x2={canvasPoints[to].x}
                 y2={canvasPoints[to].y}
-                stroke={derived ? "#8FA2B1" : "#E7EDF1"}
-                strokeWidth={derived ? 4 : 6}
+                stroke={arm ? tokens.skeletonSecondary : derived ? tokens.skeletonDerived : tokens.skeletonPrimary}
+                strokeWidth={derived ? 4 : arm ? 7 : 6}
                 strokeLinecap="round"
               />
             );
           })}
           {DISPLAY_JOINTS.map((joint) => {
             const derived = canvasPoints[joint].source === "derived";
+            const arm = ARM_JOINTS[shootingHand].includes(joint);
             return (
               <Circle
                 key={joint}
                 cx={canvasPoints[joint].x}
                 cy={canvasPoints[joint].y}
                 r={derived ? 5 : 6}
-                fill={derived ? "#0B1623" : "#F5F1E8"}
-                stroke={derived ? "#B6C2CD" : "#C24122"}
+                fill={derived ? tokens.stage : arm ? tokens.skeletonSecondary : tokens.skeletonPrimary}
+                stroke={derived ? tokens.skeletonDerived : arm ? tokens.skeletonSecondary : tokens.skeletonPrimary}
                 strokeWidth={derived ? 2 : 1.5}
               />
             );
           })}
         </Svg>
-        <View style={styles.legend}>
-          <Text style={styles.legendObserved}>● 관측 12</Text>
-          <Text style={styles.legendDerived}>○ 표시용 파생 4</Text>
-        </View>
       </View>
-
-      <View style={styles.viewRow}>
-        {presets.map((preset) => {
-          const selected = preset.id === view;
-          const focusKey = `view:${preset.id}`;
-          return (
-            <Pressable
-              key={preset.id}
-              accessibilityLabel={`${preset.label} 시점 선택`}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              focusable
-              onBlur={() => setFocusedControl((current) => current === focusKey ? null : current)}
-              onFocus={() => setFocusedControl(focusKey)}
-              onPress={() => {
-                setView(preset.id);
-                setAnnouncement(`${preset.label} 시점`);
-              }}
-              style={({ pressed }) => [
-                styles.viewButton,
-                selected && styles.controlSelected,
-                getRepresentativeFocusStyle(focusedControl === focusKey, selected ? "selected-navy" : "light"),
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={[styles.viewText, selected && styles.controlSelectedText]}>{selected ? "✓ " : ""}{preset.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <View style={styles.markerRow}>
-        {validatedProfile.phaseAnchors.map((anchor) => {
-          const markerIndex = clampFrameIndex(anchor.phase * LAST_FRAME_INDEX);
-          const selected = markerIndex === frameIndex;
-          const label = phaseLabel(anchor.id);
-          const focusKey = `marker:${anchor.id}`;
-          return (
-            <Pressable
-              key={anchor.id}
-              accessibilityLabel={`${label} 위상 ${markerIndex}%로 이동`}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              focusable
-              onBlur={() => setFocusedControl((current) => current === focusKey ? null : current)}
-              onFocus={() => setFocusedControl(focusKey)}
-              onPress={() => seekToIndex(markerIndex, label)}
-              style={({ pressed }) => [
-                styles.marker,
-                selected && styles.markerSelected,
-                getRepresentativeFocusStyle(focusedControl === focusKey, "light"),
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={[styles.markerSymbol, selected && styles.markerSelectedText]}>{selected ? "◆" : "◇"}</Text>
-              <Text numberOfLines={1} style={[styles.markerText, selected && styles.markerSelectedText]}>{label}</Text>
-              <Text style={styles.markerPercent}>{markerIndex}%</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <Pressable
-        accessibilityActions={[{ name: "increment", label: "위상 1퍼센트 증가" }, { name: "decrement", label: "위상 1퍼센트 감소" }]}
-        accessibilityLabel="대표 동작 위상 슬라이더"
-        accessibilityRole="adjustable"
-        accessibilityState={{ disabled: false }}
-        accessibilityValue={{ min: 0, max: 100, now: frameIndex, text: `${frameIndex}%` }}
-        focusable
-        onBlur={() => setFocusedControl((current) => current === "slider" ? null : current)}
-        onFocus={() => setFocusedControl("slider")}
-        onAccessibilityAction={(event) => {
-          if (event.nativeEvent.actionName === "increment") seekToIndex(frameIndex + 1);
-          if (event.nativeEvent.actionName === "decrement") seekToIndex(frameIndex - 1);
-        }}
-        onLayout={(event) => setSliderWidth(event.nativeEvent.layout.width)}
-        onPress={(event) => seekFromTrack(event.nativeEvent.locationX)}
-        style={({ pressed }) => [
-          styles.slider,
-          getRepresentativeFocusStyle(focusedControl === "slider", "light"),
-          pressed && styles.pressed,
-        ]}
-      >
-        <View style={styles.sliderRail} />
-        <View style={[styles.sliderFill, { width: `${frameIndex}%` }]} />
-        <View style={[styles.sliderThumb, { left: `${frameIndex}%` }]} />
-      </Pressable>
 
       <Pressable
         accessibilityLabel={isPlaying ? "대표 동작 일시정지" : "대표 동작 재생"}
@@ -591,65 +487,127 @@ export function SequenceViewer({
         onFocus={() => setFocusedControl("play")}
         onPress={togglePlayback}
         style={({ pressed }) => [
-          styles.playButton,
+          styles.stageTap,
           getRepresentativeFocusStyle(focusedControl === "play", "play"),
-          pressed && styles.pressed,
+          pressed && styles.stagePressed,
         ]}
       >
-        <Text style={styles.playSymbol}>{isPlaying ? "Ⅱ" : "▶"}</Text>
-        <Text style={styles.playText}>{isPlaying ? "일시정지" : "재생"}</Text>
+        {!isPlaying ? (
+          <View style={styles.pausedGlyph}>
+            <MaterialCommunityIcons name="play" size={30} color={tokens.stageForeground} />
+          </View>
+        ) : null}
       </Pressable>
 
-      <Text accessibilityLiveRegion="polite" style={styles.announcement}>{announcement}</Text>
+      <View style={styles.viewDots}>
+        {presets.map((preset) => {
+          const selected = preset.id === view;
+          const focusKey = `view:${preset.id}`;
+          return (
+            <Pressable
+              key={preset.id}
+              accessibilityLabel={`${preset.label} 시점 선택`}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              aria-selected={selected}
+              focusable
+              onBlur={() => setFocusedControl((current) => current === focusKey ? null : current)}
+              onFocus={() => setFocusedControl(focusKey)}
+              onPress={() => {
+                setView(preset.id);
+                announce(`${preset.label} 시점`);
+              }}
+              style={({ pressed }) => [
+                styles.viewDotTarget,
+                getRepresentativeFocusStyle(focusedControl === focusKey, "light"),
+                pressed && styles.pressed,
+              ]}
+            >
+              <View style={[styles.viewDot, selected && styles.viewDotSelected]} />
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.progressArea}>
+        <Pressable
+          accessibilityActions={[{ name: "increment", label: "위상 1퍼센트 증가" }, { name: "decrement", label: "위상 1퍼센트 감소" }]}
+          accessibilityLabel="대표 동작 위상 슬라이더"
+          accessibilityRole="adjustable"
+          accessibilityState={{ disabled: false }}
+          accessibilityValue={{ min: 0, max: 100, now: frameIndex, text: `${frameIndex}%` }}
+          focusable
+          onAccessibilityAction={(event) => {
+            if (event.nativeEvent.actionName === "increment") seekToIndex(frameIndex + 1);
+            if (event.nativeEvent.actionName === "decrement") seekToIndex(frameIndex - 1);
+          }}
+          onBlur={() => setFocusedControl((current) => current === "slider" ? null : current)}
+          onFocus={() => setFocusedControl("slider")}
+          onLayout={(event) => setSliderWidth(event.nativeEvent.layout.width)}
+          onPress={(event) => seekFromTrack(event.nativeEvent.locationX)}
+          onTouchMove={(event) => seekFromTrack(event.nativeEvent.locationX)}
+          style={[styles.track, getRepresentativeFocusStyle(focusedControl === "slider", "light")]}
+        >
+          <View style={styles.trackRail} />
+          <View style={[styles.trackFill, { width: `${progressPercent}%` }]} />
+        </Pressable>
+        {anchorMarkers.map((marker) => {
+          const selected = marker.index === frameIndex;
+          const focusKey = `marker:${marker.id}`;
+          return (
+            <Pressable
+              key={marker.id}
+              accessibilityLabel={`${marker.label} 위상 ${marker.index}%로 이동`}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              aria-selected={selected}
+              focusable
+              onBlur={() => setFocusedControl((current) => current === focusKey ? null : current)}
+              onFocus={() => setFocusedControl(focusKey)}
+              onPress={() => snapToAnchor(marker.index, marker.label)}
+              style={({ pressed }) => [
+                styles.anchorTarget,
+                { left: `${marker.index}%` },
+                getRepresentativeFocusStyle(focusedControl === focusKey, "light"),
+                pressed && styles.pressed,
+              ]}
+            >
+              <View style={[styles.anchorDot, selected && styles.anchorDotSelected]} />
+            </Pressable>
+          );
+        })}
+      </View>
+
       {lifecycle.reducedMotion === true ? (
-        <Text style={styles.motionNote}>동작 줄이기 설정으로 자동 재생이 꺼져 있습니다. 재생과 위상 이동은 직접 사용할 수 있습니다.</Text>
+        <Text style={styles.motionNote}>동작 줄이기 · 탭하면 재생, 점을 누르면 위상 이동</Text>
       ) : null}
-      <Text style={styles.sampleNote}>다섯 위상 표시는 탐색 마커이며, 재생은 저장된 101개 원본 위상 샘플을 순서대로 사용합니다.</Text>
     </View>
   );
 }
 
+const STAGE_HEIGHT = 300;
+const ARM_JOINTS: Record<ShootingHandV2, readonly RepresentativeDisplayJointName[]> = {
+  right: ["rightShoulder", "rightElbow", "rightWrist"],
+  left: ["leftShoulder", "leftElbow", "leftWrist"],
+};
+
 const styles = StyleSheet.create({
-  card: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 20, borderWidth: 1, gap: 12, overflow: "hidden", padding: 15 },
-  header: { alignItems: "center", flexDirection: "row", gap: 12 },
-  headerCopy: { flex: 1 },
-  eyebrow: { color: "#9A3412", fontFamily: "BarlowCondensed-Bold", fontSize: 11, letterSpacing: 1.2 },
-  title: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 2 },
-  boundary: { color: "#9A3412", fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 18, marginTop: 2 },
-  percentBadge: { alignItems: "center", backgroundColor: "#102235", borderRadius: 14, minWidth: 68, paddingHorizontal: 10, paddingVertical: 8 },
-  percentValue: { color: "#F5F1E8", fontFamily: "BarlowCondensed-Bold", fontSize: 22 },
-  percentLabel: { color: "#B6C2CD", fontFamily: "Barlow", fontSize: 9 },
-  metaPanel: { backgroundColor: "#EEF4F8", borderRadius: 13, padding: 11 },
-  mode: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
-  meta: { color: "#52677B", fontFamily: "Barlow-SemiBold", fontSize: 12, marginTop: 3 },
-  qualityPass: { color: "#166534", fontFamily: "Barlow-SemiBold", fontSize: 12, marginTop: 5 },
-  qualityRecapture: { color: "#9A3412", fontFamily: "Barlow-SemiBold", fontSize: 12, marginTop: 5 },
-  mirrorConvention: { color: "#52677B", fontFamily: "Barlow", fontSize: 11, lineHeight: 16, marginTop: 5 },
-  stage: { backgroundColor: "#0B1623", borderRadius: 15, minHeight: 300, overflow: "hidden" },
-  legend: { alignItems: "center", bottom: 9, flexDirection: "row", gap: 12, left: 12, position: "absolute" },
-  legendObserved: { color: "#F5F1E8", fontFamily: "Barlow-SemiBold", fontSize: 10 },
-  legendDerived: { color: "#B6C2CD", fontFamily: "Barlow-SemiBold", fontSize: 10 },
-  viewRow: { flexDirection: "row", gap: 7 },
-  viewButton: { alignItems: "center", backgroundColor: "#F5F1E8", borderColor: "#607487", borderRadius: 11, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 5 },
-  controlSelected: { backgroundColor: "#102235", borderColor: "#102235" },
-  viewText: { color: "#43596E", fontFamily: "BarlowCondensed-Bold", fontSize: 13 },
-  controlSelectedText: { color: "#FFFFFF" },
-  markerRow: { flexDirection: "row", gap: 4 },
-  marker: { alignItems: "center", borderColor: "#607487", borderRadius: 10, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 58, minWidth: 44, paddingHorizontal: 2, paddingVertical: 5 },
-  markerSelected: { backgroundColor: "#FFF0E8", borderColor: "#9A3412", borderWidth: 2 },
-  markerSymbol: { color: "#607487", fontSize: 13 },
-  markerText: { color: "#43596E", fontFamily: "BarlowCondensed-Bold", fontSize: 10, marginTop: 1 },
-  markerSelectedText: { color: "#9A3412" },
-  markerPercent: { color: "#607487", fontFamily: "Barlow", fontSize: 8, marginTop: 1 },
-  slider: { justifyContent: "center", minHeight: 44, minWidth: 44, paddingVertical: 12 },
-  sliderRail: { backgroundColor: "#607487", borderRadius: 99, height: 6, left: 0, position: "absolute", right: 0 },
-  sliderFill: { backgroundColor: "#9A3412", borderRadius: 99, height: 6, left: 0, position: "absolute" },
-  sliderThumb: { backgroundColor: "#FFFFFF", borderColor: "#9A3412", borderRadius: 99, borderWidth: 3, height: 22, marginLeft: -11, position: "absolute", width: 22 },
-  playButton: { alignItems: "center", backgroundColor: "#9A3412", borderRadius: 13, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 48, minWidth: 44, paddingHorizontal: 16 },
-  playSymbol: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
-  playText: { color: "#FFFFFF", fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  announcement: { color: "#102235", fontFamily: "Barlow-SemiBold", fontSize: 11, textAlign: "center" },
-  motionNote: { backgroundColor: "#EEF4F8", borderRadius: 9, color: "#43596E", fontFamily: "Barlow", fontSize: 11, lineHeight: 17, padding: 9 },
-  sampleNote: { color: "#52677B", fontFamily: "Barlow", fontSize: 10, lineHeight: 15 },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
+  player: { backgroundColor: tokens.background, position: "relative" },
+  stage: { backgroundColor: tokens.stage, height: STAGE_HEIGHT, overflow: "hidden" },
+  stageTap: { alignItems: "center", height: STAGE_HEIGHT, justifyContent: "center", left: 0, minHeight: 44, minWidth: 44, position: "absolute", right: 0, top: 0 },
+  stagePressed: { opacity: 0.92 },
+  pausedGlyph: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderColor: tokens.border, borderRadius: 32, borderWidth: 1, height: 64, justifyContent: "center", opacity: 0.94, paddingLeft: 4, width: 64 },
+  viewDots: { flexDirection: "row", position: "absolute", right: 2, top: 2 },
+  viewDotTarget: { alignItems: "center", height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
+  viewDot: { backgroundColor: tokens.stageForeground, borderRadius: 4, height: 7, opacity: 0.35, width: 7 },
+  viewDotSelected: { backgroundColor: tokens.skeletonSecondary, opacity: 1 },
+  progressArea: { height: 44, justifyContent: "center", marginHorizontal: 14, position: "relative" },
+  track: { height: 44, justifyContent: "center", minHeight: 44, minWidth: 44 },
+  trackRail: { backgroundColor: tokens.border, borderRadius: 1, height: 2, left: 0, position: "absolute", right: 0 },
+  trackFill: { backgroundColor: tokens.primary, borderRadius: 1, height: 2, left: 0, position: "absolute" },
+  anchorTarget: { alignItems: "center", height: 44, justifyContent: "center", marginLeft: -22, minHeight: 44, minWidth: 44, position: "absolute", top: 0, width: 44 },
+  anchorDot: { backgroundColor: tokens.stageForeground, borderRadius: 3, height: 6, opacity: 0.55, width: 6 },
+  anchorDotSelected: { backgroundColor: tokens.primary, borderRadius: 5, height: 10, opacity: 1, width: 10 },
+  motionNote: { color: tokens.mutedForeground, fontSize: 12, paddingHorizontal: 14, paddingTop: 2 },
+  pressed: { opacity: 0.6 },
 });
