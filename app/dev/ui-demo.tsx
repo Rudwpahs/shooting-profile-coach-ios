@@ -25,11 +25,15 @@ const noop = () => undefined;
 
 function useDemoFixtures(): UiDemoFixtures | null {
   return useMemo(() => {
-    if (!UI_DEMO_ENABLED) return null;
-    // Required, not imported: Metro drops this branch from a production bundle.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const module = require("@/lib/dev/ui-demo-fixtures") as typeof import("@/lib/dev/ui-demo-fixtures");
-    return module.buildUiDemoFixtures();
+    let fixtures: UiDemoFixtures | null = null;
+    // Required, not imported, under a literal `__DEV__` test: Metro folds the branch away in a
+    // production bundle before it collects dependencies, so the fixtures are never bundled there.
+    if (__DEV__ && UI_DEMO_ENABLED) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const module = require("@/lib/dev/ui-demo-fixtures") as typeof import("@/lib/dev/ui-demo-fixtures");
+      fixtures = module.buildUiDemoFixtures();
+    }
+    return fixtures;
   }, []);
 }
 

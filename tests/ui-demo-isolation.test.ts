@@ -22,12 +22,15 @@ describe("development demo harness stays out of production", () => {
     expect(gate).toMatch(/UI_DEMO_ENABLED[^=]*=\s*__DEV__ && process\.env\.EXPO_PUBLIC_HOOPHUB_UI_DEMO === "1"/);
   });
 
-  it("loads fixtures only through a require inside the gate, so a production bundle drops them", () => {
-    expect(route).toContain("if (!UI_DEMO_ENABLED)");
+  it("loads fixtures only through a require inside a literal __DEV__ branch, so a production bundle drops them", () => {
+    // Metro folds a literal `__DEV__` test and removes the branch before collecting dependencies;
+    // an imported boolean alone is not foldable, so the require must sit under the literal.
+    expect(route).toContain("if (__DEV__ && UI_DEMO_ENABLED) {");
     expect(route).toContain('require("@/lib/dev/ui-demo-fixtures")');
     // A type-only import is erased at build time; only a value import would pull the fixtures in.
     expect(route).not.toMatch(/^import (?!type\b).*ui-demo-fixtures/m);
-    expect(route.indexOf("if (!UI_DEMO_ENABLED)")).toBeLessThan(route.indexOf('require("@/lib/dev/ui-demo-fixtures")'));
+    expect(route.indexOf("if (__DEV__ && UI_DEMO_ENABLED) {")).toBeLessThan(route.indexOf('require("@/lib/dev/ui-demo-fixtures")'));
+    expect(route).toContain("if (!UI_DEMO_ENABLED || !fixtures) return <Redirect");
   });
 
   it("builds fixtures from the synthetic session only: no network, no account, no real person", () => {
