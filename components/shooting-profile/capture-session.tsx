@@ -1,25 +1,19 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type ViewStyle,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from "react-native";
 
+import { CaptureGuide } from "@/components/capture/capture-guide";
 import { ScreenContainer } from "@/components/screen-container";
-import { TopBar } from "@/components/ui/top-bar";
 import { CaptureModePicker } from "@/components/shooting-profile/capture-mode-picker";
 import { CaptureSlotCard } from "@/components/shooting-profile/capture-slot-card";
 import { QualitySummary } from "@/components/shooting-profile/quality-summary";
-import {
-  type SaveRepresentativeProfile,
-  useShootingProfileCapture,
-} from "@/hooks/use-shooting-profile-capture";
+import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
+import { type SaveRepresentativeProfile, useShootingProfileCapture } from "@/hooks/use-shooting-profile-capture";
+import { captureGuidanceForSlot, captureProtocolPresentation } from "@/lib/shooting-profile/capture-guidance";
+import type { CaptureSessionState } from "@/lib/shooting-profile/capture-session-reducer";
+import type { CaptureProtocolV2, ShootingHandV2 } from "@/lib/shooting-profile/types";
 
 type CaptureSessionProps = {
   completionActionLabel: string;
@@ -28,23 +22,44 @@ type CaptureSessionProps = {
   saveProfile?: SaveRepresentativeProfile;
 };
 
-function StepHeader({ current }: { current: 1 | 2 | 3 | 4 }) {
-  return (
-    <View style={styles.stepHeader}>
-      <Text style={styles.stepCount}>{current} / 4</Text>
-      <Text style={styles.stepNames}>모드 · 설정 · 촬영 · 리뷰</Text>
-    </View>
-  );
-}
+/** Everything the presentation needs from the capture hook; the hook's return type satisfies it. */
+export type CaptureController = {
+  state: CaptureSessionState;
+  canSave: boolean;
+  selectMode: (mode: CaptureProtocolV2) => void;
+  returnToModeSelect: () => void;
+  setShootingHand: (hand: ShootingHandV2) => void;
+  startCollection: () => void;
+  acquireSlot: (slotId: string, source: "camera" | "library") => Promise<void> | void;
+  retakeSlot: (slotId: string) => void;
+  cancelSession: () => void;
+  retrySession: () => void;
+  save: () => Promise<void> | void;
+};
 
-function SetupInstruction({ icon, children }: { icon: "accessibility-new" | "straighten" | "photo-size-select-large" | "sports-basketball"; children: string }) {
-  return (
-    <View style={styles.instructionRow}>
-      <MaterialIcons name={icon} size={19} color={tokens.primary} />
-      <Text style={styles.instructionText}>{children}</Text>
-    </View>
-  );
-}
+type CaptureSessionViewProps = {
+  controller: CaptureController;
+  completionActionLabel: string;
+  onClose: () => void;
+  onComplete: (savedProfileId: string) => void;
+  /** Stage width for the review skeleton; measured by the container when omitted. */
+  width?: number;
+};
+
+const FALLBACK_WIDTH = 375;
+const MAX_WIDTH = 680;
+const STEP_TITLES: Readonly<Record<CaptureSessionState["status"], string>> = {
+  mode_select: "어떻게 만들까요?",
+  setup: "서는 곳과 카메라",
+  collecting: "촬영",
+  ready_to_aggregate: "결합 중",
+  aggregating: "결합 중",
+  result_review: "확인",
+  saving: "확인",
+  complete: "저장 완료",
+  cancelled: "멈춤",
+  error: "다시 확인",
+};
 
 function focusStyle(focused: boolean, dark = false): ViewStyle {
   if (!focused) return {};
@@ -61,65 +76,99 @@ function focusStyle(focused: boolean, dark = false): ViewStyle {
   };
 }
 
+/** Owns the capture hook; nothing else. */
 export function CaptureSession({ completionActionLabel, onClose, onComplete, saveProfile }: CaptureSessionProps) {
   const capture = useShootingProfileCapture({ saveProfile });
-  const { state } = capture;
+  return <CaptureSessionView completionActionLabel={completionActionLabel} controller={capture} onClose={onClose} onComplete={onComplete} />;
+}
+
+/**
+ * Capture in four moves: where to stand and where the camera goes (from
+ * guidance data), shoot, then accept or recapture. Every status of the
+ * unchanged state machine is rendered; recapture copy is the typed reason
+ * the hook already translated.
+ */
+export function CaptureSessionView({ controller, completionActionLabel, onClose, onComplete, width: forcedWidth }: CaptureSessionViewProps) {
+  const { state } = controller;
   const [focusedControl, setFocusedControl] = useState<string | null>(null);
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const width = Math.min(forcedWidth ?? (measuredWidth || FALLBACK_WIDTH), MAX_WIDTH);
   const saving = state.status === "saving";
-  const frontSlots = state.slots.filter((slot) => slot.view === "front");
-  const sideSlots = state.slots.filter((slot) => slot.view === "shooting_side");
-  const frontAccepted = frontSlots.filter((slot) => slot.status === "accepted").length;
-  const sideAccepted = sideSlots.filter((slot) => slot.status === "accepted").length;
+  const presentation = state.mode ? captureProtocolPresentation(state.mode, state.shootingHand) : null;
 
   const close = () => {
-    capture.cancelSession();
+    controller.cancelSession();
     onClose();
   };
 
+  const focus = (key: string) => ({
+    focusable: true,
+    onBlur: () => setFocusedControl((current) => current === key ? null : current),
+    onFocus: () => setFocusedControl(key),
+  });
+
   const renderSlots = () => (
-    <>
-      <View style={styles.slotSection}>
-        <View style={styles.slotSectionHeading}>
-          <Text style={styles.slotSectionTitle}>정면 클립</Text>
-          <Text style={styles.slotProgress}>정면 {frontAccepted}/{frontSlots.length}</Text>
-        </View>
-        <View style={styles.slotList}>
-          {frontSlots.map((slot) => (
-            <CaptureSlotCard
-              key={slot.id}
-              disabled={state.status === "saving"}
-              onCamera={() => void capture.acquireSlot(slot.id, "camera")}
-              onLibrary={() => void capture.acquireSlot(slot.id, "library")}
-              onRetake={() => capture.retakeSlot(slot.id)}
-              slot={slot}
-            />
-          ))}
-        </View>
-      </View>
-      <View style={styles.slotSection}>
-        <View style={styles.slotSectionHeading}>
-          <Text style={styles.slotSectionTitle}>슈팅 측면 클립</Text>
-          <Text style={styles.slotProgress}>측면 {sideAccepted}/{sideSlots.length}</Text>
-        </View>
-        <View style={styles.slotList}>
-          {sideSlots.map((slot) => (
-            <CaptureSlotCard
-              key={slot.id}
-              disabled={state.status === "saving"}
-              onCamera={() => void capture.acquireSlot(slot.id, "camera")}
-              onLibrary={() => void capture.acquireSlot(slot.id, "library")}
-              onRetake={() => capture.retakeSlot(slot.id)}
-              slot={slot}
-            />
-          ))}
-        </View>
-      </View>
-    </>
+    <View style={styles.slots}>
+      {(presentation?.views ?? []).map((guidance) => {
+        const slots = state.slots.filter((slot) => slot.view === guidance.view);
+        const accepted = slots.filter((slot) => slot.status === "accepted").length;
+        return (
+          <View key={guidance.view} style={styles.slotGroup}>
+            <View style={styles.slotHead}>
+              <Text style={styles.slotTitle}>{guidance.title}</Text>
+              <Text accessibilityLiveRegion="polite" style={styles.slotCount}>{accepted}/{slots.length}</Text>
+            </View>
+            {slots.map((slot) => (
+              <CaptureSlotCard
+                key={slot.id}
+                disabled={saving}
+                onCamera={() => void controller.acquireSlot(slot.id, "camera")}
+                onLibrary={() => void controller.acquireSlot(slot.id, "library")}
+                onRetake={() => controller.retakeSlot(slot.id)}
+                slot={slot}
+                title={captureGuidanceForSlot(slot, state.shootingHand).title}
+              />
+            ))}
+          </View>
+        );
+      })}
+    </View>
+  );
+
+  const primary = (key: string, label: string, onPress: () => void, disabled = false) => (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      {...focus(key)}
+      onPress={onPress}
+      style={({ pressed }) => [styles.primary, focusStyle(focusedControl === key, true), disabled && styles.disabled, pressed && !disabled && styles.pressed]}
+    >
+      <Text style={styles.primaryText}>{label}</Text>
+    </Pressable>
+  );
+
+  const secondary = (key: string, label: string, onPress: () => void) => (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: false }}
+      disabled={false}
+      {...focus(key)}
+      onPress={onPress}
+      style={({ pressed }) => [styles.secondary, focusStyle(focusedControl === key), pressed && styles.pressed]}
+    >
+      <Text style={styles.secondaryText}>{label}</Text>
+    </Pressable>
   );
 
   return (
-    <ScreenContainer containerClassName="bg-background" edges={["top", "bottom", "left", "right"]}>
-      <View style={styles.canvas} />
+    <ScreenContainer
+      containerClassName="bg-background"
+      edges={["top", "bottom", "left", "right"]}
+      onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}
+    >
       <TopBar
         right={(
           <Pressable
@@ -127,251 +176,105 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
             accessibilityRole="button"
             accessibilityState={{ disabled: saving, busy: saving }}
             disabled={saving}
-            focusable
-            onBlur={() => setFocusedControl((current) => current === "close" ? null : current)}
-            onFocus={() => setFocusedControl("close")}
+            {...focus("close")}
             onPress={close}
-            style={({ pressed }) => [styles.closeButton, focusStyle(focusedControl === "close"), saving && styles.disabled, pressed && !saving && styles.pressed]}
+            style={({ pressed }) => [styles.close, focusStyle(focusedControl === "close"), saving && styles.disabled, pressed && !saving && styles.pressed]}
           >
             <Text style={styles.closeText}>닫기</Text>
           </Pressable>
         )}
         title="슛폼 촬영"
       />
+      <ScrollView contentContainerStyle={[styles.page, { width }]} showsVerticalScrollIndicator={false}>
+        <Text accessibilityRole="header" style={styles.step}>{STEP_TITLES[state.status]}</Text>
 
-      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
-        {state.status === "mode_select" ? (
-          <View>
-            <StepHeader current={1} />
-            <CaptureModePicker onSelect={capture.selectMode} />
-          </View>
-        ) : null}
+        {state.status === "mode_select" ? <CaptureModePicker onSelect={controller.selectMode} /> : null}
 
-        {state.status === "setup" && state.mode ? (
-          <View>
-            <StepHeader current={2} />
-            <Text style={styles.pageTitle}>촬영 조건을 맞춰주세요</Text>
-            <Text style={styles.pageIntro}>
-              정면 클립을 모두 마친 뒤 카메라를 한 번 옮겨 슈팅 측면 클립을 촬영합니다.
-            </Text>
-
-            <View style={styles.modeSummary}>
-              <View style={styles.modeSummaryCopy}>
-                <Text style={styles.summaryLabel}>선택 모드</Text>
-                <Text style={styles.summaryValue}>
-                  {state.mode === "basic_1_plus_1" ? "Basic · 1 + 1" : "High accuracy · 3 + 3"}
-                </Text>
-                <Text style={styles.summaryEvidence}>
-                  {state.mode === "basic_1_plus_1"
-                    ? "대표 스냅샷 추정 · 반복성 측정 아님"
-                    : "3회 반복 일치도를 확인하는 고정밀 모드"}
-                </Text>
-              </View>
-              <Pressable
-                accessibilityLabel="촬영 모드 다시 선택"
-                accessibilityRole="button"
-                accessibilityState={{ disabled: false }}
-                disabled={false}
-                focusable
-                onBlur={() => setFocusedControl((current) => current === "mode" ? null : current)}
-                onFocus={() => setFocusedControl("mode")}
-                onPress={capture.returnToModeSelect}
-                style={({ pressed }) => [styles.textButton, focusStyle(focusedControl === "mode", true), pressed && styles.pressed]}
-              >
-                <Text style={styles.textButtonText}>모드 변경</Text>
-              </Pressable>
-            </View>
-
-            <Text style={styles.sectionLabel}>슈팅 손</Text>
+        {state.status === "setup" && presentation ? (
+          <View style={styles.stack}>
             <View style={styles.handRow}>
               {(["right", "left"] as const).map((hand) => {
                 const selected = state.shootingHand === hand;
+                const key = `hand-${hand}`;
                 return (
                   <Pressable
                     key={hand}
                     accessibilityLabel={`${hand === "right" ? "오른손" : "왼손"} 슈터 선택`}
                     accessibilityRole="button"
                     accessibilityState={{ disabled: false, selected }}
+                    aria-selected={selected}
                     disabled={false}
-                    focusable
-                    onBlur={() => setFocusedControl((current) => current === `hand-${hand}` ? null : current)}
-                    onFocus={() => setFocusedControl(`hand-${hand}`)}
-                    onPress={() => capture.setShootingHand(hand)}
-                    style={({ pressed }) => [
-                      styles.handButton,
-                      selected && styles.handButtonSelected,
-                      focusStyle(focusedControl === `hand-${hand}`, selected),
-                      pressed && styles.pressed,
-                    ]}
+                    {...focus(key)}
+                    onPress={() => controller.setShootingHand(hand)}
+                    style={({ pressed }) => [styles.hand, selected && styles.handSelected, focusStyle(focusedControl === key), pressed && styles.pressed]}
                   >
-                    <MaterialIcons name={selected ? "check-circle" : "radio-button-unchecked"} size={19} color={selected ? tokens.foreground : tokens.foreground} />
-                    <Text style={[styles.handText, selected && styles.handTextSelected]}>
-                      {hand === "right" ? "오른손" : "왼손"}
-                    </Text>
+                    <Text style={[styles.handText, selected && styles.handTextSelected]}>{hand === "right" ? "오른손" : "왼손"}</Text>
                   </Pressable>
                 );
               })}
             </View>
-
-            <View style={styles.instructions}>
-              <SetupInstruction icon="accessibility-new">머리부터 발끝까지 전신이 계속 보이게 하세요.</SetupInstruction>
-              <SetupInstruction icon="straighten">카메라를 고정하고 수평을 유지하세요.</SetupInstruction>
-              <SetupInstruction icon="photo-size-select-large">각 클립의 거리와 화면 구성을 비슷하게 맞추세요.</SetupInstruction>
-              <SetupInstruction icon="sports-basketball">평소의 자연스러운 슛폼을 준비부터 팔로우스루까지 반복하세요.</SetupInstruction>
-            </View>
-
-            <Pressable
-              accessibilityLabel="정면 클립부터 촬영 시작"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: false }}
-              disabled={false}
-              focusable
-              onBlur={() => setFocusedControl((current) => current === "start" ? null : current)}
-              onFocus={() => setFocusedControl("start")}
-              onPress={capture.startCollection}
-              style={({ pressed }) => [styles.startButton, focusStyle(focusedControl === "start", true), pressed && styles.primaryPressed]}
-            >
-              <Text style={styles.startText}>정면 클립부터 시작</Text>
-              <MaterialIcons name="arrow-forward" size={19} color={tokens.primaryForeground} />
-            </Pressable>
+            <CaptureGuide views={presentation.views} />
+            <Text numberOfLines={1} style={styles.modeLine}>{presentation.modeTitle} · {presentation.modeLine}</Text>
+            {primary("start", `${presentation.views[0]?.title ?? "정면"}부터 촬영`, controller.startCollection)}
+            {secondary("mode", "모드 변경", controller.returnToModeSelect)}
           </View>
         ) : null}
 
         {state.status === "collecting" ? (
-          <View>
-            <StepHeader current={3} />
-            <Text style={styles.pageTitle}>정면부터 순서대로 촬영하세요</Text>
-            <Text accessibilityLiveRegion="polite" style={styles.pageIntro}>
-              정면 {frontAccepted}/{frontSlots.length} · 측면 {sideAccepted}/{sideSlots.length}. 통과한 클립 다음 슬롯만 열립니다.
-            </Text>
+          <View style={styles.stack}>
             {renderSlots()}
-            <Pressable
-              accessibilityLabel="현재 대표 슛폼 촬영 세션 취소"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: false }}
-              disabled={false}
-              focusable
-              onBlur={() => setFocusedControl((current) => current === "cancel" ? null : current)}
-              onFocus={() => setFocusedControl("cancel")}
-              onPress={capture.cancelSession}
-              style={({ pressed }) => [styles.cancelButton, focusStyle(focusedControl === "cancel"), pressed && styles.pressed]}
-            >
-              <Text style={styles.cancelText}>촬영 세션 취소</Text>
-            </Pressable>
+            {secondary("cancel", "촬영 세션 취소", controller.cancelSession)}
           </View>
         ) : null}
 
         {state.status === "ready_to_aggregate" || state.status === "aggregating" ? (
-          <View style={styles.centerState}>
-            <StepHeader current={3} />
-            <ActivityIndicator color={tokens.destructive} size="large" />
-            <Text style={styles.centerTitle}>정규화된 슛 위상을 결합하는 중</Text>
-            <Text accessibilityLiveRegion="polite" style={styles.centerCopy}>
-              모든 필수 클립이 통과했습니다. 정면과 측면의 서로 다른 시간축을 각각 정규화하고 있습니다.
-            </Text>
+          <View style={styles.center}>
+            <ActivityIndicator color={tokens.primary} size="large" />
+            <Text accessibilityLiveRegion="polite" style={styles.centerLine}>정면과 측면을 위상으로 결합하는 중</Text>
           </View>
         ) : null}
 
-        {(state.status === "result_review" || state.status === "saving")
-          && state.mode && state.profile && state.confidence !== undefined ? (
-          <View>
-            <StepHeader current={4} />
+        {(state.status === "result_review" || state.status === "saving") && state.mode && state.profile && state.confidence !== undefined ? (
+          <View style={styles.stack}>
             <QualitySummary
-              canSave={capture.canSave}
+              canSave={controller.canSave}
               confidence={state.confidence}
               mode={state.mode}
-              onSave={() => void capture.save()}
+              onSave={() => void controller.save()}
               profile={state.profile}
-              saving={state.status === "saving"}
+              saving={saving}
+              shootingHand={state.shootingHand}
+              width={width}
             />
-            <Text style={styles.retakeHeading}>클립별 확인</Text>
-            <Text style={styles.retakeIntro}>결과가 평소 폼과 다르면 필요한 클립 하나만 다시 선택하세요.</Text>
+            <Text numberOfLines={1} style={styles.retakeLine}>평소 폼과 다르면 클립 하나만 다시 선택하세요</Text>
             {renderSlots()}
           </View>
         ) : null}
 
         {state.status === "complete" ? (
-          <View style={styles.centerState}>
-            <StepHeader current={4} />
+          <View style={styles.center}>
             <View style={styles.completeIcon}>
-              <MaterialIcons name="lock" size={28} color={tokens.primaryForeground} />
+              <MaterialCommunityIcons name="lock" size={28} color={tokens.primaryForeground} />
             </View>
-            <Text style={styles.centerTitle}>비공개 저장 완료</Text>
-            <Text accessibilityLiveRegion="polite" style={styles.centerCopy}>
-              원본 영상은 업로드하지 않았고, 파생된 대표 슛폼 데이터만 비공개로 저장했습니다.
-            </Text>
-            <Pressable
-              accessibilityLabel="대표 슛폼 촬영 완료 화면 닫기"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !state.savedProfileId }}
-              disabled={!state.savedProfileId}
-              focusable
-              onBlur={() => setFocusedControl((current) => current === "complete" ? null : current)}
-              onFocus={() => setFocusedControl("complete")}
-              onPress={() => state.savedProfileId && onComplete(state.savedProfileId)}
-              style={({ pressed }) => [styles.startButton, focusStyle(focusedControl === "complete", true), !state.savedProfileId && styles.disabled, pressed && !!state.savedProfileId && styles.primaryPressed]}
-            >
-              <Text style={styles.startText}>{completionActionLabel}</Text>
-            </Pressable>
+            <Text accessibilityLiveRegion="polite" style={styles.centerLine}>원본 영상은 업로드하지 않았고, 파생된 대표 슛폼 데이터만 비공개로 저장했습니다.</Text>
+            {primary("complete", completionActionLabel, () => state.savedProfileId && onComplete(state.savedProfileId), !state.savedProfileId)}
           </View>
         ) : null}
 
         {state.status === "cancelled" ? (
-          <View style={styles.centerState}>
-            <MaterialIcons name="pause-circle-outline" size={44} color={tokens.mutedForeground} />
-            <Text style={styles.centerTitle}>촬영 세션을 멈췄습니다</Text>
-            <Text style={styles.centerCopy}>기기 내 분석 요청을 취소했습니다. 통과한 파생 결과는 이 화면 안에서만 유지됩니다.</Text>
-            <Pressable
-              accessibilityLabel="멈춘 대표 슛폼 촬영 세션 다시 시작"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: false }}
-              disabled={false}
-              focusable
-              onBlur={() => setFocusedControl((current) => current === "resume" ? null : current)}
-              onFocus={() => setFocusedControl("resume")}
-              onPress={capture.retrySession}
-              style={({ pressed }) => [styles.startButton, focusStyle(focusedControl === "resume", true), pressed && styles.primaryPressed]}
-            >
-              <Text style={styles.startText}>세션으로 돌아가기</Text>
-            </Pressable>
-            <Pressable
-              accessibilityLabel="멈춘 대표 슛폼 촬영 세션 닫기"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: false }}
-              disabled={false}
-              focusable
-              onBlur={() => setFocusedControl((current) => current === "cancel-close" ? null : current)}
-              onFocus={() => setFocusedControl("cancel-close")}
-              onPress={onClose}
-              style={({ pressed }) => [styles.cancelButton, focusStyle(focusedControl === "cancel-close"), pressed && styles.pressed]}
-            >
-              <Text style={styles.cancelText}>화면 닫기</Text>
-            </Pressable>
+          <View style={styles.center}>
+            <MaterialCommunityIcons name="pause-circle-outline" size={44} color={tokens.mutedForeground} />
+            <Text style={styles.centerLine}>기기 내 분석 요청을 취소했습니다. 통과한 결과는 이 화면 안에서만 유지됩니다.</Text>
+            {primary("resume", "세션으로 돌아가기", controller.retrySession)}
+            {secondary("cancel-close", "화면 닫기", onClose)}
           </View>
         ) : null}
 
         {state.status === "error" ? (
-          <View style={styles.centerState}>
-            <MaterialIcons name="error-outline" size={44} color={tokens.destructive} />
-            <Text style={styles.centerTitle}>다시 확인해 주세요</Text>
-            <Text accessibilityLiveRegion="assertive" style={styles.globalError}>
-              {state.errorMessage ?? "세션을 계속하지 못했습니다."}
-            </Text>
-            <Pressable
-              accessibilityLabel="오류 이전 대표 슛폼 촬영 단계로 돌아가기"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: false }}
-              disabled={false}
-              focusable
-              onBlur={() => setFocusedControl((current) => current === "retry" ? null : current)}
-              onFocus={() => setFocusedControl("retry")}
-              onPress={capture.retrySession}
-              style={({ pressed }) => [styles.startButton, focusStyle(focusedControl === "retry", true), pressed && styles.primaryPressed]}
-            >
-              <Text style={styles.startText}>
-                {state.recoveryStatus === "result_review" ? "리뷰로 돌아가기" : "클립 확인하기"}
-              </Text>
-            </Pressable>
+          <View style={styles.center}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={44} color={tokens.warning} />
+            <Text accessibilityLiveRegion="assertive" style={styles.errorLine}>{state.errorMessage ?? "세션을 계속하지 못했습니다."}</Text>
+            {primary("retry", state.recoveryStatus === "result_review" ? "리뷰로 돌아가기" : "클립 확인하기", controller.retrySession)}
           </View>
         ) : null}
       </ScrollView>
@@ -380,48 +283,31 @@ export function CaptureSession({ completionActionLabel, onClose, onComplete, sav
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: tokens.background, bottom: 0, left: 0, position: "absolute", right: 0, top: 0 },
-  closeButton: { alignItems: "center", borderRadius: 10, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 10 },
-  closeText: { color: tokens.foreground, fontSize: 17, fontWeight: "400", letterSpacing: -0.2 },
-  page: { alignSelf: "center", maxWidth: 680, paddingBottom: 36, paddingHorizontal: 16, paddingTop: 18, width: "100%" },
-  stepHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 13 },
-  stepCount: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 13, letterSpacing: 1 },
-  stepNames: { color: tokens.mutedForeground, fontFamily: "Barlow-SemiBold", fontSize: 11 },
-  pageTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 32, lineHeight: 36 },
-  pageIntro: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6 },
-  modeSummary: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 17, flexDirection: "row", gap: 10, marginTop: 18, padding: 14 },
-  modeSummaryCopy: { flex: 1 },
-  summaryLabel: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 11 },
-  summaryValue: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 20, marginTop: 2 },
-  summaryEvidence: { color: tokens.warning, fontFamily: "Barlow-SemiBold", fontSize: 11, lineHeight: 16, marginTop: 3 },
-  textButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 11, borderWidth: 1, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 10 },
-  textButtonText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 13 },
-  sectionLabel: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 18, marginTop: 21 },
-  handRow: { flexDirection: "row", gap: 9, marginTop: 9 },
-  handButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 12, borderWidth: 1, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 44, minWidth: 44 },
-  handButtonSelected: { backgroundColor: tokens.elevatedSurface, borderColor: tokens.border },
-  handText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
-  handTextSelected: { color: tokens.foreground },
-  instructions: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 17, borderWidth: 1, gap: 11, marginTop: 18, padding: 14 },
-  instructionRow: { alignItems: "flex-start", flexDirection: "row", gap: 8 },
-  instructionText: { color: tokens.foreground, flex: 1, fontFamily: "Barlow", fontSize: 13, lineHeight: 19 },
-  startButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 14, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 18, minHeight: 48, minWidth: 44, paddingHorizontal: 14 },
-  startText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 17 },
-  slotSection: { marginTop: 22 },
-  slotSectionHeading: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", marginBottom: 9 },
-  slotSectionTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 22 },
-  slotProgress: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 14 },
-  slotList: { gap: 10 },
-  cancelButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 13, borderWidth: 1, justifyContent: "center", marginTop: 14, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
-  cancelText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 15 },
-  centerState: { alignItems: "center", paddingHorizontal: 8, paddingTop: 34 },
-  centerTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 27, marginTop: 14, textAlign: "center" },
-  centerCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" },
-  completeIcon: { alignItems: "center", backgroundColor: tokens.positive, borderRadius: 24, height: 52, justifyContent: "center", width: 52 },
-  retakeHeading: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 24, marginTop: 25 },
-  retakeIntro: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 3 },
-  globalError: { color: tokens.destructive, fontFamily: "Barlow-SemiBold", fontSize: 14, lineHeight: 21, marginTop: 8, textAlign: "center" },
+  page: { alignSelf: "center", paddingBottom: 36, paddingTop: 6 },
+  close: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 4 },
+  closeText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
+  step: { ...typography.title, color: tokens.foreground, paddingHorizontal: 14, paddingBottom: 10, paddingTop: 8 },
+  stack: { gap: 12, paddingHorizontal: 14 },
+  handRow: { flexDirection: "row", gap: 8 },
+  hand: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 999, flex: 1, justifyContent: "center", minHeight: 44, minWidth: 44 },
+  handSelected: { backgroundColor: tokens.foreground },
+  handText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
+  handTextSelected: { color: tokens.background },
+  modeLine: { ...typography.caption, color: tokens.mutedForeground },
+  slots: { gap: 14 },
+  slotGroup: { gap: 8 },
+  slotHead: { alignItems: "baseline", flexDirection: "row", justifyContent: "space-between" },
+  slotTitle: { ...typography.headline, color: tokens.foreground },
+  slotCount: { ...typography.label, color: tokens.mutedForeground },
+  primary: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 12, justifyContent: "center", minHeight: 48, minWidth: 44, paddingHorizontal: 16 },
+  primaryText: { ...typography.headline, color: tokens.primaryForeground },
+  secondary: { alignItems: "center", borderRadius: 12, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
+  secondaryText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
+  center: { alignItems: "center", gap: 14, paddingHorizontal: 24, paddingTop: 28 },
+  centerLine: { ...typography.callout, color: tokens.mutedForeground, textAlign: "center" },
+  errorLine: { ...typography.callout, color: tokens.warning, textAlign: "center" },
+  completeIcon: { alignItems: "center", backgroundColor: tokens.positive, borderRadius: 26, height: 52, justifyContent: "center", width: 52 },
+  retakeLine: { ...typography.caption, color: tokens.mutedForeground, paddingTop: 4 },
   disabled: { opacity: 0.44 },
   pressed: { opacity: 0.72 },
-  primaryPressed: { opacity: 0.76 },
 });

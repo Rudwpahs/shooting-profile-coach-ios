@@ -1,80 +1,53 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { CaptureProtocolV2 } from "@/lib/shooting-profile/types";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
+import { captureProtocolPresentation } from "@/lib/shooting-profile/capture-guidance";
+import type { CaptureProtocolV2 } from "@/lib/shooting-profile/types";
 
 type CaptureModePickerProps = {
   onSelect: (mode: CaptureProtocolV2) => void;
   disabled?: boolean;
 };
 
-const modes = [
-  {
-    mode: "basic_1_plus_1" as const,
-    icon: "filter-2" as const,
-    title: "Basic · 정면 1 + 측면 1",
-    evidence: "대표 스냅샷 추정 · 반복성 측정 아님",
-    detail: "평소 슛 두 클립으로 빠르게 대표 동작을 추정합니다.",
-  },
-  {
-    mode: "high_accuracy_3_plus_3" as const,
-    icon: "filter-6" as const,
-    title: "High accuracy · 정면 3 + 측면 3",
-    evidence: "3회 반복 일치도를 확인하는 고정밀 모드",
-    detail: "각 시점의 반복 슛을 먼저 비교한 뒤 일치하는 동작만 결합합니다.",
-  },
-];
+const MODES: readonly CaptureProtocolV2[] = ["basic_1_plus_1", "high_accuracy_3_plus_3"];
 
+/** Two rows: the mode name and one line of what it asks for. */
 export function CaptureModePicker({ onSelect, disabled = false }: CaptureModePickerProps) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.eyebrow}>1 / 4 · 모드</Text>
-      <Text style={styles.title}>어떤 방식으로 만들까요?</Text>
-      <Text style={styles.intro}>두 모드 모두 정면과 슈팅 측면을 따로 촬영합니다.</Text>
-      <View style={styles.options}>
-        {modes.map((item) => (
+    <View style={styles.options}>
+      {MODES.map((mode) => {
+        const presentation = captureProtocolPresentation(mode, "right");
+        const evidence = mode === "basic_1_plus_1" ? "대표 스냅샷 추정 · 반복성 측정 아님" : "3회 반복 일치도를 확인하는 고정밀 모드";
+        return (
           <Pressable
-            key={item.mode}
-            accessibilityLabel={`${item.title} 선택. ${item.evidence}`}
+            key={mode}
+            accessibilityLabel={`${presentation.modeTitle} · ${presentation.modeLine} 선택. ${evidence}`}
             accessibilityRole="button"
             accessibilityState={{ disabled }}
             disabled={disabled}
-            onPress={() => onSelect(item.mode)}
-            style={({ pressed }) => [
-              styles.option,
-              disabled && styles.disabled,
-              pressed && !disabled && styles.pressed,
-            ]}
+            onPress={() => onSelect(mode)}
+            style={({ pressed }) => [styles.option, disabled && styles.disabled, pressed && !disabled && styles.pressed]}
           >
-            <View style={styles.optionTop}>
-              <View style={styles.iconWrap}>
-                <MaterialIcons name={item.icon} size={22} color={tokens.primary} />
-              </View>
-              <MaterialIcons name="arrow-forward" size={21} color={tokens.foreground} />
+            <View style={styles.copy}>
+              <Text style={styles.title}>{presentation.modeTitle}</Text>
+              <Text numberOfLines={1} style={styles.line}>{presentation.modeLine}</Text>
             </View>
-            <Text style={styles.optionTitle}>{item.title}</Text>
-            <Text style={styles.evidence}>{item.evidence}</Text>
-            <Text style={styles.detail}>{item.detail}</Text>
+            <MaterialCommunityIcons name="chevron-right" size={24} color={tokens.mutedForeground} />
           </Pressable>
-        ))}
-      </View>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { width: "100%" },
-  eyebrow: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.2 },
-  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 34, lineHeight: 38, marginTop: 4 },
-  intro: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6 },
-  options: { gap: 12, marginTop: 20 },
-  option: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 18, borderWidth: 1, minHeight: 44, padding: 16 },
-  optionTop: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  iconWrap: { alignItems: "center", backgroundColor: tokens.primarySoft, borderRadius: 12, height: 44, justifyContent: "center", width: 44 },
-  optionTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 21, marginTop: 12 },
-  evidence: { color: tokens.primary, fontFamily: "Barlow-SemiBold", fontSize: 13, lineHeight: 19, marginTop: 4 },
-  detail: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 5 },
+  options: { gap: 10 },
+  option: { alignItems: "center", backgroundColor: tokens.surface, borderRadius: 14, flexDirection: "row", gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 12 },
+  copy: { flex: 1, gap: 2 },
+  title: { ...typography.title, color: tokens.foreground },
+  line: { ...typography.callout, color: tokens.mutedForeground },
   disabled: { opacity: 0.46 },
-  pressed: { opacity: 0.76 },
+  pressed: { opacity: 0.7 },
 });

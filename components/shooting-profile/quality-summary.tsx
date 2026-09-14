@@ -1,76 +1,64 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 
-import type {
-  CaptureProtocolV2,
-  RepresentativePose4DV2,
-} from "@/lib/shooting-profile/types";
+import { LoopStage } from "@/components/skeleton/loop-stage";
+import { representativeConfidence } from "@/components/skeleton/representative-glyph";
+import { SkeletonLoop } from "@/components/skeleton/skeleton-loop";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
+import { confidenceBandCopy } from "@/lib/skeleton/analysis-evidence";
+import type { CaptureProtocolV2, RepresentativePose4DV2, ShootingHandV2 } from "@/lib/shooting-profile/types";
 
 type QualitySummaryProps = {
   mode: CaptureProtocolV2;
   profile: RepresentativePose4DV2;
+  /** Passed by the session for parity with the stored record; the analysis route's detail layer shows it after saving. */
   confidence: number;
+  shootingHand: ShootingHandV2;
   canSave: boolean;
   saving: boolean;
   onSave: () => void;
+  width: number;
 };
 
-export function QualitySummary({
-  mode,
-  profile,
-  confidence,
-  canSave,
-  saving,
-  onSave,
-}: QualitySummaryProps) {
+/**
+ * Review: the result skeleton first, one band line, then the truthful consent
+ * copy and the save action. The percentage stays out of this step; the
+ * analysis route's detail layer shows it after saving.
+ */
+export function QualitySummary({ mode, profile, confidence, shootingHand, canSave, saving, onSave, width }: QualitySummaryProps) {
+  void confidence;
   const [focused, setFocused] = useState(false);
   const saveDisabled = !canSave || saving;
-  const qualityLabel = profile.quality.passed ? "결합 품질 통과" : "재촬영 필요";
-  const evidence = mode === "basic_1_plus_1"
-    ? "대표 스냅샷 추정 · 반복성 측정 아님"
-    : "3회 반복 일치도를 확인하는 고정밀 모드";
+  const band = confidenceBandCopy(profile);
+  const height = Math.round(width * 0.9);
+  const evidence = mode === "basic_1_plus_1" ? "대표 스냅샷 추정 · 반복성 측정 아님" : "3회 반복 일치도를 확인하는 고정밀 모드";
 
   return (
-    <View style={styles.card}>
-      <View style={styles.heading}>
-        <View style={styles.iconWrap}>
-          <MaterialIcons name="view-in-ar" size={24} color={tokens.primary} />
-        </View>
-        <View style={styles.headingCopy}>
-          <Text style={styles.title}>대표 슛폼 검토</Text>
-          <Text style={styles.boundary}>위상 결합 4D 추정 · 실측 3D 아님</Text>
-        </View>
+    <View style={styles.review}>
+      <LoopStage accessibilityLabel="대표 슛폼 결과 skeleton" height={height} width={width}>
+        {(paused) => (
+          <SkeletonLoop
+            accessibilityLabel="대표 슛폼 결과 skeleton, 사선 시점 재생"
+            confidence={representativeConfidence(profile)}
+            height={height}
+            paused={paused}
+            profile={profile}
+            shootingHand={shootingHand}
+            view="oblique"
+            width={width}
+          />
+        )}
+      </LoopStage>
+      <View accessible accessibilityLabel={`${band.title}, ${band.quality}. ${evidence}. 위상 결합 4D 추정 · 실측 3D 아님`} style={styles.bandRow}>
+        <View style={[styles.dot, band.band === "high" && styles.dotHigh, !profile.quality.passed && styles.dotRecapture]} />
+        <Text numberOfLines={1} style={styles.bandText}>{band.title} · <Text style={profile.quality.passed ? styles.pass : styles.recapture}>{band.quality}</Text></Text>
       </View>
-
-      <View style={styles.metricRow}>
-        <View style={styles.metric}>
-          <Text style={styles.metricValue}>{Math.round(confidence * 100)}%</Text>
-          <Text style={styles.metricLabel}>추정 신뢰도</Text>
-        </View>
-        <View style={styles.metric}>
-          <Text style={styles.metricValue}>101</Text>
-          <Text style={styles.metricLabel}>정규화 위상</Text>
-        </View>
-      </View>
-
-      <View style={styles.statusRow}>
-        <MaterialIcons
-          name={profile.quality.passed ? "check-circle" : "error-outline"}
-          size={19}
-          color={profile.quality.passed ? tokens.positive : tokens.destructive}
-        />
-        <Text accessibilityLiveRegion="polite" style={styles.statusText}>{qualityLabel}</Text>
-      </View>
-      <Text style={styles.evidence}>{evidence}</Text>
-      <Text style={styles.detail}>
-        정면과 슈팅 측면은 서로 다른 슛을 정규화된 위상으로 결합했습니다. 한 순간을 동시 측정한 결과가 아닙니다.
-      </Text>
-
-      <View style={styles.saveBoundary}>
-        <MaterialIcons name="lock-outline" size={18} color={tokens.foreground} />
-        <Text style={styles.saveBoundaryText}>
+      <Text numberOfLines={1} style={styles.evidence}>{evidence} · 위상 결합 4D 추정 · 실측 3D 아님</Text>
+      <View style={styles.consent}>
+        <MaterialCommunityIcons name="lock-outline" size={18} color={tokens.mutedForeground} />
+        <Text style={styles.consentText}>
           {saving
             ? "12개 허용 관절의 위상 정규화 2D 관찰값과 대표 추정치만 비공개로 저장하는 중입니다. 원본 영상, 파일명, 원본 MediaPipe 깊이값은 업로드하지 않습니다. 아직 저장 완료로 표시하지 않습니다."
             : canSave
@@ -87,14 +75,9 @@ export function QualitySummary({
         onBlur={() => setFocused(false)}
         onFocus={() => setFocused(true)}
         onPress={onSave}
-        style={({ pressed }) => [
-          styles.saveButton,
-          focusStyle(focused),
-          saveDisabled && styles.disabled,
-          pressed && !saveDisabled && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.save, focusStyle(focused), saveDisabled && styles.disabled, pressed && !saveDisabled && styles.pressed]}
       >
-        <MaterialIcons name="lock" size={18} color={tokens.primaryForeground} />
+        <MaterialCommunityIcons name="lock" size={18} color={tokens.primaryForeground} />
         <Text accessibilityLiveRegion="polite" style={styles.saveText}>{saving ? "저장 중" : canSave ? "비공개 저장" : "비공개 저장 준비 중"}</Text>
       </Pressable>
     </View>
@@ -117,24 +100,19 @@ function focusStyle(focused: boolean): ViewStyle {
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 20, borderWidth: 1, padding: 17 },
-  heading: { alignItems: "center", flexDirection: "row", gap: 11 },
-  iconWrap: { alignItems: "center", backgroundColor: tokens.primarySoft, borderRadius: 13, height: 46, justifyContent: "center", width: 46 },
-  headingCopy: { flex: 1 },
-  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 24 },
-  boundary: { color: tokens.warning, fontFamily: "Barlow-SemiBold", fontSize: 12, lineHeight: 17, marginTop: 2 },
-  metricRow: { backgroundColor: tokens.elevatedSurface, borderRadius: 14, flexDirection: "row", marginTop: 16, paddingVertical: 13 },
-  metric: { alignItems: "center", flex: 1 },
-  metricValue: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 22 },
-  metricLabel: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 11, marginTop: 1 },
-  statusRow: { alignItems: "center", flexDirection: "row", gap: 7, marginTop: 15 },
-  statusText: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
-  evidence: { color: tokens.primary, fontFamily: "Barlow-SemiBold", fontSize: 13, lineHeight: 19, marginTop: 10 },
-  detail: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 4 },
-  saveBoundary: { alignItems: "flex-start", backgroundColor: tokens.elevatedSurface, borderRadius: 12, flexDirection: "row", gap: 7, marginTop: 14, padding: 11 },
-  saveBoundaryText: { color: tokens.foreground, flex: 1, fontFamily: "Barlow", fontSize: 12, lineHeight: 18 },
-  saveButton: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 13, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 44, minWidth: 44, paddingHorizontal: 14 },
-  saveText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 },
+  review: { gap: 8 },
+  bandRow: { alignItems: "center", flexDirection: "row", gap: 8, paddingHorizontal: 14, paddingTop: 8 },
+  dot: { backgroundColor: tokens.mutedForeground, borderRadius: 5, height: 10, width: 10 },
+  dotHigh: { backgroundColor: tokens.analysisHighConfidence },
+  dotRecapture: { backgroundColor: tokens.warning },
+  bandText: { ...typography.callout, color: tokens.foreground, fontWeight: "700" },
+  pass: { color: tokens.positive, fontWeight: "400" },
+  recapture: { color: tokens.warning, fontWeight: "400" },
+  evidence: { ...typography.caption, color: tokens.mutedForeground, paddingHorizontal: 14 },
+  consent: { alignItems: "flex-start", flexDirection: "row", gap: 8, marginHorizontal: 14, marginTop: 6 },
+  consentText: { ...typography.caption, color: tokens.mutedForeground, flex: 1 },
+  save: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 12, flexDirection: "row", gap: 8, justifyContent: "center", marginHorizontal: 14, marginTop: 8, minHeight: 48, minWidth: 44, paddingHorizontal: 16 },
+  saveText: { ...typography.headline, color: tokens.primaryForeground },
   disabled: { opacity: 0.44 },
   pressed: { opacity: 0.74 },
 });
