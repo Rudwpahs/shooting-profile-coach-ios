@@ -2,6 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { CaptureProtocolV2 } from "@/lib/shooting-profile/types";
+import { tokens } from "@/constants/tokens";
 
 type CaptureModePickerProps = {
   onSelect: (mode: CaptureProtocolV2) => void;
@@ -48,9 +49,9 @@ export function CaptureModePicker({ onSelect, disabled = false }: CaptureModePic
           >
             <View style={styles.optionTop}>
               <View style={styles.iconWrap}>
-                <MaterialIcons name={item.icon} size={22} color="#F97316" />
+                <MaterialIcons name={item.icon} size={22} color={tokens.primary} />
               </View>
-              <MaterialIcons name="arrow-forward" size={21} color="#102235" />
+              <MaterialIcons name="arrow-forward" size={21} color={tokens.foreground} />
             </View>
             <Text style={styles.optionTitle}>{item.title}</Text>
             <Text style={styles.evidence}>{item.evidence}</Text>
@@ -64,16 +65,16 @@ export function CaptureModePicker({ onSelect, disabled = false }: CaptureModePic
 
 const styles = StyleSheet.create({
   container: { width: "100%" },
-  eyebrow: { color: "#9A3412", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.2 },
-  title: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 34, lineHeight: 38, marginTop: 4 },
-  intro: { color: "#61738A", fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6 },
+  eyebrow: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.2 },
+  title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 34, lineHeight: 38, marginTop: 4 },
+  intro: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 6 },
   options: { gap: 12, marginTop: 20 },
-  option: { backgroundColor: "#FFFEFA", borderColor: "#D9E0E4", borderRadius: 18, borderWidth: 1, minHeight: 44, padding: 16 },
+  option: { backgroundColor: tokens.surface, borderColor: tokens.border, borderRadius: 18, borderWidth: 1, minHeight: 44, padding: 16 },
   optionTop: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  iconWrap: { alignItems: "center", backgroundColor: "#FFF0E8", borderRadius: 12, height: 44, justifyContent: "center", width: 44 },
-  optionTitle: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 21, marginTop: 12 },
-  evidence: { color: "#C24122", fontFamily: "Barlow-SemiBold", fontSize: 13, lineHeight: 19, marginTop: 4 },
-  detail: { color: "#61738A", fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 5 },
+  iconWrap: { alignItems: "center", backgroundColor: tokens.primarySoft, borderRadius: 12, height: 44, justifyContent: "center", width: 44 },
+  optionTitle: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 21, marginTop: 12 },
+  evidence: { color: tokens.primary, fontFamily: "Barlow-SemiBold", fontSize: 13, lineHeight: 19, marginTop: 4 },
+  detail: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 13, lineHeight: 19, marginTop: 5 },
   disabled: { opacity: 0.46 },
   pressed: { opacity: 0.76 },
 });
