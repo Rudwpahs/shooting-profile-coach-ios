@@ -1,0 +1,15 @@
+# Direct versions verified on Python 3.11.15, Windows. No model artifacts.
+# Transitive packages are constrained by these libraries, not a full environment lock.
+pytest==9.1.1
+pydantic==2.13.5
+ruff==0.16.7
+torch==2.13.0
+transformers==5.17.0
+accelerate==1.15.0
+peft==0.20.0
+bitsandbytes==0.50.2
+fastapi==0.141.1
+uvicorn==0.53.0
+httpx==0.28.1
+jsonschema==4.26.0
+firebase-admin==7.5.0

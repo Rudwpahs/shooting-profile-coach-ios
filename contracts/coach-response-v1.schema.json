@@ -1,0 +1,270 @@
+{
+  "$defs": {
+    "CoachDrillV1": {
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "items": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Constraints",
+          "type": "array"
+        },
+        "name": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "purpose": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "retest": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Retest",
+          "type": "string"
+        },
+        "success_criteria": {
+          "items": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Success Criteria",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "purpose",
+        "constraints",
+        "success_criteria",
+        "retest"
+      ],
+      "title": "CoachDrillV1",
+      "type": "object"
+    },
+    "CoachHypothesisV1": {
+      "additionalProperties": false,
+      "properties": {
+        "competing_explanations": {
+          "items": {
+            "maxLength": 160,
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Competing Explanations",
+          "type": "array"
+        },
+        "confidence": {
+          "enum": [
+            "very_low",
+            "low",
+            "medium",
+            "high",
+            "very_high"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "statement": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "supporting_observation_ids": {
+          "items": {
+            "maxLength": 64,
+            "pattern": "^obs_[a-z0-9]+(?:_[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Supporting Observation Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "statement",
+        "confidence",
+        "supporting_observation_ids",
+        "competing_explanations"
+      ],
+      "title": "CoachHypothesisV1",
+      "type": "object"
+    },
+    "CoachProviderStampV1": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": [
+            "deterministic_v1",
+            "remote_formpath_coach_v1"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "revision": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "revision"
+      ],
+      "title": "CoachProviderStampV1",
+      "type": "object"
+    },
+    "PrimaryVisualCueV1": {
+      "additionalProperties": false,
+      "description": "The only way a reply may point at the body: one observation id the request contained.",
+      "properties": {
+        "label": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "observation_id": {
+          "maxLength": 64,
+          "pattern": "^obs_[a-z0-9]+(?:_[a-z0-9]+)*$",
+          "title": "Observation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "label"
+      ],
+      "title": "PrimaryVisualCueV1",
+      "type": "object"
+    }
+  },
+  "$id": "coach-response-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "coaching_comment": {
+      "maxLength": 140,
+      "minLength": 1,
+      "title": "Coaching Comment",
+      "type": "string"
+    },
+    "confidence": {
+      "enum": [
+        "very_low",
+        "low",
+        "medium",
+        "high",
+        "very_high"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "do_not_infer": {
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+        "type": "string"
+      },
+      "maxItems": 12,
+      "minItems": 1,
+      "title": "Do Not Infer",
+      "type": "array"
+    },
+    "drills": {
+      "items": {
+        "$ref": "#/$defs/CoachDrillV1"
+      },
+      "maxItems": 2,
+      "title": "Drills",
+      "type": "array"
+    },
+    "evidence_used": {
+      "items": {
+        "minimum": 1,
+        "type": "integer"
+      },
+      "maxItems": 16,
+      "title": "Evidence Used",
+      "type": "array"
+    },
+    "hypotheses": {
+      "items": {
+        "$ref": "#/$defs/CoachHypothesisV1"
+      },
+      "maxItems": 3,
+      "title": "Hypotheses",
+      "type": "array"
+    },
+    "observation_summary": {
+      "items": {
+        "maxLength": 160,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 6,
+      "minItems": 1,
+      "title": "Observation Summary",
+      "type": "array"
+    },
+    "primary_visual_cue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PrimaryVisualCueV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider": {
+      "$ref": "#/$defs/CoachProviderStampV1"
+    },
+    "request_id": {
+      "pattern": "^req_[a-z0-9]{8,64}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "retest_plan": {
+      "items": {
+        "maxLength": 160,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 4,
+      "title": "Retest Plan",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "request_id",
+    "observation_summary",
+    "hypotheses",
+    "confidence",
+    "coaching_comment",
+    "do_not_infer",
+    "drills",
+    "retest_plan",
+    "evidence_used",
+    "primary_visual_cue",
+    "provider"
+  ],
+  "title": "CoachResponseV1",
+  "type": "object"
+}
