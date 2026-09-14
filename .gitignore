@@ -80,3 +80,6 @@ graphify-out/
 
 # Research skill local cache/scratch. Durable validated findings belong in docs/research/.
 .research/
+
+# Playwright MCP session output (screenshots live in artifacts/)
+.playwright-mcp/
