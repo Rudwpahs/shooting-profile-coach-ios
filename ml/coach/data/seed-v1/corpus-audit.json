@@ -1,0 +1,295 @@
+{
+  "audit_version": "b2c-v1",
+  "domains": {
+    "BIOMECHANICS": 100,
+    "COACHING_METHOD": 96,
+    "DECELERATION_COD": 88,
+    "DECISION": 125,
+    "DEFENSE": 188,
+    "FATIGUE": 71,
+    "FINISHING": 66,
+    "FOOTWORK": 124,
+    "HANDLE": 87,
+    "MOTOR_LEARNING": 74,
+    "PERCEPTION_GAZE": 53,
+    "PNR_TACTICS": 165,
+    "POSE_VALIDATION": 91,
+    "RELEASE_BALLISTICS": 45,
+    "SHOOTING": 198,
+    "SPACING_OFFBALL": 69,
+    "TRAINING_LOAD": 42,
+    "UNCLASSIFIED": 114,
+    "YOUTH": 72
+  },
+  "duplicate_canonical_claims": [],
+  "duplicate_ids": [],
+  "evidence_codes": {
+    "A": 62,
+    "B": 689,
+    "C": 108,
+    "D": 25,
+    "E": 26,
+    "U": 30
+  },
+  "evidence_tiers": {
+    "A": 62,
+    "B": 689,
+    "C": 108,
+    "D": 25,
+    "H": 56
+  },
+  "integrity": {
+    "db_sha256": "c1e17824b8359e4655ebc664f7df325d3371e4e0e703bcd9bcaf4a63c6f6b039",
+    "fallback_codes": {
+      "domains": [
+        "UNCLASSIFIED"
+      ],
+      "metrics": [
+        "UNMAPPED_METRIC"
+      ],
+      "policies": [
+        "GENERAL_GUIDANCE"
+      ]
+    },
+    "jsonl_sha256": "9fd0b467919e15321e4e2ff13343a46aab270e7980a36d7a0aeec49927b9592f",
+    "range": "RU-0061..RU-1000",
+    "sources": 6,
+    "status": "OK",
+    "units": 940,
+    "vocabulary_version": "2.0"
+  },
+  "linked_source_coverage": {
+    "domain": {
+      "BIOMECHANICS": {
+        "linked": 0,
+        "total": 100
+      },
+      "COACHING_METHOD": {
+        "linked": 14,
+        "total": 96
+      },
+      "DECELERATION_COD": {
+        "linked": 11,
+        "total": 88
+      },
+      "DECISION": {
+        "linked": 8,
+        "total": 125
+      },
+      "DEFENSE": {
+        "linked": 6,
+        "total": 188
+      },
+      "FATIGUE": {
+        "linked": 0,
+        "total": 71
+      },
+      "FINISHING": {
+        "linked": 2,
+        "total": 66
+      },
+      "FOOTWORK": {
+        "linked": 9,
+        "total": 124
+      },
+      "HANDLE": {
+        "linked": 1,
+        "total": 87
+      },
+      "MOTOR_LEARNING": {
+        "linked": 2,
+        "total": 74
+      },
+      "PERCEPTION_GAZE": {
+        "linked": 1,
+        "total": 53
+      },
+      "PNR_TACTICS": {
+        "linked": 5,
+        "total": 165
+      },
+      "POSE_VALIDATION": {
+        "linked": 1,
+        "total": 91
+      },
+      "RELEASE_BALLISTICS": {
+        "linked": 1,
+        "total": 45
+      },
+      "SHOOTING": {
+        "linked": 5,
+        "total": 198
+      },
+      "SPACING_OFFBALL": {
+        "linked": 1,
+        "total": 69
+      },
+      "TRAINING_LOAD": {
+        "linked": 0,
+        "total": 42
+      },
+      "UNCLASSIFIED": {
+        "linked": 7,
+        "total": 114
+      },
+      "YOUTH": {
+        "linked": 2,
+        "total": 72
+      }
+    },
+    "metric": {
+      "ACCELERATION": {
+        "linked": 3,
+        "total": 24
+      },
+      "ANGULAR_VELOCITY": {
+        "linked": 0,
+        "total": 21
+      },
+      "ASYMMETRY": {
+        "linked": 0,
+        "total": 19
+      },
+      "BACKSPIN": {
+        "linked": 0,
+        "total": 5
+      },
+      "COM_DISPLACEMENT": {
+        "linked": 0,
+        "total": 6
+      },
+      "DECELERATION": {
+        "linked": 4,
+        "total": 40
+      },
+      "DECISION_ACCURACY": {
+        "linked": 1,
+        "total": 13
+      },
+      "DEFENDER_DISTANCE": {
+        "linked": 0,
+        "total": 5
+      },
+      "ENTRY_ANGLE": {
+        "linked": 0,
+        "total": 6
+      },
+      "FIXATION_COUNT": {
+        "linked": 0,
+        "total": 11
+      },
+      "FIXATION_DURATION": {
+        "linked": 0,
+        "total": 14
+      },
+      "GRF_FORCE": {
+        "linked": 8,
+        "total": 51
+      },
+      "HEART_RATE": {
+        "linked": 0,
+        "total": 2
+      },
+      "JOINT_ANGLE": {
+        "linked": 0,
+        "total": 34
+      },
+      "JOINT_MOMENT_POWER": {
+        "linked": 0,
+        "total": 13
+      },
+      "JUMP_HEIGHT": {
+        "linked": 0,
+        "total": 16
+      },
+      "MOVEMENT_SPEED": {
+        "linked": 2,
+        "total": 88
+      },
+      "POSE_ERROR": {
+        "linked": 0,
+        "total": 27
+      },
+      "REACTION_TIME": {
+        "linked": 0,
+        "total": 11
+      },
+      "RELEASE_ANGLE": {
+        "linked": 0,
+        "total": 9
+      },
+      "RELEASE_HEIGHT": {
+        "linked": 0,
+        "total": 8
+      },
+      "RELEASE_TIMING": {
+        "linked": 0,
+        "total": 9
+      },
+      "RELEASE_VELOCITY": {
+        "linked": 0,
+        "total": 11
+      },
+      "SHOT_ACCURACY": {
+        "linked": 1,
+        "total": 78
+      },
+      "SHOT_CLOCK": {
+        "linked": 0,
+        "total": 3
+      },
+      "UNMAPPED_METRIC": {
+        "linked": 27,
+        "total": 524
+      },
+      "VARIABILITY": {
+        "linked": 0,
+        "total": 52
+      }
+    }
+  },
+  "metric_mapping": {
+    "ACCELERATION": 24,
+    "ANGULAR_VELOCITY": 21,
+    "ASYMMETRY": 19,
+    "BACKSPIN": 5,
+    "COM_DISPLACEMENT": 6,
+    "DECELERATION": 40,
+    "DECISION_ACCURACY": 13,
+    "DEFENDER_DISTANCE": 5,
+    "ENTRY_ANGLE": 6,
+    "FIXATION_COUNT": 11,
+    "FIXATION_DURATION": 14,
+    "GRF_FORCE": 51,
+    "HEART_RATE": 2,
+    "JOINT_ANGLE": 34,
+    "JOINT_MOMENT_POWER": 13,
+    "JUMP_HEIGHT": 16,
+    "MOVEMENT_SPEED": 88,
+    "POSE_ERROR": 27,
+    "REACTION_TIME": 11,
+    "RELEASE_ANGLE": 9,
+    "RELEASE_HEIGHT": 8,
+    "RELEASE_TIMING": 9,
+    "RELEASE_VELOCITY": 11,
+    "SHOT_ACCURACY": 78,
+    "SHOT_CLOCK": 3,
+    "UNMAPPED_METRIC": 524,
+    "VARIABILITY": 52
+  },
+  "missing_required_fields": [],
+  "provenance": {
+    "LINKED": 40,
+    "ROW_ONLY": 900
+  },
+  "provenance_inconsistencies": [],
+  "safety_related_count": 503,
+  "sentinels": {
+    "GENERAL_GUIDANCE": 390,
+    "UNCLASSIFIED": 114,
+    "UNMAPPED_METRIC": 524
+  },
+  "source_count": 6,
+  "total_units": 940,
+  "unmapped_count": 524
+}

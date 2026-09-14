@@ -1,0 +1,148 @@
+{
+  "$id": "coach-observation-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "boundary": {
+      "const": "representative_phase_fused_4d_estimate_not_actual_3d",
+      "title": "Boundary",
+      "type": "string"
+    },
+    "caveats": {
+      "items": {
+        "maxLength": 160,
+        "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Caveats",
+      "type": "array"
+    },
+    "id": {
+      "maxLength": 64,
+      "pattern": "^obs_[a-z0-9]+(?:_[a-z0-9]+)*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "joints": {
+      "items": {
+        "enum": [
+          "leftShoulder",
+          "leftElbow",
+          "leftWrist",
+          "rightShoulder",
+          "rightElbow",
+          "rightWrist",
+          "leftHip",
+          "leftKnee",
+          "leftAnkle",
+          "rightHip",
+          "rightKnee",
+          "rightAnkle"
+        ],
+        "type": "string"
+      },
+      "maxItems": 12,
+      "title": "Joints",
+      "type": "array"
+    },
+    "measurement_confidence": {
+      "enum": [
+        "very_low",
+        "low",
+        "medium",
+        "high",
+        "very_high"
+      ],
+      "title": "Measurement Confidence",
+      "type": "string"
+    },
+    "metric": {
+      "enum": [
+        "release_elbow_angle_deg",
+        "release_wrist_height_sb",
+        "release_elbow_lateral_offset_sb",
+        "release_shoulder_line_yaw_deg",
+        "deepest_dip_knee_angle_deg",
+        "follow_through_elbow_angle_deg",
+        "follow_through_wrist_over_head_sb",
+        "capture_quality"
+      ],
+      "title": "Metric",
+      "type": "string"
+    },
+    "phase_anchor": {
+      "anyOf": [
+        {
+          "enum": [
+            "ready",
+            "deepestDip",
+            "rise",
+            "releaseProxy",
+            "followThrough"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Phase Anchor"
+    },
+    "reference": {
+      "anyOf": [
+        {
+          "maxLength": 120,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Reference"
+    },
+    "source": {
+      "const": "representative_phase_fused_4d",
+      "title": "Source",
+      "type": "string"
+    },
+    "unit": {
+      "enum": [
+        "deg",
+        "shoulder_breadths",
+        "label"
+      ],
+      "title": "Unit",
+      "type": "string"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "maxLength": 64,
+          "type": "string"
+        }
+      ],
+      "title": "Value"
+    }
+  },
+  "required": [
+    "id",
+    "metric",
+    "unit",
+    "value",
+    "reference",
+    "measurement_confidence",
+    "source",
+    "boundary",
+    "phase_anchor",
+    "joints",
+    "caveats"
+  ],
+  "title": "CoachObservationV1",
+  "type": "object"
+}

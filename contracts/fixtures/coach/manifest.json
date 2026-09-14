@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "description": "Cross-language fixture gate for the Coach contract V1. Every case is run by tests/coach-parity.test.ts (Zod) and ml/coach/tests/test_contract_fixtures.py (Pydantic); both must reach the same verdict. A case is either a golden file or one visible patch of a golden file. `structural` marks negatives the exported JSON Schema alone can reject; the others need the cross-field rules.",
+  "cases": [
+    { "id": "golden_request_basic", "schema": "coach-request-v1", "valid": true, "file": "golden/request-basic.json" },
+    { "id": "golden_response_basic_grounded", "schema": "coach-response-v1", "valid": true, "file": "golden/response-basic.json", "request_file": "golden/request-basic.json" },
+    { "id": "golden_observation_quality", "schema": "coach-observation-v1", "valid": true, "file": "golden/observation-quality.json" },
+    { "id": "golden_response_minimal", "schema": "coach-response-v1", "valid": true, "base": "golden/response-basic.json", "request_file": "golden/request-basic.json", "patch": [
+      { "op": "set", "path": "/hypotheses", "value": [] },
+      { "op": "set", "path": "/drills", "value": [] },
+      { "op": "set", "path": "/retest_plan", "value": [] },
+      { "op": "set", "path": "/evidence_used", "value": [] },
+      { "op": "set", "path": "/primary_visual_cue", "value": null }
+    ] },
+    { "id": "golden_request_unknown_player", "schema": "coach-request-v1", "valid": true, "base": "golden/request-basic.json", "patch": [
+      { "op": "set", "path": "/player", "value": { "handedness": "unknown", "skill_level": null, "training_goal": null } },
+      { "op": "set", "path": "/evidence", "value": [] },
+      { "op": "set", "path": "/recent_history", "value": [] }
+    ] },
+
+    { "id": "request_frames_key", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "private frame evidence has no place in a request", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/frames", "value": [] }] },
+    { "id": "request_player_age", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "no personal measurements in the player context", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/player/age", "value": 17 }] },
+    { "id": "request_context_file_name", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "file names and URIs never travel", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/context/fileName", "value": "clip.mov" }] },
+    { "id": "request_observation_covariance", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "the covariance payload stays private", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/covariance", "value": [0.01, 0, 0, 0.01, 0, 0.01] }] },
+    { "id": "request_observation_native_z", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "native z never travels", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/z", "value": 0.4 }] },
+    { "id": "request_observation_timestamp", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "frame timestamps never travel", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/timestampMs", "value": 1240 }] },
+    { "id": "request_schema_version_2", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "only schema version 1 exists", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/schema_version", "value": 2 }] },
+    { "id": "request_id_not_opaque", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "request ids are opaque req_ tokens", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/request_id", "value": "0123456789abcdef" }] },
+    { "id": "request_id_missing", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "every request carries its id", "base": "golden/request-basic.json", "patch": [{ "op": "remove", "path": "/request_id" }] },
+    { "id": "request_locale_fr", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "locales are ko or en", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/locale", "value": "fr" }] },
+    { "id": "request_handedness_both", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "handedness is left, right or unknown", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/player/handedness", "value": "both" }] },
+    { "id": "request_history_free_text", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "history entries are stable codes, never sentences", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/recent_history", "value": ["Missed 7 of 10 from the wing yesterday"] }] },
+    { "id": "request_no_observations", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "a request carries at least one observation", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations", "value": [] }] },
+    { "id": "request_duplicate_observation_ids", "schema": "coach-request-v1", "valid": false, "reason": "observation ids are unique", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/1", "value": {
+      "id": "obs_release_elbow_angle", "metric": "release_elbow_angle_deg", "value": 90, "unit": "deg", "reference": null, "measurement_confidence": "low", "source": "representative_phase_fused_4d", "boundary": "representative_phase_fused_4d_estimate_not_actual_3d", "phase_anchor": "releaseProxy", "joints": ["rightElbow"], "caveats": []
+    } }] },
+    { "id": "request_metric_force", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "force is not a metric the profile can support", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/metric", "value": "ground_reaction_force_n" }] },
+    { "id": "request_source_phone_2d", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "the only V1 source is the representative phase-fused estimate", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/source", "value": "phone_2d" }] },
+    { "id": "request_boundary_actual_3d", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "the estimate may never be relabelled as actual 3D", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/boundary", "value": "actual_optical_mocap_3d" }] },
+    { "id": "request_unit_mismatch", "schema": "coach-request-v1", "valid": false, "reason": "each metric has one unit", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/unit", "value": "shoulder_breadths" }] },
+    { "id": "request_value_out_of_bounds", "schema": "coach-request-v1", "valid": false, "reason": "degrees stay within a turn", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/value", "value": 361 }] },
+    { "id": "request_measurement_without_anchor", "schema": "coach-request-v1", "valid": false, "reason": "a measurement names its phase anchor", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/phase_anchor", "value": null }] },
+    { "id": "request_measurement_without_joints", "schema": "coach-request-v1", "valid": false, "reason": "a measurement names at least one joint", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/observations/0/joints", "value": [] }] },
+    { "id": "request_evidence_tier_z", "schema": "coach-request-v1", "valid": false, "structural": true, "reason": "evidence tiers are closed", "base": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/evidence/0/evidence_tier", "value": "Z" }] },
+
+    { "id": "observation_label_free_text", "schema": "coach-observation-v1", "valid": false, "reason": "a label value is a stable code", "base": "golden/observation-quality.json", "patch": [{ "op": "set", "path": "/value", "value": "Not a code" }] },
+    { "id": "observation_quality_with_joints", "schema": "coach-observation-v1", "valid": false, "reason": "the quality label is not a pose", "base": "golden/observation-quality.json", "patch": [{ "op": "set", "path": "/joints", "value": ["rightElbow"] }] },
+    { "id": "observation_confidence_certain", "schema": "coach-observation-v1", "valid": false, "structural": true, "reason": "confidence has five bands", "base": "golden/observation-quality.json", "patch": [{ "op": "set", "path": "/measurement_confidence", "value": "certain" }] },
+
+    { "id": "response_coordinates", "schema": "coach-response-v1", "valid": false, "structural": true, "reason": "a reply never carries coordinates", "base": "golden/response-basic.json", "patch": [{ "op": "set", "path": "/coordinates", "value": { "x": 0.4, "y": 0.2 } }] },
+    { "id": "response_cue_coordinates", "schema": "coach-response-v1", "valid": false, "structural": true, "reason": "a cue is an observation id and a label, nothing spatial", "base": "golden/response-basic.json", "patch": [{ "op": "set", "path": "/primary_visual_cue/x", "value": 0.4 }] },
+    { "id": "response_multiline_comment", "schema": "coach-response-v1", "valid": false, "reason": "the coaching comment is one line", "base": "golden/response-basic.json", "patch": [{ "op": "set", "path": "/coaching_comment", "value": "first line\nsecond line" }] },
+    { "id": "response_missing_core_do_not_infer", "schema": "coach-response-v1", "valid": false, "reason": "every reply declares force, torque, muscle activation and metric 3D as not inferred", "base": "golden/response-basic.json", "patch": [{ "op": "set", "path": "/do_not_infer", "value": ["joint_torque"] }] },
+    { "id": "response_hypothesis_without_support", "schema": "coach-response-v1", "valid": false, "structural": true, "reason": "a hypothesis names the observations it rests on", "base": "golden/response-basic.json", "patch": [{ "op": "set", "path": "/hypotheses/0/supporting_observation_ids", "value": [] }] },
+    { "id": "response_provider_unknown", "schema": "coach-response-v1", "valid": false, "structural": true, "reason": "providers are the deterministic one or the remote FormPath Coach", "base": "golden/response-basic.json", "patch": [{ "op": "set", "path": "/provider/id", "value": "gpt" }] },
+    { "id": "response_cue_unknown_observation", "schema": "coach-response-v1", "valid": false, "reason": "the cue must name an observation the request contained", "base": "golden/response-basic.json", "request_file": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/primary_visual_cue", "value": { "observation_id": "obs_ghost", "label": "?" } }] },
+    { "id": "response_wrong_request_id", "schema": "coach-response-v1", "valid": false, "reason": "a reply answers exactly the request it names", "base": "golden/response-basic.json", "request_file": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/request_id", "value": "req_ffffffffffffffff" }] },
+    { "id": "response_evidence_unknown", "schema": "coach-response-v1", "valid": false, "reason": "evidence may cite only research units the request supplied", "base": "golden/response-basic.json", "request_file": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/evidence_used", "value": [99] }] },
+    { "id": "response_hypothesis_unknown_observation", "schema": "coach-response-v1", "valid": false, "reason": "a hypothesis may rest only on observations the request contained", "base": "golden/response-basic.json", "request_file": "golden/request-basic.json", "patch": [{ "op": "set", "path": "/hypotheses/0/supporting_observation_ids", "value": ["obs_ghost"] }] }
+  ]
+}

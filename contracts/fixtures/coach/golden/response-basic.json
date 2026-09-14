@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "request_id": "req_0123456789abcdef",
+  "observation_summary": ["릴리스 추정 시점 팔꿈치 각도 96도, 중간 신뢰도"],
+  "hypotheses": [
+    {
+      "statement": "릴리스 시 팔꿈치가 약간 벌어져 좌우 편차가 생길 수 있습니다.",
+      "confidence": "medium",
+      "supporting_observation_ids": ["obs_release_elbow_angle"],
+      "competing_explanations": ["촬영 각도 오차"]
+    }
+  ],
+  "confidence": "medium",
+  "coaching_comment": "같은 리듬을 먼저 만드세요",
+  "do_not_infer": ["ground_reaction_force", "joint_torque", "muscle_activation", "actual_metric_3d_position"],
+  "drills": [
+    {
+      "name": "폼 슈팅 10회",
+      "purpose": "릴리스 정렬 감각",
+      "constraints": ["림 앞 1m"],
+      "success_criteria": ["10회 중 8회 같은 궤적"],
+      "retest": "다음 촬영에서 팔꿈치 각도 재확인"
+    }
+  ],
+  "retest_plan": ["3일 후 Basic 1+1 재촬영"],
+  "evidence_used": [12],
+  "primary_visual_cue": { "observation_id": "obs_release_elbow_angle", "label": "릴리스 팔꿈치" },
+  "provider": { "id": "deterministic_v1", "revision": "2026-09-09" }
+}
