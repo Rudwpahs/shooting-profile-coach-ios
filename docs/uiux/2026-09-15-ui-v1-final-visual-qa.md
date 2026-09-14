@@ -21,6 +21,11 @@ real implementation rendered from an exported development web bundle; nothing is
    `SequenceViewer`, `CaptureSessionView`) and feeds them fixtures derived from the synthetic landmark
    session (`lib/dev/ui-demo-fixtures.ts`): no account, no network, no recording, no person. Capture
    states are produced by running the unchanged `captureSessionReducer`.
+5. Production isolation check: a production export (`corepack pnpm exec expo export --platform web
+   --output-dir web-dist`, 21 static routes) contains none of the fixture strings
+   (`demo-fixture-001`, `syntheticLandmarkSession`, `demo_fixture_recapture`) in any emitted
+   JavaScript. The first production export did contain them because the require sat behind an
+   imported boolean; it now sits under a literal `__DEV__` test that Metro folds away (`c71242f`).
 
 ## Captures
 
