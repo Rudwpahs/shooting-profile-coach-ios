@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   canvas: { backgroundColor: "#F5F1E8", bottom: 0, left: 0, overflow: "hidden", position: "absolute", right: 0, top: 0 },
   courtArc: { borderColor: "rgba(16,34,53,0.08)", borderRadius: 300, borderWidth: 1, height: 480, left: -278, position: "absolute", top: -190, width: 480 },
   courtLine: { backgroundColor: "rgba(249,115,22,0.22)", height: 1, position: "absolute", right: 0, top: 112, width: 96 },
-  page: { alignSelf: "center", maxWidth: 680, paddingBottom: 116, paddingHorizontal: 16, paddingTop: 20, width: "100%" },
+  page: { alignSelf: "center", maxWidth: 680, paddingBottom: 32, paddingHorizontal: 16, paddingTop: 20, width: "100%" },
   header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   kicker: { color: "#F97316", fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1.7 },
   title: { color: "#102235", fontFamily: "BarlowCondensed-Bold", fontSize: 45, letterSpacing: -1.1, lineHeight: 49, marginTop: 2 },
