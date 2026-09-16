@@ -15,6 +15,7 @@ import type { RepresentativeViewId } from "@/components/shooting-profile/sequenc
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
+import { evaluateSignupGate } from "@/lib/compliance/signup-gate";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { listFirebasePrivatePoses, removeFirebasePrivatePose, type FirebasePrivatePose } from "@/lib/firebase-private-data";
@@ -73,6 +74,9 @@ export default function PersonalProfileTab() {
   const [mode, setMode] = useState<AccountMode>("signin");
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [age14Plus, setAge14Plus] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyNoticeAcknowledged, setPrivacyNoticeAcknowledged] = useState(false);
   const [v1RecordEnvelope, setV1RecordEnvelope] = useState<{ ownerUid: string; value: FirebasePrivatePose[] } | null>(null);
   const [v1Loading, setV1Loading] = useState(false);
   const [v1Error, setV1Error] = useState<string | null>(null);
@@ -248,6 +252,13 @@ export default function PersonalProfileTab() {
     if (!email.trim() || password.length < 6) {
       setStatus("이메일과 6자 이상 비밀번호를 입력하세요.");
       return;
+    }
+    if (mode === "signup") {
+      const gate = evaluateSignupGate({ age14Plus, termsAccepted, privacyNoticeAcknowledged });
+      if (!gate.ok) {
+        setStatus(gate.message);
+        return;
+      }
     }
     setSubmitting(true);
     setStatus(null);
@@ -463,20 +474,34 @@ export default function PersonalProfileTab() {
 
         {accountVisible ? (
           <AccountPanel
+            age14Plus={age14Plus}
             configured={configured}
             email={email}
             focusedControl={focusedControl}
             loading={loading}
             mode={mode}
+            onAge14PlusChange={setAge14Plus}
             onEmailChange={setEmail}
             onFocusChange={setFocusedControl}
             onLogout={() => void logout()}
+            onOpenPrivacy={() => router.push("/legal/privacy" as never)}
+            onOpenTerms={() => router.push("/legal/terms" as never)}
             onPasswordChange={setPassword}
+            onPrivacyNoticeAcknowledgedChange={setPrivacyNoticeAcknowledged}
             onSubmit={() => void submit()}
-            onToggleMode={() => { setMode((current) => current === "signin" ? "signup" : "signin"); setStatus(null); }}
+            onTermsAcceptedChange={setTermsAccepted}
+            onToggleMode={() => {
+              setMode((current) => current === "signin" ? "signup" : "signin");
+              setStatus(null);
+              setAge14Plus(false);
+              setTermsAccepted(false);
+              setPrivacyNoticeAcknowledged(false);
+            }}
             password={password}
+            privacyNoticeAcknowledged={privacyNoticeAcknowledged}
             status={status}
             submitting={submitting}
+            termsAccepted={termsAccepted}
             user={user}
           />
         ) : null}
