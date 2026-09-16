@@ -24,7 +24,7 @@ jobs:
     env:
       CI: "true"
       EXPO_NO_TELEMETRY: "1"
-      EXPO_PUBLIC_HOOPHUB_UI_DEMO: "1"
+      EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD: "1"
       HOOPHUB_WEB_PREVIEW_BASE_URL: "/shooting-profile-coach-ios"
 
     steps:
@@ -48,10 +48,24 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify preview and production-isolation contracts
-        run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts
+        run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts tests/ui-pages-preview-routing.test.ts
 
-      - name: Export development UI preview
-        run: pnpm exec expo export --platform web --dev --output-dir web-preview-dist
+      - name: Verify ordinary production export excludes demo fixtures
+        env:
+          EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD: "0"
+          EXPO_PUBLIC_HOOPHUB_UI_DEMO: "0"
+          HOOPHUB_WEB_PREVIEW_BASE_URL: ""
+        shell: bash
+        run: |
+          pnpm exec expo export --platform web --output-dir web-production-check
+          if grep -R -E "demo-fixture-|demo_fixture_recapture|syntheticLandmarkSession" web-production-check; then
+            echo "Demo fixture content leaked into an ordinary production export" >&2
+            exit 1
+          fi
+          rm -rf web-production-check
+
+      - name: Export production UI preview
+        run: pnpm exec expo export --platform web --output-dir web-preview-dist
 
       - name: Verify static preview output
         shell: bash
