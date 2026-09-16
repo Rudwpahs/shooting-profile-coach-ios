@@ -27,27 +27,33 @@ describe("reel feed state", () => {
 
   it("one tap pauses, the next tap resumes as an explicit play, and a third pauses again", () => {
     const start = createReelFeedState(2);
-    const paused = run(start, { type: "toggle-playback" });
+    const paused = run(start, { type: "toggle-playback", playing: true });
     expect(paused.playback).toBe("paused");
-    const resumed = run(paused, { type: "toggle-playback" });
+    const resumed = run(paused, { type: "toggle-playback", playing: false });
     expect(resumed.playback).toBe("explicit");
-    expect(run(resumed, { type: "toggle-playback" }).playback).toBe("paused");
+    expect(run(resumed, { type: "toggle-playback", playing: true }).playback).toBe("paused");
     expect(run(paused, { type: "pause" })).toBe(paused);
     expect(run(start, { type: "pause" }).playback).toBe("paused");
   });
 
+  it("a tap while autoplay is held back (Reduce Motion) is the explicit request to play", () => {
+    const held = createReelFeedState(2);
+    expect(held.playback).toBe("auto");
+    expect(run(held, { type: "toggle-playback", playing: false }).playback).toBe("explicit");
+  });
+
   it("moves next and previous within bounds and the new item always starts playing", () => {
     const start = createReelFeedState(3);
-    const paused = run(start, { type: "toggle-playback" });
+    const paused = run(start, { type: "toggle-playback", playing: true });
     const next = run(paused, { type: "next" });
     expect(next).toEqual({ activeIndex: 1, count: 3, playback: "auto" });
     expect(run(next, { type: "next" }, { type: "next" }, { type: "next" }).activeIndex).toBe(2);
     expect(run(start, { type: "previous" })).toBe(start);
-    expect(run(run(next, { type: "toggle-playback" }), { type: "previous" })).toEqual({ activeIndex: 0, count: 3, playback: "auto" });
+    expect(run(run(next, { type: "toggle-playback", playing: true }), { type: "previous" })).toEqual({ activeIndex: 0, count: 3, playback: "auto" });
   });
 
   it("settles from viewability like a gesture: the same index keeps the pause, a new index clears it", () => {
-    const paused = run(createReelFeedState(3), { type: "toggle-playback" });
+    const paused = run(createReelFeedState(3), { type: "toggle-playback", playing: true });
     expect(run(paused, { type: "settle", index: 0 })).toBe(paused);
     expect(run(paused, { type: "settle", index: 2 })).toEqual({ activeIndex: 2, count: 3, playback: "auto" });
     expect(run(paused, { type: "settle", index: 9 }).activeIndex).toBe(2);
@@ -56,7 +62,7 @@ describe("reel feed state", () => {
 
   it("never toggles an empty feed and clamps when the list shrinks", () => {
     const empty = createReelFeedState(0);
-    expect(run(empty, { type: "toggle-playback" })).toBe(empty);
+    expect(run(empty, { type: "toggle-playback", playing: true })).toBe(empty);
     expect(run(empty, { type: "pause" })).toBe(empty);
     const onLast = run(createReelFeedState(3), { type: "next" }, { type: "next" }, { type: "pause" });
     expect(run(onLast, { type: "items", count: 2 })).toEqual({ activeIndex: 1, count: 2, playback: "auto" });

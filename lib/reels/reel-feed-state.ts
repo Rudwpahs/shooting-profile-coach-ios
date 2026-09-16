@@ -19,7 +19,8 @@ export type ReelFeedEvent =
   | { type: "settle"; index: number }
   | { type: "next" }
   | { type: "previous" }
-  | { type: "toggle-playback" }
+  /** A tap on the stage; `playing` is whether the Reel was advancing at that moment. */
+  | { type: "toggle-playback"; playing: boolean }
   | { type: "pause" };
 
 /** Which items may hold media: the active one plays, its neighbours hold a still, the rest hold nothing. */
@@ -68,8 +69,10 @@ export function transitionReelFeedState(state: ReelFeedState, event: ReelFeedEve
     case "previous":
       return settle(state, state.activeIndex - 1);
     case "toggle-playback":
+      // A tap pauses what plays and plays what does not; when autoplay was
+      // held back (Reduce Motion), the tap is the explicit request to play.
       if (state.count === 0) return state;
-      return { ...state, playback: state.playback === "paused" ? "explicit" : "paused" };
+      return { ...state, playback: event.playing ? "paused" : "explicit" };
     case "pause":
       return state.count === 0 || state.playback === "paused" ? state : { ...state, playback: "paused" };
     default:
