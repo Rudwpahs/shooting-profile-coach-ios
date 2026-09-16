@@ -61,6 +61,12 @@ and the progress line along the bottom edge above the inset.
 - The browser has no home-indicator inset, so the progress line sits 8 points above the bottom
   edge in the captures; on device it sits above the inset. Dynamic Island/notch clearance follows
   the top inset the same way.
+- Production-isolation check, local trap: in a worktree that has already run a preview export,
+  Metro's file-system transform cache keeps the transform in which
+  `EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD` was inlined as `"1"`, so a later plain export appears to
+  carry the fixtures. `expo export --platform web --clear` with both demo variables set to `"0"`
+  (what the Pages workflow does on a fresh runner) produced 22 routes and no
+  `demo-fixture-` / `demo_fixture_recapture` / `syntheticLandmarkSession` string anywhere.
 
 ## What the captures cannot show
 
