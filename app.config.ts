@@ -34,6 +34,8 @@ const env = {
   androidPackage: bundleId,
 };
 
+const webPreviewBaseUrl = process.env.HOOPHUB_WEB_PREVIEW_BASE_URL?.trim();
+
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
@@ -129,6 +131,7 @@ const config: ExpoConfig = {
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
+    baseUrl: webPreviewBaseUrl || undefined,
   },
 };
 
