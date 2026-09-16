@@ -1,5 +1,3 @@
-import { representativeConfidence } from "@/components/skeleton/representative-glyph";
-import type { SkeletonConfidence } from "@/components/skeleton/skeleton-glyph";
 import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
 import { relativeDayLabel } from "@/lib/format/relative-day";
 import type { RepresentativePose4DV2, ShootingHandV2 } from "@/lib/shooting-profile/types";
@@ -7,7 +5,8 @@ import type { RepresentativePose4DV2, ShootingHandV2 } from "@/lib/shooting-prof
 /**
  * UI view model for one Reel. Not a wire contract and never persisted: the
  * route builds it from what Home already holds (the viewer record of my
- * latest representative profile and the anonymous references).
+ * latest representative profile and the anonymous references). Pure data and
+ * copy only; anything that projects or draws lives under `components/reels`.
  */
 export type ProfileReel = {
   kind: "profile";
@@ -55,9 +54,4 @@ export function reelAccessibilityName(item: ReelItem): string {
 /** The analysis route exists only for a saved profile. */
 export function reelAnalysisProfileId(item: ReelItem): string | null {
   return item.kind === "profile" ? item.profileId : null;
-}
-
-/** Confidence as form (band and dashing), never as a number. */
-export function reelConfidence(item: ReelItem): SkeletonConfidence {
-  return item.kind === "profile" ? representativeConfidence(item.profile) : "basic";
 }

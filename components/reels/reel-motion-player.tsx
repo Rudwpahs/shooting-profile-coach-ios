@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Animated } from "react-native";
 
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
-import { representativeGlyph, representativeSequenceBounds } from "@/components/skeleton/representative-glyph";
-import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
-import { reelConfidence, type ReelItem } from "@/lib/reels/reel-model";
+import { representativeConfidence, representativeGlyph, representativeSequenceBounds } from "@/components/skeleton/representative-glyph";
+import { SkeletonGlyph, type SkeletonConfidence } from "@/components/skeleton/skeleton-glyph";
+import type { ReelItem } from "@/lib/reels/reel-model";
 import {
   REEL_LAST_FRAME,
   advanceReelFrameClock,
@@ -17,6 +17,11 @@ import {
 import { glyphBounds, poseMotionGlyph, type GlyphBounds, type SkeletonGlyphData } from "@/lib/skeleton/pose-motion-glyph";
 
 const BOUNDS_SAMPLES = 24;
+
+/** Confidence as form (band and dashing), never as a number. */
+export function reelConfidence(item: ReelItem): SkeletonConfidence {
+  return item.kind === "profile" ? representativeConfidence(item.profile) : "basic";
+}
 
 /** One fit per Reel and view: the loop, the neighbour still and the paused frame share it, so the figure never jumps. */
 export function reelStageBounds(item: ReelItem, view: RepresentativeViewId): GlyphBounds {

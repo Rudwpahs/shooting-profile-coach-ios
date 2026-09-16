@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { reelConfidence } from "@/components/reels/reel-motion-player";
 import { representativeConfidence } from "@/components/skeleton/representative-glyph";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { relativeDayLabel } from "@/lib/format/relative-day";
@@ -7,7 +8,6 @@ import {
   profileReelId,
   reelAccessibilityName,
   reelAnalysisProfileId,
-  reelConfidence,
   reelLine,
   reelTitle,
   referenceReelId,

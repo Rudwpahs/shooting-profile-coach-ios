@@ -65,6 +65,18 @@ describe("home entry", () => {
   });
 });
 
+describe("preview demo states", () => {
+  const demo = read("app/dev/ui-demo.tsx");
+
+  it("renders the real Reels feed with synthetic fixtures for playing, paused, next and analysis-entry", () => {
+    expect(demo).toContain('screen === "reels"');
+    expect(demo).toContain("<ReelsFeed");
+    for (const state of ["playing", "paused", "next", "analysis-entry"]) expect(demo).toContain(`"${state}"`);
+    expect(demo).toContain("fixtures.reels");
+    expect(demo).not.toMatch(/useFirebaseAuth|useLatestRepresentativeProfile|takeReelHandoff/);
+  });
+});
+
 describe("reels chrome contract", () => {
   it("shows a play indicator only while paused and never a persistent giant play button", () => {
     const conditional = overlay.indexOf("{paused ? (");
@@ -88,6 +100,15 @@ describe("reels chrome contract", () => {
     expect(playback).toContain("advanceRepresentativeFrameIndex(");
     expect(playback).toContain("resolveRepresentativePlayback(");
     expect(reels).not.toMatch(/projectPosePoint|Math\.cos\(|Math\.sin\(/);
+  });
+
+  it("keeps the pure model free of React Native so the preview fixtures load in plain node", () => {
+    const model = read("lib/reels/reel-model.ts");
+    const sources = read("lib/reels/reel-sources.ts");
+    const handoff = read("lib/reels/reel-handoff.ts");
+    for (const source of [model, sources, handoff]) {
+      expect(source).not.toMatch(/from "react-native"|from "@\/components\//);
+    }
   });
 
   it("subscribes once per screen to app state and Reduce Motion, outside the viewer", () => {

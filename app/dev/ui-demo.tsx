@@ -1,13 +1,14 @@
 import { Redirect, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AnalysisDetails, AnalysisEvidence, AnalysisSummaryLine } from "@/components/analysis/analysis-layers";
 import { HomeFeed } from "@/components/home/home-feed";
 import { MotionGrid } from "@/components/profile/motion-grid";
 import { ProfileHero } from "@/components/profile/profile-hero";
 import { ProfileStats } from "@/components/profile/profile-stats";
+import { ReelsFeed } from "@/components/reels/reels-feed";
 import { ScreenContainer } from "@/components/screen-container";
 import { CaptureSessionView, type CaptureController } from "@/components/shooting-profile/capture-session";
 import { SequenceViewer, type RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
@@ -22,6 +23,9 @@ import { primaryFinding } from "@/lib/skeleton/analysis-evidence";
 const FALLBACK_WIDTH = 375;
 const MAX_WIDTH = 680;
 const noop = () => undefined;
+/** Reels demo states: autoplaying, paused with the indicator, the next item active, and the paused frame the analysis action opens from. */
+const REEL_STATES = ["playing", "paused", "next", "analysis-entry"] as const;
+type ReelDemoState = (typeof REEL_STATES)[number];
 
 function useDemoFixtures(): UiDemoFixtures | null {
   return useMemo(() => {
@@ -51,6 +55,8 @@ export default function UiDemoRoute() {
   const fixtures = useDemoFixtures();
   const [measuredWidth, setMeasuredWidth] = useState(0);
   const [heroView, setHeroView] = useState<RepresentativeViewId>("oblique");
+  const viewport = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   if (!UI_DEMO_ENABLED || !fixtures) return <Redirect href="/" />;
   const width = Math.min(measuredWidth || FALLBACK_WIDTH, MAX_WIDTH);
   const screen = typeof params.screen === "string" ? params.screen : "home";
@@ -116,6 +122,27 @@ export default function UiDemoRoute() {
     );
   }
 
+  if (screen === "reels") {
+    const reelState: ReelDemoState = (REEL_STATES as readonly string[]).includes(state) ? (state as ReelDemoState) : "playing";
+    return (
+      <View style={styles.reels}>
+        <ReelsFeed
+          appState="active"
+          focused
+          height={viewport.height}
+          initialIndex={reelState === "next" ? 1 : 0}
+          initialPlayback={reelState === "paused" || reelState === "analysis-entry" ? "paused" : "auto"}
+          insets={{ top: insets.top, bottom: insets.bottom }}
+          items={fixtures.reels}
+          onClose={noop}
+          onOpenAnalysis={noop}
+          reducedMotion={false}
+          width={viewport.width}
+        />
+      </View>
+    );
+  }
+
   if (screen === "capture") {
     const captureState = state === "setup" || state === "collecting" || state === "recapture" || state === "review" ? fixtures.capture[state] : fixtures.capture.setup;
     const controller: CaptureController = {
@@ -143,4 +170,5 @@ const styles = StyleSheet.create({
   section: { marginTop: 14 },
   safeArea: { backgroundColor: tokens.background, flex: 1 },
   analysisPage: { alignSelf: "center", maxWidth: 680, paddingBottom: 40, width: "100%" },
+  reels: { backgroundColor: tokens.stage, flex: 1 },
 });

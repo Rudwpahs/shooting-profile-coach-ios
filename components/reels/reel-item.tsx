@@ -1,13 +1,13 @@
 import { useMemo, useRef } from "react";
 import { Animated, Pressable, StyleSheet, View, type AccessibilityActionEvent, type AppStateStatus } from "react-native";
 
-import { ReelMotionPlayer, reelStageBounds, reelStagePadding, reelStillGlyph } from "@/components/reels/reel-motion-player";
+import { ReelMotionPlayer, reelConfidence, reelStageBounds, reelStagePadding, reelStillGlyph } from "@/components/reels/reel-motion-player";
 import { ReelOverlay, type ReelOverlayInsets } from "@/components/reels/reel-overlay";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { tokens } from "@/constants/tokens";
 import type { ReelMediaRole, ReelPlaybackMode } from "@/lib/reels/reel-feed-state";
-import { reelAccessibilityName, reelAnalysisProfileId, reelConfidence, reelLine, type ReelItem as ReelItemModel } from "@/lib/reels/reel-model";
+import { reelAccessibilityName, reelAnalysisProfileId, reelLine, type ReelItem as ReelItemModel } from "@/lib/reels/reel-model";
 import { reelProgress, reelShouldPlay, reelStartFrame } from "@/lib/reels/reel-playback";
 
 type ReelItemProps = {

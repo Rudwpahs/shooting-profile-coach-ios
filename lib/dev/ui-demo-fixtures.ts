@@ -1,4 +1,6 @@
+import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import type { ShootingProfileSummaryV2, ShootingProfileViewerRecordV2 } from "@/lib/firebase-shooting-profiles";
+import { profileReelId, referenceReelId, type ReelItem } from "@/lib/reels/reel-model";
 import {
   captureSessionReducer,
   createCaptureSession,
@@ -19,6 +21,8 @@ export type UiDemoFixtures = {
   record: NonNullable<ShootingProfileViewerRecordV2>;
   summaries: ShootingProfileSummaryV2[];
   capture: Record<"setup" | "collecting" | "recapture" | "review", CaptureSessionState>;
+  /** The Reels demo: the fixture profile first, then the anonymous references. */
+  reels: ReelItem[];
 };
 
 const DEMO_DATE = new Date(2026, 8, 15, 10, 0, 0);
@@ -78,5 +82,10 @@ export function buildUiDemoFixtures(): UiDemoFixtures {
   });
   if (review.status !== "result_review") throw new Error(`demo fixture review state is ${review.status}`);
 
-  return { profile, recaptureProfile, record, summaries, capture: { setup, collecting, recapture, review } };
+  const reels: ReelItem[] = [
+    { kind: "profile", id: profileReelId(summaries[0].id), profileId: summaries[0].id, profile, shootingHand: "right", confidence: result.confidence, createdAt: DEMO_DATE },
+    ...ANONYMOUS_POSE_REFERENCES.map((reference): ReelItem => ({ kind: "reference", id: referenceReelId(reference.id), reference })),
+  ];
+
+  return { profile, recaptureProfile, record, summaries, capture: { setup, collecting, recapture, review }, reels };
 }
