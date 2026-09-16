@@ -26,9 +26,12 @@ const noop = () => undefined;
 function useDemoFixtures(): UiDemoFixtures | null {
   return useMemo(() => {
     let fixtures: UiDemoFixtures | null = null;
-    // Required, not imported, under a literal `__DEV__` test: Metro folds the branch away in a
-    // production bundle before it collects dependencies, so the fixtures are never bundled there.
-    if (__DEV__ && UI_DEMO_ENABLED) {
+    // Keep the require behind build-time-foldable literals. Normal production exports have
+    // neither flag enabled, while the GitHub Pages workflow explicitly enables PREVIEW_BUILD.
+    if (
+      (__DEV__ && process.env.EXPO_PUBLIC_HOOPHUB_UI_DEMO === "1") ||
+      process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"
+    ) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const module = require("@/lib/dev/ui-demo-fixtures") as typeof import("@/lib/dev/ui-demo-fixtures");
       fixtures = module.buildUiDemoFixtures();
@@ -38,10 +41,10 @@ function useDemoFixtures(): UiDemoFixtures | null {
 }
 
 /**
- * DEV DEMO. Renders the real presentational components with synthetic
- * fixtures so every state can be photographed without an account, a device
- * or a recording. Unreachable in production: the gate is a development bundle
- * plus EXPO_PUBLIC_HOOPHUB_UI_DEMO=1.
+ * UI DEMO. Renders the real presentational components with synthetic fixtures
+ * so every state can be reviewed without an account, a device or a recording.
+ * Normal production builds remain disabled; the Pages preview is an explicit
+ * build-time opt-in used only by its deployment workflow.
  */
 export default function UiDemoRoute() {
   const params = useLocalSearchParams<{ screen?: string; state?: string }>();
