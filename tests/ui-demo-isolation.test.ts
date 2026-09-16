@@ -13,23 +13,25 @@ function sourceFiles(root: string): string[] {
   });
 }
 
-describe("development demo harness stays out of production", () => {
+describe("UI demo harness stays isolated from normal production", () => {
   const gate = readFileSync("lib/dev/ui-demo.ts", "utf8");
   const route = readFileSync("app/dev/ui-demo.tsx", "utf8");
   const fixtures = readFileSync("lib/dev/ui-demo-fixtures.ts", "utf8");
 
-  it("is enabled only in a development bundle with an explicit opt-in variable", () => {
-    expect(gate).toMatch(/UI_DEMO_ENABLED[^=]*=\s*__DEV__ && process\.env\.EXPO_PUBLIC_HOOPHUB_UI_DEMO === "1"/);
+  it("is enabled only by the development opt-in or the explicit Pages preview-build opt-in", () => {
+    expect(gate).toContain('__DEV__ && process.env.EXPO_PUBLIC_HOOPHUB_UI_DEMO === "1"');
+    expect(gate).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
   });
 
-  it("loads fixtures only through a require inside a literal __DEV__ branch, so a production bundle drops them", () => {
-    // Metro folds a literal `__DEV__` test and removes the branch before collecting dependencies;
-    // an imported boolean alone is not foldable, so the require must sit under the literal.
-    expect(route).toContain("if (__DEV__ && UI_DEMO_ENABLED) {");
+  it("loads fixtures only behind build-time-foldable demo gates so an ordinary production bundle can drop them", () => {
+    expect(route).toContain('__DEV__ && process.env.EXPO_PUBLIC_HOOPHUB_UI_DEMO === "1"');
+    expect(route).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
     expect(route).toContain('require("@/lib/dev/ui-demo-fixtures")');
     // A type-only import is erased at build time; only a value import would pull the fixtures in.
     expect(route).not.toMatch(/^import (?!type\b).*ui-demo-fixtures/m);
-    expect(route.indexOf("if (__DEV__ && UI_DEMO_ENABLED) {")).toBeLessThan(route.indexOf('require("@/lib/dev/ui-demo-fixtures")'));
+    expect(route.indexOf('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"')).toBeLessThan(
+      route.indexOf('require("@/lib/dev/ui-demo-fixtures")'),
+    );
     expect(route).toContain("if (!UI_DEMO_ENABLED || !fixtures) return <Redirect");
   });
 
