@@ -13,14 +13,17 @@ describe("install-free UI web preview", () => {
     expect(appConfig).toContain("reactCompiler: true");
   });
 
-  it("builds the real development UI demo and deploys only the static export to Pages", () => {
+  it("builds the real synthetic UI demo with a production static export and deploys only that export to Pages", () => {
     expect(existsSync(workflowPath)).toBe(true);
     const workflow = readFileSync(workflowPath, "utf8");
 
-    expect(workflow).toContain('EXPO_PUBLIC_HOOPHUB_UI_DEMO: "1"');
+    expect(workflow).toContain('EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD: "1"');
     expect(workflow).toContain('HOOPHUB_WEB_PREVIEW_BASE_URL: "/shooting-profile-coach-ios"');
-    expect(workflow).toContain("pnpm exec expo export --platform web --dev --output-dir web-preview-dist");
-    expect(workflow).toContain("pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts");
+    expect(workflow).toContain("pnpm exec expo export --platform web --output-dir web-preview-dist");
+    expect(workflow).not.toContain("expo export --platform web --dev");
+    expect(workflow).toContain("tests/ui-pages-preview-routing.test.ts");
+    expect(workflow).toContain("Verify ordinary production export excludes demo fixtures");
+    expect(workflow).toContain("demo_fixture_recapture");
     expect(workflow).toContain("actions/configure-pages@v5");
     expect(workflow).toContain("actions/upload-pages-artifact@v4");
     expect(workflow).toContain("actions/deploy-pages@v4");
