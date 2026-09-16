@@ -102,6 +102,8 @@ export default function RootLayout() {
           {/* in order for ios apps tab switching to work properly, use presentation: "fullScreenModal" for login page, whenever you decide to use presentation: "modal*/}
           <FirebaseAuthProvider><Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
+            {/* Full-screen Reels: outside the tabs so no tab bar; a fade so the Home preview reads as growing into the stage. */}
+            <Stack.Screen name="reels" options={{ animation: "fade" }} />
             <Stack.Screen name="oauth/callback" />
           </Stack></FirebaseAuthProvider>
           <StatusBar style="auto" />

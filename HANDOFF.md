@@ -1,6 +1,15 @@
 # FormPath repository handoff
 
-Last updated: 2026-09-15 UTC
+Last updated: 2026-09-16 UTC
+
+## Hoop Hub Reels v1 handoff - 2026-09-16
+
+- Branch `work/hoophub-reels-v1` from `main` `2ebf1d2`; not merged; a PR exists for review only, merging is the owner's call.
+- Spec `docs/superpowers/specs/2026-09-16-hoophub-reels-v1-spec.md`, plan `docs/superpowers/plans/2026-09-16-hoophub-reels-v1.md`, open-source review `docs/uiux/2026-09-16-reels-open-source-review.md`, visual QA `docs/uiux/2026-09-16-reels-v1-visual-qa.md`.
+- Route `app/reels.tsx` is a stack route outside `(tabs)`: no tab bar, no top bar, safe areas to the chrome. Pure state lives under `lib/reels/` (view model, feed reducer, frame clock and playback policy, in-memory handoff), presentation under `components/reels/` (player, progress, overlay, item, feed). `SequenceViewer` is untouched; its projection and playback helpers are reused, never copied.
+- Home previews keep playing inline and open Reels at the tapped item; Home hands its items over in memory, a deep link rebuilds the list from Home's own sources. Leaving to analysis keeps the route mounted (same Reel and frame on return); back returns to Home.
+- Preview: `screen=reels&state=playing|paused|next|analysis-entry` on the install-free Pages demo; fixtures stay behind the build-time gates and the production-isolation test.
+- Not in this branch: Motion Lift (the earlier product-ui harness stays unmerged and is reference only), Lift Subject (investigation only), scrubbing (P2). Open owner decisions: device review of the entry transition and the gesture feel on an iPhone.
 
 ## Hoop Hub UI v1 handoff - 2026-09-15
 

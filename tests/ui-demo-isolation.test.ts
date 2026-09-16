@@ -55,6 +55,11 @@ describe("UI demo harness stays isolated from normal production", () => {
     expect(demo.capture.review.status).toBe("result_review");
     expect(demo.capture.review.slots.every((slot) => slot.status === "accepted")).toBe(true);
     expect(demo.summaries.every((summary) => summary.id.startsWith("demo-fixture-"))).toBe(true);
+    // Reels demo: the fixture profile first, then the anonymous references, nothing else.
+    expect(demo.reels[0].kind).toBe("profile");
+    expect(demo.reels.length).toBeGreaterThanOrEqual(2);
+    expect(demo.reels.slice(1).every((reel) => reel.kind === "reference")).toBe(true);
+    expect(new Set(demo.reels.map((reel) => reel.id)).size).toBe(demo.reels.length);
   });
 
   it("is never imported by a production path", () => {

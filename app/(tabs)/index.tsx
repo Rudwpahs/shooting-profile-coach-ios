@@ -10,6 +10,8 @@ import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { useProfile } from "@/lib/profile-store";
 import { getPracticeFocus } from "@/lib/recommendation";
+import { setReelHandoff } from "@/lib/reels/reel-handoff";
+import { homeReelItems } from "@/lib/reels/reel-sources";
 
 const FALLBACK_WIDTH = 375;
 const MAX_WIDTH = 680;
@@ -42,6 +44,11 @@ export default function HomeScreen() {
         onOpenAnalysis={(profileId) => router.push(`/private-analysis/${profileId}` as never)}
         onOpenCapture={() => router.push("/private-capture" as never)}
         onOpenProfile={() => router.navigate("/profile" as never)}
+        onOpenReel={(reelId) => {
+          // Hand Reels what Home is already showing, so it opens on the same item without a second fetch.
+          setReelHandoff({ items: homeReelItems(latest, ANONYMOUS_POSE_REFERENCES), startId: reelId });
+          router.push(`/reels?start=${encodeURIComponent(reelId)}` as never);
+        }}
         onOpenReference={() => router.push("/library" as never)}
         reference={ANONYMOUS_POSE_REFERENCES[0]}
         viewerEnabled={FORMPATH_FLAGS.representative4DViewer}

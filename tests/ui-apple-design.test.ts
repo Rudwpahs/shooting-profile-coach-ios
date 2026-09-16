@@ -26,6 +26,12 @@ const REDESIGNED = [
   "components/shooting-profile/capture-slot-card.tsx",
   "components/shooting-profile/quality-summary.tsx",
   "components/capture/capture-guide.tsx",
+  "app/reels.tsx",
+  "components/reels/reels-feed.tsx",
+  "components/reels/reel-item.tsx",
+  "components/reels/reel-motion-player.tsx",
+  "components/reels/reel-overlay.tsx",
+  "components/reels/reel-progress.tsx",
 ];
 
 /**
@@ -76,10 +82,18 @@ describe("apple design foundations", () => {
     const loopStage = read("components/skeleton/loop-stage.tsx");
     expect(loopStage).toContain("setPaused((value) => !value)");
     expect(loopStage).toContain('position: "absolute"');
-    for (const file of ["components/home/home-feed.tsx", "components/profile/profile-hero.tsx", "components/shooting-profile/quality-summary.tsx"]) {
+    for (const file of ["components/profile/profile-hero.tsx", "components/shooting-profile/quality-summary.tsx"]) {
       expect(read(file), file).toContain("<LoopStage");
       expect(read(file), file).toContain("paused={paused}");
     }
+    // Home previews behave like Reel previews instead: they keep playing and a tap opens full-screen Reels.
+    const homeFeed = read("components/home/home-feed.tsx");
+    expect(homeFeed).not.toContain("<LoopStage");
+    expect(homeFeed).toContain("onOpenReel(");
+    // The Reel itself is the post: the whole stage is the tap target and a tap toggles playback.
+    const reelItem = read("components/reels/reel-item.tsx");
+    expect(reelItem).toContain('testID="reel-tap"');
+    expect(reelItem).toContain("onPress={toggle}");
     for (const loop of ["components/skeleton/skeleton-loop.tsx", "components/skeleton/pose-motion-loop.tsx"]) {
       const source = read(loop);
       expect(source).toContain("paused?: boolean;");
