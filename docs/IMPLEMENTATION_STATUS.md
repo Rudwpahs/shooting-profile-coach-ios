@@ -36,6 +36,15 @@
 | V2와 선수 스타일 데이터 비교 | 미구현 | source 권리·provenance·호환 metric 검증 이후 Project 3로 진행 |
 | 사용자 간 공유·peer range | 미구현 | 동의·최소화·privacy threshold 설계 이후 Project 4로 진행 |
 
+## 2026-09-16 Hoop Hub Reels v1 (`work/hoophub-reels-v1`, 소유자 리뷰 대기)
+
+`main` @ `2ebf1d2` 위에 전체화면 세로 페이징 Reels를 추가했다. 홈의 모션 미리보기를 누르면 그 항목부터 Reels가 열리고(`app/reels.tsx`, 탭 밖 stack route라 탭 바·상단 바가 없다),
+활성 항목만 재생하며 이웃은 정지 프레임 하나만 가진다. 탭 = 같은 프레임에서 일시정지/재개, 위·아래 스와이프 = 한 항목씩 snap, 하단 2pt progress line,
+작은 시점 chip(정면·사선·측면, 표시용 yaw일 뿐 촬영 프로토콜과 무관), 저장된 프로필에만 `분석` action(분석에서 돌아오면 같은 Reel).
+Reduce Motion·백그라운드·화면 전환은 분석 뷰어의 playback policy를 그대로 조합한다(`lib/reels/reel-playback.ts`); Reduce Motion에서는 자동 재생하지 않고 탭이 명시적 재생이다.
+이전 product-ui 하네스는 개념만 이식했고 merge하지 않았다. 재구성 수학·임계값·캡처 수락·privacy·Firestore rules·rollout gate·계약은 변경 없음. 가짜 소셜 요소 없음.
+Lift Subject는 조사만 했다(`docs/uiux/2026-09-16-reels-open-source-review.md`). 시각 증거: `artifacts/reels-v1/`, QA: `docs/uiux/2026-09-16-reels-v1-visual-qa.md`.
+
 ## 2026-09-15 Hoop Hub UI v1 (`work/hoophub-ui-v1-final`, 소유자 리뷰 대기)
 
 `main` @ `c9da820` 위에 PR #5의 승인된 방향(Graphite / Volt, skeleton identity)을 선별 이식하고 촬영 화면을 다시 만들었다.
