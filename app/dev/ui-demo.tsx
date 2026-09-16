@@ -71,6 +71,7 @@ export default function UiDemoRoute() {
           onOpenAnalysis={noop}
           onOpenCapture={noop}
           onOpenProfile={noop}
+          onOpenReel={noop}
           onOpenReference={noop}
           reference={reference}
           viewerEnabled

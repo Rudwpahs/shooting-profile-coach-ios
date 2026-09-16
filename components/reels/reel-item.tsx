@@ -103,7 +103,7 @@ export function ReelItem({
         disabled={!active}
         onAccessibilityAction={onAccessibilityAction}
         onPress={toggle}
-        style={[styles.tap, { width, height }]}
+        style={({ pressed }) => [styles.tap, { width, height }, pressed && styles.pressed]}
         testID="reel-tap"
       />
 
@@ -130,4 +130,6 @@ const styles = StyleSheet.create({
   item: { backgroundColor: tokens.stage },
   stage: { backgroundColor: tokens.stage, overflow: "hidden" },
   tap: { left: 0, position: "absolute", top: 0 },
+  // Touch-down dims the stage a little; the tap itself is the pause or resume.
+  pressed: { backgroundColor: tokens.background, opacity: 0.12 },
 });

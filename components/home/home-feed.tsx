@@ -1,9 +1,8 @@
 import { useMemo } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { FeedCard } from "@/components/home/feed-card";
 import { StoryStrip, type StoryItem } from "@/components/home/story-strip";
-import { LoopStage } from "@/components/skeleton/loop-stage";
 import { PoseMotionLoop } from "@/components/skeleton/pose-motion-loop";
 import { representativeConfidence, representativeGlyph, representativeReleaseFrameIndex } from "@/components/skeleton/representative-glyph";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
@@ -13,6 +12,7 @@ import { typography } from "@/constants/typography";
 import type { LatestRepresentativeState } from "@/hooks/use-latest-representative-profile";
 import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
 import { relativeDayLabel } from "@/lib/format/relative-day";
+import { profileReelId, referenceReelId } from "@/lib/reels/reel-model";
 import { poseMotionGlyph } from "@/lib/skeleton/pose-motion-glyph";
 
 export type HomeFeedProps = {
@@ -26,14 +26,18 @@ export type HomeFeedProps = {
   onOpenProfile: () => void;
   onOpenReference: () => void;
   onOpenAnalysis: (profileId: string) => void;
+  /** A tap on a preview opens full-screen Reels at that item. */
+  onOpenReel: (reelId: string) => void;
 };
 
 /**
  * The feed itself: a story strip, my latest skeleton loop (or an honest
  * placeholder), and the anonymous reference loop. One caption line per card.
+ * Each preview keeps playing inline and opens Reels on tap, the way a Reel
+ * preview does; there is no detail screen and no separate expand control.
  * Presentational, so the route and the development demo render the same thing.
  */
-export function HomeFeed({ width, latest, reference, goalLabel, focusTitle, viewerEnabled, onOpenCapture, onOpenProfile, onOpenReference, onOpenAnalysis }: HomeFeedProps) {
+export function HomeFeed({ width, latest, reference, goalLabel, focusTitle, viewerEnabled, onOpenCapture, onOpenProfile, onOpenReference, onOpenAnalysis, onOpenReel }: HomeFeedProps) {
   const stageHeight = Math.round(width * 0.9);
   const referenceAvatar = useMemo(() => poseMotionGlyph(reference.motion, { view: "side", progress: 0.75 }), [reference.motion]);
   const silhouette = useMemo(() => poseMotionGlyph(reference.motion, { view: "oblique", progress: 0.75 }), [reference.motion]);
@@ -74,20 +78,24 @@ export function HomeFeed({ width, latest, reference, goalLabel, focusTitle, view
           confidence={representativeConfidence(latest.record.profile)}
           meta={relativeDayLabel(latest.summary.createdAt.toDate())}
           stage={(
-            <LoopStage accessibilityLabel="내 최근 대표 슛폼 skeleton" height={stageHeight} width={width}>
-              {(paused) => (
-                <SkeletonLoop
-                  accessibilityLabel="내 최근 대표 슛폼 skeleton, 사선 시점 재생"
-                  confidence={representativeConfidence(latest.record.profile)}
-                  height={stageHeight}
-                  paused={paused}
-                  profile={latest.record.profile}
-                  shootingHand={latest.record.shootingHand}
-                  view="oblique"
-                  width={width}
-                />
-              )}
-            </LoopStage>
+            <Pressable
+              accessibilityLabel="내 슛폼 릴 열기"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: false }}
+              disabled={false}
+              onPress={() => onOpenReel(profileReelId(latest.summary.id))}
+              style={({ pressed }) => [{ width, height: stageHeight }, pressed && styles.stagePressed]}
+            >
+              <SkeletonLoop
+                accessibilityLabel="내 최근 대표 슛폼 skeleton, 사선 시점 재생"
+                confidence={representativeConfidence(latest.record.profile)}
+                height={stageHeight}
+                profile={latest.record.profile}
+                shootingHand={latest.record.shootingHand}
+                view="oblique"
+                width={width}
+              />
+            </Pressable>
           )}
           title="내 슛폼"
         />
@@ -113,18 +121,22 @@ export function HomeFeed({ width, latest, reference, goalLabel, focusTitle, view
         caption={reference.styleTitle}
         meta="CMU optical mocap"
         stage={(
-          <LoopStage accessibilityLabel={`${reference.shortLabel} 참조 skeleton`} height={stageHeight} width={width}>
-            {(paused) => (
-              <PoseMotionLoop
-                accessibilityLabel={`${reference.shortLabel} 참조 skeleton, 사선 시점 재생`}
-                height={stageHeight}
-                motion={reference.motion}
-                paused={paused}
-                view="oblique"
-                width={width}
-              />
-            )}
-          </LoopStage>
+          <Pressable
+            accessibilityLabel={`${reference.shortLabel} 참조 릴 열기`}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: false }}
+            disabled={false}
+            onPress={() => onOpenReel(referenceReelId(reference.id))}
+            style={({ pressed }) => [{ width, height: stageHeight }, pressed && styles.stagePressed]}
+          >
+            <PoseMotionLoop
+              accessibilityLabel={`${reference.shortLabel} 참조 skeleton, 사선 시점 재생`}
+              height={stageHeight}
+              motion={reference.motion}
+              view="oblique"
+              width={width}
+            />
+          </Pressable>
         )}
         title={reference.shortLabel}
       />
@@ -137,4 +149,5 @@ const styles = StyleSheet.create({
   placeholder: { alignItems: "center", backgroundColor: tokens.stage, justifyContent: "flex-end", overflow: "hidden", paddingBottom: 22 },
   silhouette: { left: 0, opacity: 0.16, position: "absolute", top: 0 },
   placeholderText: { ...typography.callout, color: tokens.mutedForeground },
+  stagePressed: { opacity: 0.92 },
 });
