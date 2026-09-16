@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { Animated, Pressable, StyleSheet, View, type AccessibilityActionEvent, type AppStateStatus } from "react-native";
 
 import { ReelMotionPlayer, reelConfidence, reelStageBounds, reelStagePadding, reelStillGlyph } from "@/components/reels/reel-motion-player";
-import { ReelOverlay, type ReelOverlayInsets } from "@/components/reels/reel-overlay";
+import { REEL_STAGE_BOTTOM, REEL_STAGE_TOP, ReelOverlay, type ReelOverlayInsets } from "@/components/reels/reel-overlay";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { tokens } from "@/constants/tokens";
@@ -45,6 +45,9 @@ export function ReelItem({
   const active = role === "active";
   const playing = reelShouldPlay({ active, focused, appState, playback, reducedMotion });
   const startFrame = reelStartFrame(item);
+  // The item is the whole viewport; the figure is fitted between the chrome bands.
+  const stageTop = insets.top + REEL_STAGE_TOP;
+  const stageHeight = Math.max(1, height - stageTop - (insets.bottom + REEL_STAGE_BOTTOM));
   const progress = useRef(new Animated.Value(reelProgress(startFrame))).current;
   const still = useMemo(() => (role === "adjacent" ? reelStillGlyph(item, view) : null), [item, role, view]);
   const bounds = useMemo(() => (role === "adjacent" ? reelStageBounds(item, view) : null), [item, role, view]);
@@ -69,9 +72,9 @@ export function ReelItem({
       testID={`reel-item-${item.kind}`}
     >
       {/* Layer 1: media. (A future subject cutout would sit between this and the skeleton.) */}
-      <View style={[styles.stage, { width, height }]} testID={`reel-stage-${active ? "active" : role === "adjacent" ? "still" : "idle"}`}>
+      <View style={[styles.stage, { width, height: stageHeight, top: stageTop }]} testID={`reel-stage-${active ? "active" : role === "adjacent" ? "still" : "idle"}`}>
         {active ? (
-          <ReelMotionPlayer height={height} item={item} playing={playing} progress={progress} startFrame={startFrame} view={view} width={width} />
+          <ReelMotionPlayer height={stageHeight} item={item} playing={playing} progress={progress} startFrame={startFrame} view={view} width={width} />
         ) : still && bounds ? (
           <SkeletonGlyph
             accessible={false}
@@ -79,8 +82,8 @@ export function ReelItem({
             bounds={bounds}
             confidence={reelConfidence(item)}
             data={still}
-            height={height}
-            padding={reelStagePadding(width, height)}
+            height={stageHeight}
+            padding={reelStagePadding(width, stageHeight)}
             width={width}
           />
         ) : null}
@@ -128,7 +131,7 @@ export function ReelItem({
 
 const styles = StyleSheet.create({
   item: { backgroundColor: tokens.stage },
-  stage: { backgroundColor: tokens.stage, overflow: "hidden" },
+  stage: { backgroundColor: tokens.stage, left: 0, overflow: "hidden", position: "absolute" },
   tap: { left: 0, position: "absolute", top: 0 },
   // Touch-down dims the stage a little; the tap itself is the pause or resume.
   pressed: { backgroundColor: tokens.background, opacity: 0.12 },

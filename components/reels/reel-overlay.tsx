@@ -16,6 +16,10 @@ export const REEL_VIEWS: readonly { id: RepresentativeViewId; label: string }[] 
 
 const CONTROL = 44;
 const INDICATOR = 60;
+/** Clearance under the top controls: the figure is fitted below the close affordance and the chips. */
+export const REEL_STAGE_TOP = CONTROL + 8;
+/** Clearance above the bottom band: the caption, the rail and the progress line never meet the figure's feet. */
+export const REEL_STAGE_BOTTOM = 96;
 
 export type ReelOverlayInsets = { top: number; bottom: number };
 

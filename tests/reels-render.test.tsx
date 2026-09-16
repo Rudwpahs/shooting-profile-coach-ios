@@ -24,6 +24,7 @@ vi.mock("expo-haptics", () => ({
 
 const { ReelsFeed } = await import("@/components/reels/reels-feed");
 const { ReelItem } = await import("@/components/reels/reel-item");
+const { REEL_STAGE_BOTTOM, REEL_STAGE_TOP } = await import("@/components/reels/reel-overlay");
 const { anonymousReferenceReel, syntheticProfileReel } = await import("@/tests/fixtures/reel-fixtures");
 
 const WIDTH = 375;
@@ -89,6 +90,12 @@ describe("reels feed", () => {
     expect(tap().getAttribute("aria-valuetext")).toBe("1 / 3");
     expect(byTestId("reel-pause-indicator")).toHaveLength(0);
     expect(byTestId("reel-progress").length).toBeGreaterThanOrEqual(1);
+    // The figure is fitted between the top controls and the bottom caption band, so feet never run into text.
+    const stage = byTestId("reel-stage-active")[0];
+    expect(REEL_STAGE_TOP).toBeGreaterThanOrEqual(44);
+    expect(REEL_STAGE_BOTTOM).toBeGreaterThanOrEqual(88);
+    expect(stage.style.top).toBe(`${INSETS.top + REEL_STAGE_TOP}px`);
+    expect(stage.style.height).toBe(`${HEIGHT - (INSETS.top + REEL_STAGE_TOP) - (INSETS.bottom + REEL_STAGE_BOTTOM)}px`);
   });
 
   it("one tap pauses with a small play indicator, the next tap resumes", async () => {
