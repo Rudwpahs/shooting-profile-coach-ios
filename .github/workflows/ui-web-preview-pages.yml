@@ -1,0 +1,93 @@
+name: Hoop Hub UI Web Preview
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: hoop-hub-ui-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build install-free UI preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_PUBLIC_HOOPHUB_UI_DEMO: "1"
+      HOOPHUB_WEB_PREVIEW_BASE_URL: "/shooting-profile-coach-ios"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
+      - name: Activate pnpm 9.12.0 with Corepack
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.0 --activate
+          test "$(pnpm --version)" = "9.12.0"
+
+      - name: Install dependencies from lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify preview and production-isolation contracts
+        run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts
+
+      - name: Export development UI preview
+        run: pnpm exec expo export --platform web --dev --output-dir web-preview-dist
+
+      - name: Verify static preview output
+        shell: bash
+        run: |
+          test -f web-preview-dist/index.html
+          if [ -f web-preview-dist/dev/ui-demo.html ]; then
+            echo "Preview route: web-preview-dist/dev/ui-demo.html"
+          elif [ -f web-preview-dist/dev/ui-demo/index.html ]; then
+            echo "Preview route: web-preview-dist/dev/ui-demo/index.html"
+          else
+            echo "Expected /dev/ui-demo static route was not emitted" >&2
+            find web-preview-dist -maxdepth 4 -type f | sort >&2
+            exit 1
+          fi
+
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: web-preview-dist
+
+  deploy:
+    name: Deploy install-free UI preview
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
