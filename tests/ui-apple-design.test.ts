@@ -10,7 +10,9 @@ const REDESIGNED = [
   "components/home/home-feed.tsx",
   "app/(tabs)/explore.tsx",
   "app/(tabs)/profile.tsx",
+  "components/profile/owner-profile-tab.tsx",
   "app/private-analysis/[id].tsx",
+  "components/owner/owner-private-analysis-route.tsx",
   "components/hoophub-tab-bar.tsx",
   "components/ui/top-bar.tsx",
   "components/home/feed-card.tsx",
@@ -34,11 +36,6 @@ const REDESIGNED = [
   "components/reels/reel-progress.tsx",
 ];
 
-/**
- * The parts of Apple's design guidance (Designing Fluid Interfaces, The
- * Details of UI Typography, Principles of Great Design) that this app can
- * honour in React Native, pinned so they survive later edits.
- */
 describe("apple design foundations", () => {
   it("uses the platform system font on every redesigned surface, with hierarchy from weight and size", () => {
     for (const file of REDESIGNED) {
@@ -54,7 +51,6 @@ describe("apple design foundations", () => {
     expect(typography.title.letterSpacing).toBeLessThan(0);
     expect(typography.body.letterSpacing).toBe(0);
     expect(typography.label.letterSpacing).toBeGreaterThan(0);
-    // Leading tracks size inversely: relative line height is tighter on large text.
     expect(typography.wordmark.lineHeight / typography.wordmark.fontSize).toBeLessThan(typography.caption.lineHeight / typography.caption.fontSize);
     expect(typography.stat.fontVariant).toEqual(["tabular-nums"]);
   });
@@ -63,10 +59,10 @@ describe("apple design foundations", () => {
     const topBar = read("components/ui/top-bar.tsx");
     expect(topBar).toContain("TOP_BAR_HEIGHT = 44");
     expect(topBar).toContain('accessibilityRole="header"');
-    for (const screen of ["app/(tabs)/index.tsx", "app/(tabs)/explore.tsx", "app/(tabs)/profile.tsx", "app/private-analysis/[id].tsx", "components/shooting-profile/capture-session.tsx"]) {
+    for (const screen of ["app/(tabs)/index.tsx", "app/(tabs)/explore.tsx", "components/profile/owner-profile-tab.tsx", "components/owner/owner-private-analysis-route.tsx", "components/shooting-profile/capture-session.tsx"]) {
       expect(read(screen), screen).toContain("<TopBar");
     }
-    expect(read("app/private-analysis/[id].tsx")).toContain('name="chevron-left"');
+    expect(read("components/owner/owner-private-analysis-route.tsx")).toContain('name="chevron-left"');
     expect(read("components/shooting-profile/capture-session.tsx")).not.toContain("FORMPATH / PRIVATE CAPTURE");
   });
 
@@ -86,18 +82,15 @@ describe("apple design foundations", () => {
       expect(read(file), file).toContain("<LoopStage");
       expect(read(file), file).toContain("paused={paused}");
     }
-    // Home previews behave like Reel previews instead: they keep playing and a tap opens full-screen Reels.
     const homeFeed = read("components/home/home-feed.tsx");
     expect(homeFeed).not.toContain("<LoopStage");
     expect(homeFeed).toContain("onOpenReel(");
-    // The Reel itself is the post: the whole stage is the tap target and a tap toggles playback.
     const reelItem = read("components/reels/reel-item.tsx");
     expect(reelItem).toContain('testID="reel-tap"');
     expect(reelItem).toContain("onPress={toggle}");
     for (const loop of ["components/skeleton/skeleton-loop.tsx", "components/skeleton/pose-motion-loop.tsx"]) {
       const source = read(loop);
       expect(source).toContain("paused?: boolean;");
-      // Mounting never forces play; only the viewer's own change of intent does.
       expect(source).toContain("if (pausedRef.current === paused) return;");
     }
   });
