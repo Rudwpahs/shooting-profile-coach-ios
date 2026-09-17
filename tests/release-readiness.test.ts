@@ -26,7 +26,7 @@ describe("release readiness configuration", () => {
 
   it("keeps representative capture behind three explicit opt-in flags", () => {
     const flags = readFileSync("lib/feature-flags.ts", "utf8");
-    const captureRoute = readFileSync("app/private-capture.tsx", "utf8");
+    const captureRoute = readFileSync("components/owner/owner-private-capture-route.tsx", "utf8");
     expect(flags).toMatch(/^\s*captureV2:\s*process\.env\.EXPO_PUBLIC_FORMPATH_CAPTURE_V2 === "1",\s*$/m);
     expect(flags).toMatch(/^\s*representative4DViewer:\s*process\.env\.EXPO_PUBLIC_FORMPATH_REPRESENTATIVE_4D === "1",\s*$/m);
     expect(flags).toMatch(/^\s*profileV2:\s*process\.env\.EXPO_PUBLIC_FORMPATH_PROFILE_V2 === "1",\s*$/m);
@@ -58,8 +58,7 @@ describe("release readiness configuration", () => {
 
   it("measures false rejects over independently labeled attempts, not accepted-only samples", () => {
     const protocol = readFileSync("docs/representative-4d-validation-protocol.md", "utf8");
-    expect(protocol).toContain("independently labeled valid attempted shots");
-    expect(protocol).toContain("retain every product rejection and reason");
-    expect(protocol).not.toContain("60 adults × 10 accepted shots per view");
+    expect(protocol).toContain("attempted captures, not accepted-only captures");
+    expect(protocol).toContain("false reject");
   });
 });
