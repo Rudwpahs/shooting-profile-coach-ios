@@ -38,4 +38,35 @@ describe("preview-only navigation components", () => {
     expect(source).not.toContain("getShootingProfileV2");
     expect(source).not.toContain("useFirebaseAuth");
   });
+
+  it("keeps the delegated owner capture route behind the original auth and feature gates", () => {
+    const source = read("components/owner/owner-private-capture-route.tsx");
+    expect(source).toContain("FORMPATH_FLAGS.captureV2 && FORMPATH_FLAGS.profileV2");
+    expect(source).toContain("useFirebaseAuth");
+    expect(source).toContain("saveShootingProfileV2(user, input)");
+    expect(source).toContain('router.replace(`/private-analysis/${savedProfileId}` as never)');
+    expect(source).toContain('<Redirect href="/profile" />');
+    expect(source).toContain("router.canGoBack()");
+  });
+
+  it("keeps the delegated owner analysis route behind owner auth, both flags, and keyed loading", () => {
+    const source = read("components/owner/owner-private-analysis-route.tsx");
+    for (const invariant of [
+      "FORMPATH_FLAGS.profileV2",
+      "FORMPATH_FLAGS.representative4DViewer",
+      "useFirebaseAuth",
+      "getShootingProfileV2(user, profileId)",
+      "buildShootingProfileViewerKey(user.uid, profileId)",
+      "canRenderShootingProfileViewerRecord",
+      "router.canGoBack()",
+      'router.replace("/profile")',
+      "SequenceViewer",
+      "shootingHand={loadState.record.shootingHand}",
+      "confidence={loadState.record.confidence}",
+    ]) {
+      expect(source).toContain(invariant);
+    }
+    expect(source).not.toContain("JSON.parse");
+    expect(source).not.toMatch(/console\.(?:log|warn|error)/);
+  });
 });
