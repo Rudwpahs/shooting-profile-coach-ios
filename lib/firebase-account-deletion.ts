@@ -63,7 +63,8 @@ export async function deleteFirebaseAccount(user: User, password: string): Promi
   if (!password.trim()) {
     throw new Error("계정 삭제를 위해 현재 비밀번호를 입력하세요.");
   }
-  if (!firestore) {
+  const db = firestore;
+  if (!db) {
     throw new Error("Firebase Firestore 연결 설정이 아직 완료되지 않았습니다.");
   }
 
@@ -91,7 +92,7 @@ export async function deleteFirebaseAccount(user: User, password: string): Promi
       await removeFirebasePrivatePose(user, poseId);
     },
     deleteLegacyRoot: async () => {
-      await deleteDoc(doc(firestore, "users", user.uid));
+      await deleteDoc(doc(db, "users", user.uid));
     },
     deleteAuthUser: async () => {
       await deleteUser(user);
