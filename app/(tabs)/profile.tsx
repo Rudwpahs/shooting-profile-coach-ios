@@ -68,7 +68,7 @@ function focusStyle(focused: boolean, dark = false): ViewStyle {
 export default function PersonalProfileTab() {
   const router = useRouter();
   const { profile } = useProfile();
-  const { user, loading, configured, profileSync, signIn, signUp, logout } = useFirebaseAuth();
+  const { user, loading, configured, signIn, signUp, logout } = useFirebaseAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<AccountMode>("signin");
@@ -405,12 +405,6 @@ export default function PersonalProfileTab() {
         />
         <Text style={styles.goalLine}>목표 · {goalLabel}</Text>
 
-        {user && profileSync?.status === "failed" ? (
-          <View accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.syncWarning}>
-            <Text style={styles.syncWarningText}>{profileSync.message}</Text>
-          </View>
-        ) : null}
-
         {FORMPATH_FLAGS.profileV2 ? (
           <View style={styles.section}>
             {loading ? <Text accessibilityLiveRegion="polite" style={styles.stateText}>계정 상태를 확인하는 중</Text> : !user ? null : (
@@ -536,8 +530,6 @@ const styles = StyleSheet.create({
   page: { alignSelf: "center", paddingBottom: 32 },
   iconButton: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
   goalLine: { ...typography.caption, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 8 },
-  syncWarning: { backgroundColor: tokens.warningSoft, borderColor: tokens.warning, borderRadius: 10, borderWidth: 1, marginHorizontal: 14, marginTop: 10, padding: 10 },
-  syncWarningText: { color: tokens.warning, fontSize: 12, lineHeight: 17 },
   section: { marginTop: 14 },
   stateText: { ...typography.callout, color: tokens.mutedForeground, marginVertical: 14, textAlign: "center" },
   noticeText: { ...typography.caption, color: tokens.positive, paddingHorizontal: 14, paddingTop: 8 },
