@@ -48,7 +48,6 @@ export function AccountPanel({
     onBlur: () => onFocusChange(focusedControl === key ? null : focusedControl),
     onFocus: () => onFocusChange(key),
   });
-  const signup = mode === "signup";
 
   if (loading) {
     return <View style={styles.panel}><ActivityIndicator color={tokens.mutedForeground} style={styles.loader} /></View>;
