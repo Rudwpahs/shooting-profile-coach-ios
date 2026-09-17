@@ -58,7 +58,8 @@ describe("release readiness configuration", () => {
 
   it("measures false rejects over independently labeled attempts, not accepted-only samples", () => {
     const protocol = readFileSync("docs/representative-4d-validation-protocol.md", "utf8");
-    expect(protocol).toContain("attempted captures, not accepted-only captures");
-    expect(protocol).toContain("false reject");
+    expect(protocol).toContain("independently labeled valid attempted shots");
+    expect(protocol).toContain("retain every product rejection and reason");
+    expect(protocol).not.toContain("60 adults × 10 accepted shots per view");
   });
 });
