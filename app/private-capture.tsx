@@ -9,7 +9,7 @@ import { usePreviewRuntime } from "@/lib/preview/preview-runtime-provider";
  * tests/ui-preview-navigation.test.ts verifies the actual owner source.
  *
  * Owner invariants: FORMPATH_FLAGS.captureV2; <Redirect href="/profile" />;
- * router.canGoBack().
+ * router.canGoBack(); router.replace("/profile").
  */
 export default function PrivateCaptureRoute() {
   const preview = usePreviewRuntime();
