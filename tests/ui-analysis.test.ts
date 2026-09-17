@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-const route = readFileSync("app/private-analysis/[id].tsx", "utf8");
+const route = readFileSync("components/owner/owner-private-analysis-route.tsx", "utf8");
 const layers = readFileSync("components/analysis/analysis-layers.tsx", "utf8");
 const viewer = readFileSync("components/shooting-profile/sequence-viewer.tsx", "utf8");
 
@@ -56,8 +56,6 @@ describe("analysis in three layers", () => {
   });
 
   it("puts one visual highlight on the skeleton: the joint behind the primary finding", () => {
-    // The route hands the least certain joint to the player, and the player
-    // draws exactly one ring around it, in the accent, on top of the joints.
     expect(route).toContain("highlightJoint={primaryFinding(loadState.record.profile).joint}");
     expect(viewer).toContain("highlightJoint?: PersistedJointNameV2;");
     const stage = viewer.slice(viewer.indexOf("<Svg"), viewer.indexOf("</Svg>"));
