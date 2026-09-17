@@ -9,12 +9,9 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "react-native-reanimated";
 import { Platform } from "react-native";
-import "@/lib/_core/nativewind-pressable";
-import { ThemeProvider } from "@/lib/theme-provider";
-import { FirebaseAuthProvider } from "@/lib/firebase-auth";
+import "react-native-reanimated";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -23,8 +20,13 @@ import {
 } from "react-native-safe-area-context";
 import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
-import { trpc, createTRPCClient } from "@/lib/trpc";
+import "@/lib/_core/nativewind-pressable";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+import { FirebaseAuthProvider } from "@/lib/firebase-auth";
+import { PREVIEW_RUNTIME_ENABLED } from "@/lib/preview/preview-runtime";
+import { PreviewRuntimeProvider } from "@/lib/preview/preview-runtime-provider";
+import { ThemeProvider } from "@/lib/theme-provider";
+import { createTRPCClient, trpc } from "@/lib/trpc";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -100,12 +102,16 @@ export default function RootLayout() {
           {/* Default to hiding native headers so raw route segments don't appear (e.g. "(tabs)", "products/[id]"). */}
           {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
           {/* in order for ios apps tab switching to work properly, use presentation: "fullScreenModal" for login page, whenever you decide to use presentation: "modal*/}
-          <FirebaseAuthProvider><Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            {/* Full-screen Reels: outside the tabs so no tab bar; a fade so the Home preview reads as growing into the stage. */}
-            <Stack.Screen name="reels" options={{ animation: "fade" }} />
-            <Stack.Screen name="oauth/callback" />
-          </Stack></FirebaseAuthProvider>
+          <PreviewRuntimeProvider>
+            <FirebaseAuthProvider disabled={PREVIEW_RUNTIME_ENABLED}>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" />
+                {/* Full-screen Reels: outside the tabs so no tab bar; a fade so the Home preview reads as growing into the stage. */}
+                <Stack.Screen name="reels" options={{ animation: "fade" }} />
+                <Stack.Screen name="oauth/callback" />
+              </Stack>
+            </FirebaseAuthProvider>
+          </PreviewRuntimeProvider>
           <StatusBar style="auto" />
         </QueryClientProvider>
       </trpc.Provider>

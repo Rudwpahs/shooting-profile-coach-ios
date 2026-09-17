@@ -55,7 +55,7 @@ describe("representative 4D release boundary", () => {
 
   it("keeps every V2 capability default-off, preserves V1, and records native resource gates", () => {
     const flags = readFileSync("lib/feature-flags.ts", "utf8");
-    const profileRoute = readFileSync("app/(tabs)/profile.tsx", "utf8");
+    const profileRoute = readFileSync("components/profile/owner-profile-tab.tsx", "utf8");
     const moduleConfig = readFileSync("modules/formpath-pose/expo-module.config.json", "utf8");
     const podspec = readFileSync("modules/formpath-pose/FormpathPose.podspec", "utf8");
     const qa = readFileSync("docs/iphone-custom-build-qa.md", "utf8");

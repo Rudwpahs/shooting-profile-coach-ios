@@ -131,7 +131,7 @@ describe("profile sync outcome", () => {
 /** Structural guard: no React Native render-test setup exists in this repository. */
 describe("auth provider wiring", () => {
   const auth = readFileSync("lib/firebase-auth.tsx", "utf8");
-  const profile = readFileSync("app/(tabs)/profile.tsx", "utf8");
+  const profile = readFileSync("components/profile/owner-profile-tab.tsx", "utf8");
 
   /** Reads forward from an anchor so the assertions do not depend on declaration order. */
   const bodyAfter = (source: string, anchor: string) => {
