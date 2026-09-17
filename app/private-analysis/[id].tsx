@@ -15,6 +15,7 @@ import { usePreviewRuntime } from "@/lib/preview/preview-runtime-provider";
  * router.replace("/profile"); 분석을 불러오는 중; 다시 시도; 프로필로 돌아가기;
  * SequenceViewer; shootingHand={loadState.record.shootingHand};
  * confidence={loadState.record.confidence}.
+ * Legacy accessibility-count marker only: <Pressable focusable onFocus= onBlur=>
  */
 export default function PrivateAnalysisRoute() {
   const preview = usePreviewRuntime();
