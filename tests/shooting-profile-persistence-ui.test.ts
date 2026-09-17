@@ -25,13 +25,7 @@ describe("private V2 capture persistence wiring", () => {
 
   it("invalidates retained attempts on every capture-generation escape and rejects late save completion", () => {
     const hook = read("hooks/use-shooting-profile-capture.ts");
-    for (const callback of [
-      "selectMode",
-      "returnToModeSelect",
-      "setShootingHand",
-      "retakeSlot",
-      "cancelSession",
-    ]) {
+    for (const callback of ["selectMode", "returnToModeSelect", "setShootingHand", "retakeSlot", "cancelSession"]) {
       const start = hook.indexOf(`const ${callback} = useCallback`);
       expect(start).toBeGreaterThan(-1);
       expect(hook.slice(start, start + 420)).toContain("invalidateDerivedSave");
@@ -44,7 +38,7 @@ describe("private V2 capture persistence wiring", () => {
   });
 
   it("requires both capture flags and settled signed-in auth, then routes only by opaque returned ID", () => {
-    const route = read("app/private-capture.tsx");
+    const route = read("components/owner/owner-private-capture-route.tsx");
     expect(route).toContain("FORMPATH_FLAGS.captureV2 && FORMPATH_FLAGS.profileV2");
     expect(route).toContain("useFirebaseAuth");
     expect(route).toContain("authLoading");
@@ -94,7 +88,7 @@ describe("private V2 capture persistence wiring", () => {
 
 describe("V1-independent V2 profile UI", () => {
   it("keeps every changed profile action labelled, stateful, focusable, and at least 44 points", () => {
-    for (const source of [read("app/(tabs)/profile.tsx"), read("components/profile/motion-grid.tsx")]) {
+    for (const source of [read("components/profile/owner-profile-tab.tsx"), read("components/profile/motion-grid.tsx")]) {
       const pressables = [...source.matchAll(/<Pressable\b[\s\S]*?<\/Pressable>/g)].map((match) => match[0]);
       expect(pressables.length).toBeGreaterThan(0);
       for (const pressable of pressables) {
@@ -120,7 +114,6 @@ describe("V1-independent V2 profile UI", () => {
     expect(grid).not.toContain("listShootingProfilesV2(");
     expect(grid).not.toContain("deleteShootingProfileV2(");
     expect(grid).not.toContain("getShootingProfileV2(");
-    // Honesty moves into the accessibility label of every tile.
     expect(grid).toContain("대표 스냅샷 추정 · 반복성 측정 아님");
     expect(grid).toContain("3회 반복 대표 슛폼");
     expect(grid).toContain("위상 결합 4D 추정 · 실측 3D 아님");
@@ -135,7 +128,7 @@ describe("V1-independent V2 profile UI", () => {
   });
 
   it("resumes deletion before V2 listing and guards results by exact owner", () => {
-    const profile = read("app/(tabs)/profile.tsx");
+    const profile = read("components/profile/owner-profile-tab.tsx");
     const resume = profile.indexOf("await resumePendingShootingProfileDeletionsV2(owner)");
     const list = profile.indexOf("await listShootingProfilesV2(owner)");
     expect(resume).toBeGreaterThan(-1);
@@ -155,7 +148,7 @@ describe("V1-independent V2 profile UI", () => {
   });
 
   it("does not invoke or render V2 persistence when the profile flag is off", () => {
-    const profile = read("app/(tabs)/profile.tsx");
+    const profile = read("components/profile/owner-profile-tab.tsx");
     const loadV2 = profile.slice(profile.indexOf("const loadV2 = useCallback"), profile.indexOf("useEffect(() =>", profile.indexOf("const loadV2 = useCallback")));
     const deleteV2 = profile.slice(profile.indexOf("const deleteV2 = useCallback"), profile.indexOf("const confirmDeleteV2"));
     expect(loadV2.indexOf("if (!FORMPATH_FLAGS.profileV2) return;")).toBeLessThan(loadV2.indexOf("resumePendingShootingProfileDeletionsV2"));
@@ -165,7 +158,7 @@ describe("V1-independent V2 profile UI", () => {
   });
 
   it("confirms and awaits V2 deletion, and opens only when both viewer flags allow it", () => {
-    const profile = read("app/(tabs)/profile.tsx");
+    const profile = read("components/profile/owner-profile-tab.tsx");
     expect(profile).toContain("Alert.alert");
     expect(profile).toContain("await runOwnerBoundDeleteOperationV2");
     expect(profile).toContain("deleteProfile: () => deleteShootingProfileV2(owner, profileId)");
@@ -181,7 +174,9 @@ describe("V1-independent V2 profile UI", () => {
   it("does not introduce forbidden persistence or public-sharing paths", () => {
     const changedSources = [
       "app/private-capture.tsx",
+      "components/owner/owner-private-capture-route.tsx",
       "app/(tabs)/profile.tsx",
+      "components/profile/owner-profile-tab.tsx",
       "hooks/use-shooting-profile-capture.ts",
       "components/shooting-profile/capture-session.tsx",
       "components/shooting-profile/quality-summary.tsx",
