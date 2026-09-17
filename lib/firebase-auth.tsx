@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
 
+import { deleteFirebaseAccount } from "@/lib/firebase-account-deletion";
 import { firebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 
 type FirebaseAuthContextValue = {
@@ -9,6 +10,7 @@ type FirebaseAuthContextValue = {
   configured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -39,13 +41,19 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
     await createUserWithEmailAndPassword(requireAuth(), email.trim(), password);
   }, []);
 
+  const deleteAccount = useCallback(async (password: string) => {
+    const currentUser = requireAuth().currentUser;
+    if (!currentUser) throw new Error("삭제할 로그인 계정이 없습니다.");
+    await deleteFirebaseAccount(currentUser, password);
+  }, []);
+
   const logout = useCallback(async () => {
     await signOut(requireAuth());
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, configured: isFirebaseConfigured, signIn, signUp, logout }),
-    [loading, logout, signIn, signUp, user],
+    () => ({ user, loading, configured: isFirebaseConfigured, signIn, signUp, deleteAccount, logout }),
+    [deleteAccount, loading, logout, signIn, signUp, user],
   );
   return <FirebaseAuthContext.Provider value={value}>{children}</FirebaseAuthContext.Provider>;
 }
