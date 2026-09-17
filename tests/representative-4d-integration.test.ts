@@ -1,18 +1,56 @@
 import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
-const read = (path: string) => readFileSync(path, "utf8");
+import {
+  PERSISTED_OBSERVATION_JOINTS_V2,
+  reconstructObservationFramesFromSequencePayloadV2,
+  serializeObservationSequenceForCloud,
+} from "@/lib/firebase-shooting-profile-contract";
+import { buildRepresentativeSequence } from "@/lib/shooting-profile/representative-sequence";
+import { syntheticDualViewSession } from "@/tests/fixtures/synthetic-dual-view";
 
 describe("representative 4D release boundary", () => {
-  it("keeps native pose intake private and app-side", () => {
-    const hook = read("hooks/use-shooting-profile-capture.ts");
-    expect(hook).toContain("detectPoseSequenceV2");
-    expect(hook).not.toMatch(/fetch\(|axios|trpc|server/i);
+  it("builds only a phase-fused estimate from separate front and side shots", () => {
+    const session = syntheticDualViewSession({ mode: "basic_1_plus_1" });
+    const result = buildRepresentativeSequence(session);
+
+    expect(result.status, JSON.stringify(result)).toBe("complete");
+    if (result.status !== "complete") return;
+    expect(result.profile.boundary).toBe(
+      "representative_phase_fused_4d_estimate_not_actual_3d",
+    );
+    expect(result.profile.timeBasis).toBe("normalized_shot_phase");
+    expect(result.profile.frames).toHaveLength(101);
+    expect(result.profile.frames.some((frame) => (
+      Object.values(frame.joints).some((joint) => Math.abs(joint.z) > 1e-6)
+    ))).toBe(true);
+    expect(JSON.stringify(result)).not.toContain("calibrated_multi_view_3d");
   });
 
-  it("does not upload raw videos or original landmark sequences", () => {
-    const save = read("lib/firebase-shooting-profiles.ts");
-    expect(save).not.toMatch(/videoUri|filename|sourceLandmarks|normalizedAttempts/);
+  it("persists only the 12 allowlisted source x/y/visibility joints and no raw-media identity", () => {
+    const session = syntheticDualViewSession({ mode: "basic_1_plus_1" });
+    const sourceAttempt = session.frontAttempts[0];
+    const completeSourceAttempt = {
+      ...sourceAttempt,
+      frames: sourceAttempt.frames.map((frame) => ({
+        ...frame,
+        sourceLandmarks: Array.from({ length: 33 }, (_, index) => (
+          frame.sourceLandmarks[index] ?? { x: 0.5, y: 0.5, visibility: 0 }
+        )),
+      })),
+    };
+    const serialized = serializeObservationSequenceForCloud(completeSourceAttempt);
+    const decoded = reconstructObservationFramesFromSequencePayloadV2(serialized)[0];
+
+    expect(Object.keys(decoded.joints)).toEqual([...PERSISTED_OBSERVATION_JOINTS_V2]);
+    expect(Object.values(decoded.joints).every((joint) => (
+      Object.keys(joint).every((key) => key === "x" || key === "y" || key === "visibility")
+      && !("z" in joint)
+    ))).toBe(true);
+    expect(JSON.stringify(serialized)).not.toMatch(
+      /sourceTimestampMs|timestampMs|file:\/\/|filename|uri|exif|thumbnail|rawMedia|nose/i,
+    );
   });
 
   it("keeps every V2 capability default-off, preserves V1, and records native resource gates", () => {
