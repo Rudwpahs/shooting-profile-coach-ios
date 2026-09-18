@@ -57,7 +57,7 @@ class DecisionDistributionV1(_DecisionContractModel):
     options: Annotated[list[DecisionOptionV1], Field(min_length=1)]
 
     @model_validator(mode="after")
-    def _validate_options(self) -> "DecisionDistributionV1":
+    def _validate_options(self) -> DecisionDistributionV1:
         labels = [option.label for option in self.options]
         if len(labels) != len(set(labels)):
             raise ValueError("decision option labels must be unique")
@@ -93,7 +93,7 @@ class DecisionPacketV1(_DecisionContractModel):
     distributions: Annotated[list[DecisionDistributionV1], Field(min_length=1)]
 
     @model_validator(mode="after")
-    def _validate_unique_heads(self) -> "DecisionPacketV1":
+    def _validate_unique_heads(self) -> DecisionPacketV1:
         heads = [distribution.head for distribution in self.distributions]
         if len(heads) != len(set(heads)):
             raise ValueError("decision heads must be unique within a packet")
