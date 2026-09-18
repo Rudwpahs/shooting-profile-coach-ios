@@ -61,7 +61,7 @@ def load_training_examples(path: str | Path) -> list[TrainingExampleV1]:
             except json.JSONDecodeError as exc:
                 raise ValueError(f"{source}: line {line_no}: malformed JSON: {exc.msg}") from exc
             if not isinstance(payload, dict):
-                raise ValueError(f"{source}: line {line_no}: expected JSON object")
+                raise TypeError(f"{source}: line {line_no}: expected JSON object")
 
             example = TrainingExampleV1.model_validate(payload)
             if example.example_id in seen_ids:
