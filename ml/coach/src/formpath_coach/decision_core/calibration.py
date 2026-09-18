@@ -35,7 +35,7 @@ def _target_probability_vector(
 ) -> tuple[tuple[float, ...], int]:
     values = _probability_vector(probabilities)
     if isinstance(target_index, bool) or not isinstance(target_index, int):
-        raise ValueError("target_index must be an integer")
+        raise TypeError("target_index must be an integer")
     if target_index < 0 or target_index >= len(values):
         raise ValueError("target_index is out of range")
     return values, target_index
