@@ -91,7 +91,10 @@ class RepresentativePoseInputV2(_MotionInputModel):
     @model_validator(mode="after")
     def _validate_frame_phases(self) -> RepresentativePoseInputV2:
         phases = [frame.phase for frame in self.frames]
-        if any(next_phase < phase for phase, next_phase in zip(phases, phases[1:], strict=True)):
+        if any(
+            next_phase < phase
+            for phase, next_phase in zip(phases[:-1], phases[1:], strict=True)
+        ):
             raise ValueError("frame phases must be monotonic nondecreasing")
         return self
 
