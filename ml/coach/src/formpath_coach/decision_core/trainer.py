@@ -36,6 +36,14 @@ class EpochReport:
     counts: dict[str, int]
 
 
+@dataclass(frozen=True)
+class TinyFitResult:
+    train_history: tuple[float, ...]
+    validation_history: tuple[float, ...]
+    best_validation_loss: float
+    best_state_dict: dict[str, torch.Tensor]
+
+
 def create_optimizer(model: nn.Module, config: TrainingConfig) -> torch.optim.Optimizer:
     return torch.optim.AdamW(
         model.parameters(),
@@ -143,3 +151,47 @@ def evaluate(
             model.train()
 
     return _aggregate_epoch(losses, counts)
+
+
+def fit_tiny(
+    model: nn.Module,
+    train_examples: list[TrainingExampleV1],
+    validation_examples: list[TrainingExampleV1],
+    config: TrainingConfig,
+    *,
+    epochs: int,
+) -> TinyFitResult:
+    """Run a deterministic tiny fit used to verify end-to-end training wiring."""
+
+    if epochs <= 0:
+        raise ValueError("epochs must be positive")
+    if not train_examples:
+        raise ValueError("train_examples must not be empty")
+    if not validation_examples:
+        raise ValueError("validation_examples must not be empty")
+
+    optimizer = create_optimizer(model, config)
+    train_history: list[float] = []
+    validation_history: list[float] = []
+    best_validation_loss = float("inf")
+    best_state_dict: dict[str, torch.Tensor] = {}
+
+    for _ in range(epochs):
+        train_report = train_one_epoch(model, train_examples, optimizer, config)
+        validation_report = evaluate(model, validation_examples, config)
+        train_history.append(train_report.total_loss)
+        validation_history.append(validation_report.total_loss)
+
+        if validation_report.total_loss < best_validation_loss:
+            best_validation_loss = validation_report.total_loss
+            best_state_dict = {
+                name: tensor.detach().cpu().clone()
+                for name, tensor in model.state_dict().items()
+            }
+
+    return TinyFitResult(
+        train_history=tuple(train_history),
+        validation_history=tuple(validation_history),
+        best_validation_loss=best_validation_loss,
+        best_state_dict=best_state_dict,
+    )
