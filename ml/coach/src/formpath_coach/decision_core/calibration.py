@@ -2,8 +2,24 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from dataclasses import dataclass
+
+import torch
+from torch.nn import functional as F
+
+from formpath_coach.decision_core.schemas import DECISION_LABELS_V1
 
 _PROBABILITY_TOLERANCE = 1e-6
+_IGNORE_INDEX = -100
+
+
+@dataclass(frozen=True)
+class CalibrationResult:
+    temperatures: dict[str, float]
+    nll_before: dict[str, float]
+    nll_after: dict[str, float]
+    counts: dict[str, int]
+    fitted_on: str = "validation"
 
 
 def _finite_values(values: Sequence[float], *, name: str) -> tuple[float, ...]:
@@ -117,3 +133,111 @@ def expected_calibration_error(
         accuracy = correct_count / sample_count
         error += (sample_count / total) * abs(mean_confidence - accuracy)
     return error
+
+
+def _active_calibration_rows(
+    head: str,
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    labels = DECISION_LABELS_V1.get(head)
+    if labels is None:
+        raise ValueError(f"unknown decision head: {head}")
+    if logits.ndim != 2:
+        raise ValueError(f"logits for {head} must have shape [batch, class]")
+    if targets.ndim != 1:
+        raise ValueError(f"targets for {head} must have shape [batch]")
+    if logits.shape[0] != targets.shape[0]:
+        raise ValueError(f"batch size mismatch for {head}")
+    if logits.shape[1] != len(labels):
+        raise ValueError(
+            f"wrong class width for {head}: got {logits.shape[1]}, expected {len(labels)}"
+        )
+    if not torch.isfinite(logits).all():
+        raise ValueError(f"logits for {head} must be finite")
+
+    active = targets != _IGNORE_INDEX
+    active_logits = logits[active].detach().to(device="cpu", dtype=torch.float64)
+    active_targets = targets[active].detach().to(device="cpu", dtype=torch.long)
+    if active_targets.numel() and (
+        torch.any(active_targets < 0) or torch.any(active_targets >= len(labels))
+    ):
+        raise ValueError(f"target index out of range for {head}")
+    return active_logits, active_targets
+
+
+def _temperature_grid() -> tuple[float, ...]:
+    lower = math.log(0.25)
+    upper = math.log(16.0)
+    candidates = {
+        math.exp(lower + (upper - lower) * index / 128)
+        for index in range(129)
+    }
+    candidates.add(1.0)
+    return tuple(sorted(candidates))
+
+
+def fit_validation_temperatures(
+    logits_by_head: dict[str, torch.Tensor],
+    targets_by_head: dict[str, torch.Tensor],
+) -> CalibrationResult:
+    """Fit one scalar temperature per decision head using validation labels only."""
+
+    unknown = (set(logits_by_head) | set(targets_by_head)) - set(DECISION_LABELS_V1)
+    if unknown:
+        raise ValueError(f"unknown decision heads: {sorted(unknown)}")
+
+    temperatures = {head: 1.0 for head in DECISION_LABELS_V1}
+    counts = {head: 0 for head in DECISION_LABELS_V1}
+    nll_before: dict[str, float] = {}
+    nll_after: dict[str, float] = {}
+    candidates = _temperature_grid()
+
+    for head in DECISION_LABELS_V1:
+        logits = logits_by_head.get(head)
+        targets = targets_by_head.get(head)
+        if logits is None or targets is None:
+            continue
+
+        active_logits, active_targets = _active_calibration_rows(head, logits, targets)
+        count = int(active_targets.numel())
+        counts[head] = count
+        if count == 0:
+            continue
+
+        identity_loss = float(F.cross_entropy(active_logits, active_targets).item())
+        best_temperature = 1.0
+        best_loss = identity_loss
+        for temperature in candidates:
+            candidate_loss = float(
+                F.cross_entropy(active_logits / temperature, active_targets).item()
+            )
+            if candidate_loss < best_loss:
+                best_loss = candidate_loss
+                best_temperature = temperature
+
+        temperatures[head] = float(best_temperature)
+        nll_before[head] = identity_loss
+        nll_after[head] = best_loss
+
+    return CalibrationResult(
+        temperatures=temperatures,
+        nll_before=nll_before,
+        nll_after=nll_after,
+        counts=counts,
+    )
+
+
+def apply_temperatures(
+    logits_by_head: dict[str, torch.Tensor],
+    temperatures: dict[str, float],
+) -> dict[str, torch.Tensor]:
+    calibrated: dict[str, torch.Tensor] = {}
+    for head, logits in logits_by_head.items():
+        if head not in DECISION_LABELS_V1:
+            raise ValueError(f"unknown decision head: {head}")
+        temperature = float(temperatures.get(head, 1.0))
+        if not math.isfinite(temperature) or temperature <= 0.0:
+            raise ValueError(f"temperature for {head} must be finite and positive")
+        calibrated[head] = logits / temperature
+    return calibrated
