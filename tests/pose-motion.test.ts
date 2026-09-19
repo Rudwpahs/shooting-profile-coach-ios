@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES, PLAYER_MONOCULAR_3D_ANALYSES, PLAYER_SOURCE_SKELETON_REVIEWS, PLAYER_VIDEO_REVIEW_RECORDS } from "@/lib/anonymous-pose-library";
+import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
+import { PLAYER_MONOCULAR_3D_ANALYSES, PLAYER_SOURCE_SKELETON_REVIEWS, PLAYER_VIDEO_REVIEW_RECORDS } from "@/lib/research/player-analysis-evidence";
 import { BONE_LINKS, clampPoseZoom, getPoseCameraPresets, getPoseDisplayTransform, interpolatePoseFrame, POSE_ZOOM_MAX, POSE_ZOOM_MIN, projectPosePoint, validatePoseMotion } from "@/lib/pose-motion";
 
 describe("approved actual optical-mocap pose motion", () => {
