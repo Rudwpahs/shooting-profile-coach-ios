@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-19",
+  "upstream": {
+    "repository": "bhavnishkumar/InstagramUI",
+    "url": "https://github.com/bhavnishkumar/InstagramUI",
+    "branch": "master",
+    "commit": "b64437a0b1757c5ead6b08e9c1eb00e870e88b41",
+    "treeComplete": true,
+    "treeTruncated": false,
+    "licenseFileFound": false,
+    "policy": "clean-room-patterns-only"
+  },
+  "dependencies": {
+    "SDWebImage": "5.13.2",
+    "SDWebImageSwiftUI": "2.0.2"
+  },
+  "upstreamFiles": [
+    {"path":"InstagramUI/InstagramUIApp.swift","sha":"40439639056ba36a41653afa6ab18f8d0f8651e4","status":"inspected","value":"low"},
+    {"path":"InstagramUI/MVVM/View/TabbarView.swift","sha":"f81344d3132c5565527197f7928c4cb8d1ad6d22","status":"inspected","value":"medium"},
+    {"path":"InstagramUI/MVVM/View/FeedView.swift","sha":"7a9fd3fb06322b15d115ae40f844ed13845b0675","status":"inspected","value":"high"},
+    {"path":"InstagramUI/MVVM/View/PostCell.swift","sha":"12f3e6013126c2f339999476e15132844a025032","status":"inspected","value":"high-pattern-only","note":"Third-party header says Copyright © 2020 Stephan Dowless. All rights reserved. Do not copy."},
+    {"path":"InstagramUI/MVVM/ViewModel/FeedViewModel.swift","sha":"f9ee93317128a485fad430fedebe29114bcc65c3","status":"inspected","value":"medium"},
+    {"path":"InstagramUI/MVVM/Model/FeedModel.swift","sha":"3f197dd7a1f758309674885945863466771d9f33","status":"inspected","value":"medium"},
+    {"path":"InstagramUI/Helper/Feed.json","sha":"1119da35ab906f57faeabc80a38c04b22bcba9e1","status":"inventory-only","value":"none"},
+    {"path":"InstagramUI/MVVM/View/SearchView.swift","sha":"72be03eaf76296e5daf5975cd7e52f2fbbf3f35a","status":"inspected","value":"high"},
+    {"path":"InstagramUI/MVVM/View/Compositional Layout/Layout1.swift","sha":"50c494bf023e4efd30ac490da5e8facb6100edb6","status":"inspected","value":"high"},
+    {"path":"InstagramUI/MVVM/View/Compositional Layout/Layout2.swift","sha":"3e5e3d47973f950ee9fd69e8b01859ad5f429eb0","status":"inspected","value":"high"},
+    {"path":"InstagramUI/MVVM/View/Compositional Layout/Layout3.swift","sha":"3b2dcf31e122e51b49d3fb33e7da1f664d089091","status":"inspected","value":"high"},
+    {"path":"InstagramUI/MVVM/ViewModel/SearchViewModel.swift","sha":"2bc330aa6f77e8280f8b23351fd9150d29e1063c","status":"inspected","value":"medium"},
+    {"path":"InstagramUI/MVVM/Model/CardsModel.swift","sha":"32696e7c91af060edf1fc634c55fb5acc17bdf59","status":"inventory-only","value":"low"},
+    {"path":"InstagramUI/MVVM/View/ProfileView.swift","sha":"e1cf8c2ac40ab70bafeef86ae02664e5a8f27433","status":"inspected","value":"high"},
+    {"path":"InstagramUI/MVVM/ViewModel/ProfileViewModel.swift","sha":"fa934a54836555a284e8140378410d6ec1c7eaca","status":"inspected","value":"medium"},
+    {"path":"InstagramUI/MVVM/Model/ProfileModel.swift","sha":"540161a7978578e45b8b766c6cbca91e7100adef","status":"inspected","value":"medium"},
+    {"path":"InstagramUI/MVVM/View/EditProfileView.swift","sha":"dfc0b0ddcc434ac9d9c96c3fc55113a826dc9a93","status":"inventory-only","value":"low"},
+    {"path":"InstagramUI/Helper/Userdata.json","sha":"6e8a020c02fad5aeeb48060e4572b7c784414487","status":"inventory-only","value":"none"},
+    {"path":"InstagramUI/MVVM/View/ReelsView.swift","sha":"f6abe216b8e144f36e27a24808d25e15592df029","status":"placeholder","value":"none","note":"Only Pending Work"},
+    {"path":"InstagramUI/MVVM/View/NotificationView.swift","sha":"5e290eb87a1d565baeb39c39b60163e65be0395d","status":"placeholder","value":"none","note":"Only Pending Work"},
+    {"path":"InstagramUI/MVVM/View/LoginView.swift","sha":"30c2f1644f7606fa98eb03fd8e3e4c213ab373bd","status":"inventory-only","value":"low"},
+    {"path":"InstagramUI/MVVM/View/SpalshView.swift","sha":"532e7baec55f5b375c98cae98109ba57f60083cf","status":"inventory-only","value":"low"},
+    {"path":"InstagramUI/Helper/ThemeHelper.swift","sha":"35b88a1a8e3fb6cf8d90c6678a7ed6c7bbb5ce3d","status":"inspected","value":"medium-pattern-only"},
+    {"path":"InstagramUI/Helper/Toast.swift","sha":"7368ff07787260056e81603b7d1ea33445925775","status":"inventory-only","value":"medium-pattern-only"},
+    {"path":"InstagramUI/Helper/AsyncImage.swift","sha":"da8319c330a76dd6a58e3a5111eb36b259411e35","status":"inventory-only","value":"none"},
+    {"path":"InstagramUI/Helper/String + Extension.swift","sha":"9a3eda2e348d0993aa4a5241de46adc16cba4737","status":"inventory-only","value":"none"},
+    {"path":"InstagramUI/Persistence.swift","sha":"548bcb3eac74cf915da3a8d3cec417a8ce95b46d","status":"inventory-only","value":"none"},
+    {"path":"InstagramUI.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved","sha":"eac63a63a3107779661192e1d091b6d9dcc07d76","status":"inspected","value":"dependency-record"}
+  ],
+  "upstreamAreas": [
+    {"path":"InstagramUI/Assets.xcassets","status":"inventory-only","reuse":"prohibited-without-separate-rights-check"},
+    {"path":"Screenshots","status":"inventory-only","reuse":"not-needed"},
+    {"path":"InstagramUITests","status":"inventory-only","reuse":"not-needed-for-ui-extraction"},
+    {"path":"InstagramUIUITests","status":"inventory-only","reuse":"not-needed-for-ui-extraction"}
+  ],
+  "hoopHubBaseline": {
+    "repository": "Rudwpahs/shooting-profile-coach-ios",
+    "branch": "main",
+    "commitAtComparison": "1eb8803ed5e79cd981dc1010a510088ab01249be",
+    "files": [
+      {"path":"app/(tabs)/explore.tsx","sha":"18cab058371664c011fdf40a797bb97a7ac3d2e5","status":"inspected"},
+      {"path":"app/(tabs)/profile.tsx","sha":"33abbf83a6b03540be7e37d001b916a1dc06fac1","status":"inspected"},
+      {"path":"app/(tabs)/index.tsx","sha":"c3b66707f75eedd5916c28053742f8c084a3c700","status":"inspected"},
+      {"path":"components/home/story-strip.tsx","sha":"601c52d1838f6a8b1f0670d2f2903962d70e646f","status":"inspected"},
+      {"path":"components/home/feed-card.tsx","sha":"86e86926c39598d4e4b5a5cb388e24f4f1d4c526","status":"inspected"},
+      {"path":"components/home/home-feed.tsx","sha":"d3efb7ab021abca15ca8d19a4a93bd5c7d253f3e","status":"inventory-confirmed"},
+      {"path":"app/reels.tsx","sha":"56491c324cdf54b867435839512dd2a5c38a01b5","status":"inventory-confirmed"}
+    ]
+  },
+  "doNotReextractUnless": [
+    "upstream_commit_changed_and_delta_is_relevant",
+    "an_inventory-only_file_becomes_directly_decision-relevant",
+    "a_fresh_licensing_or_provenance_question_requires_new_evidence"
+  ]
+}
