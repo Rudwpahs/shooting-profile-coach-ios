@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const panelSource = readFileSync("components/profile/account-deletion-panel.tsx", "utf8");
+const controllerSource = readFileSync("components/profile/account-deletion-controller.tsx", "utf8");
 const accountSource = readFileSync("components/profile/account-panel.tsx", "utf8");
-const profileSource = readFileSync("app/(tabs)/profile.tsx", "utf8");
 
 describe("account deletion UI contract", () => {
   it("exposes one accessible destructive entry point for a signed-in account", () => {
@@ -33,18 +33,16 @@ describe("account deletion UI contract", () => {
     expect(panelSource).toContain("error");
   });
 
-  it("is rendered from the signed-in AccountPanel", () => {
-    expect(accountSource).toContain("AccountDeletionPanel");
-    expect(accountSource).toContain("onDeleteAccount");
+  it("is rendered from the signed-in AccountPanel through the controller", () => {
+    expect(accountSource).toContain("AccountDeletionController");
   });
 
   it("deletes the remote account before clearing local profile data", () => {
-    expect(profileSource).toContain("deleteAccount");
-    expect(profileSource).toContain("clearProfile");
-    const start = profileSource.indexOf("const deleteCurrentAccount = async");
+    expect(controllerSource).toContain("deleteAccount");
+    expect(controllerSource).toContain("clearProfile");
+    const start = controllerSource.indexOf("const deleteCurrentAccount = async");
     expect(start).toBeGreaterThan(-1);
-    const end = profileSource.indexOf("const deletePose", start);
-    const handler = profileSource.slice(start, end);
+    const handler = controllerSource.slice(start);
     expect(handler.indexOf("await deleteAccount(")).toBeGreaterThan(-1);
     expect(handler.indexOf("await clearProfile()")).toBeGreaterThan(-1);
     expect(handler.indexOf("await deleteAccount(")).toBeLessThan(handler.indexOf("await clearProfile()"));
