@@ -16,10 +16,6 @@ export function AccountDeletionPanel({ onDelete }: AccountDeletionPanelProps) {
   const [focusedControl, setFocusedControl] = useState<string | null>(null);
 
   const performDelete = async () => {
-    if (!password.trim()) {
-      setError("현재 비밀번호를 입력하세요.");
-      return;
-    }
     setDeleting(true);
     setError(null);
     try {
@@ -43,7 +39,7 @@ export function AccountDeletionPanel({ onDelete }: AccountDeletionPanelProps) {
       "계정과 저장된 슛폼 데이터가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
       [
         { text: "취소", style: "cancel" },
-        { text: "계정 영구 삭제", style: "destructive", onPress: () => { void onDelete(password).catch(() => setError("계정 삭제를 완료하지 못했습니다. 다시 시도하세요.")); } },
+        { text: "계정 영구 삭제", style: "destructive", onPress: () => { void performDelete(); } },
       ],
     );
   };
@@ -112,9 +108,6 @@ export function AccountDeletionPanel({ onDelete }: AccountDeletionPanelProps) {
           <Text style={styles.deleteText}>{deleting ? "삭제 중" : "계정 영구 삭제"}</Text>
         </Pressable>
       </View>
-      <Pressable accessibilityRole="button" onPress={() => { void performDelete(); }} style={styles.hiddenFallback}>
-        <Text>삭제 재시도</Text>
-      </Pressable>
     </View>
   );
 }
@@ -133,5 +126,4 @@ const styles = StyleSheet.create({
   error: { color: tokens.destructive, fontSize: 12, lineHeight: 17 },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.8 },
-  hiddenFallback: { display: "none" },
 });
