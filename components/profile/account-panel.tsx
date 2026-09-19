@@ -2,7 +2,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { User } from "firebase/auth";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { AccountDeletionPanel } from "@/components/profile/account-deletion-panel";
+import { AccountDeletionController } from "@/components/profile/account-deletion-controller";
 import { getRepresentativeFocusStyle } from "@/components/shooting-profile/sequence-viewer";
 import { tokens } from "@/constants/tokens";
 
@@ -26,7 +26,6 @@ type AccountPanelProps = {
   onToggleMode: () => void;
   onSubmit: () => void;
   onLogout: () => void;
-  onDeleteAccount: (password: string) => Promise<void>;
   onFocusChange: (control: string | null) => void;
   onAge14PlusChange: (checked: boolean) => void;
   onTermsAcceptedChange: (checked: boolean) => void;
@@ -37,12 +36,12 @@ type AccountPanelProps = {
 
 /**
  * Account controls, separated from the identity area. Presentational: every
- * decision about auth, sync and ownership stays in the profile route.
+ * decision about auth, sync and ownership stays outside this component.
  */
 export function AccountPanel({
   loading, configured, user, mode, email, password, status, submitting, focusedControl,
   age14Plus, termsAccepted, privacyNoticeAcknowledged,
-  onEmailChange, onPasswordChange, onToggleMode, onSubmit, onLogout, onDeleteAccount, onFocusChange,
+  onEmailChange, onPasswordChange, onToggleMode, onSubmit, onLogout, onFocusChange,
   onAge14PlusChange, onTermsAcceptedChange, onPrivacyNoticeAcknowledgedChange,
   onOpenTerms, onOpenPrivacy,
 }: AccountPanelProps) {
@@ -193,7 +192,7 @@ export function AccountPanel({
       >
         <Text style={styles.logoutText}>로그아웃</Text>
       </Pressable>
-      <AccountDeletionPanel onDelete={onDeleteAccount} />
+      <AccountDeletionController />
     </View>
   );
 }
