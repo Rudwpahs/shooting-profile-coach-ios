@@ -37,3 +37,12 @@ jobs:
         run: python -m pytest ml/coach/tests ml/coach/retrieval_tests ml/coach/evaluation_tests ml/coach/scenario_tests -q
       - name: Ruff
         run: python -m ruff check ml/coach/src ml/coach/tests ml/coach/decision_core_tests ml/coach/retrieval_tests ml/coach/evaluation_tests ml/coach/scenario_tests
+      - name: Decision Core smoke training evidence
+        run: |
+          rm -rf /tmp/formpath-decision-core-smoke
+          python -m formpath_coach.decision_core.smoke_training \
+            --output-dir /tmp/formpath-decision-core-smoke \
+            --source-revision "$GITHUB_SHA"
+          cat /tmp/formpath-decision-core-smoke/metrics.json
+          cat /tmp/formpath-decision-core-smoke/calibration.json
+          cat /tmp/formpath-decision-core-smoke/training_manifest.json
