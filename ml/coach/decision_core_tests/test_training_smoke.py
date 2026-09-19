@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import torch
+from ml.coach.decision_core_tests.test_trainer import _example
 
 from formpath_coach.decision_core.system1 import System1BaselineV1
 from formpath_coach.decision_core.trainer import TrainingConfig, fit_tiny
-from ml.coach.decision_core_tests.test_trainer import _example
 
 
 def test_tiny_controlled_dataset_overfits_and_captures_best_state() -> None:
