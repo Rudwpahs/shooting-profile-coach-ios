@@ -82,6 +82,17 @@ anatomy / motion audit
 
 Curry의 retained motion은 MotionBERT를 이용한 **learned image-to-3D display estimate**이며 actual calibrated 3D가 아닙니다. Paul George 데이터도 player-video-derived analysis motion으로 남아 있으며 actual 3D recommendation evidence에서 제외합니다.
 
+## 이 저장소의 역할
+
+이 저장소가 **FormPath 제품 개발의 중심 저장소**입니다.
+
+- `filmStudy` — FormPath에 필요한 개념을 공부하고 작은 실험을 하는 prestudy
+- `shooting-form-analysis` — Flask 기반 pose / DTW 비교 실험
+- `miner` — 공개 농구 자료를 후보 데이터로 만드는 수집기
+- `hoopDB` — 검토·증류 전 후보 데이터를 보관하는 private DB
+
+즉, 다른 저장소에서 실험하거나 모은 결과가 있더라도 **제품에서 무엇을 보여주고 무엇을 추천 근거로 쓸지는 이 저장소의 데이터 경계와 검증 규칙을 기준으로 판단**합니다.
+
 ## 개발 명령
 
 ```bash
