@@ -50,7 +50,7 @@ jobs:
       - name: Verify preview and production-isolation contracts
         run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts tests/ui-pages-preview-routing.test.ts
 
-      - name: Verify ordinary production export excludes demo fixtures
+      - name: Verify ordinary production export excludes demo fixtures and research player evidence
         env:
           EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD: "0"
           EXPO_PUBLIC_HOOPHUB_UI_DEMO: "0"
@@ -58,8 +58,8 @@ jobs:
         shell: bash
         run: |
           pnpm exec expo export --platform web --output-dir web-production-check
-          if grep -R -E "demo-fixture-|demo_fixture_recapture|syntheticLandmarkSession" web-production-check; then
-            echo "Demo fixture content leaked into an ordinary production export" >&2
+          if grep -R -E "demo-fixture-|demo_fixture_recapture|syntheticLandmarkSession|Stephen Curry|Paul George|IMAGE-LIFTED 3D ANALYSIS|PLAYER_MONOCULAR_3D_ANALYSES" web-production-check; then
+            echo "Demo fixture or named-player research content leaked into an ordinary production export" >&2
             exit 1
           fi
           rm -rf web-production-check

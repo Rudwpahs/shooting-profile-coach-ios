@@ -435,46 +435,52 @@ describe("V2 publication order and payload contract", () => {
   });
 });
 
-describe("owner profile document", () => {
+describe("owner root document minimization", () => {
   const profileDocRef = (db: Firestore, uid = OWNER) => doc(db, "users", uid);
 
-  it("allows the owner to upsert a profile carrying a string email", async () => {
-    await assertSucceeds(
-      setDoc(
-        profileDocRef(ownerDb()),
-        { email: "owner@example.com", displayName: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp() },
-        { merge: true },
-      ),
-    );
-  });
-
-  it("denies a profile whose email is null", async () => {
+  it("denies the owner creating a duplicate root profile document", async () => {
     await assertFails(
-      setDoc(
-        profileDocRef(ownerDb()),
-        { email: null, displayName: null, updatedAt: serverTimestamp() },
-        { merge: true },
-      ),
+      setDoc(profileDocRef(ownerDb()), {
+        email: "owner@example.com",
+        displayName: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
     );
   });
 
-  it("denies a profile whose email exceeds the length bound", async () => {
-    await assertFails(
-      setDoc(
-        profileDocRef(ownerDb()),
-        { email: `${"a".repeat(320)}@example.com`, updatedAt: serverTimestamp() },
-        { merge: true },
-      ),
-    );
+  it("allows the owner to read and delete a legacy root profile document", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(profileDocRef(context.firestore() as unknown as Firestore), {
+        email: "stored-earlier@example.com",
+        displayName: null,
+      });
+    });
+    await assertSucceeds(getDoc(profileDocRef(ownerDb())));
+    await assertSucceeds(deleteDoc(profileDocRef(ownerDb())));
   });
 
-  it("denies another user writing the owner's profile document", async () => {
-    await assertFails(
-      setDoc(profileDocRef(intruderDb(), OWNER), { email: "owner@example.com" }, { merge: true }),
-    );
+  it("denies the owner updating a legacy root profile document", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(profileDocRef(context.firestore() as unknown as Firestore), {
+        email: "stored-earlier@example.com",
+        displayName: null,
+      });
+    });
+    await assertFails(updateDoc(profileDocRef(ownerDb()), { email: "changed@example.com" }));
   });
 
-  it("denies an unauthenticated read of the profile document", async () => {
+  it("denies another user reading or writing the owner's root profile document", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(profileDocRef(context.firestore() as unknown as Firestore), {
+        email: "stored-earlier@example.com",
+      });
+    });
+    await assertFails(getDoc(profileDocRef(intruderDb(), OWNER)));
+    await assertFails(setDoc(profileDocRef(intruderDb(), OWNER), { email: "intruder@example.com" }));
+  });
+
+  it("denies an unauthenticated read of the root profile document", async () => {
     await assertFails(getDoc(profileDocRef(anonymousDb())));
   });
 });

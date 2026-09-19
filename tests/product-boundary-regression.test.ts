@@ -2,8 +2,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { ANONYMOUS_POSE_REFERENCES, PLAYER_MONOCULAR_3D_ANALYSES } from "@/lib/anonymous-pose-library";
+import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { validatePoseMotion } from "@/lib/pose-motion";
+import { PLAYER_MONOCULAR_3D_ANALYSES } from "@/lib/research/player-analysis-evidence";
 
 describe("fixed product motion boundary", () => {
   it("keeps one approved optical reference separate from the two analysis-only player motions", () => {
