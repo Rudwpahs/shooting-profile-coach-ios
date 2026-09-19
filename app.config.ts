@@ -5,7 +5,6 @@ import type { ExpoConfig } from "expo/config";
 // Bundle ID format: space.manus.<project_name_dots>.<timestamp>
 // e.g., "my-app" created at 2024-01-15 10:30:45 -> "space.manus.my.app.t20240115103045"
 // Bundle ID can only contain letters, numbers, and dots
-// Android requires each dot-separated segment to start with a letter
 const rawBundleId = "com.app.shootingprofilecoachios";
 const bundleId =
   rawBundleId
@@ -48,11 +47,11 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
-    "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "$(PRODUCT_NAME)이 기기 안에서 포즈 분석할 로컬 슈팅 클립을 촬영하도록 카메라 접근을 허용합니다.",
-        "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to select a shooting video for private pose analysis."
-      }
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+      NSCameraUsageDescription: "$(PRODUCT_NAME)이 기기 안에서 포즈 분석할 로컬 슈팅 클립을 촬영하도록 카메라 접근을 허용합니다.",
+      NSPhotoLibraryUsageDescription: "Allow $(PRODUCT_NAME) to select a shooting video for private pose analysis.",
+    },
   },
   android: {
     adaptiveIcon: {
@@ -64,7 +63,6 @@ const config: ExpoConfig = {
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
-    permissions: ["POST_NOTIFICATIONS"],
     intentFilters: [
       {
         action: "VIEW",
@@ -86,12 +84,6 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
-    [
-      "expo-audio",
-      {
-        microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",
-      },
-    ],
     [
       "expo-video",
       {
