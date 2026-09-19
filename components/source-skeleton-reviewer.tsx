@@ -2,14 +2,24 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
 
-import type { PlayerSourceSkeletonReview } from "@/lib/anonymous-pose-library";
 import { tokens } from "@/constants/tokens";
+
+type SourceSkeletonReview = {
+  displayName: string;
+  sourceView: "정면" | "측면" | "사선";
+  sourceAttribution: string;
+  phases: {
+    label: string;
+    sourceTimestampMs: number;
+    landmarks: { x: number; y: number; visibility: number }[];
+  }[];
+};
 
 const EDGES: [number, number][] = [
   [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28],
 ];
 
-export function SourceSkeletonReviewer({ review }: { review: PlayerSourceSkeletonReview }) {
+export function SourceSkeletonReviewer({ review }: { review: SourceSkeletonReview }) {
   const [phaseIndex, setPhaseIndex] = useState(0);
   const phase = review.phases[phaseIndex];
   const skeletonPoints = phase.landmarks.slice(11, 29);
@@ -65,4 +75,3 @@ const styles = StyleSheet.create({
   boundaryCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 11, lineHeight: 15, marginTop: 2 },
   pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });
-
