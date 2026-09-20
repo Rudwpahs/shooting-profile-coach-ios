@@ -11,6 +11,7 @@ import { useReduceMotion } from "@/hooks/use-reduce-motion";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
+import { usePreviewRuntime } from "@/lib/preview/preview-runtime-provider";
 import { initialReelIndex } from "@/lib/reels/reel-feed-state";
 import { takeReelHandoff, type ReelHandoff } from "@/lib/reels/reel-handoff";
 import { homeReelItems } from "@/lib/reels/reel-sources";
@@ -33,10 +34,12 @@ export default function ReelsRoute() {
   const insets = useSafeAreaInsets();
   const appState = useAppStateStatus();
   const reducedMotion = useReduceMotion();
+  const preview = usePreviewRuntime();
   const [handoff] = useState<ReelHandoff | null>(() => takeReelHandoff());
   const { user, loading: authLoading } = useFirebaseAuth();
   // Only a deep link without a handoff loads anything; Home's own state is reused otherwise.
-  const latest = useLatestRepresentativeProfile(handoff ? null : user, authLoading);
+  const ownerLatest = useLatestRepresentativeProfile(handoff ? null : user, authLoading);
+  const latest = preview.enabled ? preview.latest : ownerLatest;
   const items = useMemo(() => handoff?.items ?? homeReelItems(latest, ANONYMOUS_POSE_REFERENCES), [handoff, latest]);
   const startId = typeof params.start === "string" ? params.start : handoff?.startId;
   const initialIndex = useMemo(() => initialReelIndex(items, startId), [items, startId]);

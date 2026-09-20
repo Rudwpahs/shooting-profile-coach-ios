@@ -8,6 +8,7 @@ import { useLatestRepresentativeProfile } from "@/hooks/use-latest-representativ
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
+import { usePreviewRuntime } from "@/lib/preview/preview-runtime-provider";
 import { useProfile } from "@/lib/profile-store";
 import { getPracticeFocus } from "@/lib/recommendation";
 import { setReelHandoff } from "@/lib/reels/reel-handoff";
@@ -26,8 +27,10 @@ const GOAL_LABELS = { consistency: "일관성", range: "거리", release: "릴�
 export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
+  const preview = usePreviewRuntime();
   const { user, loading: authLoading } = useFirebaseAuth();
-  const latest = useLatestRepresentativeProfile(user, authLoading);
+  const ownerLatest = useLatestRepresentativeProfile(user, authLoading);
+  const latest = preview.enabled ? preview.latest : ownerLatest;
   const [measuredWidth, setMeasuredWidth] = useState(0);
   const width = Math.min(measuredWidth || FALLBACK_WIDTH, MAX_WIDTH);
 

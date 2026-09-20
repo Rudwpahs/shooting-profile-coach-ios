@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-const profile = readFileSync("app/(tabs)/profile.tsx", "utf8");
+const profile = readFileSync("components/profile/owner-profile-tab.tsx", "utf8");
 const hero = readFileSync("components/profile/profile-hero.tsx", "utf8");
 const grid = readFileSync("components/profile/motion-grid.tsx", "utf8");
 const account = readFileSync("components/profile/account-panel.tsx", "utf8");
@@ -23,7 +23,6 @@ describe("profile as skeleton identity", () => {
     expect(profile).not.toMatch(/kicker|eyebrow|sectionTitle|lead:/);
     expect(profile).not.toContain("개인 저장공간 연결됨");
     expect(profile).not.toContain("계정을 연결하면 분석을 보관합니다");
-    // Boundary and mode copy survive only as accessibility labels on the tiles.
     expect(grid).toContain("위상 결합 4D 추정 · 실측 3D 아님");
     expect(profile).not.toContain("위상 결합 4D 추정 · 실측 3D 아님");
   });
@@ -44,7 +43,6 @@ describe("profile as skeleton identity", () => {
     const loadGlyphs = profile.slice(profile.indexOf("const loadV2Glyphs = useCallback"), profile.indexOf("useEffect(() =>", profile.indexOf("const loadV2Glyphs = useCallback")));
     expect(loadGlyphs.indexOf("if (!FORMPATH_FLAGS.profileV2) return;")).toBeLessThan(loadGlyphs.indexOf("getShootingProfileV2"));
     expect(loadGlyphs).toContain("ownerGenerationMatches(currentOwnerUidRef.current, ownerUid, v2GlyphGenerationRef.current, generation)");
-    // Deleting a profile also drops its cached glyph.
     expect(profile).toContain("const { [profileId]: _removed, ...rest } = envelope.value;");
   });
 

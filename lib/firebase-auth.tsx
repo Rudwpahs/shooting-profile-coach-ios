@@ -22,23 +22,35 @@ function requireAuth() {
   return firebaseAuth;
 }
 
-export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
+function previewAuthDisabledError() {
+  return new Error("Firebase 인증은 공개 미리보기에서 비활성화되어 있습니다.");
+}
+
+export function FirebaseAuthProvider({ children, disabled = false }: { children: ReactNode; disabled?: boolean }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!disabled);
   const [profileSync, setProfileSync] = useState<ProfileSyncOutcome | null>(null);
 
   const syncedUidRef = useRef<string | null>(null);
 
   const runProfileSync = useCallback(async (nextUser: User) => {
+    if (disabled) return;
     syncedUidRef.current = nextUser.uid;
     setProfileSync(await syncOwnerProfile(nextUser));
-  }, []);
+  }, [disabled]);
 
   // A session restored from storage never passes through signIn, so the repair has
-  // to run here as well. Without it a profile that a failed sign-up never wrote
-  // would stay missing, and its failure would stay invisible, until the user
-  // happened to sign out and back in.
+  // to run here as well. Public preview mode explicitly skips this subscription so
+  // a persisted browser login can never trigger a real profile-sync write.
   useEffect(() => {
+    if (disabled) {
+      syncedUidRef.current = null;
+      setUser(null);
+      setProfileSync(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     if (!firebaseAuth) { setLoading(false); return; }
     return onAuthStateChanged(firebaseAuth, (nextUser) => {
       setUser(nextUser);
@@ -47,23 +59,46 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
       if (syncedUidRef.current === nextUser.uid) return;
       void runProfileSync(nextUser);
     });
-  }, [runProfileSync]);
+  }, [disabled, runProfileSync]);
 
   // Sign-in repairs a profile document that a previous sign-up never managed to
   // write. The upsert is idempotent, so running it on every sign-in is safe.
   const signIn = useCallback(async (email: string, password: string) => {
+    if (disabled) throw previewAuthDisabledError();
     const credential = await signInWithEmailAndPassword(requireAuth(), email.trim(), password);
     await runProfileSync(credential.user);
-  }, [runProfileSync]);
+  }, [disabled, runProfileSync]);
   // A failed profile write no longer rejects sign-up: the account already exists at
   // that point, so rejecting would strand the user on `email-already-in-use` with no
   // profile. The failure is reported instead, and the next sign-in retries it.
   const signUp = useCallback(async (email: string, password: string) => {
+    if (disabled) throw previewAuthDisabledError();
     const credential = await createUserWithEmailAndPassword(requireAuth(), email.trim(), password);
     await runProfileSync(credential.user);
-  }, [runProfileSync]);
-  const logout = useCallback(async () => { await signOut(requireAuth()); syncedUidRef.current = null; setProfileSync(null); }, []);
-  const value = useMemo(() => ({ user, loading, configured: isFirebaseConfigured, profileSync, signIn, signUp, logout }), [loading, profileSync, signIn, signUp, user, logout]);
+  }, [disabled, runProfileSync]);
+  const logout = useCallback(async () => {
+    if (disabled) {
+      syncedUidRef.current = null;
+      setUser(null);
+      setProfileSync(null);
+      return;
+    }
+    await signOut(requireAuth());
+    syncedUidRef.current = null;
+    setProfileSync(null);
+  }, [disabled]);
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      configured: disabled ? false : isFirebaseConfigured,
+      profileSync,
+      signIn,
+      signUp,
+      logout,
+    }),
+    [disabled, loading, logout, profileSync, signIn, signUp, user],
+  );
   return <FirebaseAuthContext.Provider value={value}>{children}</FirebaseAuthContext.Provider>;
 }
 
