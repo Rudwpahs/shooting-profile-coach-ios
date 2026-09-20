@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const setDoc = vi.fn(async () => undefined);
 const deleteDoc = vi.fn(async () => undefined);
 const getDocs = vi.fn(async () => ({ docs: [] as { id: string; data: () => unknown }[] }));
-const getDoc = vi.fn(async () => ({ exists: () => false, metadata: { fromCache: false } }));
 const doc = vi.fn(() => ({ id: "generated-id" }));
 const collection = vi.fn(() => ({}));
 const query = vi.fn(() => ({}));
@@ -14,7 +13,6 @@ vi.mock("firebase/firestore", () => ({
   collection,
   deleteDoc,
   doc,
-  getDoc,
   getDocs,
   orderBy,
   query,
@@ -27,7 +25,6 @@ vi.mock("@/lib/firebase", () => ({ firestore: { id: "fake-firestore" } }));
 const {
   LEGACY_CLOUD_SAVE_DISABLED,
   LegacyCloudSaveDisabledError,
-  ensureFirebaseProfile,
   listFirebasePrivatePoses,
   removeFirebasePrivatePose,
   saveFirebasePrivatePose,
@@ -82,11 +79,5 @@ describe("legacy V1 private pose cloud write boundary", () => {
   it("still lets the owner delete an existing legacy document", async () => {
     await removeFirebasePrivatePose(owner, "legacy-doc-id");
     expect(deleteDoc).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps the owner profile upsert working", async () => {
-    await ensureFirebaseProfile(owner);
-    expect(setDoc).toHaveBeenCalledTimes(1);
-    expect(getDoc).toHaveBeenCalledTimes(1);
   });
 });

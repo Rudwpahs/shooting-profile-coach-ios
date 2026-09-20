@@ -327,9 +327,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if signedInOwner(userId);
-      allow create, update: if signedInOwner(userId)
-        && request.resource.data.email is string
-        && request.resource.data.email.size() <= 320;
+      allow create, update: if false;
       allow delete: if signedInOwner(userId);
 
       // Legacy V1 records are read-only history. Their payload predates the V2

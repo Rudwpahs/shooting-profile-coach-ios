@@ -15,6 +15,7 @@ import type { RepresentativeViewId } from "@/components/shooting-profile/sequenc
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
+import { evaluateSignupGate } from "@/lib/compliance/signup-gate";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { listFirebasePrivatePoses, removeFirebasePrivatePose, type FirebasePrivatePose } from "@/lib/firebase-private-data";
@@ -67,12 +68,15 @@ function focusStyle(focused: boolean, dark = false): ViewStyle {
 export default function PersonalProfileTab() {
   const router = useRouter();
   const { profile } = useProfile();
-  const { user, loading, configured, profileSync, signIn, signUp, logout } = useFirebaseAuth();
+  const { user, loading, configured, signIn, signUp, logout } = useFirebaseAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<AccountMode>("signin");
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [age14Plus, setAge14Plus] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyNoticeAcknowledged, setPrivacyNoticeAcknowledged] = useState(false);
   const [v1RecordEnvelope, setV1RecordEnvelope] = useState<{ ownerUid: string; value: FirebasePrivatePose[] } | null>(null);
   const [v1Loading, setV1Loading] = useState(false);
   const [v1Error, setV1Error] = useState<string | null>(null);
@@ -249,6 +253,13 @@ export default function PersonalProfileTab() {
       setStatus("이메일과 6자 이상 비밀번호를 입력하세요.");
       return;
     }
+    if (mode === "signup") {
+      const gate = evaluateSignupGate({ age14Plus, termsAccepted, privacyNoticeAcknowledged });
+      if (!gate.ok) {
+        setStatus(gate.message);
+        return;
+      }
+    }
     setSubmitting(true);
     setStatus(null);
     try {
@@ -394,12 +405,6 @@ export default function PersonalProfileTab() {
         />
         <Text style={styles.goalLine}>목표 · {goalLabel}</Text>
 
-        {user && profileSync?.status === "failed" ? (
-          <View accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.syncWarning}>
-            <Text style={styles.syncWarningText}>{profileSync.message}</Text>
-          </View>
-        ) : null}
-
         {FORMPATH_FLAGS.profileV2 ? (
           <View style={styles.section}>
             {loading ? <Text accessibilityLiveRegion="polite" style={styles.stateText}>계정 상태를 확인하는 중</Text> : !user ? null : (
@@ -463,20 +468,34 @@ export default function PersonalProfileTab() {
 
         {accountVisible ? (
           <AccountPanel
+            age14Plus={age14Plus}
             configured={configured}
             email={email}
             focusedControl={focusedControl}
             loading={loading}
             mode={mode}
+            onAge14PlusChange={setAge14Plus}
             onEmailChange={setEmail}
             onFocusChange={setFocusedControl}
             onLogout={() => void logout()}
+            onOpenPrivacy={() => router.push("/legal/privacy" as never)}
+            onOpenTerms={() => router.push("/legal/terms" as never)}
             onPasswordChange={setPassword}
+            onPrivacyNoticeAcknowledgedChange={setPrivacyNoticeAcknowledged}
             onSubmit={() => void submit()}
-            onToggleMode={() => { setMode((current) => current === "signin" ? "signup" : "signin"); setStatus(null); }}
+            onTermsAcceptedChange={setTermsAccepted}
+            onToggleMode={() => {
+              setMode((current) => current === "signin" ? "signup" : "signin");
+              setStatus(null);
+              setAge14Plus(false);
+              setTermsAccepted(false);
+              setPrivacyNoticeAcknowledged(false);
+            }}
             password={password}
+            privacyNoticeAcknowledged={privacyNoticeAcknowledged}
             status={status}
             submitting={submitting}
+            termsAccepted={termsAccepted}
             user={user}
           />
         ) : null}
@@ -511,8 +530,6 @@ const styles = StyleSheet.create({
   page: { alignSelf: "center", paddingBottom: 32 },
   iconButton: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
   goalLine: { ...typography.caption, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 8 },
-  syncWarning: { backgroundColor: tokens.warningSoft, borderColor: tokens.warning, borderRadius: 10, borderWidth: 1, marginHorizontal: 14, marginTop: 10, padding: 10 },
-  syncWarningText: { color: tokens.warning, fontSize: 12, lineHeight: 17 },
   section: { marginTop: 14 },
   stateText: { ...typography.callout, color: tokens.mutedForeground, marginVertical: 14, textAlign: "center" },
   noticeText: { ...typography.caption, color: tokens.positive, paddingHorizontal: 14, paddingTop: 8 },
