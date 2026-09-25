@@ -5,8 +5,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AnalysisDetails, AnalysisEvidence, AnalysisSummaryLine } from "@/components/analysis/analysis-layers";
+import { ShotInspectionViewer } from "@/components/shooting-profile/shot-inspection-viewer";
 import {
-  SequenceViewer,
   buildShootingProfileViewerKey,
   canRenderShootingProfileViewerRecord,
   getRepresentativeFocusStyle,
@@ -14,7 +14,7 @@ import {
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
-import { FORMPATH_FLAGS } from "@/lib/feature-flags";
+import { FORMPATH_EXPERIMENTAL_FLAGS, FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import {
   getShootingProfileV2,
@@ -38,11 +38,13 @@ type ViewerLoadState =
   | { status: "error"; key: string };
 
 /**
- * 분석, in three layers: the skeleton with its band and one finding (layer 1),
- * the numbers behind it (layer 2, collapsed), and per-joint evidence with the
- * boundary of what the record is (layer 3, collapsed). Access rules are
- * unchanged: both viewer flags, the signed-in owner, an opaque id, and a
- * request key that must still be current when the record arrives.
+ * 분석, in three layers: the motion/phase/local-film inspection surface with
+ * one finding (layer 1), the numbers behind it (layer 2, collapsed), and
+ * per-joint evidence with the boundary of what the record is (layer 3,
+ * collapsed). Motion fallback remains the existing SequenceViewer inside the
+ * coordinator. Access rules are unchanged: both viewer flags, the signed-in
+ * owner, an opaque id, and a request key that must still be current when the
+ * record arrives.
  */
 export default function PrivateAnalysisRoute() {
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
@@ -162,6 +164,8 @@ export default function PrivateAnalysisRoute() {
     );
   }
 
+  if (!profileId) return <Redirect href="/profile" />;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <TopBar
@@ -187,10 +191,12 @@ export default function PrivateAnalysisRoute() {
       />
       <ScrollView contentContainerStyle={styles.page}>
         <AnalysisSummaryLine profile={loadState.record.profile} />
-        <SequenceViewer
+        <ShotInspectionViewer
           confidence={loadState.record.confidence}
+          experimentalEnabled={FORMPATH_EXPERIMENTAL_FLAGS.shotInspectionV1}
           highlightJoint={primaryFinding(loadState.record.profile).joint}
           profile={loadState.record.profile}
+          profileId={profileId}
           shootingHand={loadState.record.shootingHand}
         />
         <AnalysisDetails
