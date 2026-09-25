@@ -6,8 +6,8 @@ import {
   clearLocalFilmRefs,
   dropLocalFilmRef,
   retainAcceptedLocalFilmRef,
-  type LocalFilmClipRefV1,
 } from "@/lib/film-space/local-association";
+import type { LocalFilmClipRefV1 } from "@/lib/film-space/types";
 
 const hookSource = readFileSync(
   resolve(process.cwd(), "hooks/use-shooting-profile-capture.ts"),
