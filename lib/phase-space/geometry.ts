@@ -8,7 +8,6 @@ import type {
   RepresentativePose4DV2,
   ShootingHandV2,
 } from "@/lib/shooting-profile/types";
-import { PERSISTED_JOINT_NAMES_V2 } from "@/lib/shooting-profile/types";
 
 export type PhaseSpacePoint = Readonly<{ x: number; y: number; z: number }>;
 export type PhaseSpaceCamera = Readonly<{
@@ -112,9 +111,23 @@ export function buildPhaseSpaceGeometry(
     return { phase: frame.phase, joints };
   });
 
-  const trajectories = Object.fromEntries(
-    PERSISTED_JOINT_NAMES_V2.map((joint) => [joint, frames.map((frame) => frame.joints[joint])]),
-  ) as Record<PersistedJointNameV2, readonly PhaseSpacePoint[]>;
+  const trajectory = (joint: PersistedJointNameV2): readonly PhaseSpacePoint[] => (
+    frames.map((frame) => frame.joints[joint])
+  );
+  const trajectories: Record<PersistedJointNameV2, readonly PhaseSpacePoint[]> = {
+    leftShoulder: trajectory("leftShoulder"),
+    leftElbow: trajectory("leftElbow"),
+    leftWrist: trajectory("leftWrist"),
+    rightShoulder: trajectory("rightShoulder"),
+    rightElbow: trajectory("rightElbow"),
+    rightWrist: trajectory("rightWrist"),
+    leftHip: trajectory("leftHip"),
+    leftKnee: trajectory("leftKnee"),
+    leftAnkle: trajectory("leftAnkle"),
+    rightHip: trajectory("rightHip"),
+    rightKnee: trajectory("rightKnee"),
+    rightAnkle: trajectory("rightAnkle"),
+  };
 
   const anchorsById = new Map(profile.phaseAnchors.map((anchor) => [anchor.id, anchor]));
   const anchors = REQUIRED_ANCHORS.map((id) => {
