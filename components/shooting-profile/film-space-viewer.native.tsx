@@ -14,7 +14,7 @@ import { tokens } from "@/constants/tokens";
 import {
   disposeFilmSpaceFrames,
   extractFilmSpaceFrames,
-} from "@/lib/film-space/frame-source";
+} from "@/lib/film-space/frame-source.native";
 import { createFilmSpaceSamplingPlan } from "@/lib/film-space/sampling";
 import type { LocalFilmClipRefV1 } from "@/lib/film-space/types";
 
