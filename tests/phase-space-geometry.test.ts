@@ -1,4 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("react-native", () => ({
+  StyleSheet: { create: <T>(styles: T) => styles },
+}));
+vi.mock("react-native-svg", () => ({ default: () => null, Circle: () => null, Line: () => null }));
+vi.mock("@expo/vector-icons/MaterialCommunityIcons", () => ({ default: () => null }));
+vi.mock("expo-haptics", () => ({ selectionAsync: async () => undefined }));
 
 import {
   buildPhaseSpaceGeometry,
