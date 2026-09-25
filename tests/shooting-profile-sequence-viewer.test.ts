@@ -286,6 +286,7 @@ describe("keyed private viewer state", () => {
 
 describe("viewer and private route static safety", () => {
   const viewerSource = readFileSync(resolve(process.cwd(), "components/shooting-profile/sequence-viewer.tsx"), "utf8");
+  const inspectionSource = readFileSync(resolve(process.cwd(), "components/shooting-profile/shot-inspection-viewer.tsx"), "utf8");
   const routeSource = readFileSync(resolve(process.cwd(), "app/private-analysis/[id].tsx"), "utf8");
 
   it("does not import or call the V1 five-frame interpolator", () => {
@@ -340,7 +341,9 @@ describe("viewer and private route static safety", () => {
     expect(routeSource).toContain("분석을 불러오는 중");
     expect(routeSource).toContain("다시 시도");
     expect(routeSource).toContain("프로필로 돌아가기");
-    expect(routeSource).toContain("SequenceViewer");
+    expect(routeSource).toContain("ShotInspectionViewer");
+    expect(inspectionSource).toContain("if (!experimentalEnabled)");
+    expect(inspectionSource).toContain("<SequenceViewer");
     expect(routeSource).toContain("shootingHand={loadState.record.shootingHand}");
     expect(routeSource).toContain("confidence={loadState.record.confidence}");
     expect(routeSource).not.toContain("const [profile, setProfile]");
