@@ -144,3 +144,12 @@ export const FORMPATH_FLAG_RESOLUTION = resolveFormPathFlags({
 });
 
 export const FORMPATH_FLAGS = FORMPATH_FLAG_RESOLUTION.flags;
+
+// Experimental visualization stays independently default-off and cannot bypass
+// the existing Representative V2 release gate.
+export const FORMPATH_EXPERIMENTAL_FLAGS = Object.freeze({
+  shotInspectionV1:
+    process.env.EXPO_PUBLIC_FORMPATH_SHOT_INSPECTION_V1 === "1"
+    && FORMPATH_FLAGS.profileV2
+    && FORMPATH_FLAGS.representative4DViewer,
+});
