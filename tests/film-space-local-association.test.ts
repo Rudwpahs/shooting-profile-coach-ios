@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  deleteLocalFilmAssociation,
+  loadLocalFilmAssociation,
+  saveLocalFilmAssociation,
+} from "@/lib/film-space/local-association";
+
 const storage = new Map<string, string>();
 
 vi.mock("@react-native-async-storage/async-storage", () => ({
@@ -9,12 +15,6 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
     removeItem: async (key: string) => { storage.delete(key); },
   },
 }));
-
-import {
-  deleteLocalFilmAssociation,
-  loadLocalFilmAssociation,
-  saveLocalFilmAssociation,
-} from "@/lib/film-space/local-association";
 
 const clips = [{
   slotId: "front-0",
