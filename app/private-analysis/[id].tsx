@@ -41,7 +41,8 @@ type ViewerLoadState =
  * 분석, in three layers: the motion/phase/local-film inspection surface with
  * one finding (layer 1), the numbers behind it (layer 2, collapsed), and
  * per-joint evidence with the boundary of what the record is (layer 3,
- * collapsed). Access rules are unchanged: both viewer flags, the signed-in
+ * collapsed). Motion fallback remains the existing SequenceViewer inside the
+ * coordinator. Access rules are unchanged: both viewer flags, the signed-in
  * owner, an opaque id, and a request key that must still be current when the
  * record arrives.
  */
