@@ -14,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: hoop-hub-ui-pages
+  group: hoop-hub-ui-pages-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
