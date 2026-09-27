@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createFilmSpaceSamplingPlan } from "@/lib/film-space/sampling";
+import {
+  createFilmSpaceSamplingPlan,
+  resolveFilmSpaceSamplingPlan,
+} from "@/lib/film-space/sampling";
 
 describe("film-space deterministic sampling", () => {
   it("creates deterministic 64-96 slice plans with bounded raw RGBA budget", () => {
@@ -31,6 +34,13 @@ describe("film-space deterministic sampling", () => {
     expect(() => createFilmSpaceSamplingPlan(Number.POSITIVE_INFINITY)).toThrow(/duration/i);
     expect(() => createFilmSpaceSamplingPlan(0)).toThrow(/duration/i);
     expect(() => createFilmSpaceSamplingPlan(100)).toThrow(/short|duration/i);
+  });
+
+  it("offers a fail-closed resolver for viewer inputs instead of surfacing sampling exceptions", () => {
+    expect(resolveFilmSpaceSamplingPlan(Number.NaN)).toBeNull();
+    expect(resolveFilmSpaceSamplingPlan(0)).toBeNull();
+    expect(resolveFilmSpaceSamplingPlan(100)).toBeNull();
+    expect(resolveFilmSpaceSamplingPlan(3000)?.sliceCount).toBe(80);
   });
 
   it("keeps long clips bounded instead of scaling slice count with duration", () => {
