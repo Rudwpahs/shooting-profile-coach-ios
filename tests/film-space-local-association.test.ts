@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as localFilmAssociation from "@/lib/film-space/local-association";
 import {
   deleteLocalFilmAssociation,
   loadLocalFilmAssociation,
   saveLocalFilmAssociation,
 } from "@/lib/film-space/local-association";
+import type { LocalFilmAssociationV1, LocalFilmClipRefV1 } from "@/lib/film-space/types";
 
 const storage = new Map<string, string>();
 
@@ -16,15 +18,30 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-const clips = [{
+const clipA: LocalFilmClipRefV1 = {
   slotId: "front-0",
-  view: "front" as const,
+  view: "front",
   takeIndex: 0,
-  uri: "file:///private/cache/clip.mov",
+  uri: "file:///private/cache/front.mov",
   durationMs: 2800,
   width: 1080,
   height: 1920,
-}];
+};
+const clipB: LocalFilmClipRefV1 = {
+  slotId: "shooting-side-0",
+  view: "shooting_side",
+  takeIndex: 0,
+  uri: "file:///private/cache/side.mov",
+  durationMs: 2900,
+  width: 1080,
+  height: 1920,
+};
+const clips = [clipA];
+
+type EvictLocalFilmClip = (
+  profileId: string,
+  slotId: string,
+) => Promise<LocalFilmAssociationV1 | null>;
 
 describe("local film association", () => {
   beforeEach(() => storage.clear());
@@ -32,7 +49,7 @@ describe("local film association", () => {
   it("stores local URI only under a local app key and never serializes filename or EXIF", async () => {
     await saveLocalFilmAssociation("profile-a", clips);
     const serialized = [...storage.values()][0] ?? "";
-    expect(serialized).toContain("file:///private/cache/clip.mov");
+    expect(serialized).toContain("file:///private/cache/front.mov");
     expect(serialized).not.toMatch(/filename|exif|cloud|firestore|https?:/i);
   });
 
@@ -56,6 +73,23 @@ describe("local film association", () => {
     expect(await loadLocalFilmAssociation("wrong-version")).toBeNull();
     expect(await loadLocalFilmAssociation("wrong-profile")).toBeNull();
     expect(await loadLocalFilmAssociation("empty")).toBeNull();
+  });
+
+  it("evicts only the missing local clip and deletes the association after the last clip is gone", async () => {
+    await saveLocalFilmAssociation("profile-a", [clipA, clipB]);
+    const candidate = (localFilmAssociation as unknown as Record<string, unknown>)
+      .evictLocalFilmClipFromAssociation;
+    expect(candidate).toBeTypeOf("function");
+    if (typeof candidate !== "function") return;
+    const evict = candidate as EvictLocalFilmClip;
+
+    const afterFirstEviction = await evict("profile-a", clipA.slotId);
+    expect(afterFirstEviction?.clips).toEqual([clipB]);
+    expect((await loadLocalFilmAssociation("profile-a"))?.clips).toEqual([clipB]);
+
+    expect(await evict("profile-a", clipB.slotId)).toBeNull();
+    expect(await loadLocalFilmAssociation("profile-a")).toBeNull();
+    expect(storage.size).toBe(0);
   });
 
   it("deletes only the local association key", async () => {

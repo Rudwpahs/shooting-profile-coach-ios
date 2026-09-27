@@ -23,8 +23,17 @@ describe("film-space viewer boundary", () => {
     expect(nativeSource).toMatch(/SOURCE TIME/);
     expect(nativeSource).toMatch(/동기화되지 않/);
     expect(nativeSource).toMatch(/source_unavailable|unavailable/);
+    expect(nativeSource).toMatch(/onSourceUnavailable/);
     expect(nativeSource).not.toMatch(/firebase|fetch\(|axios|trpc|upload/i);
     expect(nativeSource).not.toMatch(/console\.(log|warn|error).*uri/i);
+  });
+
+  it("renders source-time slices as an XY volume without claiming measured 3D or 4D", () => {
+    expect(nativeSource).toMatch(/translateX/);
+    expect(nativeSource).toMatch(/translateY/);
+    expect(nativeSource).toMatch(/시간 슬라이스/);
+    expect(nativeSource).toMatch(/측정된 3D|measured 3D/i);
+    expect(nativeSource).toMatch(/4D/);
   });
 
   it("keeps web as an honest unsupported fallback without native extraction imports", () => {

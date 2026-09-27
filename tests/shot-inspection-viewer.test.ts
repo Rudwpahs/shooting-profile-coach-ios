@@ -12,6 +12,10 @@ const flagSource = readFileSync(
   resolve(process.cwd(), "lib/feature-flags.ts"),
   "utf8",
 );
+const viewerSource = readFileSync(
+  resolve(process.cwd(), "components/shooting-profile/shot-inspection-viewer.tsx"),
+  "utf8",
+);
 
 describe("shot inspection coordinator", () => {
   it("defaults to Motion and keeps Phase available when local film is missing", () => {
@@ -32,6 +36,14 @@ describe("shot inspection coordinator", () => {
     expect(routeSource).not.toMatch(/<SequenceViewer/);
     expect(routeSource).toMatch(/profileId=/);
     expect(routeSource).toMatch(/highlightJoint=/);
+  });
+
+  it("evicts unavailable local film, supports clip selection, and fails closed to Motion", () => {
+    expect(viewerSource).toMatch(/evictLocalFilmClipFromAssociation/);
+    expect(viewerSource).toMatch(/onSourceUnavailable/);
+    expect(viewerSource).toMatch(/selectedSlotId/);
+    expect(viewerSource).toMatch(/clips\.map/);
+    expect(viewerSource).toMatch(/setMode\(["']motion["']\)/);
   });
 
   it("keeps the new inspection surface behind a separate default-off public env flag and existing rollout gate", () => {
