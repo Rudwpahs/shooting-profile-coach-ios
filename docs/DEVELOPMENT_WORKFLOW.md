@@ -6,7 +6,7 @@
 
 - **Superpowers v6.3.0+**: 작업 분류, spec/plan 연결, 구현·검토·검증 절차
 - **UI UX Pro Max v2.15.0+**: React Native 사용자 화면의 디자인 시스템, UX, 접근성, 인터랙션 품질 게이트
-- **Graphify 0.5.0+**: 코드베이스 구조 파악, 모듈 간 관계·의존성 추적, 대규모 리팩터링 전 구조 확인
+- **Graphify `graphifyy==0.9.69`**: 코드베이스 구조 파악, 모듈 간 관계·의존성 추적, 대규모 리팩터링 전 구조 확인
 
 이 도구들은 개발 보조 도구이며 Expo 앱의 runtime dependency로 포함하지 않는다.
 
@@ -14,7 +14,7 @@
 
 한 번에 하나의 문제만 정의한다. Superpowers 방식으로 작업을 작은 탐색(spike), 제한된 변경(bounded), 구조 변경(architectural) 중 하나로 보고 필요한 수준만큼 계획한다. 예를 들어 “Curry 3D를 더 자연스럽게”가 아니라, “single-view candidate가 3D viewer에 공급되지 않도록 막고 calibrated capture admission path를 만든다”처럼 acceptance criterion을 쓴다.
 
-광범위하거나 낯선 영역의 작업은 기존 Graphify 결과(`GRAPH_REPORT.md`, `graphify-out/`)가 있다면 먼저 구조를 읽는다. 결과가 오래되었으면 가능한 환경에서 갱신한 뒤 실제 source와 대조한다. Graphify 결과만으로 구현 결정을 확정하지 않는다.
+광범위하거나 낯선 영역의 작업은 먼저 현재 HEAD와 `graphify-out/`의 freshness를 확인한다. fresh graph가 있으면 broad source search 전에 `graphify query`로 질문을 좁히고, 필요하면 `graphify path` 또는 `graphify explain`으로 관계·심볼을 추적한다. Graphify가 없거나 stale graph를 현재 환경에서 갱신할 수 없으면 직접 source search로 fallback하고 그 제한을 명시한다. 어떤 경우에도 Graphify 결과만으로 구현 결정을 확정하지 않으며, 구현에 영향을 주는 dependency·ownership·storage·execution-flow 주장은 실제 source에서 재확인한다.
 
 ## Stage 1 — Source and data admission
 
@@ -36,9 +36,11 @@
 | Multi-view 3D | shared-flash sync, checkerboard calibration, undistortion, triangulation, reprojection, visual audit |
 | Separate-shot representative 4D | exact 101-phase grid, all-phase consensus, uncertainty/closure gates, explicit estimate label, flags default off |
 | Firebase | UID-only rules and regression tests |
-| Broad refactor | Graphify 또는 동등한 구조 분석으로 영향 범위 확인 후 source-level verification |
+| Broad refactor | fresh Graphify 또는 동등한 구조 분석으로 영향 범위를 좁힌 뒤 source-level verification |
 
 UI 작업은 컴파일 성공만으로 완료 처리하지 않는다. 최소한 small-screen reflow, touch target, text scaling, loading/error/empty state, contrast, reduced-motion 또는 해당 interaction의 접근성 상태를 확인한다.
+
+Graphify는 `.agents/skills/graphify/`의 project-local 개발 도구이며 `package.json`, Expo/native runtime, Firestore schema, server storage, raw-video upload/storage 경로에 의존성이나 동작을 추가하지 않는다. Generated graph data는 `graphify-out/`에 두고 기본적으로 git에 커밋하지 않는다. 자동 post-commit/CI refresh도 이 단계에서는 사용하지 않는다.
 
 ## Stage 4 — Review and checkpoint
 
