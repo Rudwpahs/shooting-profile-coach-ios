@@ -13,6 +13,8 @@
 ## Global Constraints
 
 - Adopt the official upstream `Graphify-Labs/graphify` and package `graphifyy==0.9.69`; CLI command remains `graphify`.
+- Version `0.9.69` was released on 2026-09-26; PyPI provenance points to upstream commit `4139885a1212956cf69a76946fbde0d181ab85e9`.
+- Upstream package license expression is `Apache-2.0`; upstream also retains historical `LICENSE-MIT` / `NOTICE` material.
 - Python requirement is 3.10+; prefer `uv`/`uvx` so the repository does not depend on the machine's broken `python`/`py` shim.
 - Graphify is a development aid only; do not add it to `package.json`, `pnpm-lock.yaml`, Expo/native runtime, Firestore schema, server storage, or raw-video paths.
 - Project-local skill location is `.agents/skills/graphify/`; generated graph data stays under `graphify-out/` and remains untracked.
@@ -36,20 +38,22 @@
 - Modify: `AGENTS.md`
 - Modify: `docs/AGENT_TOOLCHAIN.md`
 - Modify: `docs/DEVELOPMENT_WORKFLOW.md`
+- Local-only verification marker: `.git/graphify-integration-base`
 
 **Interfaces:**
 - Consumes: approved design spec; official Graphify package/repository facts.
 - Produces: one repository-wide Graphify policy: `graphifyy==0.9.69`, `Graphify-Labs/graphify`, `.agents/skills/graphify/`, query-first usage, source-verification rule, and explicit no-runtime-dependency rule.
 
-- [ ] **Step 1: Write the policy assertions before editing docs**
+- [ ] **Step 1: Record the implementation base and stale-policy assertions before editing docs**
 
 Run:
 
 ```bash
+git rev-parse HEAD > .git/graphify-integration-base
 rg -n "Graphify 0\.5\.0|safishamsi/graphify" AGENTS.md docs/AGENT_TOOLCHAIN.md docs/DEVELOPMENT_WORKFLOW.md
 ```
 
-Expected: at least the old `Graphify 0.5.0+` baseline is found; the command establishes the stale state this task removes.
+Expected: the current HEAD is stored locally for final diff verification, and at least the old `Graphify 0.5.0+` baseline is found.
 
 - [ ] **Step 2: Update `AGENTS.md` Graphify baseline and behavior**
 
@@ -62,12 +66,15 @@ Replace the old upstream/package/version information with:
 ```text
 Source: https://github.com/Graphify-Labs/graphify
 Package: graphifyy==0.9.69
+Release: 2026-09-26
+Provenance commit: 4139885a1212956cf69a76946fbde0d181ab85e9
+License: Apache-2.0 (historical MIT material retained upstream)
 CLI: graphify
 Python: 3.10+
 Project skill: .agents/skills/graphify/
 ```
 
-Document the project install command as `uvx --from graphifyy==0.9.69 graphify install --project --platform agents`. State that the generic Agent Skills target is intentional because this repository standardizes project-local skills under `.agents/skills/`; do not enable post-commit hooks in this phase.
+Document the project install command as `uvx --from graphifyy==0.9.69 graphify install --project --platform agents`. State that the generic Agent Skills target is intentional because this repository standardizes project-local skills under `.agents/skills/`; do not enable post-commit hooks in this phase. Add the host note that Codex invokes the skill as `$graphify`, while terminal verification uses the `graphify` CLI directly.
 
 - [ ] **Step 4: Update `docs/DEVELOPMENT_WORKFLOW.md`**
 
@@ -79,11 +86,11 @@ Run:
 
 ```bash
 ! rg -n "Graphify 0\.5\.0|safishamsi/graphify" AGENTS.md docs/AGENT_TOOLCHAIN.md docs/DEVELOPMENT_WORKFLOW.md
-rg -n "0\.9\.69|Graphify-Labs/graphify|graphify query" AGENTS.md docs/AGENT_TOOLCHAIN.md docs/DEVELOPMENT_WORKFLOW.md
+rg -n "0\.9\.69|Graphify-Labs/graphify|graphify query|Apache-2\.0" AGENTS.md docs/AGENT_TOOLCHAIN.md docs/DEVELOPMENT_WORKFLOW.md
 git diff -- package.json pnpm-lock.yaml
 ```
 
-Expected: first command exits 0 via shell negation, new baseline/query-first text is found, and runtime manifest diff is empty.
+Expected: first command exits 0 via shell negation, new provenance/query-first text is found, and runtime manifest diff is empty.
 
 - [ ] **Step 6: Commit**
 
@@ -132,7 +139,7 @@ uvx --from graphifyy==0.9.69 graphify install --project --platform agents
 
 Expected: skill is installed under `.agents/skills/graphify/`; the installer reports a project-scoped install. If `uvx` is unavailable, install `uv` using the platform-supported method, but do not modify or repair the unrelated system Python shim.
 
-- [ ] **Step 3: Verify exact version and required bundle**
+- [ ] **Step 3: Verify exact version and release bundle**
 
 Run:
 
@@ -143,7 +150,7 @@ for f in add-watch.md exports.md extraction-spec.md github-and-merge.md hooks.md
 rg -n "name: graphify|graphify query|graphify path|graphify explain" .agents/skills/graphify/SKILL.md .agents/skills/graphify/references/query.md
 ```
 
-Expected: all checks pass.
+Expected: all checks pass. The eight reference filenames are the files shipped by the verified `0.9.69` provenance commit.
 
 - [ ] **Step 4: Reject unintended installer side effects**
 
@@ -273,8 +280,9 @@ For each row, open the exact source files named by Graphify and confirm the rela
 Run:
 
 ```bash
-git diff -- package.json pnpm-lock.yaml firestore.rules firebase.json server app lib
-git diff --name-only | rg -n "^(package\.json|pnpm-lock\.yaml|firestore\.rules|firebase\.json|server/|app/|lib/)" || true
+BASE=$(cat .git/graphify-integration-base)
+git diff "$BASE"..HEAD -- package.json pnpm-lock.yaml firestore.rules firebase.json server app lib
+git diff --name-only "$BASE"..HEAD | rg -n "^(package\.json|pnpm-lock\.yaml|firestore\.rules|firebase\.json|server/|app/|lib/)" || true
 ```
 
 Expected: no product runtime, Firestore, server, or application source change belongs to this Graphify integration.
@@ -342,20 +350,21 @@ git check-ignore graphify-out/graph.json
 
 Expected: both checks pass.
 
-- [ ] **Step 4: Verify no prohibited integration changes**
+- [ ] **Step 4: Verify no prohibited integration changes from the recorded base**
 
 Run:
 
 ```bash
-git diff HEAD~4..HEAD -- package.json pnpm-lock.yaml firestore.rules firebase.json server app lib
-git log --oneline -5
+BASE=$(cat .git/graphify-integration-base)
+git diff "$BASE"..HEAD -- package.json pnpm-lock.yaml firestore.rules firebase.json server app lib
+git log --oneline "$BASE"..HEAD
 ```
 
-Expected: no Graphify integration commit changes runtime/product/storage files. The recent history shows the policy, skill, and validation commits only (plus the already-approved spec/plan commits around them).
+Expected: runtime/product/storage diff is empty. Integration history contains only policy/tooling/validation work; the already-approved spec and plan are outside the recorded implementation base.
 
 - [ ] **Step 5: Run repository checks only if implementation touched non-doc/tooling config**
 
-If any file outside `AGENTS.md`, `docs/**`, `.agents/**`, and the already-ignored `graphify-out/**` changed, run:
+If any file outside `AGENTS.md`, `docs/**`, `.agents/**`, and the already-ignored `graphify-out/**` changed after the recorded base, run:
 
 ```bash
 pnpm check
@@ -366,4 +375,4 @@ Expected: both pass. If no such file changed, record `not required — tooling/d
 
 - [ ] **Step 6: Final review**
 
-Compare the branch diff with `docs/superpowers/specs/2026-09-27-graphify-project-local-integration-design.md`. Confirm that post-commit hooks/CI refresh remain deferred, graph output remains advisory, and no generated graph artifact is committed.
+Compare the branch diff with `docs/superpowers/specs/2026-09-27-graphify-project-local-integration-design.md`. Confirm that post-commit hooks/CI refresh remain deferred, graph output remains advisory, no generated graph artifact is committed, and any environment limitation is stated precisely rather than hidden.
