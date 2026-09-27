@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   PanResponder,
   Pressable,
   StyleSheet,
@@ -54,13 +55,28 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
     setSelectedIndex(0);
     readyCacheRef.current = null;
 
+    const releaseReadyCache = () => {
+      const cache = readyCacheRef.current;
+      readyCacheRef.current = null;
+      if (cache) void disposeFilmSpaceFrames(cache);
+    };
+
     if (!plan) {
       setViewerState({ status: "unavailable", reason: "source_unavailable" });
       return () => {
         active = false;
         controller.abort();
+        releaseReadyCache();
       };
     }
+
+    const appStateSubscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active" || !active) return;
+      active = false;
+      controller.abort();
+      releaseReadyCache();
+      setViewerState({ status: "cancelled" });
+    });
 
     void extractFilmSpaceFrames(clip, plan, controller.signal).then((result) => {
       if (!active) {
@@ -71,11 +87,10 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
       setViewerState(result);
     });
     return () => {
+      appStateSubscription.remove();
       active = false;
       controller.abort();
-      const cache = readyCacheRef.current;
-      readyCacheRef.current = null;
-      if (cache) void disposeFilmSpaceFrames(cache);
+      releaseReadyCache();
     };
   }, [clip, plan]);
 
@@ -110,7 +125,7 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
         <Text style={styles.stateCopy}>
           {unavailable
             ? "영상이 삭제되었거나 로컬 캐시에서 사라졌습니다. Motion과 Phase는 계속 사용할 수 있습니다."
-            : "Film Space 준비가 취소되었거나 현재 플랫폼에서 지원되지 않습니다."}
+            : "Film Space 준비가 취소되었거나 현재 플랫폼에서 지원되지 않습니다. Motion과 Phase는 계속 사용할 수 있습니다."}
         </Text>
       </View>
     );
