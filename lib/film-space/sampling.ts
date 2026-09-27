@@ -10,6 +10,12 @@ const DEFAULT_LONG_EDGE_PX = 240;
 const MAX_RAW_RGBA_BYTES = 24 * 1024 * 1024;
 const RGBA_BYTES_PER_PIXEL = 4;
 
+type FilmSpaceSamplingOptions = Readonly<{
+  preferredSlices?: number;
+  targetLongEdgePx?: number;
+  maxRawRgbaBytes?: number;
+}>;
+
 function finite(value: number, label: string): number {
   if (!Number.isFinite(value)) throw new Error(`film-space ${label} must be finite`);
   return value;
@@ -21,11 +27,7 @@ function clampInteger(value: number, min: number, max: number): number {
 
 export function createFilmSpaceSamplingPlan(
   durationMs: number,
-  options: Readonly<{
-    preferredSlices?: number;
-    targetLongEdgePx?: number;
-    maxRawRgbaBytes?: number;
-  }> = {},
+  options: FilmSpaceSamplingOptions = {},
 ): FilmSpaceSamplingPlan {
   const normalizedDurationMs = Math.round(finite(durationMs, "duration"));
   if (normalizedDurationMs < MIN_DURATION_MS) {
@@ -80,4 +82,15 @@ export function createFilmSpaceSamplingPlan(
     estimatedRawRgbaBytes,
     maxRawRgbaBytes,
   });
+}
+
+export function resolveFilmSpaceSamplingPlan(
+  durationMs: number,
+  options: FilmSpaceSamplingOptions = {},
+): FilmSpaceSamplingPlan | null {
+  try {
+    return createFilmSpaceSamplingPlan(durationMs, options);
+  } catch {
+    return null;
+  }
 }
