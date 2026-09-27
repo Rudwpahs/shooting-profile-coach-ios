@@ -65,7 +65,7 @@ export function selectGhostFrameIndices(frameCount: number, ghostCount = 11): nu
     throw new Error("phase space requires exactly 101 stored frames");
   }
   if (!Number.isFinite(ghostCount)) throw new Error("ghost count must be finite");
-  const count = Math.max(2, Math.min(13, Math.round(ghostCount)));
+  const count = Math.max(9, Math.min(13, Math.round(ghostCount)));
   return Array.from(
     { length: count },
     (_, index) => Math.round((index * LAST_FRAME_INDEX) / (count - 1)),
