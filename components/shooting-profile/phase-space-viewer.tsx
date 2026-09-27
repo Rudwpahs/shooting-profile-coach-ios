@@ -256,7 +256,7 @@ export function PhaseSpaceViewer({
         <Text style={styles.anchorLabel}>followThrough</Text>
       </View>
       <Text style={styles.boundaryCopy}>
-        101개 정규화 슛 단계 · 동기화 시간축이 아님 · 계측 4D가 아님
+        101개 정규화 슛 단계 · z축은 슛 단계, 물리 깊이가 아님 · 동기화 시간축이 아님 · 계측 4D가 아님 · 측정된 물리 3D가 아님
       </Text>
     </View>
   );
