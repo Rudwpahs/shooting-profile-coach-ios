@@ -41,11 +41,14 @@ describe("phase-space viewer contract", () => {
     expect(VIEWER_SOURCE).toMatch(/accessibilityLabel/);
   });
 
-  it("labels the axis as shot phase and explicitly rejects synchronized-time or measured-4D interpretation", () => {
+  it("labels the axis as shot phase and explicitly rejects synchronized-time, physical-depth, measured-3D, or measured-4D interpretation", () => {
     expect(VIEWER_SOURCE).toMatch(/SHOT PHASE/);
     expect(VIEWER_SOURCE).toMatch(/정규화/);
+    expect(VIEWER_SOURCE).toMatch(/z축은 슛 단계/);
+    expect(VIEWER_SOURCE).toMatch(/물리 깊이가 아님/);
     expect(VIEWER_SOURCE).toMatch(/동기화 시간축이 아님/);
     expect(VIEWER_SOURCE).toMatch(/계측 4D가 아님/);
+    expect(VIEWER_SOURCE).toMatch(/측정된 물리 3D가 아님/);
     expect(VIEWER_SOURCE).not.toMatch(/SYNC TIME|실시간 4D/);
   });
 });

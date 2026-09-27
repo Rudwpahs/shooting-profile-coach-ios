@@ -27,9 +27,11 @@ describe("phase-space geometry", () => {
     expect(geometry.trajectories.rightWrist[100].z).toBe(1);
   });
 
-  it("selects sparse ghosts including first and last without 101 opaque copies", () => {
+  it("selects 9-13 sparse ghosts including first and last without 101 opaque copies", () => {
     expect(selectGhostFrameIndices(101, 11)).toEqual([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+    expect(selectGhostFrameIndices(101, 3)).toHaveLength(9);
     expect(selectGhostFrameIndices(101, 13)).toHaveLength(13);
+    expect(selectGhostFrameIndices(101, 99)).toHaveLength(13);
     expect(() => selectGhostFrameIndices(100, 11)).toThrow(/101/);
   });
 
