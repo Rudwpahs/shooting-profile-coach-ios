@@ -77,7 +77,7 @@ export function ShotInspectionViewer({
     return () => { active = false; };
   }, [experimentalEnabled, profileId]);
 
-  const clips = association?.clips ?? [];
+  const clips = useMemo(() => association?.clips ?? [], [association]);
   const filmSupported = Platform.OS === "ios";
   const model = useMemo(() => resolveShotInspectionModes({
     experimentalEnabled,
