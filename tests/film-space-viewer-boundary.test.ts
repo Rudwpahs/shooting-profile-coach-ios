@@ -17,6 +17,8 @@ describe("film-space viewer boundary", () => {
     expect(nativeSource).toMatch(/disposeFilmSpaceFrames/);
     expect(nativeSource).toMatch(/resolveFilmSpaceSamplingPlan/);
     expect(nativeSource).toMatch(/AbortController/);
+    expect(nativeSource).toMatch(/AppState/);
+    expect(nativeSource).toMatch(/addEventListener\(\s*["']change["']/);
     expect(nativeSource).toMatch(/PanResponder/);
     expect(nativeSource).toMatch(/SOURCE TIME/);
     expect(nativeSource).toMatch(/동기화되지 않/);
