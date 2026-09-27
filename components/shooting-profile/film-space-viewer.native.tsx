@@ -15,7 +15,7 @@ import {
   disposeFilmSpaceFrames,
   extractFilmSpaceFrames,
 } from "@/lib/film-space/frame-source.native";
-import { createFilmSpaceSamplingPlan } from "@/lib/film-space/sampling";
+import { resolveFilmSpaceSamplingPlan } from "@/lib/film-space/sampling";
 import type { LocalFilmClipRefV1 } from "@/lib/film-space/types";
 
 const STAGE_HEIGHT = 320;
@@ -35,7 +35,7 @@ function clampZoom(value: number): number {
 
 export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
   const plan = useMemo(
-    () => createFilmSpaceSamplingPlan(clip.durationMs),
+    () => resolveFilmSpaceSamplingPlan(clip.durationMs),
     [clip.durationMs],
   );
   const [viewerState, setViewerState] = useState<ViewerState>({ status: "loading" });
@@ -53,6 +53,15 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
     setViewerState({ status: "loading" });
     setSelectedIndex(0);
     readyCacheRef.current = null;
+
+    if (!plan) {
+      setViewerState({ status: "unavailable", reason: "source_unavailable" });
+      return () => {
+        active = false;
+        controller.abort();
+      };
+    }
+
     void extractFilmSpaceFrames(clip, plan, controller.signal).then((result) => {
       if (!active) {
         if (result.status === "ready") void disposeFilmSpaceFrames(result);
