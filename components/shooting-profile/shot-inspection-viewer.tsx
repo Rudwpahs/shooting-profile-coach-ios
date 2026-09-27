@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { FilmSpaceViewer } from "@/components/shooting-profile/film-space-viewer";
 import { PhaseSpaceViewer } from "@/components/shooting-profile/phase-space-viewer";
 import { SequenceViewer } from "@/components/shooting-profile/sequence-viewer";
 import { tokens } from "@/constants/tokens";
-import { loadLocalFilmAssociation } from "@/lib/film-space/local-association";
-import type { LocalFilmAssociationV1 } from "@/lib/film-space/types";
+import {
+  evictLocalFilmClipFromAssociation,
+  loadLocalFilmAssociation,
+} from "@/lib/film-space/local-association";
+import type {
+  LocalFilmAssociationV1,
+  LocalFilmClipRefV1,
+} from "@/lib/film-space/types";
 import {
   resolveShotInspectionModes,
   type ShotInspectionMode,
@@ -32,6 +38,11 @@ const MODE_LABELS: Readonly<Record<ShotInspectionMode, string>> = {
   film: "Film",
 };
 
+function localClipLabel(clip: LocalFilmClipRefV1): string {
+  const view = clip.view === "front" ? "Front" : "Side";
+  return `${view} ${clip.takeIndex + 1}`;
+}
+
 export function ShotInspectionViewer({
   profileId,
   profile,
@@ -42,32 +53,64 @@ export function ShotInspectionViewer({
 }: ShotInspectionViewerProps) {
   const [association, setAssociation] = useState<LocalFilmAssociationV1 | null>(null);
   const [mode, setMode] = useState<ShotInspectionMode>("motion");
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     if (!experimentalEnabled) {
       setAssociation(null);
+      setSelectedSlotId(null);
       setMode("motion");
       return () => { active = false; };
     }
     void loadLocalFilmAssociation(profileId)
       .then((result) => {
-        if (active) setAssociation(result);
+        if (!active) return;
+        setAssociation(result);
+        setSelectedSlotId(result?.clips[0]?.slotId ?? null);
       })
       .catch(() => {
-        if (active) setAssociation(null);
+        if (!active) return;
+        setAssociation(null);
+        setSelectedSlotId(null);
       });
     return () => { active = false; };
   }, [experimentalEnabled, profileId]);
 
+  const clips = association?.clips ?? [];
+  const filmSupported = Platform.OS === "ios";
   const model = useMemo(() => resolveShotInspectionModes({
     experimentalEnabled,
-    hasLocalFilm: (association?.clips.length ?? 0) > 0,
-  }), [association, experimentalEnabled]);
+    hasLocalFilm: filmSupported && clips.length > 0,
+  }), [clips.length, experimentalEnabled, filmSupported]);
 
   useEffect(() => {
     if (!model.enabledModes.includes(mode)) setMode(model.defaultMode);
   }, [mode, model]);
+
+  useEffect(() => {
+    if (clips.length === 0) {
+      if (selectedSlotId !== null) setSelectedSlotId(null);
+      return;
+    }
+    if (!selectedSlotId || !clips.some((clip) => clip.slotId === selectedSlotId)) {
+      setSelectedSlotId(clips[0].slotId);
+    }
+  }, [clips, selectedSlotId]);
+
+  const handleFilmSourceUnavailable = useCallback(async (clip: LocalFilmClipRefV1) => {
+    try {
+      const next = await evictLocalFilmClipFromAssociation(profileId, clip.slotId);
+      setAssociation(next);
+      const nextSlotId = next?.clips[0]?.slotId ?? null;
+      setSelectedSlotId(nextSlotId);
+      if (!nextSlotId) setMode("motion");
+    } catch {
+      setAssociation(null);
+      setSelectedSlotId(null);
+      setMode("motion");
+    }
+  }, [profileId]);
 
   if (!experimentalEnabled) {
     return (
@@ -80,7 +123,7 @@ export function ShotInspectionViewer({
     );
   }
 
-  const localClip = association?.clips[0] ?? null;
+  const localClip = clips.find((clip) => clip.slotId === selectedSlotId) ?? clips[0] ?? null;
 
   return (
     <View style={styles.container}>
@@ -123,7 +166,39 @@ export function ShotInspectionViewer({
           shootingHand={shootingHand}
         />
       ) : null}
-      {mode === "film" && localClip ? <FilmSpaceViewer clip={localClip} /> : null}
+      {mode === "film" && localClip ? (
+        <View>
+          {clips.length > 1 ? (
+            <View accessibilityRole="tablist" style={styles.clipRow}>
+              {clips.map((clip) => {
+                const selected = clip.slotId === localClip.slotId;
+                return (
+                  <Pressable
+                    key={clip.slotId}
+                    accessibilityLabel={`${localClipLabel(clip)} 로컬 영상 보기`}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected }}
+                    onPress={() => setSelectedSlotId(clip.slotId)}
+                    style={({ pressed }) => [
+                      styles.clipButton,
+                      selected && styles.clipButtonSelected,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.clipText, selected && styles.clipTextSelected]}>
+                      {localClipLabel(clip)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+          <FilmSpaceViewer
+            clip={localClip}
+            onSourceUnavailable={handleFilmSourceUnavailable}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -135,5 +210,10 @@ const styles = StyleSheet.create({
   modeButtonSelected: { backgroundColor: tokens.foreground, borderColor: tokens.foreground },
   modeText: { color: tokens.foreground, fontSize: 13, fontWeight: "600" },
   modeTextSelected: { color: tokens.background },
+  clipRow: { flexDirection: "row", gap: 6, paddingBottom: 8, paddingHorizontal: 14 },
+  clipButton: { alignItems: "center", borderColor: tokens.border, borderRadius: 8, borderWidth: 1, justifyContent: "center", minHeight: 36, minWidth: 64, paddingHorizontal: 10 },
+  clipButtonSelected: { backgroundColor: tokens.elevatedSurface },
+  clipText: { color: tokens.mutedForeground, fontSize: 12, fontWeight: "600" },
+  clipTextSelected: { color: tokens.foreground },
   pressed: { opacity: 0.65 },
 });

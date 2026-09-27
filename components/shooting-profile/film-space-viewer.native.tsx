@@ -22,9 +22,12 @@ import type { LocalFilmClipRefV1 } from "@/lib/film-space/types";
 const STAGE_HEIGHT = 320;
 const MIN_ZOOM = 0.8;
 const MAX_ZOOM = 1.5;
+const SLICE_DEPTH_X_PX = 150;
+const SLICE_DEPTH_Y_PX = 90;
 
 type FilmSpaceViewerProps = Readonly<{
   clip: LocalFilmClipRefV1;
+  onSourceUnavailable?: (clip: LocalFilmClipRefV1) => void | Promise<void>;
 }>;
 
 type LoadedState = Awaited<ReturnType<typeof extractFilmSpaceFrames>>;
@@ -34,7 +37,7 @@ function clampZoom(value: number): number {
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
 }
 
-export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
+export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerProps) {
   const plan = useMemo(
     () => resolveFilmSpaceSamplingPlan(clip.durationMs),
     [clip.durationMs],
@@ -47,6 +50,7 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
   const [zoom, setZoom] = useState(1);
   const rotationStart = useRef({ yaw: -18, pitch: 7 });
   const readyCacheRef = useRef<Extract<LoadedState, { status: "ready" }> | null>(null);
+  const sourceUnavailableNotifiedRef = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -54,15 +58,22 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
     setViewerState({ status: "loading" });
     setSelectedIndex(0);
     readyCacheRef.current = null;
+    sourceUnavailableNotifiedRef.current = false;
 
     const releaseReadyCache = () => {
       const cache = readyCacheRef.current;
       readyCacheRef.current = null;
       if (cache) void disposeFilmSpaceFrames(cache);
     };
+    const notifySourceUnavailable = () => {
+      if (sourceUnavailableNotifiedRef.current) return;
+      sourceUnavailableNotifiedRef.current = true;
+      if (onSourceUnavailable) void onSourceUnavailable(clip);
+    };
 
     if (!plan) {
       setViewerState({ status: "unavailable", reason: "source_unavailable" });
+      notifySourceUnavailable();
       return () => {
         active = false;
         controller.abort();
@@ -84,6 +95,9 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
         return;
       }
       if (result.status === "ready") readyCacheRef.current = result;
+      if (result.status === "unavailable" && result.reason === "source_unavailable") {
+        notifySourceUnavailable();
+      }
       setViewerState(result);
     });
     return () => {
@@ -92,7 +106,7 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
       controller.abort();
       releaseReadyCache();
     };
-  }, [clip, plan]);
+  }, [clip, onSourceUnavailable, plan]);
 
   const rotationResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -149,6 +163,11 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
       >
         {frames.map((frame, index) => {
           const depth = frames.length <= 1 ? 0 : index / (frames.length - 1);
+          const centeredDepth = depth - 0.5;
+          const yawRadians = yaw * Math.PI / 180;
+          const pitchRadians = pitch * Math.PI / 180;
+          const translateX = centeredDepth * SLICE_DEPTH_X_PX * Math.sin(yawRadians);
+          const translateY = centeredDepth * SLICE_DEPTH_Y_PX * Math.sin(pitchRadians);
           const selected = index === safeSelectedIndex;
           return (
             <Image
@@ -161,10 +180,11 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
                   opacity: selected ? 0.92 : 0.035,
                   transform: [
                     { perspective: 780 },
+                    { translateX },
+                    { translateY },
                     { rotateY: `${yaw}deg` },
                     { rotateX: `${pitch}deg` },
-                    { translateY: (depth - 0.5) * 110 },
-                    { scale: zoom * (0.82 + depth * 0.18) },
+                    { scale: zoom * (0.84 + depth * 0.16) },
                   ],
                   zIndex: selected ? frames.length + 1 : index,
                 },
@@ -228,7 +248,7 @@ export function FilmSpaceViewer({ clip }: FilmSpaceViewerProps) {
         />
       </Pressable>
       <Text style={styles.boundaryCopy}>
-        로컬 원본 영상의 시간축 · 대표 슛 Phase와 동기화되지 않음 · 서버 업로드 없음
+        로컬 원본 영상의 시간 슬라이스 시각화 · 대표 슛 Phase와 동기화되지 않음 · 화면 깊이처럼 배치한 표현일 뿐 측정된 3D 또는 실제 4D가 아님 · 서버 업로드 없음
       </Text>
     </View>
   );

@@ -147,3 +147,25 @@ export async function deleteLocalFilmAssociation(profileId: string): Promise<voi
   if (!key) return;
   await AsyncStorage.removeItem(key);
 }
+
+export async function evictLocalFilmClipFromAssociation(
+  profileId: string,
+  slotId: string,
+): Promise<LocalFilmAssociationV1 | null> {
+  const association = await loadLocalFilmAssociation(profileId);
+  if (!association) return null;
+
+  const clips = association.clips.filter((clip) => clip.slotId !== slotId);
+  if (clips.length === association.clips.length) return association;
+  if (clips.length === 0) {
+    await deleteLocalFilmAssociation(profileId);
+    return null;
+  }
+
+  await saveLocalFilmAssociation(profileId, clips);
+  return {
+    version: ASSOCIATION_VERSION,
+    profileId,
+    clips,
+  };
+}
