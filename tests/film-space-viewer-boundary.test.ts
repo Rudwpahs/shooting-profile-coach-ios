@@ -12,10 +12,10 @@ const webSource = readFileSync(
 );
 
 describe("film-space viewer boundary", () => {
-  it("keeps the native viewer local-only, bounded, cancellable, and source-time labeled", () => {
+  it("keeps the native viewer local-only, bounded, cancellable, fail-closed, and source-time labeled", () => {
     expect(nativeSource).toMatch(/extractFilmSpaceFrames/);
     expect(nativeSource).toMatch(/disposeFilmSpaceFrames/);
-    expect(nativeSource).toMatch(/createFilmSpaceSamplingPlan/);
+    expect(nativeSource).toMatch(/resolveFilmSpaceSamplingPlan/);
     expect(nativeSource).toMatch(/AbortController/);
     expect(nativeSource).toMatch(/PanResponder/);
     expect(nativeSource).toMatch(/SOURCE TIME/);
@@ -28,6 +28,8 @@ describe("film-space viewer boundary", () => {
   it("keeps web as an honest unsupported fallback without native extraction imports", () => {
     expect(webSource).not.toMatch(/frame-source|expo-video|expo-gl|expo-image/);
     expect(webSource).toMatch(/iPhone|기기/);
+    expect(webSource).toMatch(/Motion/);
+    expect(webSource).toMatch(/Phase/);
     expect(webSource).toMatch(/지원/);
   });
 });
