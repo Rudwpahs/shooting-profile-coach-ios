@@ -60,7 +60,7 @@ export default function UiDemoRoute() {
   const insets = useSafeAreaInsets();
   if (!UI_DEMO_ENABLED || !fixtures) return <Redirect href="/" />;
   const width = Math.min(measuredWidth || FALLBACK_WIDTH, MAX_WIDTH);
-  const screen = typeof params.screen === "string" ? params.screen : "home";
+  const screen = typeof params.screen === "string" ? params.screen : "profile";
   const state = typeof params.state === "string" ? params.state : "ready";
   const reference = ANONYMOUS_POSE_REFERENCES[0];
 
