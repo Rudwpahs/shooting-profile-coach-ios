@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 
 import { HomeFeed } from "@/components/home/home-feed";
@@ -24,6 +24,13 @@ const GOAL_LABELS = { consistency: "일관성", range: "거리", release: "릴�
  * the feed is `HomeFeed`.
  */
 export default function HomeScreen() {
+  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
+    return <Redirect href="/dev/ui-demo" />;
+  }
+  return <FirebaseBackedHomeScreen />;
+}
+
+function FirebaseBackedHomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const { user, loading: authLoading } = useFirebaseAuth();
