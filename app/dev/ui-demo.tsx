@@ -11,7 +11,8 @@ import { ProfileStats } from "@/components/profile/profile-stats";
 import { ReelsFeed } from "@/components/reels/reels-feed";
 import { ScreenContainer } from "@/components/screen-container";
 import { CaptureSessionView, type CaptureController } from "@/components/shooting-profile/capture-session";
-import { SequenceViewer, type RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
+import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
+import { ShotInspectionViewer } from "@/components/shooting-profile/shot-inspection-viewer";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
@@ -114,7 +115,14 @@ export default function UiDemoRoute() {
         <TopBar title="대표 슛폼" />
         <ScrollView contentContainerStyle={styles.analysisPage}>
           <AnalysisSummaryLine profile={profile} />
-          <SequenceViewer confidence={fixtures.record.confidence} highlightJoint={primaryFinding(profile).joint} profile={profile} shootingHand="right" />
+          <ShotInspectionViewer
+            confidence={fixtures.record.confidence}
+            experimentalEnabled
+            highlightJoint={primaryFinding(profile).joint}
+            profile={profile}
+            profileId={fixtures.summaries[0].id}
+            shootingHand="right"
+          />
           <AnalysisDetails confidence={fixtures.record.confidence} profile={profile} shootingHand="right" />
           <AnalysisEvidence profile={profile} />
         </ScrollView>
