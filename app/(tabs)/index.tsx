@@ -25,7 +25,7 @@ const GOAL_LABELS = { consistency: "일관성", range: "거리", release: "릴�
  */
 export default function HomeScreen() {
   if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
-    return <Redirect href="/dev/ui-demo" />;
+    return <Redirect href="/dev/ui-demo?screen=profile&state=ready" />;
   }
   return <FirebaseBackedHomeScreen />;
 }
