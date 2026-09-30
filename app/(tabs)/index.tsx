@@ -1,4 +1,4 @@
-import { Redirect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import { HomeFeed } from "@/components/home/home-feed";
@@ -25,7 +25,11 @@ const GOAL_LABELS = { consistency: "일관성", range: "거리", release: "릴�
  */
 export default function HomeScreen() {
   if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
-    return <Redirect href="/dev/ui-demo?screen=profile&state=ready" />;
+    // Keep synthetic preview code out of normal production exports while still
+    // rendering it directly at the Pages entry URL (no base-path redirect).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { UiPreviewShell } = require("@/components/dev/ui-preview-shell") as typeof import("@/components/dev/ui-preview-shell");
+    return <UiPreviewShell />;
   }
   return <FirebaseBackedHomeScreen />;
 }
