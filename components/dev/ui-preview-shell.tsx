@@ -26,7 +26,6 @@ import {
   type UiPreviewRoute,
   type UiPreviewScreen,
 } from "@/lib/dev/ui-preview-navigation";
-import { profileReelId } from "@/lib/reels/reel-model";
 import { primaryFinding } from "@/lib/skeleton/analysis-evidence";
 import {
   captureSessionReducer,
@@ -36,6 +35,8 @@ import {
 
 const FALLBACK_WIDTH = 375;
 const MAX_WIDTH = 680;
+const REEL_STATES = ["playing", "paused", "next", "analysis-entry"] as const;
+type ReelPreviewState = (typeof REEL_STATES)[number];
 
 export type UiPreviewShellProps = {
   initialScreen?: UiPreviewScreen;
@@ -167,15 +168,22 @@ export function UiPreviewShell({ initialScreen = "home", initialState = "ready",
   }
 
   if (route.screen === "reels") {
+    const reelState: ReelPreviewState = REEL_STATES.includes(route.state as ReelPreviewState)
+      ? (route.state as ReelPreviewState)
+      : "playing";
     const requestedIndex = route.itemId ? fixtures.reels.findIndex((item) => item.id === route.itemId) : 0;
+    const initialIndex = reelState === "next"
+      ? Math.min(1, Math.max(0, fixtures.reels.length - 1))
+      : requestedIndex >= 0 ? requestedIndex : 0;
+    const initialPlayback = reelState === "paused" || reelState === "analysis-entry" ? "paused" : "auto";
     return (
       <View style={styles.reels}>
         <ReelsFeed
           appState="active"
           focused
           height={viewport.height}
-          initialIndex={requestedIndex >= 0 ? requestedIndex : 0}
-          initialPlayback="auto"
+          initialIndex={initialIndex}
+          initialPlayback={initialPlayback}
           insets={{ top: insets.top, bottom: insets.bottom }}
           items={fixtures.reels}
           onClose={back}
@@ -245,10 +253,6 @@ export function UiPreviewShell({ initialScreen = "home", initialState = "ready",
       onComplete={(profileId) => open({ screen: "analysis", state: "ready", itemId: profileId })}
     />
   );
-}
-
-export function demoProfileReelId(fixtures: UiDemoFixtures): string {
-  return profileReelId(fixtures.summaries[0].id);
 }
 
 const styles = StyleSheet.create({
