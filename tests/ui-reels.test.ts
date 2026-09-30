@@ -66,14 +66,14 @@ describe("home entry", () => {
 });
 
 describe("preview demo states", () => {
-  const demo = read("app/dev/ui-demo.tsx");
+  const shell = read("components/dev/ui-preview-shell.tsx");
 
   it("renders the real Reels feed with synthetic fixtures for playing, paused, next and analysis-entry", () => {
-    expect(demo).toContain('screen === "reels"');
-    expect(demo).toContain("<ReelsFeed");
-    for (const state of ["playing", "paused", "next", "analysis-entry"]) expect(demo).toContain(`"${state}"`);
-    expect(demo).toContain("fixtures.reels");
-    expect(demo).not.toMatch(/useFirebaseAuth|useLatestRepresentativeProfile|takeReelHandoff/);
+    expect(shell).toContain('route.screen === "reels"');
+    expect(shell).toContain("<ReelsFeed");
+    for (const state of ["playing", "paused", "next", "analysis-entry"]) expect(shell).toContain(`"${state}"`);
+    expect(shell).toContain("fixtures.reels");
+    expect(shell).not.toMatch(/useFirebaseAuth|useLatestRepresentativeProfile|takeReelHandoff/);
   });
 });
 
