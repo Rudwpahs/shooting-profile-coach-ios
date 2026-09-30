@@ -17,10 +17,11 @@ describe("GitHub Pages UI preview routing", () => {
 
   it("renders the signed-in interactive Home shell directly instead of redirecting through a Pages path", () => {
     expect(homeRoute).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
+    expect(homeRoute).toContain('require("@/components/dev/ui-preview-shell")');
     expect(homeRoute).toContain('<UiPreviewShell');
     expect(homeRoute).not.toContain('<Redirect href="/dev/ui-demo');
     expect(shell).toContain('createUiPreviewNavigation');
-    expect(shell).toContain('screen: "home"');
+    expect(shell).toContain('initialScreen = "home"');
   });
 
   it("wires visible preview actions instead of leaving primary Home/Profile/Reels actions as noop", () => {
