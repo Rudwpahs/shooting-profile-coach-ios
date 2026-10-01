@@ -7,6 +7,7 @@ on:
       - main
       - work/hoophub-film-phase-space-v1
       - work/hoophub-liquid-preview-integration-v1
+      - work/hoophub-liquid-dock-v1
   workflow_dispatch:
 
 permissions:
@@ -50,7 +51,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify preview and production-isolation contracts
-        run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts tests/ui-pages-preview-routing.test.ts tests/ui-demo-interactive-shell.test.ts
+        run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts tests/ui-pages-preview-routing.test.ts tests/ui-demo-interactive-shell.test.ts tests/liquid-dock.test.ts
 
       - name: Verify ordinary production export excludes demo fixtures and research player evidence
         env:
