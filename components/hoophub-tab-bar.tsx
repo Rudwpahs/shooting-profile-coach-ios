@@ -2,9 +2,10 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { LiquidPressable } from "@/components/ui/liquid";
 import { tokens } from "@/constants/tokens";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
@@ -16,11 +17,20 @@ type TabSpec = {
   outline: IconName;
 };
 
+export type HoopHubDockTabName = TabSpec["name"];
+
+export type HoopHubDockProps = {
+  selectedRoute?: string;
+  bottomInset?: number;
+  onSelectTab: (name: HoopHubDockTabName) => void;
+  onCapture: () => void;
+};
+
 /**
- * Flat, icon-only bottom bar: 홈 · 탐색 · 촬영 · 프로필. Every item is the
- * same weight, like a social app; the filled/outline pair shows the selected
- * tab, the accessibility state says it, and labels exist only for assistive
- * technology. Feedback lands on touch-down.
+ * Icon-only HoopHub dock with the shared Liquid interaction foundation.
+ * The outer hit targets stay fixed at >=48px; only each inner surface moves,
+ * ripples or drifts magnetically on web. Reduced Motion is inherited from
+ * LiquidPressable, so the dock never implements a second motion policy.
  */
 export const HOOPHUB_TABS: readonly TabSpec[] = [
   { name: "index", label: "홈", icon: "home-variant", outline: "home-variant-outline" },
@@ -35,52 +45,70 @@ function haptic() {
   if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 }
 
-export function HoopHubTabBar({ state, navigation }: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const selectedRoute = state.routes[state.index]?.name;
-
+export function HoopHubDock({ selectedRoute, bottomInset = 0, onSelectTab, onCapture }: HoopHubDockProps) {
   const renderTab = (tab: TabSpec) => {
     const selected = selectedRoute === tab.name;
     return (
-      <Pressable
+      <LiquidPressable
         key={tab.name}
         accessibilityRole="tab"
         accessibilityState={{ selected }}
         aria-selected={selected}
         accessibilityLabel={tab.label}
-        onPress={() => {
-          haptic();
-          navigation.navigate(tab.name);
-        }}
-        style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+        magnetic
+        onPress={() => onSelectTab(tab.name)}
+        rippleColor={selected ? tokens.primary : tokens.foreground}
+        style={styles.item}
+        surfaceStyle={[styles.itemSurface, selected && styles.selectedSurface]}
       >
         <MaterialCommunityIcons
           name={selected ? tab.icon : tab.outline}
           size={ICON_SIZE}
-          color={selected ? tokens.foreground : tokens.mutedForeground}
+          color={selected ? tokens.primary : tokens.mutedForeground}
         />
-      </Pressable>
+      </LiquidPressable>
     );
   };
 
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <View style={[styles.bar, { paddingBottom: Math.max(bottomInset, 10) }]}>
       {renderTab(HOOPHUB_TABS[0])}
       {renderTab(HOOPHUB_TABS[1])}
-      <Pressable
+      <LiquidPressable
         accessibilityRole="button"
         accessibilityLabel={CAPTURE_ACTION_LABEL}
-        onPress={() => {
-          haptic();
-          router.push("/private-capture");
-        }}
-        style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+        magnetic
+        onPress={onCapture}
+        pressScale={0.94}
+        rippleColor={tokens.primaryForeground}
+        style={styles.item}
+        surfaceStyle={[styles.itemSurface, styles.captureSurface]}
       >
-        <MaterialCommunityIcons name="plus-box-outline" size={ICON_SIZE} color={tokens.foreground} />
-      </Pressable>
+        <MaterialCommunityIcons name="plus" size={ICON_SIZE + 2} color={tokens.primaryForeground} />
+      </LiquidPressable>
       {renderTab(HOOPHUB_TABS[2])}
     </View>
+  );
+}
+
+export function HoopHubTabBar({ state, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const selectedRoute = state.routes[state.index]?.name;
+
+  return (
+    <HoopHubDock
+      bottomInset={insets.bottom}
+      selectedRoute={selectedRoute}
+      onSelectTab={(name) => {
+        haptic();
+        navigation.navigate(name);
+      }}
+      onCapture={() => {
+        haptic();
+        router.push("/private-capture");
+      }}
+    />
   );
 }
 
@@ -93,6 +121,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: 8,
   },
-  item: { alignItems: "center", flex: 1, justifyContent: "center", minHeight: 48, minWidth: 48 },
-  pressed: { opacity: 0.45 },
+  item: { flex: 1, minHeight: 48, minWidth: 48, paddingHorizontal: 3 },
+  itemSurface: {
+    alignItems: "center",
+    borderRadius: 18,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  selectedSurface: { backgroundColor: tokens.elevatedSurface },
+  captureSurface: { backgroundColor: tokens.primary },
 });
