@@ -1,0 +1,48 @@
+name: Import Liquid Slice 2
+
+on:
+  push:
+    branches:
+      - work/import-hoophub-liquid-slice2-temp
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and verify exact bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            .tmp/liquid-import/part-001a.b64 \
+            .tmp/liquid-import/part-001b.b64 \
+            .tmp/liquid-import/part-002.b64 \
+            .tmp/liquid-import/part-003.b64 \
+            .tmp/liquid-import/part-004a.b64 \
+            .tmp/liquid-import/part-005.b64 \
+            | base64 --decode > /tmp/hoophub-liquid-slice2.bundle
+
+          echo "49b422aa070e6ac20b241b805665db05230727436813be141fad7429cab5db01  /tmp/hoophub-liquid-slice2.bundle" | sha256sum -c -
+          git bundle verify /tmp/hoophub-liquid-slice2.bundle
+          git fetch /tmp/hoophub-liquid-slice2.bundle \
+            refs/heads/work/hoophub-liquid-interactions-v1:refs/remotes/bundle/liquid
+          test "$(git rev-parse refs/remotes/bundle/liquid)" = "c34e0c1ae6ab03e92b3c85ac03e9e677dc0b1b52"
+          test "$(git rev-parse c34e0c1ae6ab03e92b3c85ac03e9e677dc0b1b52^)" = "8f46dc6826f2821e7538e692ff006f5ab1b578f0"
+          test "$(git rev-parse 8f46dc6826f2821e7538e692ff006f5ab1b578f0^)" = "d931946a4ecf3f9fc06224c9ea9466d9abc3d0d9"
+
+      - name: Fast-forward exact Claude commits to Liquid branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin work/hoophub-liquid-interactions-v1
+          test "$(git rev-parse FETCH_HEAD)" = "d931946a4ecf3f9fc06224c9ea9466d9abc3d0d9"
+          git merge-base --is-ancestor d931946a4ecf3f9fc06224c9ea9466d9abc3d0d9 c34e0c1ae6ab03e92b3c85ac03e9e677dc0b1b52
+          git push origin c34e0c1ae6ab03e92b3c85ac03e9e677dc0b1b52:refs/heads/work/hoophub-liquid-interactions-v1
