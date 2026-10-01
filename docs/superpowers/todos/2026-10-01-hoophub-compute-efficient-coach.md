@@ -3,6 +3,10 @@
 Design: `docs/superpowers/specs/2026-10-01-hoophub-compute-efficient-coach-design.md`
 Status: **architecture locked; implementation work remains**
 
+Execution plans:
+- Coach Training v0: `docs/superpowers/plans/2026-10-01-hoophub-coach-training-v0.md`
+- Personalization v1: `docs/superpowers/plans/2026-10-01-hoophub-personalization-v1.md`
+
 Status legend:
 - `[x]` exists today and was verified from the repository/documented state
 - `[ ]` implementation or measurement still required
@@ -65,6 +69,7 @@ Status legend:
 
 ## Phase 4 — Gold scenarios and SFT baseline
 
+- [x] Training v0 implementation plan is locked and linked above; it reuses B2-C and does not change the frozen Coach V1 contract.
 - [ ] Build human-reviewed scenario JSONL from structured observations + curated evidence; do not use copied paper text as the supervision target.
 - [ ] Keep held-out gold scenarios completely separate from training and synthetic generation.
 - [ ] Run the first real Qwen3-4B-class SFT/QLoRA experiment using the existing scaffold.
@@ -103,6 +108,7 @@ Status legend:
 
 ## Phase 8 — Personalization / longitudinal feedback
 
+- [x] Personalization v1 logic and implementation plan is locked and linked above; it keeps numeric history local and does not require a Firestore schema change.
 - [ ] Define a privacy-safe feedback record for baseline observation → recommendation/drill → retest observation → context/time interval → confidence.
 - [ ] Keep personalization local-first where possible; any new server persistence requires separate review and must not be smuggled into this architecture work.
 - [ ] Require repeated observed outcomes before learning player-specific cue effectiveness.
