@@ -84,7 +84,7 @@ export function HoopHubDock({ selectedRoute, bottomInset = 0, onSelectTab, onCap
         style={styles.item}
         surfaceStyle={[styles.itemSurface, styles.captureSurface]}
       >
-        <MaterialCommunityIcons name="plus" size={ICON_SIZE + 2} color={tokens.primaryForeground} />
+        <MaterialCommunityIcons name="plus-box-outline" size={ICON_SIZE} color={tokens.primaryForeground} />
       </LiquidPressable>
       {renderTab(HOOPHUB_TABS[2])}
     </View>
