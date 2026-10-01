@@ -95,10 +95,11 @@ export function HoopHubTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const selectedRoute = state.routes[state.index]?.name;
+  const bottomInset = Math.max(insets.bottom, 10);
 
   return (
     <HoopHubDock
-      bottomInset={insets.bottom}
+      bottomInset={bottomInset}
       selectedRoute={selectedRoute}
       onSelectTab={(name) => {
         haptic();
