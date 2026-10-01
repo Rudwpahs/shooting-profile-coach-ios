@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - work/hoophub-film-phase-space-v1
+      - work/hoophub-liquid-preview-integration-v1
   workflow_dispatch:
 
 permissions:
@@ -14,7 +15,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: hoop-hub-ui-pages-${{ github.event_name }}
+  group: hoop-hub-ui-pages-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -49,7 +50,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify preview and production-isolation contracts
-        run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts tests/ui-pages-preview-routing.test.ts
+        run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts tests/ui-pages-preview-routing.test.ts tests/ui-demo-interactive-shell.test.ts
 
       - name: Verify ordinary production export excludes demo fixtures and research player evidence
         env:
