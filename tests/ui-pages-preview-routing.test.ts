@@ -14,11 +14,11 @@ describe("GitHub Pages UI preview routing", () => {
     expect(route).toContain('require("@/lib/dev/ui-demo-fixtures")');
   });
 
-  it("opens the install-free preview in an already signed-in profile scene", () => {
+  it("opens the install-free preview in an already signed-in Home scene", () => {
     expect(homeRoute).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
-    expect(homeRoute).toContain('<Redirect href="/dev/ui-demo?screen=profile&state=ready"');
-    expect(route).toContain('const screen = typeof params.screen === "string" ? params.screen : "profile"');
-    expect(route).toContain('const state = typeof params.state === "string" ? params.state : "ready"');
+    expect(homeRoute).toContain('<Redirect href="/dev/ui-demo?screen=home&state=ready"');
+    expect(route).toContain('createUiDemoNavigation(params.screen, params.state)');
+    expect(route).toContain('const { screen, state } = navigation.current;');
   });
 
   it("renders the real shot inspection coordinator in the preview analysis state", () => {
