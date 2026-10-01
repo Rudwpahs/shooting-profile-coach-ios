@@ -10,6 +10,9 @@ export default defineConfig({
       "@": rootDir,
       // Render tests mount the real components through react-native-web in jsdom.
       "react-native": "react-native-web",
+      // Reanimated resolves its native Worklets TurboModule at import time, which
+      // does not exist in Vitest/jsdom. Expo exports still compile the real module.
+      "react-native-reanimated": path.join(rootDir, "tests/support/reanimated-test-double.tsx"),
     },
   },
   esbuild: { jsx: "automatic" },
