@@ -1,76 +1,98 @@
-# B3 first experiment — requires separate owner approval
+# B3 first experiment — Training v0 execution protocol
 
-Do not execute this plan as part of B2-C. No downloaded/committed model weights
-and no training run are part of the B2-C evidence.
+Status: **planned; no real model training has been executed by this document**
 
-## Entry decision
+Primary implementation plan:
+`docs/superpowers/plans/2026-10-01-hoophub-coach-training-v0.md`
 
-Re-run B2-C regeneration, leakage, full tests, retrieval benchmark and baseline
-evaluation first. Owner reviews Seed's conservative labels and baseline failures.
-Do not equate green engineering tests with a safe deployment. Current readiness
-decision is recorded in `docs/integration/b2c-scenario-eval-handoff.md`.
+Parent architecture:
+`docs/superpowers/specs/2026-10-01-hoophub-compute-efficient-coach-design.md`
 
-## Exact preflight
+The implementation plan is the source of truth for Training v0 configuration and task order. Earlier provisional B3 knobs (including native-Windows-first fallback logic, LoRA r8/alpha16, accumulation 8, and seed 17) are superseded for Training v0 and must not be mixed with the locked run configuration.
 
-1. Record OS/WSL, RAM, CPU, `nvidia-smi`, CUDA/runtime/driver, free disk and measured
-   available VRAM. An RTX 4060 name does not substitute for the actual 8 GB reading.
-2. At B3 start, consult official model cards/config/runtime documentation. Verify
-   then-current Qwen3 small baseline and Qwen3-4B revisions, architecture, license,
-   chat template, context settings and supported LoRA targets. Do not reuse stale
-   guesses; record immutable revision and local config hashes. Check terms cover
-   intended app deployment and dataset/source usage. Obtain download approval as
-   part of B3 scope before any weights transfer.
-3. Pin the chosen environment. Verify a tiny local forward/backward, tokenizer
-   prompt-prefix masking and 4-bit device support. Prefer WSL2 only if native
-   Windows dependency/runtime smoke tests fail; record the actual failure.
-4. Freeze Seed manifest hash. Dev tunes choices; held-out is evaluated once after
-   selection. Use a deterministic train-only subset sorted by scenario ID (start
-   with 32 examples); do not move evidence between splits to improve results.
+## Entry gate
 
-## Small run configuration to finalize after preflight
+Do not execute Training v0 until the parent Compute-Efficient Coach TODO permits the training phase. In particular, freeze the required evaluation/gold-set contract first and preserve the existing B2-C train/dev/held-out isolation.
 
-Start a small Qwen3 baseline before the 4B experiment if verified availability,
-license and hardware make it appropriate. Capture baseline structured metrics
-through the same async provider interface before SFT. Do not label a wrapped
-deterministic output as model output. Preserve malformed generations as failures.
+Before a real run:
 
-Initial candidate knobs, not a tested recipe: batch 1, accumulation 8, sequence
-1024, LoRA rank 8 / alpha 16 / dropout 0.05, learning rate 2e-4, 20 optimizer steps,
-AdamW, gradient checkpointing, fixed seed 17. Preflight must measure token lengths:
-do not silently truncate evidence or all assistant tokens to fit 1024. If the
-examples do not fit, reduce evidence via a separately versioned dataset with
-the same split groups, or increase sequence length only after measuring memory.
+1. Start from the latest `main`, never from PR #19/#20/#21 UI branches.
+2. Regenerate/check the B2-C artifacts and leakage audit; do not change split membership to improve a score.
+3. Record WSL2/Linux environment, Python, PyTorch/CUDA, GPU/VRAM, driver, free disk, Transformers, PEFT, and bitsandbytes versions.
+4. Resolve and record the exact `Qwen/Qwen3-4B` model/tokenizer revision, config, and license before weights are transferred.
+5. Verify the resolved model still exposes the planned LoRA target modules before training.
+6. Run the Training v0 token audit before selecting sequence length.
 
-For Qwen3-4B QLoRA, verify 4-bit NF4/double-quant compatibility and device compute
-dtype; choose BF16 only if supported, else verified FP16. Determine exact target
-module names from the downloaded revision, not assumed Qwen naming. Record
-optimizer precision/state placement and memory. Stop on OOM/nonfinite loss;
-preserve logs, lower size through a documented new run config, never invent a
-successful artifact. No cloud GPU purchase or long run without separate approval.
+## Locked Training v0 baseline
+
+The first owner-machine baseline uses:
+
+- canonical environment: WSL2 Ubuntu + Python 3.11;
+- PyTorch 2.13 CUDA 12.6 line;
+- Qwen/Qwen3-4B at an explicitly recorded immutable revision;
+- 4-bit QLoRA with NF4 + double quantization;
+- BF16 compute only when runtime support is verified, otherwise FP16;
+- LoRA rank 32, alpha 64, dropout 0.05;
+- target modules `q_proj`, `k_proj`, `v_proj`, `o_proj`, `gate_proj`, `up_proj`, `down_proj`, after revision verification;
+- batch size 1;
+- gradient accumulation 16;
+- learning rate `2e-4`;
+- seed 42;
+- gradient checkpointing enabled for the 4B owner-machine run;
+- sequence-length ladder 512 -> 768 -> 1024, choosing the smallest length that fits every selected serialized row without truncation.
+
+If 1024 still truncates required prompt/assistant content, stop. Version a smaller evidence payload or revisit the data contract; never silently truncate required training content.
+
+## Smoke run
+
+Before a full baseline:
+
+- select exactly 32 train rows deterministically by stable request/scenario identity;
+- use at most 20 optimizer steps;
+- never include held-out rows;
+- evaluate the smoke adapter on dev only;
+- stop on OOM, non-finite loss, unavailable 4-bit CUDA support, or contract-invalid outputs;
+- retain the failure manifest rather than inventing a successful adapter.
+
+The smoke run exists to prove the environment, data path, token masking, QLoRA kernels, memory envelope, adapter saving/loading, and V1 provider/evaluator path. It is not a quality claim.
+
+## Full baseline
+
+After smoke success and the parent benchmark gate:
+
+1. Train with train split only.
+2. Use dev for candidate/configuration choice.
+3. Do not inspect held-out generations while tuning.
+4. Evaluate the selected adapter once on held-out.
+5. Compare unchanged `deterministic_v1`, untrained base, and trained adapter under the same evaluator.
+6. Preserve malformed or out-of-contract generations as failures; do not auto-repair them.
+
+Only an actual successful run with hashes and metrics permits the term **trained**.
 
 ## Required run evidence
 
-Each run directory must include:
+Each committed run record must include, as applicable:
 
-- exact source commit, base-model ID/revision/config/license, environment versions;
-- generator/corpus/dataset hashes and train/dev/held-out manifest;
-- actual subset IDs and source partitions, prompt/template hash;
-- LoRA/QLoRA modules, rank, alpha, dropout, quantization/dtype;
-- sequence length and truncation/masking audit, batch/accumulation, seed;
-- optimizer, learning rate/scheduler, steps/epochs;
-- synchronized measured peak allocated/reserved VRAM and wall-clock runtime;
-- train loss series and dev metrics (no held-out tuning);
-- held-out raw structured outputs or validation errors, schema-valid rate,
-  citation subset rate, evidence-use coverage, unsupported-inference rate,
-  all confidence/contradiction/source-loss metrics, and latency distribution;
-- failure/ablation notes, artifact checksums, commit and handoff.
+- exact source commit;
+- base-model ID and resolved revision;
+- tokenizer/config/license identity;
+- environment/dependency versions;
+- B2-C generator/corpus/dataset/manifest hashes;
+- exact train subset IDs for smoke runs;
+- prompt/chat-template hash;
+- QLoRA quantization/dtype and LoRA modules/rank/alpha/dropout;
+- sequence length and no-truncation audit result;
+- batch/accumulation, seed, optimizer, LR/scheduler, steps/epochs;
+- wall-clock time and measured peak CUDA allocated/reserved VRAM;
+- train loss series and dev metrics;
+- held-out metrics only for the selected full candidate;
+- schema-valid rate, grounding/reference integrity, unsupported-inference rate, confidence/contradiction/retest metrics;
+- inference latency/token/compute metrics required by the Efficient Frontier architecture;
+- adapter/result artifact checksums;
+- explicit failure notes when a run does not complete.
+
+Do not commit model weights, caches, raw user video, raw landmark data, or private user prompts.
 
 ## Exit gate
 
-Require schema/grounding/boundedness/retest/safety rates 1.0 and unsupported
-inference/overconfidence rates 0 on the prespecified cases. An invariant checker
-passing does not prove scientific correctness: manually audit a stratified sample,
-especially ROW_ONLY and conflicts. Compare unchanged deterministic_v1, untrained
-base provider and adapter provider. Expand only after small-run evidence and
-owner review. Only an actual run + metrics + artifact hashes permits the word
-`trained`; B2-C does not supply them.
+A green engineering run is not a deployment certificate. The candidate must pass the frozen schema/grounding/safety/retest gates and be compared with the deterministic baseline under the parent architecture's Efficient Frontier evaluation. Human review of a stratified sample remains required before broader adoption, especially for weak-provenance or contradictory evidence cases.
