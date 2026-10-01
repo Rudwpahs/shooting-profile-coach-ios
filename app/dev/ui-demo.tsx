@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { AnalysisDetails, AnalysisEvidence, AnalysisSummaryLine } from "@/components/analysis/analysis-layers";
 import { HomeFeed } from "@/components/home/home-feed";
+import { HoopHubDock, type HoopHubDockTabName } from "@/components/hoophub-tab-bar";
 import { PoseMotionViewer } from "@/components/pose-motion-viewer";
 import { MotionGrid } from "@/components/profile/motion-grid";
 import { ProfileHero } from "@/components/profile/profile-hero";
@@ -28,11 +29,11 @@ const MAX_WIDTH = 680;
 /** Reels demo states: autoplaying, paused with the indicator, the next item active, and the paused frame the analysis action opens from. */
 const REEL_STATES = ["playing", "paused", "next", "analysis-entry"] as const;
 type ReelDemoState = (typeof REEL_STATES)[number];
-type UiDemoScreen = "home" | "profile" | "analysis" | "reels" | "capture" | "reference";
+type UiDemoScreen = "home" | "explore" | "profile" | "analysis" | "reels" | "capture" | "reference";
 type UiDemoScene = { screen: UiDemoScreen; state: string };
 type UiDemoNavigation = { current: UiDemoScene; history: UiDemoScene[] };
 
-const UI_DEMO_SCREENS: readonly UiDemoScreen[] = ["home", "profile", "analysis", "reels", "capture", "reference"];
+const UI_DEMO_SCREENS: readonly UiDemoScreen[] = ["home", "explore", "profile", "analysis", "reels", "capture", "reference"];
 
 function uiDemoScene(screen?: string, state?: string): UiDemoScene {
   const safeScreen = UI_DEMO_SCREENS.includes(screen as UiDemoScreen) ? (screen as UiDemoScreen) : "home";
@@ -112,28 +113,73 @@ export default function UiDemoRoute() {
       <MaterialCommunityIcons color={tokens.foreground} name="chevron-left" size={28} />
     </Pressable>
   );
+  const previewDock = (selectedRoute: HoopHubDockTabName) => (
+    <HoopHubDock
+      bottomInset={insets.bottom}
+      selectedRoute={selectedRoute}
+      onSelectTab={(name) => {
+        if (name === "index") openScene("home", "ready");
+        else if (name === "explore") openScene("explore", "ready");
+        else openScene("profile", "ready");
+      }}
+      onCapture={() => openScene("capture", "setup")}
+    />
+  );
 
   if (screen === "home") {
     const latest = state === "ready"
       ? { status: "ready" as const, summary: fixtures.summaries[0], record: fixtures.record }
       : state === "loading" ? { status: "loading" as const } : { status: "signed-out" as const };
     return (
-      <ScreenContainer containerClassName="bg-background" onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}>
-        <TopBar wordmark="Hoop Hub" />
-        <HomeFeed
-          focusTitle="같은 리듬을 먼저 만드세요"
-          goalLabel="일관성"
-          latest={latest}
-          onOpenAnalysis={() => openScene("analysis", "ready")}
-          onOpenCapture={() => openScene("capture", "setup")}
-          onOpenProfile={() => openScene("profile", "ready")}
-          onOpenReel={() => openScene("reels", "playing")}
-          onOpenReference={() => openScene("reference", "ready")}
-          reference={reference}
-          viewerEnabled
-          width={width}
-        />
-      </ScreenContainer>
+      <View style={styles.tabScene}>
+        <ScreenContainer containerClassName="bg-background" onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}>
+          <TopBar wordmark="Hoop Hub" />
+          <HomeFeed
+            focusTitle="같은 리듬을 먼저 만드세요"
+            goalLabel="일관성"
+            latest={latest}
+            onOpenAnalysis={() => openScene("analysis", "ready")}
+            onOpenCapture={() => openScene("capture", "setup")}
+            onOpenProfile={() => openScene("profile", "ready")}
+            onOpenReel={() => openScene("reels", "playing")}
+            onOpenReference={() => openScene("reference", "ready")}
+            reference={reference}
+            viewerEnabled
+            width={width}
+          />
+        </ScreenContainer>
+        {previewDock("index")}
+      </View>
+    );
+  }
+
+  if (screen === "explore") {
+    return (
+      <View style={styles.tabScene}>
+        <ScreenContainer containerClassName="bg-background" onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}>
+          <TopBar title="탐색" />
+          <ScrollView contentContainerStyle={[styles.referencePage, { width }]} showsVerticalScrollIndicator={false}>
+            <Text style={styles.referenceTitle}>익명 레퍼런스 모션</Text>
+            <Text style={styles.referenceCopy}>{reference.shortLabel} · CMU optical mocap</Text>
+            <PoseMotionViewer
+              boundary="단계 오른쪽 SRC 번호는 원본 C3D frame입니다. 실제 모션은 익명 CMU optical-mocap source에서 변환되었습니다."
+              hand="right"
+              motion={reference.motion}
+              sourcePhaseFrames={reference.sourcePhaseFrames}
+              title={reference.shortLabel}
+            />
+            <Pressable
+              accessibilityLabel="참조 모션 열기"
+              accessibilityRole="button"
+              onPress={() => openScene("reference", "ready")}
+              style={({ pressed }) => [styles.referenceButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.referenceButtonText}>참조 모션 열기</Text>
+            </Pressable>
+          </ScrollView>
+        </ScreenContainer>
+        {previewDock("explore")}
+      </View>
     );
   }
 
@@ -142,29 +188,32 @@ export default function UiDemoRoute() {
     const records = fixtures.summaries.filter((summary) => !hiddenProfileIds.includes(summary.id));
     const glyphs = signedIn ? Object.fromEntries(records.map((summary) => [summary.id, fixtures.record])) : {};
     return (
-      <ScreenContainer containerClassName="bg-background" onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}>
-        <TopBar left={previewBack} title={signedIn ? "내 슛폼" : "프로필"} />
-        <ScrollView contentContainerStyle={[styles.page, { width }]} showsVerticalScrollIndicator={false}>
-          <ProfileHero onViewChange={setHeroView} record={signedIn ? fixtures.record : undefined} state={signedIn ? "ready" : "signed-out"} view={heroView} width={width} />
-          <ProfileStats locked={!signedIn} stats={[{ value: records.length, label: "대표 슛폼" }, { value: 0, label: "기존 분석" }]} />
-          <Text style={styles.goalLine}>목표 · 일관성</Text>
-          {signedIn ? (
-            <View style={styles.section}>
-              <MotionGrid
-                canOpen
-                deletingProfileId={null}
-                error={null}
-                glyphs={glyphs}
-                loading={false}
-                onDelete={(profileId) => setHiddenProfileIds((current) => [...current, profileId])}
-                onOpen={() => openScene("analysis", "ready")}
-                records={records}
-                width={width}
-              />
-            </View>
-          ) : null}
-        </ScrollView>
-      </ScreenContainer>
+      <View style={styles.tabScene}>
+        <ScreenContainer containerClassName="bg-background" onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}>
+          <TopBar left={previewBack} title={signedIn ? "내 슛폼" : "프로필"} />
+          <ScrollView contentContainerStyle={[styles.page, { width }]} showsVerticalScrollIndicator={false}>
+            <ProfileHero onViewChange={setHeroView} record={signedIn ? fixtures.record : undefined} state={signedIn ? "ready" : "signed-out"} view={heroView} width={width} />
+            <ProfileStats locked={!signedIn} stats={[{ value: records.length, label: "대표 슛폼" }, { value: 0, label: "기존 분석" }]} />
+            <Text style={styles.goalLine}>목표 · 일관성</Text>
+            {signedIn ? (
+              <View style={styles.section}>
+                <MotionGrid
+                  canOpen
+                  deletingProfileId={null}
+                  error={null}
+                  glyphs={glyphs}
+                  loading={false}
+                  onDelete={(profileId) => setHiddenProfileIds((current) => [...current, profileId])}
+                  onOpen={() => openScene("analysis", "ready")}
+                  records={records}
+                  width={width}
+                />
+              </View>
+            ) : null}
+          </ScrollView>
+        </ScreenContainer>
+        {previewDock("profile")}
+      </View>
     );
   }
 
@@ -259,6 +308,7 @@ export default function UiDemoRoute() {
 }
 
 const styles = StyleSheet.create({
+  tabScene: { backgroundColor: tokens.background, flex: 1 },
   page: { alignSelf: "center", paddingBottom: 32 },
   goalLine: { ...typography.caption, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 8 },
   section: { marginTop: 14 },
@@ -270,4 +320,6 @@ const styles = StyleSheet.create({
   referencePage: { alignSelf: "center", paddingBottom: 40, paddingHorizontal: 14, paddingTop: 16 },
   referenceTitle: { ...typography.title, color: tokens.foreground },
   referenceCopy: { ...typography.callout, color: tokens.mutedForeground, marginBottom: 16, marginTop: 6 },
+  referenceButton: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 14, justifyContent: "center", marginTop: 16, minHeight: 48, paddingHorizontal: 16 },
+  referenceButtonText: { ...typography.headline, color: tokens.foreground },
 });
