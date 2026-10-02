@@ -11,6 +11,7 @@ import {
   canRenderShootingProfileViewerRecord,
   getRepresentativeFocusStyle,
 } from "@/components/shooting-profile/sequence-viewer";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
@@ -170,22 +171,21 @@ export default function PrivateAnalysisRoute() {
     <SafeAreaView style={styles.safeArea}>
       <TopBar
         left={(
-          <Pressable
+          <LiquidPressable
             accessibilityLabel="대표 슛폼 분석에서 뒤로 가기"
             accessibilityRole="button"
             accessibilityState={{ disabled: false }}
             focusable
+            magnetic
             onBlur={() => setFocusedControl((current) => current === "viewer-back" ? null : current)}
             onFocus={() => setFocusedControl("viewer-back")}
             onPress={goBack}
-            style={({ pressed }) => [
-              styles.iconButton,
-              getRepresentativeFocusStyle(focusedControl === "viewer-back", "light"),
-              pressed && styles.pressed,
-            ]}
+            rippleColor={tokens.foreground}
+            style={[styles.iconButton, getRepresentativeFocusStyle(focusedControl === "viewer-back", "light")]}
+            surfaceStyle={styles.iconButtonSurface}
           >
             <MaterialCommunityIcons name="chevron-left" size={28} color={tokens.foreground} />
-          </Pressable>
+          </LiquidPressable>
         )}
         title="대표 슛폼"
       />
@@ -213,7 +213,8 @@ export default function PrivateAnalysisRoute() {
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: tokens.background, flex: 1 },
   page: { alignSelf: "center", maxWidth: 680, paddingBottom: 40, width: "100%" },
-  iconButton: { alignItems: "center", height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
+  iconButton: { height: 44, minHeight: 44, minWidth: 44, width: 44 },
+  iconButtonSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
   centerState: { alignItems: "center", flex: 1, justifyContent: "center", padding: 24 },
   stateTitle: { ...typography.title, color: tokens.foreground, marginTop: 14, textAlign: "center" },
   stateCopy: { ...typography.callout, color: tokens.mutedForeground, marginTop: 6, maxWidth: 420, textAlign: "center" },
