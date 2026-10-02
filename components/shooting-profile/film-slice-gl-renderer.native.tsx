@@ -2,6 +2,15 @@ import { GLView, type ExpoWebGLRenderingContext } from "expo-gl";
 import { useCallback, useEffect, useRef } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 
+import {
+  FILM_SLICE_CLEAR_COLOR,
+  FILM_SLICE_FRAGMENT_SHADER,
+  FILM_SLICE_QUAD,
+  FILM_SLICE_UV,
+  FILM_SLICE_VERTEX_SHADER,
+  degreesToRadians,
+  orderFilmSlicesForDraw,
+} from "@/lib/film-space/gl-slice-shader";
 import type { FilmSpaceGLTextureSourceV1 } from "@/lib/film-space/gl-texture-source";
 import type {
   FilmSpaceCameraV1,
@@ -33,81 +42,6 @@ type GLResources = {
   samplerLocation: WebGLUniformLocation | null;
 };
 
-const VERTEX_SHADER = `
-attribute vec2 a_position;
-attribute vec2 a_uv;
-uniform float u_depth;
-uniform float u_sliceScale;
-uniform float u_yaw;
-uniform float u_pitch;
-uniform float u_planeAspect;
-uniform float u_viewportAspect;
-varying vec2 v_uv;
-
-void main() {
-  vec3 p = vec3(
-    a_position.x * 0.72 * u_planeAspect,
-    a_position.y * 0.72,
-    u_depth * 1.6
-  );
-
-  float cy = cos(u_yaw);
-  float sy = sin(u_yaw);
-  p = vec3(
-    p.x * cy + p.z * sy,
-    p.y,
-    -p.x * sy + p.z * cy
-  );
-
-  float cx = cos(u_pitch);
-  float sx = sin(u_pitch);
-  p = vec3(
-    p.x,
-    p.y * cx - p.z * sx,
-    p.y * sx + p.z * cx
-  );
-
-  float perspective = 1.0 / max(0.58, 1.0 + p.z * 0.34);
-  gl_Position = vec4(
-    (p.x * u_sliceScale * perspective) / max(0.6, u_viewportAspect),
-    p.y * u_sliceScale * perspective,
-    0.0,
-    1.0
-  );
-  v_uv = a_uv;
-}
-`;
-
-const FRAGMENT_SHADER = `
-precision mediump float;
-uniform sampler2D u_texture;
-uniform float u_opacity;
-varying vec2 v_uv;
-
-void main() {
-  vec4 sampled = texture2D(u_texture, vec2(v_uv.x, 1.0 - v_uv.y));
-  gl_FragColor = vec4(sampled.rgb, sampled.a * u_opacity);
-}
-`;
-
-const QUAD = new Float32Array([
-  -0.5, -0.5,
-   0.5, -0.5,
-  -0.5,  0.5,
-  -0.5,  0.5,
-   0.5, -0.5,
-   0.5,  0.5,
-]);
-
-const UV = new Float32Array([
-  0, 0,
-  1, 0,
-  0, 1,
-  0, 1,
-  1, 0,
-  1, 1,
-]);
-
 function compileShader(
   gl: ExpoWebGLRenderingContext,
   type: number,
@@ -129,8 +63,8 @@ function createProgram(gl: ExpoWebGLRenderingContext): WebGLProgram {
   let fragment: WebGLShader | null = null;
   let program: WebGLProgram | null = null;
   try {
-    vertex = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
-    fragment = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+    vertex = compileShader(gl, gl.VERTEX_SHADER, FILM_SLICE_VERTEX_SHADER);
+    fragment = compileShader(gl, gl.FRAGMENT_SHADER, FILM_SLICE_FRAGMENT_SHADER);
     program = gl.createProgram();
     if (!program) throw new Error("film-space GL program allocation failed");
     gl.attachShader(program, vertex);
@@ -208,8 +142,8 @@ function buildResources(
   const textures: WebGLTexture[] = [];
   try {
     program = createProgram(gl);
-    positionBuffer = createBuffer(gl, QUAD);
-    uvBuffer = createBuffer(gl, UV);
+    positionBuffer = createBuffer(gl, FILM_SLICE_QUAD);
+    uvBuffer = createBuffer(gl, FILM_SLICE_UV);
     sources.forEach((source) => textures.push(createTexture(gl, source)));
 
     return {
@@ -245,7 +179,7 @@ function draw(
   camera: FilmSpaceCameraV1,
 ): void {
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-  gl.clearColor(0.035, 0.039, 0.043, 1);
+  gl.clearColor(...FILM_SLICE_CLEAR_COLOR);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.disable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);
@@ -260,20 +194,15 @@ function draw(
   gl.enableVertexAttribArray(resources.uvLocation);
   gl.vertexAttribPointer(resources.uvLocation, 2, gl.FLOAT, false, 0, 0);
 
-  gl.uniform1f(resources.yawLocation, camera.yawDegrees * Math.PI / 180);
-  gl.uniform1f(resources.pitchLocation, camera.pitchDegrees * Math.PI / 180);
+  gl.uniform1f(resources.yawLocation, degreesToRadians(camera.yawDegrees));
+  gl.uniform1f(resources.pitchLocation, degreesToRadians(camera.pitchDegrees));
   gl.uniform1f(
     resources.viewportAspectLocation,
     gl.drawingBufferWidth / Math.max(1, gl.drawingBufferHeight),
   );
   gl.uniform1i(resources.samplerLocation, 0);
 
-  const ordered = [
-    ...slices.filter((slice) => !slice.selected),
-    ...slices.filter((slice) => slice.selected),
-  ];
-
-  for (const slice of ordered) {
+  for (const slice of orderFilmSlicesForDraw(slices)) {
     const source = sources[slice.index];
     const texture = resources.textures[slice.index];
     if (!source || !texture) continue;

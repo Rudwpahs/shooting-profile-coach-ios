@@ -78,7 +78,8 @@ export function ShotInspectionViewer({
   }, [experimentalEnabled, profileId]);
 
   const clips = useMemo(() => association?.clips ?? [], [association]);
-  const filmSupported = Platform.OS === "ios";
+  // iPhone decodes through expo-video; the browser decodes its own local object URL. Android stays Motion/Phase.
+  const filmSupported = Platform.OS === "ios" || Platform.OS === "web";
   const model = useMemo(() => resolveShotInspectionModes({
     experimentalEnabled,
     hasLocalFilm: filmSupported && clips.length > 0,
