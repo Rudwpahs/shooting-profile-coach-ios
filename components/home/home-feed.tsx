@@ -106,7 +106,7 @@ export function HomeFeed({ width, latest, reference, goalLabel, focusTitle, view
           captionLead={`목표 · ${goalLabel}`}
           stage={(
             <View accessible accessibilityLabel={latest.status === "loading" ? "내 슛폼을 불러오는 중" : placeholderLine} style={[styles.placeholder, { width, height: stageHeight }]}>
-              <View pointerEvents="none" style={styles.silhouette}>
+              <View style={styles.silhouette}>
                 <SkeletonGlyph accessible={false} accessibilityLabel="" data={silhouette} ground={false} height={stageHeight} padding={Math.round(stageHeight * 0.14)} width={width} />
               </View>
               {latest.status === "loading" ? <ActivityIndicator color={tokens.mutedForeground} /> : <Text style={styles.placeholderText}>{placeholderLine}</Text>}
@@ -147,7 +147,7 @@ export function HomeFeed({ width, latest, reference, goalLabel, focusTitle, view
 const styles = StyleSheet.create({
   page: { alignSelf: "center", paddingBottom: 32 },
   placeholder: { alignItems: "center", backgroundColor: tokens.stage, justifyContent: "flex-end", overflow: "hidden", paddingBottom: 22 },
-  silhouette: { left: 0, opacity: 0.16, position: "absolute", top: 0 },
+  silhouette: { left: 0, opacity: 0.16, pointerEvents: "none", position: "absolute", top: 0 },
   placeholderText: { ...typography.callout, color: tokens.mutedForeground },
   stagePressed: { opacity: 0.92 },
 });

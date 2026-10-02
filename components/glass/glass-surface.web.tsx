@@ -74,7 +74,6 @@ export function GlassSurface({
       {glassEnabled ? (
         <View
           aria-hidden
-          pointerEvents="none"
           style={[
             styles.webTint,
             {
@@ -94,8 +93,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: "hidden",
   },
+  // Decorative only: never a pointer target (style form, as react-native-web
+  // deprecates the prop) and hidden from assistive technology via aria-hidden.
   webTint: {
     ...StyleSheet.absoluteFillObject,
+    pointerEvents: "none",
   },
 });
 

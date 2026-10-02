@@ -183,7 +183,7 @@ export function PhaseSpaceViewer({
           ))}
         </Svg>
 
-        <View pointerEvents="box-none" style={styles.zoomControls}>
+        <View style={styles.zoomControls}>
           <Pressable
             accessibilityLabel="Phase Space 확대"
             accessibilityRole="button"
@@ -265,7 +265,7 @@ export function PhaseSpaceViewer({
 const styles = StyleSheet.create({
   container: { backgroundColor: tokens.background },
   stage: { backgroundColor: tokens.stage, height: STAGE_HEIGHT, overflow: "hidden", position: "relative" },
-  zoomControls: { position: "absolute", right: 6, top: 6 },
+  zoomControls: { pointerEvents: "box-none", position: "absolute", right: 6, top: 6 },
   iconButton: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderColor: tokens.border, borderRadius: 10, borderWidth: 1, height: 44, justifyContent: "center", marginBottom: 4, minHeight: 44, minWidth: 44, width: 44 },
   pressed: { opacity: 0.62 },
   axisHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 14, paddingTop: 10 },

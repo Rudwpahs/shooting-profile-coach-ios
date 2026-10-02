@@ -192,7 +192,7 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
             />
           );
         })}
-        <View pointerEvents="box-none" style={styles.zoomControls}>
+        <View style={styles.zoomControls}>
           <Pressable
             accessibilityLabel="Film Space 확대"
             accessibilityRole="button"
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   container: { backgroundColor: tokens.background },
   stage: { backgroundColor: tokens.stage, height: STAGE_HEIGHT, overflow: "hidden", position: "relative" },
   slice: { height: 230, left: 45, position: "absolute", top: 44, width: 240 },
-  zoomControls: { position: "absolute", right: 6, top: 6 },
+  zoomControls: { pointerEvents: "box-none", position: "absolute", right: 6, top: 6 },
   iconButton: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderColor: tokens.border, borderRadius: 10, borderWidth: 1, height: 44, justifyContent: "center", marginBottom: 4, minHeight: 44, minWidth: 44, width: 44 },
   pressed: { opacity: 0.62 },
   stateBox: { alignItems: "center", backgroundColor: tokens.stage, justifyContent: "center", minHeight: 220, padding: 24 },

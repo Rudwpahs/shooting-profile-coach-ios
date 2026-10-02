@@ -50,8 +50,8 @@ export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenA
   const top = insets.top + 6;
   const progressBottom = insets.bottom + 8;
   return (
-    <View pointerEvents="box-none" style={[styles.layer, { width, height }]} testID="reel-overlay">
-      <GlassSurface pointerEvents="box-none" variant="bar" style={[styles.topRow, { top, width }]}>
+    <View style={[styles.layer, { width, height }]} testID="reel-overlay">
+      <GlassSurface variant="bar" style={[styles.topRow, { top, width }]}>
         <LiquidPressable
           accessibilityLabel="릴 닫기"
           accessibilityRole="button"
@@ -93,7 +93,6 @@ export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenA
 
       {paused ? (
         <View
-          pointerEvents="none"
           style={[styles.indicator, { left: Math.round((width - INDICATOR) / 2), top: Math.round((height - INDICATOR) / 2) }]}
           testID="reel-pause-indicator"
         >
@@ -101,8 +100,8 @@ export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenA
         </View>
       ) : null}
 
-      <View pointerEvents="box-none" style={[styles.bottomRow, { bottom: progressBottom + REEL_PROGRESS_HEIGHT + 10, width }]}>
-        <View pointerEvents="none" style={styles.caption}>
+      <View style={[styles.bottomRow, { bottom: progressBottom + REEL_PROGRESS_HEIGHT + 10, width }]}>
+        <View style={styles.caption}>
           <Text numberOfLines={1} style={styles.title}>{reelTitle(item)}</Text>
           <Text numberOfLines={1} style={styles.line}>{reelLine(item)}</Text>
         </View>
@@ -131,8 +130,10 @@ export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenA
 }
 
 const styles = StyleSheet.create({
-  layer: { left: 0, position: "absolute", top: 0 },
-  topRow: { alignItems: "center", borderWidth: 0, flexDirection: "row", justifyContent: "space-between", left: 0, paddingHorizontal: 6, position: "absolute" },
+  // Pass-through containers and decorative layers declare pointerEvents in style
+  // (react-native-web deprecates the prop); taps reach the stage beneath.
+  layer: { left: 0, pointerEvents: "box-none", position: "absolute", top: 0 },
+  topRow: { alignItems: "center", borderWidth: 0, flexDirection: "row", justifyContent: "space-between", left: 0, paddingHorizontal: 6, pointerEvents: "box-none", position: "absolute" },
   control: { height: CONTROL, minHeight: CONTROL, minWidth: CONTROL, width: CONTROL },
   controlSurface: { alignItems: "center", borderRadius: CONTROL / 2, justifyContent: "center" },
   chips: { flexDirection: "row", gap: 4, paddingRight: 6 },
@@ -142,6 +143,7 @@ const styles = StyleSheet.create({
   chipText: { ...typography.label, color: tokens.foreground },
   chipTextSelected: { color: tokens.background },
   indicator: {
+    pointerEvents: "none",
     alignItems: "center",
     backgroundColor: tokens.elevatedSurface,
     borderColor: tokens.border,
@@ -154,8 +156,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: INDICATOR,
   },
-  bottomRow: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", left: 0, paddingHorizontal: 14, position: "absolute" },
-  caption: { flex: 1, gap: 2, paddingRight: 12 },
+  bottomRow: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", left: 0, paddingHorizontal: 14, pointerEvents: "box-none", position: "absolute" },
+  caption: { flex: 1, gap: 2, paddingRight: 12, pointerEvents: "none" },
   title: { ...typography.headline, color: tokens.stageForeground },
   line: { ...typography.callout, color: tokens.mutedForeground },
   rail: { minHeight: CONTROL, minWidth: CONTROL, paddingHorizontal: 4 },

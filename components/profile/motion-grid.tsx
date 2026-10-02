@@ -125,7 +125,7 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
                 </View>
               )}
               {confidence !== "basic" ? (
-                <View pointerEvents="none" style={[styles.dot, confidence === "high" ? styles.dotHigh : styles.dotRecapture]} />
+                <View style={[styles.dot, confidence === "high" ? styles.dotHigh : styles.dotRecapture]} />
               ) : null}
               {deleting ? <Text accessibilityLiveRegion="polite" style={styles.deletingText}>삭제 중</Text> : null}
             </LiquidPressable>
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   tileHit: { minHeight: 72, minWidth: 52 },
   tile: { backgroundColor: tokens.stage, minHeight: 72, minWidth: 52, overflow: "hidden", position: "relative" },
   pending: { alignItems: "center", justifyContent: "center" },
-  dot: { borderRadius: 4, height: 8, position: "absolute", right: 6, top: 6, width: 8 },
+  dot: { borderRadius: 4, height: 8, pointerEvents: "none", position: "absolute", right: 6, top: 6, width: 8 },
   dotHigh: { backgroundColor: tokens.analysisHighConfidence },
   dotRecapture: { backgroundColor: tokens.warning },
   deleting: { opacity: 0.45 },

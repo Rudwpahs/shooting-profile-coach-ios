@@ -63,7 +63,7 @@ export function ProfileHero({ width, state, record, view, onViewChange }: Profil
         </LoopStage>
       ) : (
         <View accessible accessibilityLabel={PLACEHOLDER[state]} style={[styles.placeholder, { width, height }]}>
-          <View pointerEvents="none" style={styles.silhouette}>
+          <View style={styles.silhouette}>
             <SkeletonGlyph
               accessible={false}
               accessibilityLabel=""
@@ -79,7 +79,7 @@ export function ProfileHero({ width, state, record, view, onViewChange }: Profil
       )}
       {state === "ready" ? (
         <>
-          <View pointerEvents="none" style={[styles.badge, confidence === "high" && styles.badgeHigh, confidence === "recapture" && styles.badgeRecapture]} />
+          <View style={[styles.badge, confidence === "high" && styles.badgeHigh, confidence === "recapture" && styles.badgeRecapture]} />
           <View style={styles.dots}>
             {presets.map((preset) => {
               const selected = preset.id === view;
@@ -112,9 +112,9 @@ export function ProfileHero({ width, state, record, view, onViewChange }: Profil
 const styles = StyleSheet.create({
   frame: { backgroundColor: tokens.stage, overflow: "hidden", position: "relative" },
   placeholder: { alignItems: "center", justifyContent: "flex-end", paddingBottom: 22 },
-  silhouette: { left: 0, opacity: 0.16, position: "absolute", top: 0 },
+  silhouette: { left: 0, opacity: 0.16, pointerEvents: "none", position: "absolute", top: 0 },
   placeholderText: { ...typography.callout, color: tokens.mutedForeground },
-  badge: { backgroundColor: tokens.mutedForeground, borderRadius: 5, height: 10, position: "absolute", right: 12, top: 12, width: 10 },
+  badge: { backgroundColor: tokens.mutedForeground, borderRadius: 5, height: 10, pointerEvents: "none", position: "absolute", right: 12, top: 12, width: 10 },
   badgeHigh: { backgroundColor: tokens.analysisHighConfidence },
   badgeRecapture: { backgroundColor: tokens.warning },
   dots: { bottom: 4, flexDirection: "row", position: "absolute", right: 4 },

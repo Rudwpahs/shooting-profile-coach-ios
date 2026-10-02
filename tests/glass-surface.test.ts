@@ -45,7 +45,9 @@ describe("Hoop Hub GlassSurface", () => {
   it("keeps the web tint decorative so it cannot steal pointer or accessibility interaction", () => {
     const web = read("components/glass/glass-surface.web.tsx");
     expect(web).toContain('aria-hidden');
-    expect(web).toContain('pointerEvents="none"');
+    // Style form: react-native-web deprecates the prop and warns on every mount.
+    expect(web).toContain('pointerEvents: "none"');
+    expect(web).not.toContain('pointerEvents="none"');
     expect(web).toContain('backend === "web-css"');
   });
 });
