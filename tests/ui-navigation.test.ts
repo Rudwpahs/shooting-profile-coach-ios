@@ -7,10 +7,10 @@ const tabBar = readFileSync("components/hoophub-tab-bar.tsx", "utf8");
 const explore = readFileSync("app/(tabs)/explore.tsx", "utf8");
 
 function expectEveryPressableToBeAccessible(source: string) {
-  const pressables = source.match(/<Pressable\b/g)?.length ?? 0;
-  expect(pressables).toBeGreaterThan(0);
-  expect(source.match(/accessibilityRole=/g)?.length ?? 0).toBeGreaterThanOrEqual(pressables);
-  expect(source.match(/accessibilityLabel=/g)?.length ?? 0).toBeGreaterThanOrEqual(pressables);
+  const controls = source.match(/<(?:Pressable|LiquidPressable)\b/g)?.length ?? 0;
+  expect(controls).toBeGreaterThan(0);
+  expect(source.match(/accessibilityRole=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
+  expect(source.match(/accessibilityLabel=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
 }
 
 describe("bottom navigation", () => {
