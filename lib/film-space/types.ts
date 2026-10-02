@@ -62,3 +62,37 @@ export type FilmSpaceFrameSourceResult<TImageRef = unknown> =
   | FilmSpaceFrameSourceUnavailable
   | FilmSpaceFrameSourceCancelled
   | FilmSpaceFrameSourceUnsupported;
+
+/**
+ * One sampled frame of a single local source clip, written to a device-local
+ * cache file so a texture-based renderer can read it by URI. Both times are
+ * source-video times: the one the sampling plan asked for and the one the
+ * decoder actually returned. Nothing here is uploaded or persisted remotely.
+ */
+export type FilmSpaceLocalFrameV1 = Readonly<{
+  requestedTimestampMs: number;
+  actualTimestampMs: number;
+  width: number;
+  height: number;
+  localUri: string;
+}>;
+
+export type FilmSpaceLocalFrameCacheV1 = {
+  version: "film_space_local_frame_cache_v1";
+  status: "ready";
+  sourceSlotId: string;
+  targetLongEdgePx: number;
+  frames: readonly FilmSpaceLocalFrameV1[];
+  released: boolean;
+};
+
+export type FilmSpaceLocalFrameCacheUnavailable = Readonly<{
+  status: "unavailable";
+  reason: "source_unavailable" | "frame_generation_failed" | "frame_persist_failed";
+}>;
+
+export type FilmSpaceLocalFrameCacheResult =
+  | FilmSpaceLocalFrameCacheV1
+  | FilmSpaceLocalFrameCacheUnavailable
+  | FilmSpaceFrameSourceCancelled
+  | FilmSpaceFrameSourceUnsupported;
