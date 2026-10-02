@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { GlassSurface } from "@/components/glass/glass-surface";
 import { ScreenContainer } from "@/components/screen-container";
@@ -9,8 +9,8 @@ import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
-import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
-import { poseMotionGlyph, type GlyphView } from "@/lib/skeleton/pose-motion-glyph";
+import { exploreMotions, type ExploreMotionStillsV1, type ExploreMotionV1 } from "@/lib/explore-source";
+import type { GlyphView } from "@/lib/skeleton/pose-motion-glyph";
 
 const VIEWS: readonly { id: GlyphView; label: string }[] = [
   { id: "front", label: "정면" },
@@ -25,42 +25,22 @@ const FALLBACK_WIDTH = 375;
  * 탐색: a grid of anonymous skeleton motion. Today the only lawful public
  * content is the CMU optical-mocap reference, shown once per shot phase; other
  * users' skeletons appear here only after a public opt-in contract exists.
- * Famous-player footage is never foundational content.
+ * Famous-player footage is never foundational content. Every entry comes from
+ * the explore source, which the install-free preview extends with its
+ * synthetic shot library; each mosaic loads its stills only once it is listed.
  */
 export default function ExploreScreen() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState(0);
   const [view, setView] = useState<GlyphView>("oblique");
-  const reference = ANONYMOUS_POSE_REFERENCES[0];
+  const motions = exploreMotions();
   // The window can report 0 before layout (static web render); measure the
   // screen itself and fall back to a phone width so tiles never go negative.
   const contentWidth = Math.min(measuredWidth || windowWidth || FALLBACK_WIDTH, MAX_WIDTH);
   const tile = Math.max(1, Math.floor((contentWidth - GAP * 2) / 3));
   const big = tile * 2 + GAP;
-
-  const glyphs = useMemo(
-    () => reference.motion.frames.map((frame) => ({
-      label: frame.label,
-      data: poseMotionGlyph(reference.motion, { view, progress: frame.progress }),
-    })),
-    [reference.motion, view],
-  );
-  const open = () => router.push("/library" as never);
-  const tileFor = (index: number, size: number) => {
-    const glyph = glyphs[index];
-    if (!glyph) return null;
-    return (
-      <Pressable
-        accessibilityLabel={`${reference.shortLabel} ${glyph.label} 위상 열기`}
-        accessibilityRole="button"
-        onPress={open}
-        style={({ pressed }) => [pressed && styles.pressed]}
-      >
-        <SkeletonGlyph accessible={false} accessibilityLabel={glyph.label} data={glyph.data} height={size} width={size} />
-      </Pressable>
-    );
-  };
+  const open = useCallback((href: string) => router.push(href as never), [router]);
 
   return (
     <ScreenContainer
@@ -91,21 +71,76 @@ export default function ExploreScreen() {
           })}
         </View>
       </GlassSurface>
-      <ScrollView contentContainerStyle={[styles.page, { width: contentWidth }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.row}>
-          {tileFor(3, big)}
-          <View style={styles.column}>
-            {tileFor(0, tile)}
-            {tileFor(1, tile)}
-          </View>
-        </View>
-        <View style={styles.row}>
-          {tileFor(2, tile)}
-          {tileFor(4, tile)}
-        </View>
-        <Text style={styles.caption}>{reference.shortLabel} · CMU optical mocap</Text>
-      </ScrollView>
+      <FlatList
+        contentContainerStyle={[styles.page, { width: contentWidth }]}
+        data={motions}
+        initialNumToRender={2}
+        keyExtractor={(motion) => motion.id}
+        maxToRenderPerBatch={2}
+        renderItem={({ item }) => (
+          <ExploreMosaic big={big} motion={item} onOpen={open} tile={tile} view={view} />
+        )}
+        showsVerticalScrollIndicator={false}
+        style={styles.list}
+        windowSize={5}
+      />
     </ScreenContainer>
+  );
+}
+
+type ExploreMosaicProps = {
+  motion: ExploreMotionV1;
+  view: GlyphView;
+  tile: number;
+  big: number;
+  onOpen: (href: string) => void;
+};
+
+/** One motion as five phase stills; the stills arrive once this entry is listed, so the list stays light. */
+function ExploreMosaic({ motion, view, tile, big, onOpen }: ExploreMosaicProps) {
+  const [stills, setStills] = useState<ExploreMotionStillsV1 | null>(null);
+  const activeRef = useRef(true);
+
+  useEffect(() => {
+    activeRef.current = true;
+    void motion.load().then((loaded) => {
+      if (activeRef.current) setStills(loaded);
+    });
+    return () => {
+      activeRef.current = false;
+    };
+  }, [motion]);
+
+  const tileFor = (index: number, size: number) => {
+    const still = stills?.stills[index];
+    if (!still) return <View style={[styles.pending, { width: size, height: size }]} />;
+    return (
+      <Pressable
+        accessibilityLabel={`${motion.shortLabel} ${still.label} 위상 열기`}
+        accessibilityRole="button"
+        onPress={() => onOpen(motion.href)}
+        style={({ pressed }) => [pressed && styles.pressed]}
+      >
+        <SkeletonGlyph accessible={false} accessibilityLabel={still.label} data={still.glyph(view)} height={size} width={size} />
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={styles.mosaic}>
+      <View style={styles.row}>
+        {tileFor(3, big)}
+        <View style={styles.column}>
+          {tileFor(0, tile)}
+          {tileFor(1, tile)}
+        </View>
+      </View>
+      <View style={styles.row}>
+        {tileFor(2, tile)}
+        {tileFor(4, tile)}
+      </View>
+      <Text numberOfLines={1} style={styles.caption}>{motion.caption}</Text>
+    </View>
   );
 }
 
@@ -117,9 +152,12 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: tokens.foreground },
   chipText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
   chipTextSelected: { color: tokens.background },
-  page: { alignSelf: "center", gap: GAP, paddingBottom: 32 },
+  list: { flex: 1 },
+  page: { alignSelf: "center", gap: 18, paddingBottom: 32 },
+  mosaic: { gap: GAP },
   row: { flexDirection: "row", gap: GAP },
   column: { gap: GAP },
+  pending: { backgroundColor: tokens.stage },
   caption: { ...typography.label, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 10 },
   pressed: { opacity: 0.6 },
 });
