@@ -9,7 +9,7 @@ import {
   resumePendingShootingProfileDeletionsV2,
   type ShootingProfileSummaryV2,
   type ShootingProfileViewerRecordV2,
-} from "@/lib/firebase-shooting-profiles";
+} from "@/lib/shooting-profile-source";
 import { ownerGenerationMatches, valueForExactOwner } from "@/lib/shooting-profile/capture-session-reducer";
 
 export type LatestRepresentativeState =

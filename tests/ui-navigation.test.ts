@@ -7,10 +7,10 @@ const tabBar = readFileSync("components/hoophub-tab-bar.tsx", "utf8");
 const explore = readFileSync("app/(tabs)/explore.tsx", "utf8");
 
 function expectEveryPressableToBeAccessible(source: string) {
-  const pressables = source.match(/<Pressable\b/g)?.length ?? 0;
-  expect(pressables).toBeGreaterThan(0);
-  expect(source.match(/accessibilityRole=/g)?.length ?? 0).toBeGreaterThanOrEqual(pressables);
-  expect(source.match(/accessibilityLabel=/g)?.length ?? 0).toBeGreaterThanOrEqual(pressables);
+  const controls = source.match(/<(?:Pressable|LiquidPressable)\b/g)?.length ?? 0;
+  expect(controls).toBeGreaterThan(0);
+  expect(source.match(/accessibilityRole=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
+  expect(source.match(/accessibilityLabel=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
 }
 
 describe("bottom navigation", () => {
@@ -58,12 +58,16 @@ describe("bottom navigation", () => {
 });
 
 describe("explore tab", () => {
-  it("builds its grid from the anonymous reference only, never from named-player analyses", () => {
-    expect(explore).toContain("ANONYMOUS_POSE_REFERENCES");
-    expect(explore).not.toMatch(/PLAYER_MONOCULAR_3D_ANALYSES|PLAYER_SOURCE_SKELETON_REVIEWS|PLAYER_VIDEO_REVIEW_RECORDS/);
-    expect(explore).not.toMatch(/Curry|Paul George/);
+  it("builds its grid from the explore source, whose production content is the anonymous reference only, never named-player analyses", () => {
+    const exploreSource = readFileSync("lib/explore-source.ts", "utf8");
+    expect(explore).toContain('from "@/lib/explore-source"');
+    expect(exploreSource).toContain("ANONYMOUS_POSE_REFERENCES");
+    for (const source of [explore, exploreSource]) {
+      expect(source).not.toMatch(/PLAYER_MONOCULAR_3D_ANALYSES|PLAYER_SOURCE_SKELETON_REVIEWS|PLAYER_VIDEO_REVIEW_RECORDS/);
+      expect(source).not.toMatch(/Curry|Paul George/);
+    }
     expect(explore).toContain("SkeletonGlyph");
-    expect(explore).toContain("poseMotionGlyph");
+    expect(exploreSource).toContain("poseMotionGlyph");
   });
 
   it("measures its own width and never lays out a negative tile", () => {
@@ -75,7 +79,9 @@ describe("explore tab", () => {
   it("keeps every tile and chip accessible and labels the source in one line", () => {
     expectEveryPressableToBeAccessible(explore);
     expect(explore).toContain("accessibilityState={{ selected }}");
-    expect(explore).toContain("CMU optical mocap");
+    // The one-line source caption comes from the explore source and is rendered under each mosaic.
+    expect(readFileSync("lib/explore-source.ts", "utf8")).toContain("CMU optical mocap");
+    expect(explore).toContain("{motion.caption}");
     // Instagram density: no eyebrow/kicker lines or paragraphs of explanation.
     expect(explore).not.toMatch(/kicker|eyebrow|lead:|detail:/);
   });

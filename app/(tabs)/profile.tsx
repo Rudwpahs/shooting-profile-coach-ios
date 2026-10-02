@@ -12,22 +12,25 @@ import { ProfileHero, type ProfileHeroState } from "@/components/profile/profile
 import { ProfileStats } from "@/components/profile/profile-stats";
 import { ScreenContainer } from "@/components/screen-container";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
 import { evaluateSignupGate } from "@/lib/compliance/signup-gate";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
-import { listFirebasePrivatePoses, removeFirebasePrivatePose, type FirebasePrivatePose } from "@/lib/firebase-private-data";
 import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
   deleteShootingProfileV2,
   getShootingProfileV2,
+  listFirebasePrivatePoses,
   listShootingProfilesV2,
+  removeFirebasePrivatePose,
   resumePendingShootingProfileDeletionsV2,
+  type FirebasePrivatePose,
   type ShootingProfileSummaryV2,
   type ShootingProfileViewerRecordV2,
-} from "@/lib/firebase-shooting-profiles";
+} from "@/lib/shooting-profile-source";
 import { personalPoseToCorrectedMotion, type PersonalPoseCandidate, type PersonalPoseCorrection } from "@/lib/personal-pose";
 import type { PoseMotion } from "@/lib/pose-motion";
 import { useProfile } from "@/lib/profile-store";
@@ -42,8 +45,8 @@ import {
 
 const FALLBACK_WIDTH = 375;
 const MAX_WIDTH = 680;
-/** Tiles fetch their full record lazily; this bounds the reads one profile view can cause. */
-const GLYPH_FETCH_LIMIT = 9;
+/** Tiles fetch their full record lazily, one at a time; this bounds the reads one profile view can cause. */
+const GLYPH_FETCH_LIMIT = 24;
 
 function focusStyle(focused: boolean, dark = false): ViewStyle {
   if (!focused) return {};
@@ -377,20 +380,23 @@ export default function PersonalProfileTab() {
     >
       <TopBar
         right={(
-          <Pressable
+          <LiquidPressable
             accessibilityLabel={user ? (accountOpen ? "계정 닫기" : "계정") : "로그인"}
             accessibilityRole="button"
             accessibilityState={{ disabled: false, expanded: accountVisible }}
             aria-expanded={accountVisible}
             disabled={false}
             focusable
+            magnetic
             onBlur={() => setFocusedControl((current) => current === "account" ? null : current)}
             onFocus={() => setFocusedControl("account")}
             onPress={() => setAccountOpen((open) => !open)}
-            style={({ pressed }) => [styles.iconButton, focusStyle(focusedControl === "account"), pressed && styles.pressed]}
+            rippleColor={tokens.foreground}
+            style={[styles.iconButton, focusStyle(focusedControl === "account")]}
+            surfaceStyle={styles.iconButtonSurface}
           >
             <MaterialCommunityIcons name={user ? "account-circle-outline" : "login"} size={24} color={tokens.foreground} />
-          </Pressable>
+          </LiquidPressable>
         )}
         title={user ? "내 슛폼" : "프로필"}
       />
@@ -528,7 +534,8 @@ function privatePoseFluid(pose: FirebasePrivatePose): { motion: PoseMotion; sour
 
 const styles = StyleSheet.create({
   page: { alignSelf: "center", paddingBottom: 32 },
-  iconButton: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
+  iconButton: { height: 44, minHeight: 44, minWidth: 44, width: 44 },
+  iconButtonSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
   goalLine: { ...typography.caption, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 8 },
   section: { marginTop: 14 },
   stateText: { ...typography.callout, color: tokens.mutedForeground, marginVertical: 14, textAlign: "center" },

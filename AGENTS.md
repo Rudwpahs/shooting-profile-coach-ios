@@ -6,7 +6,7 @@ This repository uses a layered agent workflow. Treat these rules as the default 
 
 - **Superpowers v6.3.0+** — development orchestration: classify work, keep spec/plan links, use test-first implementation where applicable, run independent review, and verify evidence before declaring completion.
 - **UI UX Pro Max v2.15.0+** — UI/UX design intelligence: apply to every user-facing React Native/Expo screen, component, interaction, accessibility, typography, spacing, navigation, animation, icon, loading, error, and responsive-layout change.
-- **Graphify 0.5.0+** — codebase knowledge graph: use for architecture discovery, cross-file dependency tracing, unfamiliar subsystems, refactors spanning multiple modules, and before broad code searches when a current graph exists.
+- **Graphify `graphifyy==0.9.69`** — codebase knowledge graph from `Graphify-Labs/graphify`: use for architecture discovery, cross-file dependency tracing, unfamiliar subsystems, refactors spanning multiple modules, and before broad code searches when a current graph exists.
 
 These are agent workflow tools, not runtime application dependencies. Do not add them to the production Expo bundle.
 
@@ -32,6 +32,7 @@ Research routing and upstream/license provenance are documented in `docs/RESEARC
 
 ### Other task skills
 
+- **Graphify** — `.agents/skills/graphify/`. For broad/unfamiliar codebase questions, architecture discovery, dependency/path tracing, and multi-module refactors. When a fresh graph exists, prefer `graphify query`, then `graphify path` / `graphify explain` for scoped discovery. Graph results are navigation evidence only: implementation-relevant claims must be verified against source.
 - **Humanize** — `.agents/skills/humanize/`. Use only when the user explicitly asks to humanize, naturalize, or rewrite prose with the HumanizerAI workflow. It requires network access and a valid `HUMANIZERAI_API_KEY` for API execution. Do not make it a default code, research, or product-copy step.
 - **Algorithmic Art** — `.agents/skills/algorithmic-art/`. Use for generative/code art requests such as p5.js, seeded randomness, flow fields, particle systems, and interactive parameter exploration. Start from its required `templates/viewer.html`; create original work rather than copying an existing artwork.
 - **Nothing Design v3.0.0** — `.agents/skills/nothing-design/`. Explicit aesthetic mode only. Generic UI work continues to use UI UX Pro Max as the default quality gate.
@@ -40,7 +41,7 @@ When a project-local skill conflicts with repository safety, provenance, accessi
 
 ## Order of operation
 
-1. **Understand the repository.** For broad or unfamiliar work, consult an existing Graphify result first when fresh, then verify claims against source.
+1. **Understand the repository.** For broad or unfamiliar work, check whether `graphify-out/` is fresh for the current source state. If so, use scoped `graphify query`, `graphify path`, or `graphify explain` before broad source search; verify every implementation-relevant architectural claim against source. If Graphify is unavailable or stale and cannot be refreshed, fall back to direct source search and state the limitation rather than fabricating graph results.
 2. **Define the change or research question.** Use Superpowers-style problem classification and acceptance criteria. Keep small bounded work lightweight; use a written spec/plan for architectural or multi-step work.
 3. **Select task skills.** Research questions route through the research stack; visible UI through UI UX Pro Max; explicit Nothing style adds Nothing Design; generative-art requests use Algorithmic Art.
 4. **Choose research mode.** Quick for narrow facts, Standard for bounded comparisons/design questions, Deep for high-stakes/exhaustive research. Follow `docs/DEEP_RESEARCH_PROTOCOL_V2.md` rather than equating depth with raw search count.
@@ -87,7 +88,7 @@ A successful TypeScript build alone is not sufficient evidence that UI work is c
 
 ## Graphify policy
 
-Generated graph data belongs in `graphify-out/` and should stay out of version control unless a specific review requires a committed artifact. `GRAPH_REPORT.md` may be used as an agent navigation aid, but architectural claims must still be checked against source code before implementation.
+The adopted upstream is `Graphify-Labs/graphify`, package `graphifyy==0.9.69`, CLI `graphify`, with the project-local skill at `.agents/skills/graphify/`. Generated graph data belongs in `graphify-out/` and should stay out of version control unless a specific review requires a committed artifact. `GRAPH_REPORT.md` may be used as an agent navigation aid, but architectural claims must still be checked against source code before implementation. Automatic post-commit or CI graph refresh is intentionally not enabled in this phase.
 
 ## Existing project gates
 

@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform } from "react-native";
@@ -32,6 +32,20 @@ const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+/**
+ * The install-free web preview wraps the real app, unchanged, in a runtime
+ * that only swaps the data source and adds a phone-sized frame on desktop.
+ * The literal gate folds away in ordinary builds.
+ */
+function withPreviewRuntime(tree: ReactElement): ReactElement {
+  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const preview = require("@/lib/preview/preview-runtime-root") as typeof import("@/lib/preview/preview-runtime-root");
+    return <preview.PreviewRuntimeRoot>{tree}</preview.PreviewRuntimeRoot>;
+  }
+  return tree;
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -115,7 +129,7 @@ export default function RootLayout() {
   const shouldOverrideSafeArea = Platform.OS === "web";
 
   if (shouldOverrideSafeArea) {
-    return (
+    return withPreviewRuntime(
       <ThemeProvider>
         <SafeAreaProvider initialMetrics={providerInitialMetrics}>
           <SafeAreaFrameContext.Provider value={frame}>
@@ -124,13 +138,13 @@ export default function RootLayout() {
             </SafeAreaInsetsContext.Provider>
           </SafeAreaFrameContext.Provider>
         </SafeAreaProvider>
-      </ThemeProvider>
+      </ThemeProvider>,
     );
   }
 
-  return (
+  return withPreviewRuntime(
     <ThemeProvider>
       <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }

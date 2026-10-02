@@ -52,6 +52,7 @@ vi.mock("@/lib/firebase-shooting-profiles", () => ({
   getShootingProfileV2: vi.fn(async () => null),
   deleteShootingProfileV2: vi.fn(async () => undefined),
   resumePendingShootingProfileDeletionsV2: vi.fn(async () => undefined),
+  saveShootingProfileV2: vi.fn(async () => "mock-profile-id"),
 }));
 vi.mock("@/hooks/use-latest-representative-profile", () => ({
   useLatestRepresentativeProfile: () => latestState,

@@ -143,4 +143,30 @@ export const FORMPATH_FLAG_RESOLUTION = resolveFormPathFlags({
     process.env.EXPO_PUBLIC_FORMPATH_RELEASE_VALIDATION_CERTIFICATE,
 });
 
-export const FORMPATH_FLAGS = FORMPATH_FLAG_RESOLUTION.flags;
+/**
+ * The install-free web preview is not a release: it shows the real screens
+ * with synthetic data, so it runs with the preview override instead of the
+ * release-gated flags. The literal gate folds away in ordinary builds, where
+ * the flags remain exactly the release gate's resolution.
+ */
+function resolvePreviewFlagOverride(): typeof import("@/lib/preview/preview-flags").PREVIEW_FLAG_OVERRIDE | null {
+  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const preview = require("@/lib/preview/preview-flags") as typeof import("@/lib/preview/preview-flags");
+    return preview.PREVIEW_FLAG_OVERRIDE;
+  }
+  return null;
+}
+
+const PREVIEW_FLAG_OVERRIDE = resolvePreviewFlagOverride();
+
+export const FORMPATH_FLAGS: RepresentativeRolloutFlagsV1 = PREVIEW_FLAG_OVERRIDE?.flags ?? FORMPATH_FLAG_RESOLUTION.flags;
+
+// Experimental visualization stays independently default-off and cannot bypass
+// the existing Representative V2 release gate.
+export const FORMPATH_EXPERIMENTAL_FLAGS = Object.freeze({
+  shotInspectionV1:
+    (process.env.EXPO_PUBLIC_FORMPATH_SHOT_INSPECTION_V1 === "1" || PREVIEW_FLAG_OVERRIDE?.shotInspectionV1 === true)
+    && FORMPATH_FLAGS.profileV2
+    && FORMPATH_FLAGS.representative4DViewer,
+});

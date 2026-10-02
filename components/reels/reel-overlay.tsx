@@ -1,8 +1,10 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
 
+import { GlassSurface } from "@/components/glass/glass-surface";
 import { REEL_PROGRESS_HEIGHT, ReelProgress } from "@/components/reels/reel-progress";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
 import { reelLine, reelTitle, type ReelItem } from "@/lib/reels/reel-model";
@@ -48,44 +50,49 @@ export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenA
   const top = insets.top + 6;
   const progressBottom = insets.bottom + 8;
   return (
-    <View pointerEvents="box-none" style={[styles.layer, { width, height }]} testID="reel-overlay">
-      <View pointerEvents="box-none" style={[styles.topRow, { top, width }]}>
-        <Pressable
+    <View style={[styles.layer, { width, height }]} testID="reel-overlay">
+      <GlassSurface variant="bar" style={[styles.topRow, { top, width }]}>
+        <LiquidPressable
           accessibilityLabel="릴 닫기"
           accessibilityRole="button"
           accessibilityState={{ disabled: false }}
           disabled={false}
+          magnetic
           onPress={onClose}
-          style={({ pressed }) => [styles.control, pressed && styles.pressed]}
+          rippleColor={tokens.stageForeground}
+          style={styles.control}
+          surfaceStyle={styles.controlSurface}
           testID="reel-close"
         >
           <MaterialCommunityIcons name="arrow-left" size={26} color={tokens.stageForeground} />
-        </Pressable>
+        </LiquidPressable>
         <View style={styles.chips}>
           {REEL_VIEWS.map((candidate) => {
             const selected = candidate.id === view;
             return (
-              <Pressable
+              <LiquidPressable
                 key={candidate.id}
                 accessibilityLabel={`${candidate.label} 시점`}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: false, selected }}
                 aria-selected={selected}
                 disabled={false}
+                magnetic
                 onPress={() => onViewChange(candidate.id)}
-                style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.pressed]}
+                rippleColor={selected ? tokens.background : tokens.stageForeground}
+                style={styles.chipHit}
+                surfaceStyle={[styles.chip, selected && styles.chipSelected]}
                 testID={`reel-view-${candidate.id}`}
               >
                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{candidate.label}</Text>
-              </Pressable>
+              </LiquidPressable>
             );
           })}
         </View>
-      </View>
+      </GlassSurface>
 
       {paused ? (
         <View
-          pointerEvents="none"
           style={[styles.indicator, { left: Math.round((width - INDICATOR) / 2), top: Math.round((height - INDICATOR) / 2) }]}
           testID="reel-pause-indicator"
         >
@@ -93,24 +100,27 @@ export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenA
         </View>
       ) : null}
 
-      <View pointerEvents="box-none" style={[styles.bottomRow, { bottom: progressBottom + REEL_PROGRESS_HEIGHT + 10, width }]}>
-        <View pointerEvents="none" style={styles.caption}>
+      <View style={[styles.bottomRow, { bottom: progressBottom + REEL_PROGRESS_HEIGHT + 10, width }]}>
+        <View style={styles.caption}>
           <Text numberOfLines={1} style={styles.title}>{reelTitle(item)}</Text>
           <Text numberOfLines={1} style={styles.line}>{reelLine(item)}</Text>
         </View>
         {onOpenAnalysis ? (
-          <Pressable
+          <LiquidPressable
             accessibilityLabel="이 슛폼 분석 열기"
             accessibilityRole="button"
             accessibilityState={{ disabled: false }}
             disabled={false}
+            magnetic
             onPress={onOpenAnalysis}
-            style={({ pressed }) => [styles.rail, pressed && styles.pressed]}
+            rippleColor={tokens.stageForeground}
+            style={styles.rail}
+            surfaceStyle={styles.railSurface}
             testID="reel-analysis"
           >
             <MaterialCommunityIcons name="chart-timeline-variant" size={26} color={tokens.stageForeground} />
             <Text style={styles.railText}>분석</Text>
-          </Pressable>
+          </LiquidPressable>
         ) : null}
       </View>
 
@@ -120,15 +130,20 @@ export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenA
 }
 
 const styles = StyleSheet.create({
-  layer: { left: 0, position: "absolute", top: 0 },
-  topRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", left: 0, paddingHorizontal: 6, position: "absolute" },
-  control: { alignItems: "center", height: CONTROL, justifyContent: "center", minHeight: CONTROL, minWidth: CONTROL, width: CONTROL },
+  // Pass-through containers and decorative layers declare pointerEvents in style
+  // (react-native-web deprecates the prop); taps reach the stage beneath.
+  layer: { left: 0, pointerEvents: "box-none", position: "absolute", top: 0 },
+  topRow: { alignItems: "center", borderWidth: 0, flexDirection: "row", justifyContent: "space-between", left: 0, paddingHorizontal: 6, pointerEvents: "box-none", position: "absolute" },
+  control: { height: CONTROL, minHeight: CONTROL, minWidth: CONTROL, width: CONTROL },
+  controlSurface: { alignItems: "center", borderRadius: CONTROL / 2, justifyContent: "center" },
   chips: { flexDirection: "row", gap: 4, paddingRight: 6 },
-  chip: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 999, justifyContent: "center", minHeight: 30, opacity: 0.92, paddingHorizontal: 11 },
+  chipHit: { justifyContent: "center", minHeight: CONTROL, minWidth: CONTROL },
+  chip: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 999, flexGrow: 0, justifyContent: "center", minHeight: 30, opacity: 0.92, paddingHorizontal: 11 },
   chipSelected: { backgroundColor: tokens.foreground, opacity: 1 },
   chipText: { ...typography.label, color: tokens.foreground },
   chipTextSelected: { color: tokens.background },
   indicator: {
+    pointerEvents: "none",
     alignItems: "center",
     backgroundColor: tokens.elevatedSurface,
     borderColor: tokens.border,
@@ -141,11 +156,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: INDICATOR,
   },
-  bottomRow: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", left: 0, paddingHorizontal: 14, position: "absolute" },
-  caption: { flex: 1, gap: 2, paddingRight: 12 },
+  bottomRow: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", left: 0, paddingHorizontal: 14, pointerEvents: "box-none", position: "absolute" },
+  caption: { flex: 1, gap: 2, paddingRight: 12, pointerEvents: "none" },
   title: { ...typography.headline, color: tokens.stageForeground },
   line: { ...typography.callout, color: tokens.mutedForeground },
-  rail: { alignItems: "center", gap: 2, justifyContent: "center", minHeight: CONTROL, minWidth: CONTROL, paddingHorizontal: 4 },
+  rail: { minHeight: CONTROL, minWidth: CONTROL, paddingHorizontal: 4 },
+  railSurface: { alignItems: "center", borderRadius: 14, gap: 2, justifyContent: "center" },
   railText: { ...typography.label, color: tokens.stageForeground },
-  pressed: { opacity: 0.6 },
 });

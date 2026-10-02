@@ -3,6 +3,14 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 
 import type { SaveShootingProfileInputV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
+  clearLocalFilmRefs,
+  createLocalFilmClipRef,
+  dropLocalFilmRef,
+  retainAcceptedLocalFilmRef,
+  saveLocalFilmAssociation,
+} from "@/lib/film-space/local-association";
+import type { LocalFilmClipRefV1 } from "@/lib/film-space/types";
+import {
   admitCaptureSaveOperationV2,
   captureSaveOperationMatches,
   captureSessionRetainsSaveToken,
@@ -108,6 +116,7 @@ export function useShootingProfileCapture(
   const activeRequestsRef = useRef(new Map<string, ActiveRequest>());
   const saveInFlightRef = useRef<CaptureSaveOperationTokenV2 | null>(null);
   const normalizedAttemptsRef = useRef<RetainedNormalizedAttemptsV2 | null>(null);
+  const localFilmRefsRef = useRef(new Map<string, LocalFilmClipRefV1>());
 
   useEffect(() => {
     stateRef.current = state;
@@ -139,29 +148,37 @@ export function useShootingProfileCapture(
     normalizedAttemptsRef.current = null;
   }, []);
 
+  const invalidateLocalFilmRefs = useCallback(() => {
+    clearLocalFilmRefs(localFilmRefsRef.current);
+  }, []);
+
   useEffect(() => () => {
     cancelAllRequests();
     invalidateDerivedSave();
-  }, [cancelAllRequests, invalidateDerivedSave]);
+    invalidateLocalFilmRefs();
+  }, [cancelAllRequests, invalidateDerivedSave, invalidateLocalFilmRefs]);
 
   const selectMode = useCallback((mode: CaptureProtocolV2) => {
     cancelAllRequests();
     invalidateDerivedSave();
+    invalidateLocalFilmRefs();
     dispatch({ type: "SELECT_MODE", mode });
-  }, [cancelAllRequests, invalidateDerivedSave]);
+  }, [cancelAllRequests, invalidateDerivedSave, invalidateLocalFilmRefs]);
 
   const returnToModeSelect = useCallback(() => {
     cancelAllRequests();
     invalidateDerivedSave();
+    invalidateLocalFilmRefs();
     dispatch({ type: "RETURN_TO_MODE_SELECT" });
-  }, [cancelAllRequests, invalidateDerivedSave]);
+  }, [cancelAllRequests, invalidateDerivedSave, invalidateLocalFilmRefs]);
 
   const setShootingHand = useCallback((shootingHand: ShootingHandV2) => {
     if (stateRef.current.shootingHand === shootingHand) return;
     cancelAllRequests();
     invalidateDerivedSave();
+    invalidateLocalFilmRefs();
     dispatch({ type: "SET_SHOOTING_HAND", shootingHand });
-  }, [cancelAllRequests, invalidateDerivedSave]);
+  }, [cancelAllRequests, invalidateDerivedSave, invalidateLocalFilmRefs]);
 
   const startCollection = useCallback(() => {
     dispatch({ type: "START_COLLECTION" });
@@ -254,6 +271,7 @@ export function useShootingProfileCapture(
         });
       });
 
+      if (!requestIsActive()) return;
       if (detected.status === "cancelled") {
         dispatch({ type: "SLOT_CANCELLED", slotId, requestId, generation });
         return;
@@ -278,6 +296,18 @@ export function useShootingProfileCapture(
         });
         return;
       }
+      const localFilmRef = createLocalFilmClipRef({
+        slotId,
+        view: slot.view,
+        takeIndex: slot.takeIndex,
+        uri: asset.uri,
+        durationMs: asset.duration,
+        width: asset.width,
+        height: asset.height,
+      });
+      if (localFilmRef) {
+        retainAcceptedLocalFilmRef(localFilmRefsRef.current, localFilmRef);
+      }
       dispatch({
         type: "SLOT_ACCEPTED",
         slotId,
@@ -298,13 +328,12 @@ export function useShootingProfileCapture(
       if (active?.requestId === requestId && active.generation === generation) {
         activeRequestsRef.current.delete(slotId);
       }
-      // Picker media is not retained here. User-library originals are never deleted,
-      // and app-cache deletion is left to the OS unless this app can prove ownership.
     }
   }, []);
 
   const retakeSlot = useCallback((slotId: string) => {
     invalidateDerivedSave();
+    dropLocalFilmRef(localFilmRefsRef.current, slotId);
     dispatch({ type: "RETAKE_SLOT", slotId });
     cancelRequest(slotId);
   }, [cancelRequest, invalidateDerivedSave]);
@@ -313,7 +342,8 @@ export function useShootingProfileCapture(
     dispatch({ type: "CANCEL_SESSION" });
     cancelAllRequests();
     invalidateDerivedSave();
-  }, [cancelAllRequests, invalidateDerivedSave]);
+    invalidateLocalFilmRefs();
+  }, [cancelAllRequests, invalidateDerivedSave, invalidateLocalFilmRefs]);
 
   const retrySession = useCallback(() => {
     dispatch({ type: "RETRY_SESSION" });
@@ -382,8 +412,14 @@ export function useShootingProfileCapture(
     });
     if (!operation) return;
     saveInFlightRef.current = operation;
+    const localClips = snapshot.slots.flatMap((slot) => {
+      if (slot.status !== "accepted") return [];
+      const clip = localFilmRefsRef.current.get(slot.id);
+      return clip ? [clip] : [];
+    });
+    let savedProfileId: string | null = null;
 
-    await runCaptureSaveOperationV2({
+    const result = await runCaptureSaveOperationV2({
       state: snapshot,
       retained,
       saveProfile: options.saveProfile,
@@ -393,11 +429,14 @@ export function useShootingProfileCapture(
         stateRef.current.sessionGeneration,
       ),
       onStarted: () => dispatch({ type: "SAVE_STARTED" }),
-      onSucceeded: (profileId, sessionGeneration) => dispatch({
-        type: "SAVE_SUCCEEDED",
-        sessionGeneration,
-        profileId,
-      }),
+      onSucceeded: (profileId, sessionGeneration) => {
+        savedProfileId = profileId;
+        dispatch({
+          type: "SAVE_SUCCEEDED",
+          sessionGeneration,
+          profileId,
+        });
+      },
       onFailed: (sessionGeneration) => dispatch({
         type: "SAVE_FAILED",
         sessionGeneration,
@@ -410,6 +449,15 @@ export function useShootingProfileCapture(
         );
       },
     });
+
+    if (result === "succeeded" && savedProfileId && localClips.length > 0) {
+      try {
+        await saveLocalFilmAssociation(savedProfileId, localClips);
+      } catch {
+        // The cloud profile is already saved. Film Space is local-only and optional,
+        // so local persistence failure must not turn a valid profile save into an error.
+      }
+    }
   }, [options.saveProfile]);
 
   const canSave = options.saveProfile !== undefined

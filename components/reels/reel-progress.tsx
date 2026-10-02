@@ -20,13 +20,13 @@ type ReelProgressProps = {
 export function ReelProgress({ progress, width, bottom }: ReelProgressProps) {
   const fillWidth = progress.interpolate({ inputRange: [0, 1], outputRange: [0, width], extrapolate: "clamp" });
   return (
-    <View pointerEvents="none" style={[styles.track, { bottom, width }]} testID="reel-progress">
+    <View style={[styles.track, { bottom, width }]} testID="reel-progress">
       <Animated.View style={[styles.fill, { width: fillWidth }]} testID="reel-progress-fill" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  track: { backgroundColor: tokens.border, height: REEL_PROGRESS_HEIGHT, left: 0, position: "absolute" },
+  track: { backgroundColor: tokens.border, height: REEL_PROGRESS_HEIGHT, left: 0, pointerEvents: "none", position: "absolute" },
   fill: { backgroundColor: tokens.primary, height: REEL_PROGRESS_HEIGHT },
 });

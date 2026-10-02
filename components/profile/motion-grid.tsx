@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View, type ViewStyle } from "react-native";
 
 import { getRepresentativeFocusStyle } from "@/components/shooting-profile/sequence-viewer";
 import { representativeConfidence, representativeGlyph, representativeReleaseFrameIndex } from "@/components/skeleton/representative-glyph";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { tokens } from "@/constants/tokens";
 import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-contract";
 import type { ShootingProfileSummaryV2, ShootingProfileViewerRecordV2 } from "@/lib/firebase-shooting-profiles";
@@ -86,7 +87,7 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
             : `${modeLabel(record)} · 기록 식별자가 유효하지 않아 열거나 삭제할 수 없습니다`;
           const focusKey = `tile-${record.id}`;
           return (
-            <Pressable
+            <LiquidPressable
               key={record.id}
               accessibilityActions={validId ? [{ name: "longpress", label: "삭제" }] : []}
               accessibilityLabel={label}
@@ -96,6 +97,7 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
               aria-disabled={disabled}
               disabled={disabled}
               focusable
+              magnetic
               onAccessibilityAction={(event) => {
                 if (event.nativeEvent.actionName === "longpress" && canDelete) onDelete(record.id);
               }}
@@ -103,13 +105,9 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
               onFocus={() => setFocusedControl(focusKey)}
               onLongPress={() => { if (canDelete) onDelete(record.id); }}
               onPress={() => onOpen(record.id)}
-              style={({ pressed }) => [
-                styles.tile,
-                { width: tile, height: tile },
-                focusRing(focusedControl === focusKey),
-                deleting && styles.deleting,
-                pressed && !disabled && styles.pressed,
-              ]}
+              rippleColor={tokens.foreground}
+              style={[styles.tileHit, { width: tile, height: tile }, focusRing(focusedControl === focusKey)]}
+              surfaceStyle={[styles.tile, { width: tile, height: tile }, deleting && styles.deleting]}
             >
               {full ? (
                 <SkeletonGlyph
@@ -127,10 +125,10 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
                 </View>
               )}
               {confidence !== "basic" ? (
-                <View pointerEvents="none" style={[styles.dot, confidence === "high" ? styles.dotHigh : styles.dotRecapture]} />
+                <View style={[styles.dot, confidence === "high" ? styles.dotHigh : styles.dotRecapture]} />
               ) : null}
               {deleting ? <Text accessibilityLiveRegion="polite" style={styles.deletingText}>삭제 중</Text> : null}
-            </Pressable>
+            </LiquidPressable>
           );
         })}
       </View>
@@ -141,9 +139,10 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
 
 const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
+  tileHit: { minHeight: 72, minWidth: 52 },
   tile: { backgroundColor: tokens.stage, minHeight: 72, minWidth: 52, overflow: "hidden", position: "relative" },
   pending: { alignItems: "center", justifyContent: "center" },
-  dot: { borderRadius: 4, height: 8, position: "absolute", right: 6, top: 6, width: 8 },
+  dot: { borderRadius: 4, height: 8, pointerEvents: "none", position: "absolute", right: 6, top: 6, width: 8 },
   dotHigh: { backgroundColor: tokens.analysisHighConfidence },
   dotRecapture: { backgroundColor: tokens.warning },
   deleting: { opacity: 0.45 },

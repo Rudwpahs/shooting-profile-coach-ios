@@ -65,15 +65,16 @@ describe("home entry", () => {
   });
 });
 
-describe("preview demo states", () => {
-  const demo = read("app/dev/ui-demo.tsx");
+describe("preview reels", () => {
+  const legacyDemo = read("app/dev/ui-demo.tsx");
+  const previewRuntime = read("lib/preview/preview-runtime.ts");
 
-  it("renders the real Reels feed with synthetic fixtures for playing, paused, next and analysis-entry", () => {
-    expect(demo).toContain('screen === "reels"');
-    expect(demo).toContain("<ReelsFeed");
-    for (const state of ["playing", "paused", "next", "analysis-entry"]) expect(demo).toContain(`"${state}"`);
-    expect(demo).toContain("fixtures.reels");
-    expect(demo).not.toMatch(/useFirebaseAuth|useLatestRepresentativeProfile|takeReelHandoff/);
+  it("opens the real Reels route from the preview with the synthetic profile and the anonymous references, not a second feed", () => {
+    expect(legacyDemo).not.toContain("<ReelsFeed");
+    expect(legacyDemo).toContain('"/reels"');
+    expect(route).toContain("<ReelsFeed");
+    expect(route).toContain("homeReelItems(latest, ANONYMOUS_POSE_REFERENCES)");
+    expect(previewRuntime).toContain("reels");
   });
 });
 
@@ -120,10 +121,10 @@ describe("reels chrome contract", () => {
 
   it("gives every control a label, a role and a 44-point target, and reads the Reel as one adjustable element", () => {
     for (const source of [overlay, item]) {
-      const pressables = source.match(/<Pressable\b/g)?.length ?? 0;
-      expect(pressables).toBeGreaterThan(0);
-      expect(source.match(/accessibilityRole=/g)?.length ?? 0).toBeGreaterThanOrEqual(pressables);
-      expect(source.match(/accessibilityLabel=/g)?.length ?? 0).toBeGreaterThanOrEqual(pressables);
+      const controls = source.match(/<(?:Pressable|LiquidPressable)\b/g)?.length ?? 0;
+      expect(controls).toBeGreaterThan(0);
+      expect(source.match(/accessibilityRole=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
+      expect(source.match(/accessibilityLabel=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
     }
     expect(overlay).toContain("CONTROL = 44");
     expect(item).toContain('accessibilityRole="adjustable"');

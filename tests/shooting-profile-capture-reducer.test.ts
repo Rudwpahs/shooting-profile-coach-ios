@@ -846,14 +846,14 @@ describe("captureSessionReducer", () => {
 
 describe("guided capture static integration contract", () => {
   function expectEveryPressableToBeAccessible(source: string) {
-    const pressables = [...source.matchAll(/<Pressable\b[\s\S]*?<\/Pressable>/g)].map((match) => match[0]);
-    expect(pressables.length).toBeGreaterThan(0);
-    pressables.forEach((pressable) => {
-      expect(pressable).toContain("accessibilityLabel=");
-      expect(pressable).toContain('accessibilityRole="button"');
-      expect(pressable).toContain("accessibilityState=");
-      expect(pressable).toContain("disabled=");
-      expect(pressable).toContain("<Text");
+    const controls = [...source.matchAll(/<(Pressable|LiquidPressable)\b[\s\S]*?<\/\1>/g)].map((match) => match[0]);
+    expect(controls.length).toBeGreaterThan(0);
+    controls.forEach((control) => {
+      expect(control).toContain("accessibilityLabel=");
+      expect(control).toContain('accessibilityRole="button"');
+      expect(control).toContain("accessibilityState=");
+      expect(control).toContain("disabled=");
+      expect(control).toContain("<Text");
     });
   }
 

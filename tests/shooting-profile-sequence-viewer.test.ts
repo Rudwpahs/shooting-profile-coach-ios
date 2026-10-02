@@ -286,6 +286,7 @@ describe("keyed private viewer state", () => {
 
 describe("viewer and private route static safety", () => {
   const viewerSource = readFileSync(resolve(process.cwd(), "components/shooting-profile/sequence-viewer.tsx"), "utf8");
+  const inspectionSource = readFileSync(resolve(process.cwd(), "components/shooting-profile/shot-inspection-viewer.tsx"), "utf8");
   const routeSource = readFileSync(resolve(process.cwd(), "app/private-analysis/[id].tsx"), "utf8");
 
   it("does not import or call the V1 five-frame interpolator", () => {
@@ -325,7 +326,9 @@ describe("viewer and private route static safety", () => {
     expect(routeSource).toContain("FORMPATH_FLAGS.representative4DViewer");
     expect(routeSource).toContain("useFirebaseAuth");
     expect(routeSource).toContain("getShootingProfileV2(user, profileId)");
-    expect(routeSource).toContain("@/lib/firebase-shooting-profiles");
+    // Reads go through the swappable source, whose production implementation is the Firestore module.
+    expect(routeSource).toContain("@/lib/shooting-profile-source");
+    expect(readFileSync("lib/shooting-profile-source.ts", "utf8")).toContain('from "@/lib/firebase-shooting-profiles"');
     expect(routeSource).toContain("ShootingProfileViewerRecordV2");
     expect(routeSource).toContain("buildShootingProfileViewerKey(user.uid, profileId)");
     expect(routeSource).toContain("canRenderShootingProfileViewerRecord");
@@ -340,13 +343,15 @@ describe("viewer and private route static safety", () => {
     expect(routeSource).toContain("분석을 불러오는 중");
     expect(routeSource).toContain("다시 시도");
     expect(routeSource).toContain("프로필로 돌아가기");
-    expect(routeSource).toContain("SequenceViewer");
+    expect(routeSource).toContain("ShotInspectionViewer");
+    expect(inspectionSource).toContain("if (!experimentalEnabled)");
+    expect(inspectionSource).toContain("<SequenceViewer");
     expect(routeSource).toContain("shootingHand={loadState.record.shootingHand}");
     expect(routeSource).toContain("confidence={loadState.record.confidence}");
     expect(routeSource).not.toContain("const [profile, setProfile]");
-    const routePressableCount = routeSource.match(/<Pressable\b/g)?.length ?? 0;
-    expect(routeSource.match(/focusable/g)).toHaveLength(routePressableCount);
-    expect(routeSource.match(/onFocus=/g)).toHaveLength(routePressableCount);
-    expect(routeSource.match(/onBlur=/g)).toHaveLength(routePressableCount);
+    const routeControlCount = routeSource.match(/<(?:Pressable|LiquidPressable)\b/g)?.length ?? 0;
+    expect(routeSource.match(/focusable/g)).toHaveLength(routeControlCount);
+    expect(routeSource.match(/onFocus=/g)).toHaveLength(routeControlCount);
+    expect(routeSource.match(/onBlur=/g)).toHaveLength(routeControlCount);
   });
 });

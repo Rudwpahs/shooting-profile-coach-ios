@@ -1,0 +1,104 @@
+import { useEffect, useState, type PropsWithChildren } from "react";
+import { StyleSheet, View, type ViewProps, type ViewStyle } from "react-native";
+
+import { tokens } from "@/constants/tokens";
+import { selectGlassBackend } from "@/lib/glass/glass-capabilities";
+import { GLASS_PRESETS, type GlassTint, type GlassVariant } from "@/lib/glass/glass-tokens";
+
+export type GlassSurfaceProps = PropsWithChildren<ViewProps & {
+  variant: GlassVariant;
+  interactive?: boolean;
+  tint?: GlassTint;
+}>;
+
+type WebGlassStyle = ViewStyle & {
+  backdropFilter?: string;
+  WebkitBackdropFilter?: string;
+};
+
+function supportsBackdropFilter() {
+  if (typeof CSS === "undefined" || typeof CSS.supports !== "function") return false;
+  return CSS.supports("backdrop-filter", "blur(1px)")
+    || CSS.supports("-webkit-backdrop-filter", "blur(1px)");
+}
+
+function detectWebGlass() {
+  const backend = selectGlassBackend({
+    platform: "web",
+    liquidGlass: false,
+    webgl2: false,
+    backdropFilter: supportsBackdropFilter(),
+  });
+  return backend === "web-css";
+}
+
+export function GlassSurface({
+  variant,
+  interactive: _interactive = false,
+  tint = "neutral",
+  style,
+  children,
+  ...viewProps
+}: GlassSurfaceProps) {
+  const preset = GLASS_PRESETS[variant];
+  // Static Expo web export renders without browser globals. Start opaque on
+  // both SSR and the first hydration render, then progressively enhance after
+  // mount so capability differences can never change the hydration DOM.
+  const [glassEnabled, setGlassEnabled] = useState(false);
+  useEffect(() => {
+    setGlassEnabled(detectWebGlass());
+  }, []);
+  const fallbackBackground = tint === "volt" ? tokens.elevatedSurface : tokens.surface;
+
+  const webGlassStyle: WebGlassStyle | undefined = glassEnabled
+    ? {
+        backdropFilter: `blur(${preset.blurRadius}px) saturate(132%)`,
+        WebkitBackdropFilter: `blur(${preset.blurRadius}px) saturate(132%)`,
+      }
+    : undefined;
+
+  return (
+    <View
+      {...viewProps}
+      style={[
+        styles.base,
+        {
+          borderRadius: preset.cornerRadius,
+          backgroundColor: glassEnabled ? undefined : fallbackBackground,
+          borderColor: tint === "volt" ? tokens.primary : tokens.border,
+        },
+        webGlassStyle,
+        style,
+      ]}
+    >
+      {glassEnabled ? (
+        <View
+          aria-hidden
+          style={[
+            styles.webTint,
+            {
+              backgroundColor: tint === "volt" ? tokens.primary : tokens.surface,
+              opacity: tint === "volt" ? 0.12 : 0.72,
+            },
+          ]}
+        />
+      ) : null}
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  base: {
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  // Decorative only: never a pointer target (style form, as react-native-web
+  // deprecates the prop) and hidden from assistive technology via aria-hidden.
+  webTint: {
+    ...StyleSheet.absoluteFillObject,
+    pointerEvents: "none",
+  },
+});
+
+export default GlassSurface;

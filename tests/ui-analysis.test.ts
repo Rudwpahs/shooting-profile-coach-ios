@@ -4,18 +4,20 @@ import { describe, expect, it } from "vitest";
 
 const route = readFileSync("app/private-analysis/[id].tsx", "utf8");
 const layers = readFileSync("components/analysis/analysis-layers.tsx", "utf8");
+const inspection = readFileSync("components/shooting-profile/shot-inspection-viewer.tsx", "utf8");
 const viewer = readFileSync("components/shooting-profile/sequence-viewer.tsx", "utf8");
 
 describe("analysis in three layers", () => {
-  it("opens on the skeleton, a band and one finding, with the numbers one tap deeper", () => {
+  it("opens on the inspection stage, a band and one finding, with the numbers one tap deeper", () => {
     const summary = route.indexOf("<AnalysisSummaryLine");
-    const stage = route.indexOf("<SequenceViewer");
+    const stage = route.indexOf("<ShotInspectionViewer");
     const details = route.indexOf("<AnalysisDetails");
     const evidence = route.indexOf("<AnalysisEvidence");
     expect(summary).toBeGreaterThan(-1);
     expect(stage).toBeGreaterThan(summary);
     expect(details).toBeGreaterThan(stage);
     expect(evidence).toBeGreaterThan(details);
+    expect(inspection).toContain("<SequenceViewer");
     expect(route).not.toMatch(/PRIVATE ANALYSIS|나의 대표 슛폼|소유자 계정에서만 불러온/);
   });
 
@@ -56,9 +58,8 @@ describe("analysis in three layers", () => {
   });
 
   it("puts one visual highlight on the skeleton: the joint behind the primary finding", () => {
-    // The route hands the least certain joint to the player, and the player
-    // draws exactly one ring around it, in the accent, on top of the joints.
     expect(route).toContain("highlightJoint={primaryFinding(loadState.record.profile).joint}");
+    expect(inspection).toContain("highlightJoint={highlightJoint}");
     expect(viewer).toContain("highlightJoint?: PersistedJointNameV2;");
     const stage = viewer.slice(viewer.indexOf("<Svg"), viewer.indexOf("</Svg>"));
     expect(stage).toContain("highlightJoint ? (");

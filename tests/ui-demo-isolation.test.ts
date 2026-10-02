@@ -13,26 +13,19 @@ function sourceFiles(root: string): string[] {
   });
 }
 
-describe("UI demo harness stays isolated from normal production", () => {
+describe("UI demo fixtures stay isolated from normal production", () => {
   const gate = readFileSync("lib/dev/ui-demo.ts", "utf8");
-  const route = readFileSync("app/dev/ui-demo.tsx", "utf8");
   const fixtures = readFileSync("lib/dev/ui-demo-fixtures.ts", "utf8");
+  const previewRuntime = readFileSync("lib/preview/preview-runtime.ts", "utf8");
 
   it("is enabled only by the development opt-in or the explicit Pages preview-build opt-in", () => {
     expect(gate).toContain('__DEV__ && process.env.EXPO_PUBLIC_HOOPHUB_UI_DEMO === "1"');
     expect(gate).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
   });
 
-  it("loads fixtures only behind build-time-foldable demo gates so an ordinary production bundle can drop them", () => {
-    expect(route).toContain('__DEV__ && process.env.EXPO_PUBLIC_HOOPHUB_UI_DEMO === "1"');
-    expect(route).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
-    expect(route).toContain('require("@/lib/dev/ui-demo-fixtures")');
-    // A type-only import is erased at build time; only a value import would pull the fixtures in.
-    expect(route).not.toMatch(/^import (?!type\b).*ui-demo-fixtures/m);
-    expect(route.indexOf('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"')).toBeLessThan(
-      route.indexOf('require("@/lib/dev/ui-demo-fixtures")'),
-    );
-    expect(route).toContain("if (!UI_DEMO_ENABLED || !fixtures) return <Redirect");
+  it("feeds the preview runtime, which production reaches only behind build-time-foldable gates", () => {
+    expect(previewRuntime).toContain('from "@/lib/dev/ui-demo-fixtures"');
+    expect(previewRuntime).toContain("buildUiDemoFixtures()");
   });
 
   it("builds fixtures from the synthetic session only: no network, no account, no real person", () => {
@@ -67,7 +60,7 @@ describe("UI demo harness stays isolated from normal production", () => {
     for (const root of ["app", "components", "hooks", "lib"]) {
       for (const file of sourceFiles(join(process.cwd(), root))) {
         const rel = relative(process.cwd(), file).replace(/\\/g, "/");
-        if (rel.startsWith("lib/dev/") || rel === "app/dev/ui-demo.tsx") continue;
+        if (rel.startsWith("lib/dev/") || rel.startsWith("lib/preview/")) continue;
         const source = readFileSync(file, "utf8");
         if (/@\/lib\/dev\/|@\/tests\//.test(source)) offenders.push(rel);
       }

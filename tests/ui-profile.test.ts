@@ -39,7 +39,8 @@ describe("profile as skeleton identity", () => {
     expect(profile).toContain("getShootingProfileV2(owner, profileId)");
     expect(profile).toContain("v2GlyphGenerationRef");
     expect(profile).toContain("valueForExactOwner(currentOwnerUid, v2GlyphEnvelope)");
-    expect(profile).toContain("GLYPH_FETCH_LIMIT = 9");
+    // Bounded one-at-a-time reads; wide enough that a full grid never leaves tiles spinning.
+    expect(profile).toMatch(/GLYPH_FETCH_LIMIT = (24|2[4-9]|3[0-2]);/);
     expect(profile).toContain("if (!isOpaqueShootingProfileIdV2(profileId)) continue;");
     const loadGlyphs = profile.slice(profile.indexOf("const loadV2Glyphs = useCallback"), profile.indexOf("useEffect(() =>", profile.indexOf("const loadV2Glyphs = useCallback")));
     expect(loadGlyphs.indexOf("if (!FORMPATH_FLAGS.profileV2) return;")).toBeLessThan(loadGlyphs.indexOf("getShootingProfileV2"));

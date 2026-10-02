@@ -1,8 +1,9 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import type { SkeletonConfidence } from "@/components/skeleton/skeleton-glyph";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
 
@@ -37,15 +38,18 @@ export function FeedCard({ title, meta, stage, actions, captionLead, caption, co
       {stage}
       <View style={styles.actions}>
         {actions.map((action) => (
-          <Pressable
+          <LiquidPressable
             key={action.label}
             accessibilityLabel={action.label}
             accessibilityRole="button"
+            magnetic
             onPress={action.onPress}
-            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+            rippleColor={tokens.foreground}
+            style={styles.action}
+            surfaceStyle={styles.actionSurface}
           >
             <MaterialCommunityIcons name={action.icon} size={24} color={tokens.foreground} />
-          </Pressable>
+          </LiquidPressable>
         ))}
         {confidence ? (
           <View accessible accessibilityLabel={`신뢰도 밴드 ${BAND[confidence]}`} style={styles.band}>
@@ -68,7 +72,8 @@ const styles = StyleSheet.create({
   title: { ...typography.headline, color: tokens.foreground },
   meta: { ...typography.caption, color: tokens.mutedForeground },
   actions: { alignItems: "center", flexDirection: "row", gap: 4, paddingHorizontal: 6, paddingTop: 2 },
-  action: { alignItems: "center", height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
+  action: { height: 44, minHeight: 44, minWidth: 44, width: 44 },
+  actionSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
   band: { alignItems: "center", flexDirection: "row", gap: 6, marginLeft: "auto", paddingRight: 10 },
   dot: { backgroundColor: tokens.mutedForeground, borderRadius: 4, height: 8, width: 8 },
   dotHigh: { backgroundColor: tokens.analysisHighConfidence },
@@ -76,5 +81,4 @@ const styles = StyleSheet.create({
   bandText: { ...typography.label, color: tokens.mutedForeground },
   caption: { ...typography.callout, color: tokens.foreground, paddingHorizontal: 14, paddingTop: 2 },
   captionLead: { fontWeight: "700" },
-  pressed: { opacity: 0.5 },
 });

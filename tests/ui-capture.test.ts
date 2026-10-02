@@ -58,10 +58,10 @@ describe("capture: stand, camera, shoot, accept or recapture", () => {
 
   it("labels every control for assistive technology with a 44-point target and touch-down feedback", () => {
     for (const source of [session, picker, slot, review]) {
-      const pressables = source.match(/<Pressable\b/g)?.length ?? 0;
-      expect(pressables).toBeGreaterThan(0);
-      expect(source.match(/accessibilityRole=/g)?.length ?? 0).toBeGreaterThanOrEqual(pressables);
-      expect(source.match(/accessibilityLabel=/g)?.length ?? 0).toBeGreaterThanOrEqual(pressables);
+      const controls = source.match(/<(?:Pressable|LiquidPressable)\b/g)?.length ?? 0;
+      expect(controls).toBeGreaterThan(0);
+      expect(source.match(/accessibilityRole=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
+      expect(source.match(/accessibilityLabel=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
       expect(source).toMatch(/minHeight: (?:44|4[5-9]|[5-9]\d)/);
       expect(source).toMatch(/pressed && (?:!\w+ && )?styles\.pressed/);
     }

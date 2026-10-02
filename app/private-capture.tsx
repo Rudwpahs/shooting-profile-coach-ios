@@ -1,6 +1,6 @@
 import { Redirect, useRouter } from "expo-router";
 import { useCallback } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 
 import { CaptureSession } from "@/components/shooting-profile/capture-session";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
@@ -9,7 +9,7 @@ import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-con
 import {
   saveShootingProfileV2,
   type SaveShootingProfileInputV2,
-} from "@/lib/firebase-shooting-profiles";
+} from "@/lib/shooting-profile-source";
 import { tokens } from "@/constants/tokens";
 
 export default function PrivateCaptureRoute() {
@@ -44,6 +44,20 @@ export default function PrivateCaptureRoute() {
   }, [user]);
 
   if (!captureEnabled || (!authLoading && !user)) return <Redirect href="/profile" />;
+
+  // Install-free web preview: the same capture screen, with the browser file chooser as the
+  // clip source and the preview profile as the save target. The literal gate folds away otherwise.
+  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1" && Platform.OS === "web") {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const preview = require("@/lib/preview/preview-capture-session") as typeof import("@/lib/preview/preview-capture-session");
+    return (
+      <preview.PreviewCaptureSession
+        completionActionLabel="저장된 대표 슛폼 열기"
+        onClose={close}
+        onComplete={complete}
+      />
+    );
+  }
 
   if (authLoading) {
     return (

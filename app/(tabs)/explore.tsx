@@ -1,14 +1,16 @@
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
+import { GlassSurface } from "@/components/glass/glass-surface";
 import { ScreenContainer } from "@/components/screen-container";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
-import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
-import { poseMotionGlyph, type GlyphView } from "@/lib/skeleton/pose-motion-glyph";
+import { exploreMotions, type ExploreMotionStillsV1, type ExploreMotionV1 } from "@/lib/explore-source";
+import type { GlyphView } from "@/lib/skeleton/pose-motion-glyph";
 
 const VIEWS: readonly { id: GlyphView; label: string }[] = [
   { id: "front", label: "정면" },
@@ -23,42 +25,22 @@ const FALLBACK_WIDTH = 375;
  * 탐색: a grid of anonymous skeleton motion. Today the only lawful public
  * content is the CMU optical-mocap reference, shown once per shot phase; other
  * users' skeletons appear here only after a public opt-in contract exists.
- * Famous-player footage is never foundational content.
+ * Famous-player footage is never foundational content. Every entry comes from
+ * the explore source, which the install-free preview extends with its
+ * synthetic shot library; each mosaic loads its stills lazily after it mounts.
  */
 export default function ExploreScreen() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const [measuredWidth, setMeasuredWidth] = useState(0);
   const [view, setView] = useState<GlyphView>("oblique");
-  const reference = ANONYMOUS_POSE_REFERENCES[0];
+  const motions = exploreMotions();
   // The window can report 0 before layout (static web render); measure the
   // screen itself and fall back to a phone width so tiles never go negative.
   const contentWidth = Math.min(measuredWidth || windowWidth || FALLBACK_WIDTH, MAX_WIDTH);
   const tile = Math.max(1, Math.floor((contentWidth - GAP * 2) / 3));
   const big = tile * 2 + GAP;
-
-  const glyphs = useMemo(
-    () => reference.motion.frames.map((frame) => ({
-      label: frame.label,
-      data: poseMotionGlyph(reference.motion, { view, progress: frame.progress }),
-    })),
-    [reference.motion, view],
-  );
-  const open = () => router.push("/library" as never);
-  const tileFor = (index: number, size: number) => {
-    const glyph = glyphs[index];
-    if (!glyph) return null;
-    return (
-      <Pressable
-        accessibilityLabel={`${reference.shortLabel} ${glyph.label} 위상 열기`}
-        accessibilityRole="button"
-        onPress={open}
-        style={({ pressed }) => [pressed && styles.pressed]}
-      >
-        <SkeletonGlyph accessible={false} accessibilityLabel={glyph.label} data={glyph.data} height={size} width={size} />
-      </Pressable>
-    );
-  };
+  const open = useCallback((href: string) => router.push(href as never), [router]);
 
   return (
     <ScreenContainer
@@ -66,54 +48,108 @@ export default function ExploreScreen() {
       onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}
     >
       <TopBar title="탐색" />
-      <View style={styles.header}>
+      <GlassSurface variant="panel" style={styles.header}>
         <View style={styles.chips}>
           {VIEWS.map((candidate) => {
             const selected = candidate.id === view;
             return (
-              <Pressable
+              <LiquidPressable
                 key={candidate.id}
                 accessibilityLabel={`${candidate.label} 시점`}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 aria-selected={selected}
+                magnetic
                 onPress={() => setView(candidate.id)}
-                style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.pressed]}
+                rippleColor={selected ? tokens.background : tokens.foreground}
+                style={styles.chipHit}
+                surfaceStyle={[styles.chip, selected && styles.chipSelected]}
               >
                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{candidate.label}</Text>
-              </Pressable>
+              </LiquidPressable>
             );
           })}
         </View>
-      </View>
-      <ScrollView contentContainerStyle={[styles.page, { width: contentWidth }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.row}>
-          {tileFor(3, big)}
-          <View style={styles.column}>
-            {tileFor(0, tile)}
-            {tileFor(1, tile)}
-          </View>
-        </View>
-        <View style={styles.row}>
-          {tileFor(2, tile)}
-          {tileFor(4, tile)}
-        </View>
-        <Text style={styles.caption}>{reference.shortLabel} · CMU optical mocap</Text>
+      </GlassSurface>
+      <ScrollView contentContainerStyle={[styles.page, { width: contentWidth }]} showsVerticalScrollIndicator={false} style={styles.list}>
+        {motions.map((motion) => (
+          <ExploreMosaic key={motion.id} big={big} motion={motion} onOpen={open} tile={tile} view={view} />
+        ))}
       </ScrollView>
     </ScreenContainer>
   );
 }
 
+type ExploreMosaicProps = {
+  motion: ExploreMotionV1;
+  view: GlyphView;
+  tile: number;
+  big: number;
+  onOpen: (href: string) => void;
+};
+
+/** One motion as five phase stills; the stills arrive after mount (one build at a time), so the list stays light. */
+function ExploreMosaic({ motion, view, tile, big, onOpen }: ExploreMosaicProps) {
+  const [stills, setStills] = useState<ExploreMotionStillsV1 | null>(null);
+  const activeRef = useRef(true);
+
+  useEffect(() => {
+    activeRef.current = true;
+    void motion.load().then((loaded) => {
+      if (activeRef.current) setStills(loaded);
+    });
+    return () => {
+      activeRef.current = false;
+    };
+  }, [motion]);
+
+  const tileFor = (index: number, size: number) => {
+    const still = stills?.stills[index];
+    if (!still) return <View style={[styles.pending, { width: size, height: size }]} />;
+    return (
+      <Pressable
+        accessibilityLabel={`${motion.shortLabel} ${still.label} 위상 열기`}
+        accessibilityRole="button"
+        onPress={() => onOpen(motion.href)}
+        style={({ pressed }) => [pressed && styles.pressed]}
+      >
+        <SkeletonGlyph accessible={false} accessibilityLabel={still.label} data={still.glyph(view)} height={size} width={size} />
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={styles.mosaic}>
+      <View style={styles.row}>
+        {tileFor(3, big)}
+        <View style={styles.column}>
+          {tileFor(0, tile)}
+          {tileFor(1, tile)}
+        </View>
+      </View>
+      <View style={styles.row}>
+        {tileFor(2, tile)}
+        {tileFor(4, tile)}
+      </View>
+      <Text numberOfLines={1} style={styles.caption}>{motion.caption}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  header: { alignSelf: "center", maxWidth: MAX_WIDTH, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10, width: "100%" },
+  header: { alignSelf: "center", borderRadius: 0, borderWidth: 0, maxWidth: MAX_WIDTH, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10, width: "100%" },
   chips: { flexDirection: "row", gap: 6 },
-  chip: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 999, justifyContent: "center", minHeight: 34, paddingHorizontal: 14 },
+  chipHit: { justifyContent: "center", minHeight: 44, minWidth: 44 },
+  chip: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 999, flexGrow: 0, justifyContent: "center", minHeight: 34, paddingHorizontal: 14 },
   chipSelected: { backgroundColor: tokens.foreground },
   chipText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
   chipTextSelected: { color: tokens.background },
-  page: { alignSelf: "center", gap: GAP, paddingBottom: 32 },
+  list: { flex: 1 },
+  page: { alignSelf: "center", gap: 18, paddingBottom: 32 },
+  mosaic: { gap: GAP },
   row: { flexDirection: "row", gap: GAP },
   column: { gap: GAP },
+  pending: { backgroundColor: tokens.stage },
   caption: { ...typography.label, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 10 },
   pressed: { opacity: 0.6 },
 });

@@ -70,11 +70,14 @@ describe("apple design foundations", () => {
     expect(read("components/shooting-profile/capture-session.tsx")).not.toContain("FORMPATH / PRIVATE CAPTURE");
   });
 
-  it("keeps the bottom bar flat: same-weight icons, no capsule, no accent blob, feedback on touch-down", () => {
+  it("keeps same-weight Dock icons while delegating touch-down motion to the Liquid primitive", () => {
     const bar = read("components/hoophub-tab-bar.tsx");
     expect(bar).toContain('name="plus-box-outline"');
-    expect(bar).not.toMatch(/capture: \{|borderRadius: 22, height: 44|withTiming|withSpring/);
-    expect(bar).toContain("pressed && styles.pressed");
+    expect(bar).toContain("<LiquidPressable");
+    expect(bar).toContain("magnetic");
+    expect(bar).toContain("rippleColor=");
+    expect(bar).toContain("surfaceStyle=");
+    expect(bar).not.toMatch(/capture: \{|borderRadius: 22, height: 44|withTiming|withSpring|useSharedValue/);
     expect(bar).toContain("ICON_SIZE = 26");
   });
 
@@ -105,8 +108,12 @@ describe("apple design foundations", () => {
   it("responds on touch-down everywhere a finger can land", () => {
     for (const file of REDESIGNED) {
       const source = read(file);
-      if (!source.includes("<Pressable")) continue;
-      expect(source, file).toMatch(/pressed && (?:!\w+ && )?styles\.(pressed|stagePressed)/);
+      if (source.includes("<Pressable")) {
+        expect(source, file).toMatch(/pressed && (?:!\w+ && )?styles\.(pressed|stagePressed)/);
+      }
+      if (source.includes("<LiquidPressable")) {
+        expect(source, file).toContain('from "@/components/ui/liquid"');
+      }
     }
   });
 });

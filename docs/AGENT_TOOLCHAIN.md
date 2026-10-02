@@ -1,6 +1,6 @@
 # Agent Toolchain Baseline
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-27
 
 FormPath uses external agent skills as development aids. They are not application dependencies and must not be shipped inside the Expo runtime bundle.
 
@@ -10,7 +10,7 @@ FormPath uses external agent skills as development aids. They are not applicatio
 | --- | --- | --- |
 | Superpowers | v6.3.0+ | planning, subagent/task orchestration, implementation/review/verification discipline |
 | UI UX Pro Max | v2.15.0+ | React Native UI design system, UX/accessibility, interaction and visual QA |
-| Graphify | 0.5.0+ | repository knowledge graph, architecture discovery, dependency/path analysis |
+| Graphify | `graphifyy==0.9.69` | repository knowledge graph, architecture discovery, dependency/path analysis |
 | Research | adapter from v0.2.7 | persistent multi-source investigation, triangulation, contrarian validation |
 | Deep Dive | current upstream adapter | multi-lane rigorous investigation, synthesis, verification, red-team |
 | Literature Review | SciAgent v1.0.0 adapter | systematic/scoping review, citation snowballing, evidence synthesis |
@@ -41,9 +41,25 @@ Required review domains include hierarchy, typography, spacing, touch targets, n
 
 ### Graphify
 
-Source: https://github.com/safishamsi/graphify
+Source: https://github.com/Graphify-Labs/graphify
 
-The current package baseline is `graphifyy` 0.5.0; the installed CLI command is `graphify`. Use it when the task spans multiple modules, architecture is unfamiliar, or a refactor requires dependency tracing. Generated output belongs in `graphify-out/` and stays out of git by default.
+Package: `graphifyy==0.9.69`
+
+CLI: `graphify`
+
+Python: 3.10+
+
+Project skill: `.agents/skills/graphify/`
+
+Graphify is a development-only architecture/navigation aid. Use it when a task spans multiple modules, architecture is unfamiliar, or a refactor requires dependency tracing. When a fresh graph exists, use `graphify query` first for a scoped architecture question, then `graphify path` or `graphify explain` when a relationship or symbol needs narrower inspection. Generated output belongs in `graphify-out/` and stays out of git by default. Any implementation-relevant relationship from the graph must be verified against source before code changes.
+
+The project-local Agent Skills installation command is:
+
+```bash
+uvx --from graphifyy==0.9.69 graphify install --project --platform agents
+```
+
+The generic Agent Skills target is intentional because this repository standardizes project-local skills under `.agents/skills/`. Automatic post-commit or CI graph regeneration is not enabled in this phase. If Graphify or its Python environment is unavailable, fall back to direct source inspection, state that graph-assisted discovery was unavailable, and never fabricate graph results or repair unrelated system Python configuration as part of a product task.
 
 ## Research stack
 

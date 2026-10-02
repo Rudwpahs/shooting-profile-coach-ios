@@ -5,24 +5,40 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AnalysisDetails, AnalysisEvidence, AnalysisSummaryLine } from "@/components/analysis/analysis-layers";
+import { ShotInspectionViewer } from "@/components/shooting-profile/shot-inspection-viewer";
 import {
-  SequenceViewer,
   buildShootingProfileViewerKey,
   canRenderShootingProfileViewerRecord,
   getRepresentativeFocusStyle,
 } from "@/components/shooting-profile/sequence-viewer";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
-import { FORMPATH_FLAGS } from "@/lib/feature-flags";
+import { FORMPATH_EXPERIMENTAL_FLAGS, FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import {
   getShootingProfileV2,
   type ShootingProfileViewerRecordV2,
-} from "@/lib/firebase-shooting-profiles";
+} from "@/lib/shooting-profile-source";
 import { primaryFinding } from "@/lib/skeleton/analysis-evidence";
 
 const OPAQUE_PROFILE_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
+/**
+ * Static web export: the install-free preview pre-renders its deterministic
+ * preview profile pages (`preview-shot-001`, …) so GitHub Pages can serve
+ * them without a server. Ordinary builds return no params, which leaves the
+ * dynamic route exactly as it was.
+ */
+export function generateStaticParams(): { id: string }[] {
+  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const preview = require("@/lib/preview/preview-runtime") as typeof import("@/lib/preview/preview-runtime");
+    return preview.PREVIEW_PROFILE_IDS.map((id) => ({ id }));
+  }
+  return [];
+}
 
 function opaqueProfileId(value: string | string[] | undefined): string | null {
   if (typeof value !== "string" || value !== value.trim() || !OPAQUE_PROFILE_ID.test(value)) return null;
@@ -38,11 +54,13 @@ type ViewerLoadState =
   | { status: "error"; key: string };
 
 /**
- * 분석, in three layers: the skeleton with its band and one finding (layer 1),
- * the numbers behind it (layer 2, collapsed), and per-joint evidence with the
- * boundary of what the record is (layer 3, collapsed). Access rules are
- * unchanged: both viewer flags, the signed-in owner, an opaque id, and a
- * request key that must still be current when the record arrives.
+ * 분석, in three layers: the motion/phase/local-film inspection surface with
+ * one finding (layer 1), the numbers behind it (layer 2, collapsed), and
+ * per-joint evidence with the boundary of what the record is (layer 3,
+ * collapsed). Motion fallback remains the existing SequenceViewer inside the
+ * coordinator. Access rules are unchanged: both viewer flags, the signed-in
+ * owner, an opaque id, and a request key that must still be current when the
+ * record arrives.
  */
 export default function PrivateAnalysisRoute() {
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
@@ -162,35 +180,38 @@ export default function PrivateAnalysisRoute() {
     );
   }
 
+  if (!profileId) return <Redirect href="/profile" />;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <TopBar
         left={(
-          <Pressable
+          <LiquidPressable
             accessibilityLabel="대표 슛폼 분석에서 뒤로 가기"
             accessibilityRole="button"
             accessibilityState={{ disabled: false }}
             focusable
+            magnetic
             onBlur={() => setFocusedControl((current) => current === "viewer-back" ? null : current)}
             onFocus={() => setFocusedControl("viewer-back")}
             onPress={goBack}
-            style={({ pressed }) => [
-              styles.iconButton,
-              getRepresentativeFocusStyle(focusedControl === "viewer-back", "light"),
-              pressed && styles.pressed,
-            ]}
+            rippleColor={tokens.foreground}
+            style={[styles.iconButton, getRepresentativeFocusStyle(focusedControl === "viewer-back", "light")]}
+            surfaceStyle={styles.iconButtonSurface}
           >
             <MaterialCommunityIcons name="chevron-left" size={28} color={tokens.foreground} />
-          </Pressable>
+          </LiquidPressable>
         )}
         title="대표 슛폼"
       />
       <ScrollView contentContainerStyle={styles.page}>
         <AnalysisSummaryLine profile={loadState.record.profile} />
-        <SequenceViewer
+        <ShotInspectionViewer
           confidence={loadState.record.confidence}
+          experimentalEnabled={FORMPATH_EXPERIMENTAL_FLAGS.shotInspectionV1}
           highlightJoint={primaryFinding(loadState.record.profile).joint}
           profile={loadState.record.profile}
+          profileId={profileId}
           shootingHand={loadState.record.shootingHand}
         />
         <AnalysisDetails
@@ -207,7 +228,8 @@ export default function PrivateAnalysisRoute() {
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: tokens.background, flex: 1 },
   page: { alignSelf: "center", maxWidth: 680, paddingBottom: 40, width: "100%" },
-  iconButton: { alignItems: "center", height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
+  iconButton: { height: 44, minHeight: 44, minWidth: 44, width: 44 },
+  iconButtonSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
   centerState: { alignItems: "center", flex: 1, justifyContent: "center", padding: 24 },
   stateTitle: { ...typography.title, color: tokens.foreground, marginTop: 14, textAlign: "center" },
   stateCopy: { ...typography.callout, color: tokens.mutedForeground, marginTop: 6, maxWidth: 420, textAlign: "center" },
