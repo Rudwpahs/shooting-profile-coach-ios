@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from "react";
+import { useEffect, useState, type PropsWithChildren } from "react";
 import { StyleSheet, View, type ViewProps, type ViewStyle } from "react-native";
 
 import { tokens } from "@/constants/tokens";
@@ -22,6 +22,16 @@ function supportsBackdropFilter() {
     || CSS.supports("-webkit-backdrop-filter", "blur(1px)");
 }
 
+function detectWebGlass() {
+  const backend = selectGlassBackend({
+    platform: "web",
+    liquidGlass: false,
+    webgl2: false,
+    backdropFilter: supportsBackdropFilter(),
+  });
+  return backend === "web-css";
+}
+
 export function GlassSurface({
   variant,
   interactive: _interactive = false,
@@ -31,15 +41,13 @@ export function GlassSurface({
   ...viewProps
 }: GlassSurfaceProps) {
   const preset = GLASS_PRESETS[variant];
-  // This implementation owns CSS backdrop blur. A future optical/WebGL
-  // implementation can opt into the separate web-optical backend explicitly.
-  const backend = selectGlassBackend({
-    platform: "web",
-    liquidGlass: false,
-    webgl2: false,
-    backdropFilter: supportsBackdropFilter(),
-  });
-  const glassEnabled = backend === "web-css";
+  // Static Expo web export renders without browser globals. Start opaque on
+  // both SSR and the first hydration render, then progressively enhance after
+  // mount so capability differences can never change the hydration DOM.
+  const [glassEnabled, setGlassEnabled] = useState(false);
+  useEffect(() => {
+    setGlassEnabled(detectWebGlass());
+  }, []);
   const fallbackBackground = tint === "volt" ? tokens.elevatedSurface : tokens.surface;
 
   const webGlassStyle: WebGlassStyle | undefined = glassEnabled
