@@ -7,6 +7,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { CaptureModePicker } from "@/components/shooting-profile/capture-mode-picker";
 import { CaptureSlotCard } from "@/components/shooting-profile/capture-slot-card";
 import { QualitySummary } from "@/components/shooting-profile/quality-summary";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
@@ -171,17 +172,20 @@ export function CaptureSessionView({ controller, completionActionLabel, onClose,
     >
       <TopBar
         right={(
-          <Pressable
+          <LiquidPressable
             accessibilityLabel="대표 슛폼 촬영 화면 닫기"
             accessibilityRole="button"
             accessibilityState={{ disabled: saving, busy: saving }}
             disabled={saving}
+            magnetic
             {...focus("close")}
             onPress={close}
-            style={({ pressed }) => [styles.close, focusStyle(focusedControl === "close"), saving && styles.disabled, pressed && !saving && styles.pressed]}
+            rippleColor={tokens.foreground}
+            style={[styles.close, focusStyle(focusedControl === "close")]}
+            surfaceStyle={[styles.closeSurface, saving && styles.disabled]}
           >
             <Text style={styles.closeText}>닫기</Text>
-          </Pressable>
+          </LiquidPressable>
         )}
         title="슛폼 촬영"
       />
@@ -284,7 +288,8 @@ export function CaptureSessionView({ controller, completionActionLabel, onClose,
 
 const styles = StyleSheet.create({
   page: { alignSelf: "center", paddingBottom: 36, paddingTop: 6 },
-  close: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 4 },
+  close: { height: 44, minHeight: 44, minWidth: 44, paddingHorizontal: 4 },
+  closeSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
   closeText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
   step: { ...typography.title, color: tokens.foreground, paddingHorizontal: 14, paddingBottom: 10, paddingTop: 8 },
   stack: { gap: 12, paddingHorizontal: 14 },
