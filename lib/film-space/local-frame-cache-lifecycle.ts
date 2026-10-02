@@ -18,22 +18,17 @@ export type FilmSpaceLocalFrameCacheController = Readonly<{
   current(): FilmSpaceLocalFrameCacheV1 | null;
   /**
    * Loads a clip. Any earlier extraction is aborted and any earlier cache is
-   * released first (clip switching). A result that arrives after it was
-   * superseded, suspended or disposed is released at once and reported as
-   * cancelled, so a partial or stale cache never becomes current.
+   * fully released before the next extraction starts. A result that arrives
+   * after it was superseded, suspended or disposed is released at once and
+   * reported as cancelled.
    */
   load(clip: LocalFilmClipRefV1, plan: FilmSpaceSamplingPlan): Promise<FilmSpaceLocalFrameCacheResult>;
-  /** App background: abort the in-flight extraction and release the ready cache. The controller stays usable. */
+  /** App background: abort in-flight work and queue release of the ready cache. */
   suspend(): void;
-  /** Viewer unmount: like suspend, and no later load may adopt a cache. Idempotent. */
+  /** Viewer unmount: like suspend, but waits for queued cleanup and permanently rejects new loads. */
   dispose(): Promise<void>;
 }>;
 
-/**
- * Owns the lifecycle of one Film Space frame cache for one viewer: clip
- * switching, cancellation, app background and unmount all converge on the
- * same two rules, abort what is in flight and release what is on disk.
- */
 export function createFilmSpaceLocalFrameCacheController(
   loader: FilmSpaceLocalFrameCacheLoader,
   disposer: FilmSpaceLocalFrameCacheDisposer,
@@ -42,15 +37,36 @@ export function createFilmSpaceLocalFrameCacheController(
   let active: AbortController | null = null;
   let current: FilmSpaceLocalFrameCacheV1 | null = null;
   let disposed = false;
+  let cleanupTail: Promise<void> | null = null;
 
   const abortActive = () => {
     active?.abort();
     active = null;
   };
-  const releaseCurrent = (): Promise<void> => {
+
+  const queueDispose = (cache: FilmSpaceLocalFrameCacheV1): Promise<void> => {
+    const disposeOne = async () => {
+      try {
+        await disposer(cache);
+      } catch {
+        // Cache cleanup is best-effort, but later cleanup must still run.
+      }
+    };
+
+    const previous = cleanupTail;
+    const next = previous ? previous.then(disposeOne, disposeOne) : disposeOne();
+    const tracked = next.finally(() => {
+      if (cleanupTail === tracked) cleanupTail = null;
+    });
+    cleanupTail = tracked;
+    return tracked;
+  };
+
+  const releaseCurrent = (): Promise<void> | null => {
     const cache = current;
     current = null;
-    return cache ? disposer(cache) : Promise.resolve();
+    if (cache) return queueDispose(cache);
+    return cleanupTail;
   };
 
   return {
@@ -58,12 +74,15 @@ export function createFilmSpaceLocalFrameCacheController(
 
     async load(clip, plan) {
       abortActive();
-      void releaseCurrent();
       generation += 1;
       const token = generation;
+
+      const cleanup = releaseCurrent();
+      if (cleanup) await cleanup;
+      if (token !== generation || disposed) return { status: "cancelled" };
+
       const controller = new AbortController();
       active = controller;
-      if (disposed) controller.abort();
 
       let result: FilmSpaceLocalFrameCacheResult;
       try {
@@ -76,7 +95,7 @@ export function createFilmSpaceLocalFrameCacheController(
       if (active === controller) active = null;
       if (result.status === "ready") {
         if (stale) {
-          void disposer(result);
+          await queueDispose(result);
           return { status: "cancelled" };
         }
         current = result;
@@ -86,14 +105,19 @@ export function createFilmSpaceLocalFrameCacheController(
     },
 
     suspend() {
+      generation += 1;
       abortActive();
       void releaseCurrent();
     },
 
     async dispose() {
-      disposed = true;
-      abortActive();
-      await releaseCurrent();
+      if (!disposed) {
+        disposed = true;
+        generation += 1;
+        abortActive();
+      }
+      const cleanup = releaseCurrent();
+      if (cleanup) await cleanup;
     },
   };
 }
