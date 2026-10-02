@@ -12,6 +12,7 @@ import { ProfileHero, type ProfileHeroState } from "@/components/profile/profile
 import { ProfileStats } from "@/components/profile/profile-stats";
 import { ScreenContainer } from "@/components/screen-container";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
@@ -377,20 +378,23 @@ export default function PersonalProfileTab() {
     >
       <TopBar
         right={(
-          <Pressable
+          <LiquidPressable
             accessibilityLabel={user ? (accountOpen ? "계정 닫기" : "계정") : "로그인"}
             accessibilityRole="button"
             accessibilityState={{ disabled: false, expanded: accountVisible }}
             aria-expanded={accountVisible}
             disabled={false}
             focusable
+            magnetic
             onBlur={() => setFocusedControl((current) => current === "account" ? null : current)}
             onFocus={() => setFocusedControl("account")}
             onPress={() => setAccountOpen((open) => !open)}
-            style={({ pressed }) => [styles.iconButton, focusStyle(focusedControl === "account"), pressed && styles.pressed]}
+            rippleColor={tokens.foreground}
+            style={[styles.iconButton, focusStyle(focusedControl === "account")]}
+            surfaceStyle={styles.iconButtonSurface}
           >
             <MaterialCommunityIcons name={user ? "account-circle-outline" : "login"} size={24} color={tokens.foreground} />
-          </Pressable>
+          </LiquidPressable>
         )}
         title={user ? "내 슛폼" : "프로필"}
       />
@@ -528,7 +532,8 @@ function privatePoseFluid(pose: FirebasePrivatePose): { motion: PoseMotion; sour
 
 const styles = StyleSheet.create({
   page: { alignSelf: "center", paddingBottom: 32 },
-  iconButton: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
+  iconButton: { height: 44, minHeight: 44, minWidth: 44, width: 44 },
+  iconButtonSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
   goalLine: { ...typography.caption, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 8 },
   section: { marginTop: 14 },
   stateText: { ...typography.callout, color: tokens.mutedForeground, marginVertical: 14, textAlign: "center" },
