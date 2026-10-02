@@ -851,9 +851,9 @@ describe("guided capture static integration contract", () => {
     controls.forEach((control) => {
       expect(control).toContain("accessibilityLabel=");
       expect(control).toContain('accessibilityRole="button"');
-      expect(pressable).toContain("accessibilityState=");
-      expect(pressable).toContain("disabled=");
-      expect(pressable).toContain("<Text");
+      expect(control).toContain("accessibilityState=");
+      expect(control).toContain("disabled=");
+      expect(control).toContain("<Text");
     });
   }
 
