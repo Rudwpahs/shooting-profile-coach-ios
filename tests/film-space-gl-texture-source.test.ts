@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveFilmSpaceGLTextureSources } from "@/lib/film-space/gl-texture-source";
-import type { FilmSpaceFrameV1 } from "@/lib/film-space/types";
+import { resolveFilmSpaceGLTextureSources, resolveFilmSpaceLocalFrameGLTextureSources } from "@/lib/film-space/gl-texture-source";
+import type { FilmSpaceFrameV1, FilmSpaceLocalFrameV1 } from "@/lib/film-space/types";
 
 function frame(
   imageRef: unknown,
@@ -29,6 +29,18 @@ describe("film-space GL texture source", () => {
       "file:///cache/shot-000.jpg",
       "file:///cache/shot-001.jpg",
       "file:///cache/shot-002.jpg",
+    ]);
+  });
+
+  it("maps the file-backed cache contract directly into GPU texture sources", () => {
+    const frames: readonly FilmSpaceLocalFrameV1[] = [
+      { requestedTimestampMs: 0, actualTimestampMs: 4, width: 240, height: 180, localUri: "file:///cache/local-000.jpg" },
+      { requestedTimestampMs: 40, actualTimestampMs: 43, width: 240, height: 180, localUri: "file:///cache/local-001.jpg" },
+    ];
+
+    expect(resolveFilmSpaceLocalFrameGLTextureSources(frames)).toEqual([
+      { requestedTimestampMs: 0, width: 240, height: 180, localUri: "file:///cache/local-000.jpg" },
+      { requestedTimestampMs: 40, width: 240, height: 180, localUri: "file:///cache/local-001.jpg" },
     ]);
   });
 
