@@ -347,9 +347,9 @@ describe("viewer and private route static safety", () => {
     expect(routeSource).toContain("shootingHand={loadState.record.shootingHand}");
     expect(routeSource).toContain("confidence={loadState.record.confidence}");
     expect(routeSource).not.toContain("const [profile, setProfile]");
-    const routePressableCount = routeSource.match(/<Pressable\b/g)?.length ?? 0;
-    expect(routeSource.match(/focusable/g)).toHaveLength(routePressableCount);
-    expect(routeSource.match(/onFocus=/g)).toHaveLength(routePressableCount);
-    expect(routeSource.match(/onBlur=/g)).toHaveLength(routePressableCount);
+    const routeControlCount = routeSource.match(/<(?:Pressable|LiquidPressable)\b/g)?.length ?? 0;
+    expect(routeSource.match(/focusable/g)).toHaveLength(routeControlCount);
+    expect(routeSource.match(/onFocus=/g)).toHaveLength(routeControlCount);
+    expect(routeSource.match(/onBlur=/g)).toHaveLength(routeControlCount);
   });
 });
