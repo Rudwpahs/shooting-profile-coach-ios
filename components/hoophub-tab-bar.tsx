@@ -2,9 +2,10 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { GlassSurface } from "@/components/glass/glass-surface";
 import { LiquidPressable } from "@/components/ui/liquid";
 import { tokens } from "@/constants/tokens";
 
@@ -71,7 +72,7 @@ export function HoopHubDock({ selectedRoute, bottomInset = 0, onSelectTab, onCap
   };
 
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(bottomInset, 10) }]}>
+    <GlassSurface variant="bar" style={[styles.bar, { paddingBottom: Math.max(bottomInset, 10) }]}>
       {renderTab(HOOPHUB_TABS[0])}
       {renderTab(HOOPHUB_TABS[1])}
       <LiquidPressable
@@ -87,7 +88,7 @@ export function HoopHubDock({ selectedRoute, bottomInset = 0, onSelectTab, onCap
         <MaterialCommunityIcons name="plus-box-outline" size={ICON_SIZE} color={tokens.primaryForeground} />
       </LiquidPressable>
       {renderTab(HOOPHUB_TABS[2])}
-    </View>
+    </GlassSurface>
   );
 }
 
@@ -115,7 +116,8 @@ export function HoopHubTabBar({ state, navigation }: BottomTabBarProps) {
 
 const styles = StyleSheet.create({
   bar: {
-    backgroundColor: tokens.background,
+    borderRadius: 0,
+    borderWidth: 0,
     borderTopColor: tokens.border,
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
