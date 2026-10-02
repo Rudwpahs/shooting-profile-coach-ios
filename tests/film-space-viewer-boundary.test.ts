@@ -16,6 +16,8 @@ describe("film-space viewer boundary", () => {
     expect(nativeSource).toMatch(/extractFilmSpaceFrames/);
     expect(nativeSource).toMatch(/disposeFilmSpaceFrames/);
     expect(nativeSource).toMatch(/resolveFilmSpaceSamplingPlan/);
+    expect(nativeSource).toMatch(/createFilmSpaceSliceStack/);
+    expect(nativeSource).toMatch(/normalizeFilmSpaceCamera/);
     expect(nativeSource).toMatch(/AbortController/);
     expect(nativeSource).toMatch(/AppState/);
     expect(nativeSource).toMatch(/addEventListener\(\s*["']change["']/);

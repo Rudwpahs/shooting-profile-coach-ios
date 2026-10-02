@@ -17,13 +17,15 @@ import {
   extractFilmSpaceFrames,
 } from "@/lib/film-space/frame-source.native";
 import { resolveFilmSpaceSamplingPlan } from "@/lib/film-space/sampling";
+import {
+  createFilmSpaceSliceStack,
+  normalizeFilmSpaceCamera,
+} from "@/lib/film-space/slice-stack";
 import type { LocalFilmClipRefV1 } from "@/lib/film-space/types";
 
 const STAGE_HEIGHT = 320;
 const MIN_ZOOM = 0.8;
 const MAX_ZOOM = 1.5;
-const SLICE_DEPTH_X_PX = 150;
-const SLICE_DEPTH_Y_PX = 90;
 
 type FilmSpaceViewerProps = Readonly<{
   clip: LocalFilmClipRefV1;
@@ -148,6 +150,16 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
   const frames = viewerState.frames;
   const safeSelectedIndex = Math.min(selectedIndex, Math.max(0, frames.length - 1));
   const selectedFrame = frames[safeSelectedIndex];
+  const renderCamera = normalizeFilmSpaceCamera({
+    yawDegrees: yaw,
+    pitchDegrees: pitch,
+    zoom,
+  });
+  const sliceStack = createFilmSpaceSliceStack(
+    frames.length,
+    safeSelectedIndex,
+    renderCamera,
+  );
   const seekFromX = (locationX: number) => {
     const fraction = Math.max(0, Math.min(1, locationX / Math.max(1, scrubWidth)));
     setSelectedIndex(Math.round(fraction * Math.max(0, frames.length - 1)));
@@ -161,32 +173,26 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
         style={styles.stage}
         {...rotationResponder.panHandlers}
       >
-        {frames.map((frame, index) => {
-          const depth = frames.length <= 1 ? 0 : index / (frames.length - 1);
-          const centeredDepth = depth - 0.5;
-          const yawRadians = yaw * Math.PI / 180;
-          const pitchRadians = pitch * Math.PI / 180;
-          const translateX = centeredDepth * SLICE_DEPTH_X_PX * Math.sin(yawRadians);
-          const translateY = centeredDepth * SLICE_DEPTH_Y_PX * Math.sin(pitchRadians);
-          const selected = index === safeSelectedIndex;
+        {sliceStack.map((slice) => {
+          const frame = frames[slice.index];
           return (
             <Image
-              key={`${frame.requestedTimestampMs}-${index}`}
+              key={`${frame.requestedTimestampMs}-${slice.index}`}
               contentFit="contain"
               source={frame.imageRef}
               style={[
                 styles.slice,
                 {
-                  opacity: selected ? 0.92 : 0.035,
+                  opacity: slice.opacity,
                   transform: [
                     { perspective: 780 },
-                    { translateX },
-                    { translateY },
-                    { rotateY: `${yaw}deg` },
-                    { rotateX: `${pitch}deg` },
-                    { scale: zoom * (0.84 + depth * 0.16) },
+                    { translateX: slice.translateXPx },
+                    { translateY: slice.translateYPx },
+                    { rotateY: `${renderCamera.yawDegrees}deg` },
+                    { rotateX: `${renderCamera.pitchDegrees}deg` },
+                    { scale: slice.scale },
                   ],
-                  zIndex: selected ? frames.length + 1 : index,
+                  zIndex: slice.zIndex,
                 },
               ]}
             />
