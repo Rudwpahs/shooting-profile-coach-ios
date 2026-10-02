@@ -1,4 +1,7 @@
-import type { FilmSpaceFrameV1 } from "@/lib/film-space/types";
+import type {
+  FilmSpaceFrameV1,
+  FilmSpaceLocalFrameV1,
+} from "@/lib/film-space/types";
 
 export type FilmSpaceGLTextureSourceV1 = Readonly<{
   localUri: string;
@@ -27,14 +30,44 @@ function positiveFinite(value: number): boolean {
   return Number.isFinite(value) && value > 0;
 }
 
+function validFrameCount(length: number): boolean {
+  return length >= 1 && length <= MAX_TEXTURE_SLICES;
+}
+
 export function resolveFilmSpaceGLTextureSources(
   frames: readonly FilmSpaceFrameV1<unknown>[],
 ): readonly FilmSpaceGLTextureSourceV1[] | null {
-  if (frames.length < 1 || frames.length > MAX_TEXTURE_SLICES) return null;
+  if (!validFrameCount(frames.length)) return null;
 
   const sources: FilmSpaceGLTextureSourceV1[] = [];
   for (const frame of frames) {
     const localUri = localFileUri(frame.imageRef);
+    if (
+      !localUri
+      || !positiveFinite(frame.width)
+      || !positiveFinite(frame.height)
+      || !Number.isFinite(frame.requestedTimestampMs)
+    ) {
+      return null;
+    }
+    sources.push(Object.freeze({
+      localUri,
+      width: frame.width,
+      height: frame.height,
+      requestedTimestampMs: frame.requestedTimestampMs,
+    }));
+  }
+  return Object.freeze(sources);
+}
+
+export function resolveFilmSpaceLocalFrameGLTextureSources(
+  frames: readonly FilmSpaceLocalFrameV1[],
+): readonly FilmSpaceGLTextureSourceV1[] | null {
+  if (!validFrameCount(frames.length)) return null;
+
+  const sources: FilmSpaceGLTextureSourceV1[] = [];
+  for (const frame of frames) {
+    const localUri = localFileUri(frame.localUri);
     if (
       !localUri
       || !positiveFinite(frame.width)
