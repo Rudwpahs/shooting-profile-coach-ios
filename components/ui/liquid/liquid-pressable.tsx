@@ -10,7 +10,7 @@ import {
   type View,
   type ViewStyle,
 } from "react-native";
-import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { ReduceMotion, cancelAnimation, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 
 import { tokens } from "@/constants/tokens";
 
@@ -110,6 +110,7 @@ export const LiquidPressable = forwardRef<View, LiquidPressableProps>(function L
   const surfaceFrame = useRef<Frame>(EMPTY_FRAME);
   const rippleRef = useRef<LiquidRippleHandle>(null);
   const lastMagnetic = useRef<LiquidPoint>({ x: REST, y: REST });
+  const pressedRef = useRef(false);
 
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
@@ -154,6 +155,7 @@ export const LiquidPressable = forwardRef<View, LiquidPressableProps>(function L
 
   const handlePressIn = useCallback(
     (event: GestureResponderEvent) => {
+      pressedRef.current = true;
       const local = toSurface(hitAreaPoint(event));
       const origin = resolveRippleOrigin(local.point, local.size);
       scale.set(animateTo(plan.pressedScale, plan.pressIn));
@@ -174,6 +176,7 @@ export const LiquidPressable = forwardRef<View, LiquidPressableProps>(function L
   // a setting that changed mid-press must never leave the surface dimmed or leaning.
   const handlePressOut = useCallback(
     (event: GestureResponderEvent) => {
+      pressedRef.current = false;
       scale.set(animateTo(1, plan.release));
       opacity.set(animateTo(1, plan.release));
       leanX.set(animateTo(REST, plan.release));
@@ -207,8 +210,38 @@ export const LiquidPressable = forwardRef<View, LiquidPressableProps>(function L
     });
   }, [magneticActive, magneticField, toSurface, magneticX, magneticY]);
 
+  // A live Reduce Motion change must stop an in-flight spring immediately, not
+  // wait for the finger to lift. Disabled controls also fail closed to rest.
+  useEffect(() => {
+    if (!reduced && !disabled) return;
+
+    for (const value of [scale, opacity, leanX, leanY, stretchX, stretchY, magneticX, magneticY]) {
+      cancelAnimation(value);
+    }
+
+    leanX.set(REST);
+    leanY.set(REST);
+    stretchX.set(1);
+    stretchY.set(1);
+    magneticX.set(REST);
+    magneticY.set(REST);
+    lastMagnetic.current = { x: REST, y: REST };
+    rippleRef.current?.end();
+
+    const held = pressedRef.current && !disabled;
+    if (disabled) pressedRef.current = false;
+    scale.set(held ? plan.pressedScale : 1);
+    opacity.set(held ? plan.pressedOpacity : 1);
+  }, [reduced, disabled, plan.pressedScale, plan.pressedOpacity, scale, opacity, leanX, leanY, stretchX, stretchY, magneticX, magneticY]);
+
+  const flatSurface = StyleSheet.flatten(surfaceStyle);
+  const surfaceRadius = typeof flatSurface?.borderRadius === "number" ? flatSurface.borderRadius : 0;
+  const baseOpacity = typeof flatSurface?.opacity === "number" ? flatSurface.opacity : 1;
+
   const surfaceMotion = useAnimatedStyle(() => ({
-    opacity: opacity.get(),
+    // Animated feedback is relative to the caller's semantic opacity. This
+    // preserves disabled/deleting/selected visual state instead of forcing 1.
+    opacity: baseOpacity * opacity.get(),
     transform: [
       { translateX: leanX.get() + magneticX.get() },
       { translateY: leanY.get() + magneticY.get() },
@@ -217,8 +250,6 @@ export const LiquidPressable = forwardRef<View, LiquidPressableProps>(function L
     ],
   }));
 
-  const flatSurface = StyleSheet.flatten(surfaceStyle);
-  const surfaceRadius = typeof flatSurface?.borderRadius === "number" ? flatSurface.borderRadius : 0;
   const defaultRole = pressableProps.role || pressableProps.accessibilityRole ? {} : { accessibilityRole: "button" as const };
 
   return (
