@@ -1,33 +1,59 @@
+import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { PoseMotionViewer } from "@/components/pose-motion-viewer";
 import { ScreenContainer } from "@/components/screen-container";
-import { ANONYMOUS_POSE_LIBRARY_STATUS, ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
+import { TopBar } from "@/components/ui/top-bar";
+import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
 
 export default function LibraryScreen() {
   const router = useRouter();
+  const [infoOpen, setInfoOpen] = useState(false);
   const reference = ANONYMOUS_POSE_REFERENCES[0];
   return (
     <ScreenContainer>
+      <TopBar title="참조 동작" />
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
-        <Text style={styles.eyebrow}>SHOOTING FORM ANALYSIS</Text>
-        <Text style={styles.title}>참조 모션 재구축</Text>
-        <Text style={styles.detail}>제품에는 검토를 통과한 reference motion만 표시합니다. intermediate landmark review와 withdrawn video record는 품질 감사용으로만 보관되며 사용자 UI에는 노출하지 않습니다.</Text>
-        <Text style={styles.candidateEyebrow}>APPROVED OPTICAL 3D REFERENCE</Text>
-        <View style={styles.status}><Text style={styles.statusText}>{ANONYMOUS_POSE_LIBRARY_STATUS.profileCount} APPROVED ACTUAL 3D MODEL</Text></View>
-        <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>{reference.styleTitle}</Text>
-          <Text style={styles.noticeCopy}>{reference.sourceAttribution}</Text>
-          <PoseMotionViewer motion={reference.motion} title={reference.shortLabel} boundary="단계 오른쪽 SRC 번호는 원본 C3D frame입니다. 실제 모션은 익명 CMU optical-mocap source에서 변환되었습니다." hand="right" sourcePhaseFrames={reference.sourcePhaseFrames} />
-        </View>
-        <Pressable onPress={() => router.replace("/assessment" as never)} style={({ pressed }) => [styles.button, pressed && styles.pressed]}><Text style={styles.buttonText}>추천 목표 선택</Text></Pressable>
+        {reference ? <>
+          <PoseMotionViewer compact motion={reference.motion} title={reference.styleTitle} hand="right" sourcePhaseFrames={reference.sourcePhaseFrames} />
+          <View style={styles.caption}>
+            <Text style={styles.motionTitle}>{reference.styleTitle}</Text>
+            <Text style={styles.attribution}>CMU 모션 캡처 · 익명 참조</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="동작 정보" aria-expanded={infoOpen} accessibilityState={{ expanded: infoOpen }} onPress={() => setInfoOpen((value) => !value)} style={({ pressed }) => [styles.infoButton, pressed && styles.pressed]}>
+            <Text style={styles.infoLabel}>동작 정보</Text>
+            <MaterialCommunityIcons name={infoOpen ? "chevron-up" : "chevron-down"} size={20} color={tokens.mutedForeground} />
+          </Pressable>
+          {infoOpen ? <View style={styles.info}>
+            <Text style={styles.infoText}>{reference.sourceAttribution}</Text>
+            <Text style={styles.infoText}>광학 모션 캡처로 측정한 3D 참조 동작입니다. 화면의 움직임은 원본 단계 사이를 부드럽게 보간합니다.</Text>
+            <Text style={styles.infoText}>원본 C3D 프레임{reference.sourcePhaseFrames ? `: ${reference.sourcePhaseFrames.join(" · ")}` : " 정보 없음"}</Text>
+            <Text style={styles.infoText}>좌우로 드래그해 회전하고, 두 손가락으로 확대할 수 있습니다. 아래 점을 누르면 해당 단계로 이동합니다.</Text>
+          </View> : null}
+          <Pressable accessibilityRole="button" accessibilityLabel="추천 목표 선택" onPress={() => router.replace("/assessment" as never)} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+            <Text style={styles.buttonText}>추천 목표 선택</Text>
+          </Pressable>
+        </> : <Text style={styles.empty}>참조 동작을 준비하고 있습니다.</Text>}
       </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { alignSelf: "center", maxWidth: 960, padding: 20, paddingBottom: 32, width: "100%" }, eyebrow: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 13, letterSpacing: 2 }, title: { color: tokens.foreground, fontFamily: "BarlowCondensed-Bold", fontSize: 44, letterSpacing: -0.5, marginTop: 6 }, detail: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 15, lineHeight: 22, marginTop: 7 }, status: { alignSelf: "flex-start", backgroundColor: tokens.primarySoft, borderColor: tokens.primary, borderWidth: 2, marginTop: 14, paddingHorizontal: 10, paddingVertical: 6 }, statusText: { color: tokens.primary, fontFamily: "Barlow-SemiBold", fontSize: 11, letterSpacing: 0.3 }, notice: { backgroundColor: tokens.surface, borderColor: tokens.border, borderWidth: 2, marginTop: 24, padding: 18 }, candidateEyebrow: { color: tokens.primary, fontFamily: "BarlowCondensed-Bold", fontSize: 12, letterSpacing: 1, marginTop: 28 }, noticeTitle: { color: tokens.foreground, flex: 1, fontFamily: "BarlowCondensed-Bold", fontSize: 24 }, noticeCopy: { color: tokens.mutedForeground, fontFamily: "Barlow", fontSize: 14, lineHeight: 21, marginTop: 7 }, button: { alignItems: "center", alignSelf: "flex-start", backgroundColor: tokens.primary, marginTop: 16, minHeight: 42, justifyContent: "center", paddingHorizontal: 16 }, buttonText: { color: tokens.primaryForeground, fontFamily: "BarlowCondensed-Bold", fontSize: 16 }, pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
+  page: { alignSelf: "center", maxWidth: 560, paddingTop: 12, paddingBottom: 28, width: "100%" },
+  caption: { gap: 4, paddingHorizontal: 20, paddingTop: 16 },
+  motionTitle: { ...typography.headline, color: tokens.foreground },
+  attribution: { ...typography.caption, color: tokens.mutedForeground },
+  infoButton: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", minHeight: 48, paddingHorizontal: 20, marginTop: 8 },
+  infoLabel: { ...typography.callout, color: tokens.mutedForeground },
+  info: { gap: 12, paddingHorizontal: 20, paddingBottom: 16 },
+  infoText: { ...typography.callout, color: tokens.mutedForeground },
+  button: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: 14, justifyContent: "center", minHeight: 48, marginHorizontal: 20, marginTop: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  buttonText: { ...typography.headline, color: tokens.primaryForeground },
+  empty: { ...typography.body, color: tokens.mutedForeground, padding: 24 },
+  pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });
