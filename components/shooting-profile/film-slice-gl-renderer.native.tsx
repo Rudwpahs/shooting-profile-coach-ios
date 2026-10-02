@@ -125,24 +125,28 @@ function compileShader(
 }
 
 function createProgram(gl: ExpoWebGLRenderingContext): WebGLProgram {
-  const vertex = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
-  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
-  const program = gl.createProgram();
-  if (!program) {
-    gl.deleteShader(vertex);
-    gl.deleteShader(fragment);
-    throw new Error("film-space GL program allocation failed");
+  let vertex: WebGLShader | null = null;
+  let fragment: WebGLShader | null = null;
+  let program: WebGLProgram | null = null;
+  try {
+    vertex = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
+    fragment = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+    program = gl.createProgram();
+    if (!program) throw new Error("film-space GL program allocation failed");
+    gl.attachShader(program, vertex);
+    gl.attachShader(program, fragment);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error("film-space GL program link failed");
+    }
+    return program;
+  } catch {
+    if (program) gl.deleteProgram(program);
+    throw new Error("film-space GL program preparation failed");
+  } finally {
+    if (vertex) gl.deleteShader(vertex);
+    if (fragment) gl.deleteShader(fragment);
   }
-  gl.attachShader(program, vertex);
-  gl.attachShader(program, fragment);
-  gl.linkProgram(program);
-  gl.deleteShader(vertex);
-  gl.deleteShader(fragment);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    gl.deleteProgram(program);
-    throw new Error("film-space GL program link failed");
-  }
-  return program;
 }
 
 function createBuffer(
@@ -162,20 +166,25 @@ function createTexture(
 ): WebGLTexture {
   const texture = gl.createTexture();
   if (!texture) throw new Error("film-space GL texture allocation failed");
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    source as unknown as TexImageSource,
-  );
-  return texture;
+  try {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      source as unknown as TexImageSource,
+    );
+    return texture;
+  } catch {
+    gl.deleteTexture(texture);
+    throw new Error("film-space GL texture preparation failed");
+  }
 }
 
 function destroyResources(
@@ -193,36 +202,39 @@ function buildResources(
   gl: ExpoWebGLRenderingContext,
   sources: readonly FilmSpaceGLTextureSourceV1[],
 ): GLResources {
-  const program = createProgram(gl);
-  const positionBuffer = createBuffer(gl, QUAD);
-  const uvBuffer = createBuffer(gl, UV);
+  let program: WebGLProgram | null = null;
+  let positionBuffer: WebGLBuffer | null = null;
+  let uvBuffer: WebGLBuffer | null = null;
   const textures: WebGLTexture[] = [];
   try {
+    program = createProgram(gl);
+    positionBuffer = createBuffer(gl, QUAD);
+    uvBuffer = createBuffer(gl, UV);
     sources.forEach((source) => textures.push(createTexture(gl, source)));
+
+    return {
+      program,
+      positionBuffer,
+      uvBuffer,
+      textures,
+      positionLocation: gl.getAttribLocation(program, "a_position"),
+      uvLocation: gl.getAttribLocation(program, "a_uv"),
+      depthLocation: gl.getUniformLocation(program, "u_depth"),
+      sliceScaleLocation: gl.getUniformLocation(program, "u_sliceScale"),
+      yawLocation: gl.getUniformLocation(program, "u_yaw"),
+      pitchLocation: gl.getUniformLocation(program, "u_pitch"),
+      planeAspectLocation: gl.getUniformLocation(program, "u_planeAspect"),
+      viewportAspectLocation: gl.getUniformLocation(program, "u_viewportAspect"),
+      opacityLocation: gl.getUniformLocation(program, "u_opacity"),
+      samplerLocation: gl.getUniformLocation(program, "u_texture"),
+    };
   } catch {
     textures.forEach((texture) => gl.deleteTexture(texture));
-    gl.deleteBuffer(positionBuffer);
-    gl.deleteBuffer(uvBuffer);
-    gl.deleteProgram(program);
-    throw new Error("film-space GL texture preparation failed");
+    if (positionBuffer) gl.deleteBuffer(positionBuffer);
+    if (uvBuffer) gl.deleteBuffer(uvBuffer);
+    if (program) gl.deleteProgram(program);
+    throw new Error("film-space GL resource preparation failed");
   }
-
-  return {
-    program,
-    positionBuffer,
-    uvBuffer,
-    textures,
-    positionLocation: gl.getAttribLocation(program, "a_position"),
-    uvLocation: gl.getAttribLocation(program, "a_uv"),
-    depthLocation: gl.getUniformLocation(program, "u_depth"),
-    sliceScaleLocation: gl.getUniformLocation(program, "u_sliceScale"),
-    yawLocation: gl.getUniformLocation(program, "u_yaw"),
-    pitchLocation: gl.getUniformLocation(program, "u_pitch"),
-    planeAspectLocation: gl.getUniformLocation(program, "u_planeAspect"),
-    viewportAspectLocation: gl.getUniformLocation(program, "u_viewportAspect"),
-    opacityLocation: gl.getUniformLocation(program, "u_opacity"),
-    samplerLocation: gl.getUniformLocation(program, "u_texture"),
-  };
 }
 
 function draw(
