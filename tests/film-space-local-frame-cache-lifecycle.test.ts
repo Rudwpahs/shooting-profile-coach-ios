@@ -75,8 +75,7 @@ describe("film-space local frame cache controller", () => {
     expect(pending).toHaveLength(1);
 
     finishCleanup();
-    await flushMicrotasks();
-    expect(pending).toHaveLength(2);
+    await vi.waitFor(() => expect(pending).toHaveLength(2));
     finish(1);
     expect((await second).status).toBe("ready");
   });
