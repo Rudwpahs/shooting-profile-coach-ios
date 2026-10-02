@@ -39,6 +39,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     flexDirection: "row",
     height: TOP_BAR_HEIGHT,
+    overflow: "visible",
     paddingHorizontal: 6,
   },
   slot: { alignItems: "center", flexDirection: "row", minWidth: 44 },
