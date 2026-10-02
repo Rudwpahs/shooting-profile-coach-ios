@@ -19,16 +19,18 @@ import { typography } from "@/constants/typography";
 import { evaluateSignupGate } from "@/lib/compliance/signup-gate";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
-import { listFirebasePrivatePoses, removeFirebasePrivatePose, type FirebasePrivatePose } from "@/lib/firebase-private-data";
 import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
   deleteShootingProfileV2,
   getShootingProfileV2,
+  listFirebasePrivatePoses,
   listShootingProfilesV2,
+  removeFirebasePrivatePose,
   resumePendingShootingProfileDeletionsV2,
+  type FirebasePrivatePose,
   type ShootingProfileSummaryV2,
   type ShootingProfileViewerRecordV2,
-} from "@/lib/firebase-shooting-profiles";
+} from "@/lib/shooting-profile-source";
 import { personalPoseToCorrectedMotion, type PersonalPoseCandidate, type PersonalPoseCorrection } from "@/lib/personal-pose";
 import type { PoseMotion } from "@/lib/pose-motion";
 import { useProfile } from "@/lib/profile-store";

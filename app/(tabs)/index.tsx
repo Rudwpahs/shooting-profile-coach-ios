@@ -1,4 +1,4 @@
-import { Redirect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import { HomeFeed } from "@/components/home/home-feed";
@@ -21,16 +21,10 @@ const GOAL_LABELS = { consistency: "일관성", range: "거리", release: "릴�
  * 홈 answers three things in one glance: what I can do now (촬영), what my
  * motion looks like now (my latest skeleton), and what to look at next (the
  * anonymous reference). This route only wires auth, flags and navigation;
- * the feed is `HomeFeed`.
+ * the feed is `HomeFeed`. The install-free web preview renders this same
+ * route; only the auth and data source behind the hooks differ.
  */
 export default function HomeScreen() {
-  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
-    return <Redirect href="/dev/ui-demo?screen=home&state=ready" />;
-  }
-  return <FirebaseBackedHomeScreen />;
-}
-
-function FirebaseBackedHomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const { user, loading: authLoading } = useFirebaseAuth();

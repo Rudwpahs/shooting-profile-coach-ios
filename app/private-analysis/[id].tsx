@@ -20,10 +20,25 @@ import { useFirebaseAuth } from "@/lib/firebase-auth";
 import {
   getShootingProfileV2,
   type ShootingProfileViewerRecordV2,
-} from "@/lib/firebase-shooting-profiles";
+} from "@/lib/shooting-profile-source";
 import { primaryFinding } from "@/lib/skeleton/analysis-evidence";
 
 const OPAQUE_PROFILE_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
+/**
+ * Static web export: the install-free preview pre-renders its deterministic
+ * preview profile pages (`preview-shot-001`, …) so GitHub Pages can serve
+ * them without a server. Ordinary builds return no params, which leaves the
+ * dynamic route exactly as it was.
+ */
+export function generateStaticParams(): { id: string }[] {
+  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const preview = require("@/lib/preview/preview-runtime") as typeof import("@/lib/preview/preview-runtime");
+    return preview.PREVIEW_PROFILE_IDS.map((id) => ({ id }));
+  }
+  return [];
+}
 
 function opaqueProfileId(value: string | string[] | undefined): string | null {
   if (typeof value !== "string" || value !== value.trim() || !OPAQUE_PROFILE_ID.test(value)) return null;

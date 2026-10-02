@@ -8,6 +8,7 @@ on:
       - work/hoophub-film-phase-space-v1
       - work/hoophub-liquid-preview-integration-v1
       - work/hoophub-liquid-dock-v1
+      - work/hoophub-unified-web-film-preview-v1
   workflow_dispatch:
 
 permissions:
@@ -51,7 +52,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify preview and production-isolation contracts
-        run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts tests/ui-pages-preview-routing.test.ts tests/ui-demo-interactive-shell.test.ts tests/liquid-dock.test.ts tests/liquid-screen-rollout.test.ts tests/glass-capabilities.test.ts tests/glass-surface.test.ts tests/liquid-pressable.test.tsx
+        run: pnpm vitest run tests/ui-web-preview.test.ts tests/ui-demo-isolation.test.ts tests/ui-pages-preview-routing.test.ts tests/ui-demo-interactive-shell.test.ts tests/ui-actual-app-preview.test.ts tests/preview-runtime-isolation.test.ts tests/preview-shooting-profile-source.test.ts tests/preview-capture-controller.test.ts tests/film-space-web-boundary.test.ts tests/film-space-web-frame-extraction.test.ts tests/film-space-web-gl-renderer.test.ts tests/film-space-local-association-web.test.ts tests/liquid-dock.test.ts tests/liquid-screen-rollout.test.ts tests/glass-capabilities.test.ts tests/glass-surface.test.ts tests/liquid-pressable.test.tsx
 
       - name: Verify ordinary production export excludes demo fixtures and research player evidence
         env:
@@ -61,8 +62,8 @@ jobs:
         shell: bash
         run: |
           pnpm exec expo export --platform web --output-dir web-production-check
-          if grep -R -E "demo-fixture-|demo_fixture_recapture|syntheticLandmarkSession|Stephen Curry|Paul George|IMAGE-LIFTED 3D ANALYSIS|PLAYER_MONOCULAR_3D_ANALYSES" web-production-check; then
-            echo "Demo fixture or named-player research content leaked into an ordinary production export" >&2
+          if grep -R -E "demo-fixture-|demo_fixture_recapture|syntheticLandmarkSession|preview-shot-|preview-user|PreviewRuntimeRoot|PreviewCaptureSession|Stephen Curry|Paul George|IMAGE-LIFTED 3D ANALYSIS|PLAYER_MONOCULAR_3D_ANALYSES" web-production-check; then
+            echo "Demo fixture, preview runtime or named-player research content leaked into an ordinary production export" >&2
             exit 1
           fi
           rm -rf web-production-check
@@ -70,19 +71,23 @@ jobs:
       - name: Export production UI preview
         run: pnpm exec expo export --platform web --output-dir web-preview-dist
 
-      - name: Verify static preview output
+      - name: Verify static preview output is the real app
         shell: bash
         run: |
+          # GitHub Pages serves 404.html for unknown paths; Expo emits the not-found route as +not-found.html.
+          cp web-preview-dist/+not-found.html web-preview-dist/404.html
           test -f web-preview-dist/index.html
-          if [ -f web-preview-dist/dev/ui-demo.html ]; then
-            echo "Preview route: web-preview-dist/dev/ui-demo.html"
-          elif [ -f web-preview-dist/dev/ui-demo/index.html ]; then
-            echo "Preview route: web-preview-dist/dev/ui-demo/index.html"
-          else
-            echo "Expected /dev/ui-demo static route was not emitted" >&2
-            find web-preview-dist -maxdepth 4 -type f | sort >&2
+          test -f web-preview-dist/explore.html
+          test -f web-preview-dist/profile.html
+          test -f web-preview-dist/reels.html
+          test -f web-preview-dist/private-capture.html
+          test -f web-preview-dist/private-analysis/preview-shot-001.html
+          test -f web-preview-dist/404.html
+          if grep -l "Unmatched Route" web-preview-dist/index.html web-preview-dist/private-analysis/preview-shot-001.html; then
+            echo "A pre-rendered preview page shows the unmatched-route screen" >&2
             exit 1
           fi
+          find web-preview-dist -maxdepth 2 -name "*.html" | sort
 
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request'

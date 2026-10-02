@@ -4,7 +4,7 @@ import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndP
 import { deleteFirebaseAccount } from "@/lib/firebase-account-deletion";
 import { firebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 
-type FirebaseAuthContextValue = {
+export type FirebaseAuthContextValue = {
   user: User | null;
   loading: boolean;
   configured: boolean;
@@ -14,14 +14,28 @@ type FirebaseAuthContextValue = {
   logout: () => Promise<void>;
 };
 
-const FirebaseAuthContext = createContext<FirebaseAuthContextValue | null>(null);
+export const FirebaseAuthContext = createContext<FirebaseAuthContextValue | null>(null);
 
 function requireAuth() {
   if (!firebaseAuth) throw new Error("Firebase 연결 설정이 아직 완료되지 않았습니다.");
   return firebaseAuth;
 }
 
+/**
+ * Production auth. The install-free web preview replaces only the value of
+ * this context with a synthetic signed-in user, behind a build-time-foldable
+ * gate; the screens that consume `useFirebaseAuth` are untouched.
+ */
 export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
+  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const preview = require("@/lib/preview/preview-auth") as typeof import("@/lib/preview/preview-auth");
+    return <FirebaseAuthContext.Provider value={preview.PREVIEW_AUTH_VALUE}>{children}</FirebaseAuthContext.Provider>;
+  }
+  return <FirebaseBackedAuthProvider>{children}</FirebaseBackedAuthProvider>;
+}
+
+function FirebaseBackedAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
