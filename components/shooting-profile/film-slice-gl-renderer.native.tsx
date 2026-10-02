@@ -24,7 +24,7 @@ type GLResources = {
   positionLocation: number;
   uvLocation: number;
   depthLocation: WebGLUniformLocation | null;
-  zoomLocation: WebGLUniformLocation | null;
+  sliceScaleLocation: WebGLUniformLocation | null;
   yawLocation: WebGLUniformLocation | null;
   pitchLocation: WebGLUniformLocation | null;
   planeAspectLocation: WebGLUniformLocation | null;
@@ -37,7 +37,7 @@ const VERTEX_SHADER = `
 attribute vec2 a_position;
 attribute vec2 a_uv;
 uniform float u_depth;
-uniform float u_zoom;
+uniform float u_sliceScale;
 uniform float u_yaw;
 uniform float u_pitch;
 uniform float u_planeAspect;
@@ -69,8 +69,8 @@ void main() {
 
   float perspective = 1.0 / max(0.58, 1.0 + p.z * 0.34);
   gl_Position = vec4(
-    (p.x * u_zoom * perspective) / max(0.6, u_viewportAspect),
-    p.y * u_zoom * perspective,
+    (p.x * u_sliceScale * perspective) / max(0.6, u_viewportAspect),
+    p.y * u_sliceScale * perspective,
     0.0,
     1.0
   );
@@ -196,7 +196,16 @@ function buildResources(
   const program = createProgram(gl);
   const positionBuffer = createBuffer(gl, QUAD);
   const uvBuffer = createBuffer(gl, UV);
-  const textures = sources.map((source) => createTexture(gl, source));
+  const textures: WebGLTexture[] = [];
+  try {
+    sources.forEach((source) => textures.push(createTexture(gl, source)));
+  } catch {
+    textures.forEach((texture) => gl.deleteTexture(texture));
+    gl.deleteBuffer(positionBuffer);
+    gl.deleteBuffer(uvBuffer);
+    gl.deleteProgram(program);
+    throw new Error("film-space GL texture preparation failed");
+  }
 
   return {
     program,
@@ -206,7 +215,7 @@ function buildResources(
     positionLocation: gl.getAttribLocation(program, "a_position"),
     uvLocation: gl.getAttribLocation(program, "a_uv"),
     depthLocation: gl.getUniformLocation(program, "u_depth"),
-    zoomLocation: gl.getUniformLocation(program, "u_zoom"),
+    sliceScaleLocation: gl.getUniformLocation(program, "u_sliceScale"),
     yawLocation: gl.getUniformLocation(program, "u_yaw"),
     pitchLocation: gl.getUniformLocation(program, "u_pitch"),
     planeAspectLocation: gl.getUniformLocation(program, "u_planeAspect"),
@@ -239,7 +248,6 @@ function draw(
   gl.enableVertexAttribArray(resources.uvLocation);
   gl.vertexAttribPointer(resources.uvLocation, 2, gl.FLOAT, false, 0, 0);
 
-  gl.uniform1f(resources.zoomLocation, camera.zoom);
   gl.uniform1f(resources.yawLocation, camera.yawDegrees * Math.PI / 180);
   gl.uniform1f(resources.pitchLocation, camera.pitchDegrees * Math.PI / 180);
   gl.uniform1f(
@@ -260,6 +268,7 @@ function draw(
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.uniform1f(resources.depthLocation, slice.centeredDepth);
+    gl.uniform1f(resources.sliceScaleLocation, slice.scale);
     gl.uniform1f(resources.opacityLocation, slice.opacity);
     gl.uniform1f(
       resources.planeAspectLocation,
@@ -316,6 +325,19 @@ export function FilmSliceGLRenderer({
   useEffect(() => {
     renderLatest();
   }, [camera, renderLatest, slices]);
+
+  useEffect(() => {
+    const gl = glRef.current;
+    if (!gl) return;
+    try {
+      destroyResources(gl, resourcesRef.current);
+      resourcesRef.current = buildResources(gl, sources);
+      renderLatest();
+    } catch {
+      resourcesRef.current = null;
+      onRendererError?.();
+    }
+  }, [onRendererError, renderLatest, sources]);
 
   useEffect(() => () => {
     const gl = glRef.current;
