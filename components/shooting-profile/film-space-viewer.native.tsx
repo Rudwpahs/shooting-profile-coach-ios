@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 
+import { FilmSliceGLRenderer } from "@/components/shooting-profile/film-slice-gl-renderer.native";
+import { resolveFilmSpaceGLTextureSources } from "@/lib/film-space/gl-texture-source";
 import { tokens } from "@/constants/tokens";
 import {
   disposeFilmSpaceFrames,
@@ -50,6 +52,7 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
   const [yaw, setYaw] = useState(-18);
   const [pitch, setPitch] = useState(7);
   const [zoom, setZoom] = useState(1);
+  const [glFailed, setGlFailed] = useState(false);
   const rotationStart = useRef({ yaw: -18, pitch: 7 });
   const readyCacheRef = useRef<Extract<LoadedState, { status: "ready" }> | null>(null);
   const sourceUnavailableNotifiedRef = useRef(false);
@@ -59,6 +62,7 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
     let active = true;
     setViewerState({ status: "loading" });
     setSelectedIndex(0);
+    setGlFailed(false);
     readyCacheRef.current = null;
     sourceUnavailableNotifiedRef.current = false;
 
@@ -122,6 +126,15 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
     },
   }), [pitch, yaw]);
 
+  const glTextureSources = useMemo(
+    () => (
+      viewerState.status === "ready" && !glFailed
+        ? resolveFilmSpaceGLTextureSources(viewerState.frames)
+        : null
+    ),
+    [glFailed, viewerState],
+  );
+
   if (viewerState.status === "loading") {
     return (
       <View style={styles.stateBox}>
@@ -173,7 +186,15 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
         style={styles.stage}
         {...rotationResponder.panHandlers}
       >
-        {sliceStack.map((slice) => {
+        {glTextureSources ? (
+          <FilmSliceGLRenderer
+            camera={renderCamera}
+            onRendererError={() => setGlFailed(true)}
+            slices={sliceStack}
+            sources={glTextureSources}
+            style={styles.glStage}
+          />
+        ) : sliceStack.map((slice) => {
           const frame = frames[slice.index];
           return (
             <Image
@@ -263,6 +284,7 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
 const styles = StyleSheet.create({
   container: { backgroundColor: tokens.background },
   stage: { backgroundColor: tokens.stage, height: STAGE_HEIGHT, overflow: "hidden", position: "relative" },
+  glStage: { height: "100%", width: "100%" },
   slice: { height: 230, left: 45, position: "absolute", top: 44, width: 240 },
   zoomControls: { position: "absolute", right: 6, top: 6 },
   iconButton: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderColor: tokens.border, borderRadius: 10, borderWidth: 1, height: 44, justifyContent: "center", marginBottom: 4, minHeight: 44, minWidth: 44, width: 44 },
