@@ -17,8 +17,10 @@ The load-bearing historical claims are 2/2 confirmed from primary sources. The a
 
 ## Implementation
 
-- One `TopBar` titled “참조 동작”; remove the oversized audit headline, repeated English eyebrows, approval count and nested bordered cards.
-- The stage is first. One compact controls row retains play/pause and three labeled camera views. A thin phase track retains individually labeled 48-point phase targets and a current-phase caption.
+- Following the owner's Reels sketch, fill the tab scene with one motion stage, a small “참조 동작” heading and a bottom caption. Remove the oversized audit headline, repeated English eyebrows, approval count and nested bordered cards.
+- Place heart, personal note and motion-information icons vertically on the right, each with a 48-point target. Likes and notes persist only on this device; do not imply public counts or community comments. Storage failures remain visible and an explicit read retry preserves previously stored values.
+- Move camera presets and reset behind the top-right camera icon. A thin bottom phase track retains individually labeled 48-point phase targets and a current-phase caption. Stage tap toggles playback.
+- Notes and full motion information open in dismissible bottom sheets. Suspend playback while a sheet is open, the tab loses focus, or the application is backgrounded. Resume the user's playback intent on return.
 - Default resting pose is the release phase; playback starts on explicit intent. The whole stage is also a playback target; the existing pan responder claims drags/pinches.
 - Compute a stable display viewport over all sequence frames and preset views so default framing includes the complete body throughout playback. Do not move source joints or alter interpolation/projection functions.
 - Short attribution remains visible. “동작 정보” reveals the existing attribution, optical measurement boundary, interpolation explanation, original C3D frame numbers and gesture help.
@@ -29,4 +31,4 @@ The load-bearing historical claims are 2/2 confirmed from primary sources. The a
 
 Render tests cover disclosure open/close, provenance and source frames, phase selection, play/pause, full-stage playback, assessment routing, reduced-motion release still, uncut default framing, and noncompact evidence preservation. Verification includes typecheck, lint, hermetic unit tests, Expo web export and actual browser inspection at desktop/mobile widths. Native pinch/drag and screen-reader behavior still need a physical-device check.
 
-First full suite run: 875 passed, 2 failed, 1 skipped. One failure was an LF-only existing lockfile regex against Windows CRLF; the other was a 5-second dynamic-import timeout under concurrent compilation. Normalizing working-copy lockfile line endings (no logical diff) and limiting worker concurrency gave 877 passed, 1 skipped before final review refinements. Final results are recorded in the PR.
+Final Reels revision: 10 focused render tests passed; full hermetic suite 883 passed, 1 skipped; typecheck, zero-warning lint and Expo web export passed. An independent review found a failed-read recovery gap, corrected and verified by restoring existing liked/note values after retry. Browser inspection covered narrow and default viewports and sheet interactions. Normalize the working-copy lockfile to LF for the existing LF-only regex test; restore it before committing. Final CI results are recorded in the PR.

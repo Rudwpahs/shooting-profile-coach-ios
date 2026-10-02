@@ -18,6 +18,9 @@ function touchDistance(touches: readonly { pageX: number; pageY: number }[]) {
 type PoseMotionViewerProps = {
   /** Content-first reference presentation; existing analysis callers retain evidence UI. */
   compact?: boolean;
+  /** Full-height compact stage with overlaid controls. */
+  reel?: boolean;
+  suspended?: boolean;
   motion: PoseMotion;
   title?: string;
   boundary?: string;
@@ -29,12 +32,13 @@ type PoseMotionViewerProps = {
   onPhaseSelect?: (index: number) => void;
 };
 
-export function PoseMotionViewer({ compact = false, motion, title, boundary, hand = "right", initialCameraView = "oblique", activeFrameIndex, sourcePhaseFrames, sourcePhaseTimestampsMs, onPhaseSelect }: PoseMotionViewerProps) {
+export function PoseMotionViewer({ compact = false, reel = false, suspended = false, motion, title, boundary, hand = "right", initialCameraView = "oblique", activeFrameIndex, sourcePhaseFrames, sourcePhaseTimestampsMs, onPhaseSelect }: PoseMotionViewerProps) {
   const reduceMotion = useReduceMotion();
   const releaseIndex = Math.max(0, motion.frames.findIndex((frame) => frame.label === "릴리스"));
   const restingProgress = releaseIndex / Math.max(1, motion.frames.length - 1);
   const [displayProgress, setDisplayProgress] = useState(compact ? restingProgress : 0);
   const [playing, setPlaying] = useState(!compact);
+  const [cameraMenu, setCameraMenu] = useState(false);
   const presets = useMemo(() => getPoseCameraPresets(motion, hand), [motion, hand]);
   const preferredPreset = presets.find((preset) => preset.id === initialCameraView) ?? presets[1];
   const [camera, setCamera] = useState<Camera>(() => ({ yaw: preferredPreset.yaw, zoom: 1 }));
@@ -103,7 +107,7 @@ export function PoseMotionViewer({ compact = false, motion, title, boundary, han
     setPlaying(false);
   }, [activeFrameIndex, lastPhaseIndex]);
   useEffect(() => {
-    if (!playing) return;
+    if (!playing || suspended) return;
     let startTime: number | null = null;
     const duration = Math.max(1850, (sourcePhaseTimestampsMs?.at(-1) ?? 0) - (sourcePhaseTimestampsMs?.[0] ?? 0));
     const tick = (time: number) => {
@@ -114,7 +118,7 @@ export function PoseMotionViewer({ compact = false, motion, title, boundary, han
     };
     playbackFrame.current = requestAnimationFrame(tick);
     return () => { if (playbackFrame.current !== null) cancelAnimationFrame(playbackFrame.current); };
-  }, [motion.id, playing, sourcePhaseTimestampsMs]);
+  }, [motion.id, playing, sourcePhaseTimestampsMs, suspended]);
 
   const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => false,
@@ -145,7 +149,7 @@ export function PoseMotionViewer({ compact = false, motion, title, boundary, han
   const displayTitle = title ?? "MOTION";
   const boundaryCopy = boundary ?? "source phase를 매끄럽게 보간한 display motion입니다.";
 
-  const skeleton = <Svg width="100%" height={compact ? 360 : 300} viewBox={compactViewBox}>
+  const skeleton = <Svg width="100%" height={reel ? "100%" : compact ? 360 : 300} viewBox={compactViewBox}>
         <Line x1="22" y1="272" x2="308" y2="272" stroke={tokens.skeletonDerived} strokeWidth="1" strokeDasharray="4 5" />
         {BONE_LINKS.map(([from, to]) => <Line key={`${from}-${to}`} x1={points[from].x} y1={points[from].y} x2={points[to].x} y2={points[to].y} stroke={from.includes(activeSide) || to.includes(activeSide) ? tokens.skeletonSecondary : tokens.skeletonPrimary} strokeWidth={from.includes(activeSide) || to.includes(activeSide) ? 7 : 5} strokeLinecap="round" />)}
         {(Object.keys(points) as JointName[]).filter((joint) => joint !== "head").map((joint) => <Circle key={joint} cx={points[joint].x} cy={points[joint].y} r={activeArmJoints.includes(joint) ? 7 : 5.5} fill={activeArmJoints.includes(joint) ? tokens.skeletonSecondary : tokens.skeletonPrimary} stroke={activeArmJoints.includes(joint) ? tokens.skeletonSecondary : tokens.skeletonPrimary} strokeWidth={activeArmJoints.includes(joint) ? 1.6 : 0} />)}
@@ -153,20 +157,22 @@ export function PoseMotionViewer({ compact = false, motion, title, boundary, han
         <Circle cx={points.head.x + 2.25} cy={points.head.y - 1} r={1.5} fill={tokens.stage} />
       </Svg>;
 
-  if (compact) return <View style={minimal.card}>
-    <View style={minimal.stage} {...panResponder.panHandlers}>
-      <Pressable accessibilityRole="button" accessibilityLabel={playing ? "동작 화면 일시정지" : "동작 화면 재생"} accessibilityHint="좌우로 드래그해 시점을 회전하거나 두 손가락으로 확대할 수 있습니다." onPress={() => setPlaying((value) => !value)} style={({ pressed }) => [minimal.stageTap, pressed && styles.pressed]}>{skeleton}</Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="시점 초기화" onPress={resetView} style={({ pressed }) => [minimal.reset, minimal.iconButton, pressed && styles.pressed]}><MaterialCommunityIcons name="restore" size={20} color={tokens.mutedForeground} /></Pressable>
+  if (compact) return <View style={[minimal.card, reel && reelStyles.card]}>
+    <View style={[minimal.stage, reel && reelStyles.stage]} {...panResponder.panHandlers}>
+      <Pressable accessibilityRole="button" accessibilityLabel={playing && !suspended ? "동작 화면 일시정지" : "동작 화면 재생"} accessibilityHint="좌우로 드래그해 시점을 회전하거나 두 손가락으로 확대할 수 있습니다." onPress={() => setPlaying((value) => !value)} style={({ pressed }) => [minimal.stageTap, reel && reelStyles.stageTap, pressed && styles.pressed]}>{skeleton}</Pressable>
+      {!reel ? <Pressable accessibilityRole="button" accessibilityLabel="시점 초기화" onPress={resetView} style={({ pressed }) => [minimal.reset, minimal.iconButton, pressed && styles.pressed]}><MaterialCommunityIcons name="restore" size={20} color={tokens.mutedForeground} /></Pressable> : null}
     </View>
-    <View style={minimal.controls}>
-      <Pressable accessibilityRole="button" accessibilityLabel={playing ? "동작 일시정지" : "동작 재생"} onPress={() => setPlaying((value) => !value)} style={({ pressed }) => [minimal.iconButton, pressed && styles.pressed]}><MaterialCommunityIcons name={playing ? "pause" : "play"} size={24} color={tokens.foreground} /></Pressable>
+    {reel ? <Pressable accessibilityRole="button" accessibilityLabel="시점 선택" aria-expanded={cameraMenu} accessibilityState={{ expanded: cameraMenu }} onPress={() => setCameraMenu((value) => !value)} style={({ pressed }) => [reelStyles.camera, minimal.iconButton, pressed && styles.pressed]}><MaterialCommunityIcons name="orbit" size={24} color={tokens.stageForeground} /></Pressable> : null}
+    {!reel || cameraMenu ? <View style={[minimal.controls, reel && reelStyles.controls]}>
+      {!reel ? <Pressable accessibilityRole="button" accessibilityLabel={playing ? "동작 일시정지" : "동작 재생"} onPress={() => setPlaying((value) => !value)} style={({ pressed }) => [minimal.iconButton, pressed && styles.pressed]}><MaterialCommunityIcons name={playing ? "pause" : "play"} size={24} color={tokens.foreground} /></Pressable> : <Pressable accessibilityRole="button" accessibilityLabel="시점 초기화" onPress={resetView} style={({ pressed }) => [minimal.iconButton, pressed && styles.pressed]}><MaterialCommunityIcons name="restore" size={20} color={tokens.foreground} /></Pressable>}
       {presets.map((angle) => {
         const selected = Math.abs(normalizePoseYaw(camera.yaw - angle.yaw)) < 10;
         return <Pressable accessibilityRole="button" accessibilityLabel={`${angle.label} 시점`} aria-pressed={selected} accessibilityState={{ selected }} key={angle.id} onPress={() => scheduleCamera({ ...cameraRef.current, yaw: angle.yaw })} style={({ pressed }) => [minimal.viewButton, selected && minimal.viewActive, pressed && styles.pressed]}><Text style={[minimal.viewText, selected && minimal.viewTextActive]}>{angle.label}</Text></Pressable>;
       })}
-    </View>
-    <View style={minimal.timeline}>{motion.frames.map((item, index) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.label} 단계 보기`} aria-pressed={index === activePhaseIndex} accessibilityState={{ selected: index === activePhaseIndex }} key={item.label} onPress={() => seekPhase(index)} style={({ pressed }) => [minimal.marker, pressed && styles.pressed]}><View style={minimal.markerLine} /><View style={[styles.markerDot, index === activePhaseIndex && styles.markerDotActive]} /></Pressable>)}</View>
-    <Text style={minimal.phase}>{motion.frames[activePhaseIndex].label}</Text>
+    </View> : null}
+    <View style={[minimal.timeline, reel && reelStyles.timeline]}>{motion.frames.map((item, index) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.label} 단계 보기`} aria-pressed={index === activePhaseIndex} accessibilityState={{ selected: index === activePhaseIndex }} key={item.label} onPress={() => seekPhase(index)} style={({ pressed }) => [minimal.marker, pressed && styles.pressed]}><View style={minimal.markerLine} /><View style={[styles.markerDot, index === activePhaseIndex && styles.markerDotActive]} /></Pressable>)}</View>
+    <Text style={[minimal.phase, reel && reelStyles.phase]}>{motion.frames[activePhaseIndex].label}</Text>
+    {reel && !playing ? <View style={reelStyles.playHint}><MaterialCommunityIcons name="play" size={24} color={tokens.stageForeground} /></View> : null}
   </View>;
 
   return <View style={styles.card}>
@@ -207,5 +213,16 @@ const minimal = StyleSheet.create({
   marker: { alignItems: "center", flex: 1, minHeight: 48, justifyContent: "center" },
   markerLine: { backgroundColor: tokens.border, height: 1, left: 0, position: "absolute", right: 0, top: 24 },
   phase: { ...typography.caption, textAlign: "center", color: tokens.mutedForeground },
+});
+
+const reelStyles = StyleSheet.create({
+  card: { flex: 1, backgroundColor: tokens.stage },
+  stage: { position: "absolute", top: 60, left: 0, right: 64, bottom: 136, minHeight: 0 },
+  stageTap: { height: "100%" },
+  camera: { position: "absolute", right: 12, top: 12 },
+  controls: { position: "absolute", top: 66, right: 12, left: 18, backgroundColor: tokens.surface, borderRadius: 16, paddingHorizontal: 4 },
+  timeline: { position: "absolute", bottom: 8, left: 0, right: 0, paddingHorizontal: 16 },
+  phase: { position: "absolute", left: 22, bottom: 54 },
+  playHint: { position: "absolute", left: 20, bottom: 126, pointerEvents: "none" },
 });
 
