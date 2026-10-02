@@ -12,12 +12,13 @@ import {
 } from "react-native";
 
 import { FilmSliceGLRenderer } from "@/components/shooting-profile/film-slice-gl-renderer.native";
-import { resolveFilmSpaceGLTextureSources } from "@/lib/film-space/gl-texture-source";
 import { tokens } from "@/constants/tokens";
+import { resolveFilmSpaceLocalFrameGLTextureSources } from "@/lib/film-space/gl-texture-source";
+import { createFilmSpaceLocalFrameCacheController } from "@/lib/film-space/local-frame-cache-lifecycle";
 import {
-  disposeFilmSpaceFrames,
-  extractFilmSpaceFrames,
-} from "@/lib/film-space/frame-source.native";
+  disposeFilmSpaceLocalFrames,
+  extractFilmSpaceLocalFrames,
+} from "@/lib/film-space/local-frame-cache.native";
 import { resolveFilmSpaceSamplingPlan } from "@/lib/film-space/sampling";
 import {
   createFilmSpaceSliceStack,
@@ -34,7 +35,7 @@ type FilmSpaceViewerProps = Readonly<{
   onSourceUnavailable?: (clip: LocalFilmClipRefV1) => void | Promise<void>;
 }>;
 
-type LoadedState = Awaited<ReturnType<typeof extractFilmSpaceFrames>>;
+type LoadedState = Awaited<ReturnType<typeof extractFilmSpaceLocalFrames>>;
 type ViewerState = { status: "loading" } | LoadedState;
 
 function clampZoom(value: number): number {
@@ -54,23 +55,27 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
   const [zoom, setZoom] = useState(1);
   const [glFailed, setGlFailed] = useState(false);
   const rotationStart = useRef({ yaw: -18, pitch: 7 });
-  const readyCacheRef = useRef<Extract<LoadedState, { status: "ready" }> | null>(null);
   const sourceUnavailableNotifiedRef = useRef(false);
+  const cacheControllerRef = useRef<ReturnType<typeof createFilmSpaceLocalFrameCacheController> | null>(null);
+  if (!cacheControllerRef.current) {
+    cacheControllerRef.current = createFilmSpaceLocalFrameCacheController(
+      extractFilmSpaceLocalFrames,
+      disposeFilmSpaceLocalFrames,
+    );
+  }
+  const cacheController = cacheControllerRef.current;
+
+  useEffect(() => () => {
+    void cacheController.dispose();
+  }, [cacheController]);
 
   useEffect(() => {
-    const controller = new AbortController();
     let active = true;
     setViewerState({ status: "loading" });
     setSelectedIndex(0);
     setGlFailed(false);
-    readyCacheRef.current = null;
     sourceUnavailableNotifiedRef.current = false;
 
-    const releaseReadyCache = () => {
-      const cache = readyCacheRef.current;
-      readyCacheRef.current = null;
-      if (cache) void disposeFilmSpaceFrames(cache);
-    };
     const notifySourceUnavailable = () => {
       if (sourceUnavailableNotifiedRef.current) return;
       sourceUnavailableNotifiedRef.current = true;
@@ -82,37 +87,30 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
       notifySourceUnavailable();
       return () => {
         active = false;
-        controller.abort();
-        releaseReadyCache();
+        cacheController.suspend();
       };
     }
 
     const appStateSubscription = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active" || !active) return;
-      active = false;
-      controller.abort();
-      releaseReadyCache();
+      cacheController.suspend();
       setViewerState({ status: "cancelled" });
     });
 
-    void extractFilmSpaceFrames(clip, plan, controller.signal).then((result) => {
-      if (!active) {
-        if (result.status === "ready") void disposeFilmSpaceFrames(result);
-        return;
-      }
-      if (result.status === "ready") readyCacheRef.current = result;
+    void cacheController.load(clip, plan).then((result) => {
+      if (!active) return;
       if (result.status === "unavailable" && result.reason === "source_unavailable") {
         notifySourceUnavailable();
       }
       setViewerState(result);
     });
+
     return () => {
       appStateSubscription.remove();
       active = false;
-      controller.abort();
-      releaseReadyCache();
+      cacheController.suspend();
     };
-  }, [clip, onSourceUnavailable, plan]);
+  }, [cacheController, clip, onSourceUnavailable, plan]);
 
   const rotationResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -129,7 +127,7 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
   const glTextureSources = useMemo(
     () => (
       viewerState.status === "ready" && !glFailed
-        ? resolveFilmSpaceGLTextureSources(viewerState.frames)
+        ? resolveFilmSpaceLocalFrameGLTextureSources(viewerState.frames)
         : null
     ),
     [glFailed, viewerState],
@@ -153,7 +151,7 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
         </Text>
         <Text style={styles.stateCopy}>
           {unavailable
-            ? "영상이 삭제되었거나 로컬 캐시에서 사라졌습니다. Motion과 Phase는 계속 사용할 수 있습니다."
+            ? "영상이 삭제되었거나 로컬 프레임 캐시를 만들 수 없습니다. Motion과 Phase는 계속 사용할 수 있습니다."
             : "Film Space 준비가 취소되었거나 현재 플랫폼에서 지원되지 않습니다. Motion과 Phase는 계속 사용할 수 있습니다."}
         </Text>
       </View>
@@ -200,7 +198,7 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
             <Image
               key={`${frame.requestedTimestampMs}-${slice.index}`}
               contentFit="contain"
-              source={frame.imageRef}
+              source={{ uri: frame.localUri }}
               style={[
                 styles.slice,
                 {
