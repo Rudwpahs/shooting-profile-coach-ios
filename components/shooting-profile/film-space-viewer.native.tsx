@@ -126,6 +126,15 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
     },
   }), [pitch, yaw]);
 
+  const glTextureSources = useMemo(
+    () => (
+      viewerState.status === "ready" && !glFailed
+        ? resolveFilmSpaceGLTextureSources(viewerState.frames)
+        : null
+    ),
+    [glFailed, viewerState],
+  );
+
   if (viewerState.status === "loading") {
     return (
       <View style={styles.stateBox}>
@@ -163,10 +172,6 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
     frames.length,
     safeSelectedIndex,
     renderCamera,
-  );
-  const glTextureSources = useMemo(
-    () => glFailed ? null : resolveFilmSpaceGLTextureSources(frames),
-    [frames, glFailed],
   );
   const seekFromX = (locationX: number) => {
     const fraction = Math.max(0, Math.min(1, locationX / Math.max(1, scrubWidth)));
