@@ -153,6 +153,15 @@ describe("LiquidPressable semantics", () => {
     expect(animationCalls.filter((call) => call.kind === "spring")).toHaveLength(0);
   });
 
+  it("preserves a caller's disabled/deleting opacity instead of overwriting it at rest", async () => {
+    await render(
+      <LiquidPressable accessibilityLabel="삭제 중" disabled surfaceStyle={{ opacity: 0.45 }}>
+        <Text>삭제 중</Text>
+      </LiquidPressable>,
+    );
+    expect(surfaceMotion().opacity).toBeCloseTo(0.45, 6);
+  });
+
   it("forwards its ref to the pressable (hit-area) node, not the moving surface", async () => {
     const ref = createRef<View>();
     await render(
@@ -328,6 +337,34 @@ describe("LiquidPressable motion", () => {
     expect(surfaceMotion()).toEqual({ translateX: 0, translateY: 0, scaleX: 1, scaleY: 1, opacity: 1 });
     expect(animationCalls.filter((call) => call.kind === "spring")).toHaveLength(0);
     expect(animationCalls.every((call) => call.kind === "timing" && (call.config as { duration: number }).duration <= 160)).toBe(true);
+  });
+
+  it("stops full motion immediately when Reduce Motion turns on during a held press", async () => {
+    await render(
+      <LiquidPressable accessibilityLabel="분석" magnetic>
+        <Text>분석</Text>
+      </LiquidPressable>,
+    );
+    const [button] = byRole("button");
+    await layout(button, { left: 0, top: 0, width: 200, height: 60 });
+    await pressIn(button, 2, 2);
+    expect(surfaceMotion().scaleX).not.toBeCloseTo(REDUCED.pressedScale, 6);
+
+    resetAnimationCalls();
+    await render(
+      <LiquidPressable accessibilityLabel="분석" magnetic forceReducedMotion>
+        <Text>분석</Text>
+      </LiquidPressable>,
+    );
+
+    expect(surfaceMotion()).toEqual({
+      translateX: 0,
+      translateY: 0,
+      scaleX: REDUCED.pressedScale,
+      scaleY: REDUCED.pressedScale,
+      opacity: REDUCED.pressedOpacity,
+    });
+    expect(animationCalls.filter((call) => call.kind === "spring")).toHaveLength(0);
   });
 
   it("returns fully to rest on release even if the motion setting changed mid-press", async () => {
