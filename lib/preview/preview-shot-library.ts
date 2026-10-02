@@ -86,7 +86,7 @@ export const PREVIEW_SHOT_ARCHETYPES: readonly PreviewShotArchetypeV1[] = Object
     style: { releaseElevation: -0.3, armLiftStart: 0.46, setPointHold: 0.4, elbowFlare: 0.1 },
   }),
   archetype(4, "deep-dip-rhythm", "깊은 딥 리듬", {
-    style: { dipDepth: -0.68, jumpHeight: 0.6, dipKneeBend: 0.62 },
+    style: { dipDepth: -0.68, jumpHeight: 0.6, dipKneeBend: 0.62, forwardLean: 0.08, offHandTuck: 0.3, releaseElevation: 0.08 },
     durationScale: 1.1,
   }),
   archetype(5, "shallow-dip-rhythm", "얕은 딥 리듬", {
@@ -96,7 +96,7 @@ export const PREVIEW_SHOT_ARCHETYPES: readonly PreviewShotArchetypeV1[] = Object
     style: { setPointHold: 0.5, armLiftStart: 0.24, releaseElevation: -0.1, elbowFlare: 0.16, dipKneeBend: 0.9 },
   }),
   archetype(7, "two-stage-set", "투스테이지 셋 · 멈춤 후 릴리스", {
-    style: { setPointHold: 0.1, armLiftStart: 0.6, releaseElevation: -0.12 },
+    style: { setPointHold: 0.1, armLiftStart: 0.6, releaseElevation: -0.2, elbowFlare: 0.12, releaseHeight: 1.08 },
     anchorScheduleShift: 0.06,
     durationScale: 1.15,
   }),
@@ -110,7 +110,7 @@ export const PREVIEW_SHOT_ARCHETYPES: readonly PreviewShotArchetypeV1[] = Object
     style: { stanceWidth: 1.55, dipDepth: -0.6, dipKneeBend: 0.85 },
   }),
   archetype(11, "narrow-stance", "좁은 스탠스", {
-    style: { stanceWidth: 0.55 },
+    style: { stanceWidth: 0.55, forwardLean: -0.05, releaseElevation: -0.12 },
   }),
   archetype(12, "strong-hip-drive", "강한 힙 드라이브", {
     mode: "high_accuracy_3_plus_3",
@@ -130,10 +130,10 @@ export const PREVIEW_SHOT_ARCHETYPES: readonly PreviewShotArchetypeV1[] = Object
     style: { armLiftStart: 0.36, setPointHold: 0.35, elbowFlare: 0.36, releaseElevation: 0.1, stanceWidth: 1.1 },
   }),
   archetype(16, "delayed-elbow-lift", "늦은 팔꿈치 리프트", {
-    style: { armLiftStart: 0.66, setPointHold: 0.1, elbowFlare: 0.14 },
+    style: { armLiftStart: 0.66, setPointHold: 0.1, elbowFlare: 0.14, releaseElevation: 0.14, sideLean: 0.08 },
   }),
   archetype(17, "pronounced-follow-through", "길게 뻗는 팔로우스루", {
-    style: { followThroughReach: 0.3, releaseHeight: 1.1 },
+    style: { followThroughReach: 0.3, releaseHeight: 1.1, releaseElevation: -0.08, elbowFlare: 0.16, stanceWidth: 1.12 },
   }),
   archetype(18, "short-follow-through", "짧은 팔로우스루", {
     style: { followThroughReach: -0.2, releaseHeight: 0.85, releaseElevation: 0.25, elbowFlare: 0.24, dipKneeBend: 1.15 },
@@ -142,7 +142,7 @@ export const PREVIEW_SHOT_ARCHETYPES: readonly PreviewShotArchetypeV1[] = Object
     style: { sideDrift: 0.16, sideLean: 0.16, stanceWidth: 1.15 },
   }),
   archetype(20, "slow-rhythm", "느린 리듬 · 늦게 올리는 셋", {
-    style: { setPointHold: 0.08, armLiftStart: 0.64, dipKneeBend: 0.85, forwardLean: -0.06, stanceWidth: 0.95, sideLean: -0.08 },
+    style: { setPointHold: 0.08, armLiftStart: 0.64, dipKneeBend: 0.85, forwardLean: -0.06, stanceWidth: 0.95, sideLean: -0.08, offHandTuck: 0.25 },
     anchorScheduleShift: 0.1,
     durationScale: 1.3,
   }),
