@@ -45,8 +45,8 @@ import {
 
 const FALLBACK_WIDTH = 375;
 const MAX_WIDTH = 680;
-/** Tiles fetch their full record lazily; this bounds the reads one profile view can cause. */
-const GLYPH_FETCH_LIMIT = 9;
+/** Tiles fetch their full record lazily, one at a time; this bounds the reads one profile view can cause. */
+const GLYPH_FETCH_LIMIT = 24;
 
 function focusStyle(focused: boolean, dark = false): ViewStyle {
   if (!focused) return {};

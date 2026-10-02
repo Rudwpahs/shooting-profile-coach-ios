@@ -20,6 +20,7 @@ const GATED_PREVIEW_SITES = [
   "app/_layout.tsx",
   "app/private-analysis/[id].tsx",
   "app/private-capture.tsx",
+  "lib/explore-source.ts",
   "lib/feature-flags.ts",
   "lib/firebase-auth.tsx",
   "lib/shooting-profile-source.ts",

@@ -9,6 +9,7 @@ on:
       - work/hoophub-liquid-preview-integration-v1
       - work/hoophub-liquid-dock-v1
       - work/hoophub-unified-web-film-preview-v1
+      - work/hoophub-preview-shot-library-v1
   workflow_dispatch:
 
 permissions:
@@ -62,7 +63,7 @@ jobs:
         shell: bash
         run: |
           pnpm exec expo export --platform web --output-dir web-production-check
-          if grep -R -E "demo-fixture-|demo_fixture_recapture|syntheticLandmarkSession|preview-shot-|preview-user|PreviewRuntimeRoot|PreviewCaptureSession|Stephen Curry|Paul George|IMAGE-LIFTED 3D ANALYSIS|PLAYER_MONOCULAR_3D_ANALYSES" web-production-check; then
+          if grep -R -E "demo-fixture-|demo_fixture_recapture|syntheticLandmarkSession|preview-shot-|preview-user|PreviewRuntimeRoot|PreviewCaptureSession|preview-shot-library|canonical-balanced|compact-quick-release|previewExploreMotions|SyntheticShotStyle|Stephen Curry|Paul George|IMAGE-LIFTED 3D ANALYSIS|PLAYER_MONOCULAR_3D_ANALYSES" web-production-check; then
             echo "Demo fixture, preview runtime or named-player research content leaked into an ordinary production export" >&2
             exit 1
           fi
