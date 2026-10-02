@@ -164,9 +164,10 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
     safeSelectedIndex,
     renderCamera,
   );
-  const glTextureSources = glFailed
-    ? null
-    : resolveFilmSpaceGLTextureSources(frames);
+  const glTextureSources = useMemo(
+    () => glFailed ? null : resolveFilmSpaceGLTextureSources(frames),
+    [frames, glFailed],
+  );
   const seekFromX = (locationX: number) => {
     const fraction = Math.max(0, Math.min(1, locationX / Math.max(1, scrubWidth)));
     setSelectedIndex(Math.round(fraction * Math.max(0, frames.length - 1)));
