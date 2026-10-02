@@ -18,17 +18,19 @@ const viewerSource = readFileSync(
 );
 
 describe("shot inspection coordinator", () => {
-  it("defaults to Motion and keeps Phase available when local film is missing", () => {
+  it("defaults to Motion and keeps Phase and an honest Film tab when local film is missing", () => {
     const model = resolveShotInspectionModes({ experimentalEnabled: true, hasLocalFilm: false });
     expect(model.defaultMode).toBe("motion");
-    expect(model.enabledModes).toEqual(["motion", "phase"]);
+    expect(model.enabledModes).toEqual(["motion", "phase", "film"]);
+    expect(model.filmSourceAvailable).toBe(false);
   });
 
-  it("adds Film only when the experimental gate is on and a local clip exists", () => {
+  it("lists Film only when the experimental gate is on, and marks the source available only with a local clip", () => {
     expect(resolveShotInspectionModes({ experimentalEnabled: false, hasLocalFilm: true }).enabledModes)
       .toEqual(["motion"]);
-    expect(resolveShotInspectionModes({ experimentalEnabled: true, hasLocalFilm: true }).enabledModes)
-      .toEqual(["motion", "phase", "film"]);
+    const withClip = resolveShotInspectionModes({ experimentalEnabled: true, hasLocalFilm: true });
+    expect(withClip.enabledModes).toEqual(["motion", "phase", "film"]);
+    expect(withClip.filmSourceAvailable).toBe(true);
   });
 
   it("routes private analysis through ShotInspectionViewer instead of mounting SequenceViewer directly", () => {

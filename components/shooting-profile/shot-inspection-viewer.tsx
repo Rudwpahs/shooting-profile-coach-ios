@@ -167,6 +167,14 @@ export function ShotInspectionViewer({
           shootingHand={shootingHand}
         />
       ) : null}
+      {mode === "film" && !localClip ? (
+        <View style={styles.filmMissing}>
+          <Text style={styles.filmMissingTitle}>연결된 로컬 원본 영상이 없습니다</Text>
+          <Text style={styles.filmMissingCopy}>
+            Film Space는 이 기기에서 촬영하거나 선택한 로컬 영상만 사용합니다. 촬영에서 로컬 영상을 연결하면 여기에 시간 슬라이스가 열립니다. Motion과 Phase는 계속 사용할 수 있습니다.
+          </Text>
+        </View>
+      ) : null}
       {mode === "film" && localClip ? (
         <View>
           {clips.length > 1 ? (
@@ -216,5 +224,8 @@ const styles = StyleSheet.create({
   clipButtonSelected: { backgroundColor: tokens.elevatedSurface },
   clipText: { color: tokens.mutedForeground, fontSize: 12, fontWeight: "600" },
   clipTextSelected: { color: tokens.foreground },
+  filmMissing: { alignItems: "center", backgroundColor: tokens.stage, justifyContent: "center", minHeight: 220, padding: 24 },
+  filmMissingTitle: { color: tokens.stageForeground, fontSize: 16, fontWeight: "700", textAlign: "center" },
+  filmMissingCopy: { color: tokens.mutedForeground, fontSize: 13, lineHeight: 19, marginTop: 8, maxWidth: 420, textAlign: "center" },
   pressed: { opacity: 0.65 },
 });
