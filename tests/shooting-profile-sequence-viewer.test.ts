@@ -326,7 +326,9 @@ describe("viewer and private route static safety", () => {
     expect(routeSource).toContain("FORMPATH_FLAGS.representative4DViewer");
     expect(routeSource).toContain("useFirebaseAuth");
     expect(routeSource).toContain("getShootingProfileV2(user, profileId)");
-    expect(routeSource).toContain("@/lib/firebase-shooting-profiles");
+    // Reads go through the swappable source, whose production implementation is the Firestore module.
+    expect(routeSource).toContain("@/lib/shooting-profile-source");
+    expect(readFileSync("lib/shooting-profile-source.ts", "utf8")).toContain('from "@/lib/firebase-shooting-profiles"');
     expect(routeSource).toContain("ShootingProfileViewerRecordV2");
     expect(routeSource).toContain("buildShootingProfileViewerKey(user.uid, profileId)");
     expect(routeSource).toContain("canRenderShootingProfileViewerRecord");

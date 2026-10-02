@@ -2,36 +2,32 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-const route = readFileSync("app/dev/ui-demo.tsx", "utf8");
+const legacyDemo = readFileSync("app/dev/ui-demo.tsx", "utf8");
 const homeRoute = readFileSync("app/(tabs)/index.tsx", "utf8");
+const rootLayout = readFileSync("app/_layout.tsx", "utf8");
 const workflow = readFileSync(".github/workflows/ui-web-preview-pages.yml", "utf8");
 
-describe("interactive signed-in web preview shell", () => {
-  it("starts the Pages preview in synthetic signed-in Home instead of a static profile scene", () => {
-    expect(homeRoute).toContain('<Redirect href="/dev/ui-demo?screen=home&state=ready"');
-    expect(route).toContain('createUiDemoNavigation(params.screen, params.state)');
-    expect(route).toContain('const { screen, state } = navigation.current;');
+describe("interactive signed-in web preview", () => {
+  it("has exactly one shell: the real app, started signed in by the preview runtime", () => {
+    expect(homeRoute).not.toContain("/dev/ui-demo");
+    expect(rootLayout).toContain('require("@/lib/preview/preview-runtime-root")');
+    expect(legacyDemo).not.toMatch(/createUiDemoNavigation|pushUiDemoScene|backUiDemoScene|openScene\(/);
+    expect(legacyDemo).not.toMatch(/HomeFeed|ReelsFeed|CaptureSessionView|ShotInspectionViewer|MotionGrid|ProfileHero/);
   });
 
-  it("keeps primary preview navigation inside one state-driven demo shell", () => {
-    expect(route).toContain('pushUiDemoScene');
-    expect(route).toContain('backUiDemoScene');
-    expect(route).toContain('openScene("profile", "ready")');
-    expect(route).toContain('openScene("capture", "setup")');
-    expect(route).toContain('openScene("reels", "playing")');
-    expect(route).toContain('openScene("reference", "ready")');
-    expect(route).toContain('openScene("analysis", "ready")');
-    expect(route).not.toContain('const noop = () => undefined');
-  });
-
-  it("provides in-shell return paths for analysis, reels, capture, and reference", () => {
-    expect(route).toContain('accessibilityLabel="미리보기에서 뒤로 가기"');
-    expect(route).toContain('onClose={goBack}');
-    expect(route).toContain('if (screen === "reference")');
+  it("keeps the legacy demo addresses working by redirecting into the real routes", () => {
+    expect(legacyDemo).toContain("<Redirect");
+    expect(legacyDemo).toContain("useLocalSearchParams");
+    expect(legacyDemo).toContain('"/explore"');
+    expect(legacyDemo).toContain('"/profile"');
+    expect(legacyDemo).toContain('"/reels"');
+    expect(legacyDemo).toContain('"/private-capture"');
+    expect(legacyDemo).toContain('"/library"');
   });
 
   it("deploys the integration branch through the same base-path-safe Pages workflow", () => {
     expect(workflow).toContain("- work/hoophub-liquid-preview-integration-v1");
+    expect(workflow).toContain("- work/hoophub-unified-web-film-preview-v1");
     expect(workflow).toContain('HOOPHUB_WEB_PREVIEW_BASE_URL: "/shooting-profile-coach-ios"');
   });
 });

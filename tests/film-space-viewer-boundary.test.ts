@@ -46,11 +46,20 @@ describe("film-space viewer boundary", () => {
     expect(nativeSource).toMatch(/4D/);
   });
 
-  it("keeps web as an honest unsupported fallback without native extraction imports", () => {
-    expect(webSource).not.toMatch(/frame-source|expo-video|expo-gl|expo-image/);
-    expect(webSource).toMatch(/iPhone|기기/);
+  it("gives web a real browser-local Film Space without any native extraction or GL module, and an honest fallback", () => {
+    expect(webSource).not.toMatch(/expo-video|expo-gl|expo-image|local-frame-cache\.native|frame-source\.native/);
+    expect(webSource).toMatch(/extractFilmSpaceFrames/);
+    expect(webSource).toMatch(/disposeFilmSpaceFrames/);
+    expect(webSource).toMatch(/createFilmSpaceLocalFrameCacheController/);
+    expect(webSource).toMatch(/resolveFilmSpaceSamplingPlan/);
+    expect(webSource).toMatch(/createFilmSpaceSliceStack/);
+    expect(webSource).toMatch(/SOURCE TIME/);
+    expect(webSource).toMatch(/동기화되지 않/);
+    expect(webSource).toMatch(/측정된 3D/);
     expect(webSource).toMatch(/Motion/);
     expect(webSource).toMatch(/Phase/);
     expect(webSource).toMatch(/지원/);
+    expect(webSource).not.toMatch(/firebase|fetch\(|axios|trpc|upload/i);
+    expect(webSource).not.toMatch(/console\.(log|warn|error)/);
   });
 });

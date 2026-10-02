@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const dock = readFileSync("components/hoophub-tab-bar.tsx", "utf8");
 const preview = readFileSync("app/dev/ui-demo.tsx", "utf8");
+const tabsLayout = readFileSync("app/(tabs)/_layout.tsx", "utf8");
 const workflow = readFileSync(".github/workflows/ui-web-preview-pages.yml", "utf8");
 
 describe("Liquid Dock", () => {
@@ -28,12 +29,11 @@ describe("Liquid Dock", () => {
     expect(dock).not.toMatch(/withSpring|withTiming|useSharedValue/);
   });
 
-  it("shares the same Dock with the install-free preview and keeps tab navigation in-shell", () => {
-    expect(preview).toContain("HoopHubDock");
-    expect(preview).toContain('openScene("explore", "ready")');
-    expect(preview).toContain('screen === "explore"');
-    expect(preview).toContain('openScene("profile", "ready")');
-    expect(preview).toContain('openScene("capture", "setup")');
+  it("shares the same Dock with the install-free preview through the real tab layout, not a second shell", () => {
+    expect(tabsLayout).toContain("HoopHubTabBar");
+    expect(dock).toContain("HoopHubTabBar");
+    expect(preview).not.toContain("HoopHubDock");
+    expect(preview).not.toMatch(/openScene\(/);
   });
 
   it("deploys the Dock branch through the base-path-safe Pages workflow", () => {
