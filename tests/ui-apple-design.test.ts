@@ -108,8 +108,12 @@ describe("apple design foundations", () => {
   it("responds on touch-down everywhere a finger can land", () => {
     for (const file of REDESIGNED) {
       const source = read(file);
-      if (!source.includes("<Pressable")) continue;
-      expect(source, file).toMatch(/pressed && (?:!\w+ && )?styles\.(pressed|stagePressed)/);
+      if (source.includes("<Pressable")) {
+        expect(source, file).toMatch(/pressed && (?:!\w+ && )?styles\.(pressed|stagePressed)/);
+      }
+      if (source.includes("<LiquidPressable")) {
+        expect(source, file).toContain('from "@/components/ui/liquid"');
+      }
     }
   });
 });
