@@ -25,6 +25,18 @@ describe("Liquid + Glass screen rollout", () => {
     expect(grid).toContain("deleting && styles.deleting");
   });
 
+  it("keeps keyboard focus halos visible outside the glass TopBar clipping boundary", () => {
+    const top = read("components/ui/top-bar.tsx");
+    const profile = read("app/(tabs)/profile.tsx");
+    const analysis = read("app/private-analysis/[id].tsx");
+    const capture = read("components/shooting-profile/capture-session.tsx");
+
+    expect(profile).toContain("outlineOffset: 2");
+    expect(analysis).toContain("getRepresentativeFocusStyle");
+    expect(capture).toContain("outlineOffset: 2");
+    expect(top).toContain('overflow: "visible"');
+  });
+
   it("glassifies shared TopBar and Dock chrome while their controls keep Liquid semantics", () => {
     const top = read("components/ui/top-bar.tsx");
     const dock = read("components/hoophub-tab-bar.tsx");
