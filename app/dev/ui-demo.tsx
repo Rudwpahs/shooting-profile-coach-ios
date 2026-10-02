@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Redirect, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AnalysisDetails, AnalysisEvidence, AnalysisSummaryLine } from "@/components/analysis/analysis-layers";
@@ -16,6 +16,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { CaptureSessionView, type CaptureController } from "@/components/shooting-profile/capture-session";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
 import { ShotInspectionViewer } from "@/components/shooting-profile/shot-inspection-viewer";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
@@ -104,14 +105,17 @@ export default function UiDemoRoute() {
   };
   const goBack = () => setNavigation((current) => backUiDemoScene(current));
   const previewBack = (
-    <Pressable
+    <LiquidPressable
       accessibilityLabel="미리보기에서 뒤로 가기"
       accessibilityRole="button"
+      magnetic
       onPress={goBack}
-      style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+      rippleColor={tokens.foreground}
+      style={styles.iconButton}
+      surfaceStyle={styles.iconButtonSurface}
     >
       <MaterialCommunityIcons color={tokens.foreground} name="chevron-left" size={28} />
-    </Pressable>
+    </LiquidPressable>
   );
   const previewDock = (selectedRoute: HoopHubDockTabName) => (
     <HoopHubDock
@@ -168,14 +172,17 @@ export default function UiDemoRoute() {
               sourcePhaseFrames={reference.sourcePhaseFrames}
               title={reference.shortLabel}
             />
-            <Pressable
+            <LiquidPressable
               accessibilityLabel="참조 모션 열기"
               accessibilityRole="button"
+              magnetic
               onPress={() => openScene("reference", "ready")}
-              style={({ pressed }) => [styles.referenceButton, pressed && styles.pressed]}
+              rippleColor={tokens.foreground}
+              style={styles.referenceButtonHit}
+              surfaceStyle={styles.referenceButton}
             >
               <Text style={styles.referenceButtonText}>참조 모션 열기</Text>
-            </Pressable>
+            </LiquidPressable>
           </ScrollView>
         </ScreenContainer>
         {previewDock("explore")}
@@ -315,11 +322,12 @@ const styles = StyleSheet.create({
   safeArea: { backgroundColor: tokens.background, flex: 1 },
   analysisPage: { alignSelf: "center", maxWidth: 680, paddingBottom: 40, width: "100%" },
   reels: { backgroundColor: tokens.stage, flex: 1 },
-  iconButton: { alignItems: "center", height: 44, justifyContent: "center", minHeight: 44, minWidth: 44, width: 44 },
-  pressed: { opacity: 0.72 },
+  iconButton: { height: 44, minHeight: 44, minWidth: 44, width: 44 },
+  iconButtonSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
   referencePage: { alignSelf: "center", paddingBottom: 40, paddingHorizontal: 14, paddingTop: 16 },
   referenceTitle: { ...typography.title, color: tokens.foreground },
   referenceCopy: { ...typography.callout, color: tokens.mutedForeground, marginBottom: 16, marginTop: 6 },
-  referenceButton: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 14, justifyContent: "center", marginTop: 16, minHeight: 48, paddingHorizontal: 16 },
+  referenceButtonHit: { marginTop: 16, minHeight: 48 },
+  referenceButton: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 14, justifyContent: "center", minHeight: 48, paddingHorizontal: 16 },
   referenceButtonText: { ...typography.headline, color: tokens.foreground },
 });
