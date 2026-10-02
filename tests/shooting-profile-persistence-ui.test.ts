@@ -3,6 +3,17 @@ import { describe, expect, it } from "vitest";
 
 const read = (path: string) => readFileSync(path, "utf8");
 
+function interactiveBlocks(source: string) {
+  return [...source.matchAll(/<(Pressable|LiquidPressable)\b[\s\S]*?<\/\1>/g)].map((match) => match[0]);
+}
+
+function firstInteractiveIndex(source: string) {
+  const indexes = ["<Pressable", "<LiquidPressable"]
+    .map((token) => source.indexOf(token))
+    .filter((index) => index >= 0);
+  return indexes.length > 0 ? Math.min(...indexes) : -1;
+}
+
 describe("private V2 capture persistence wiring", () => {
   it("retains the exact normalized attempts by session generation and saves only the strict envelope", () => {
     const hook = read("hooks/use-shooting-profile-capture.ts");
@@ -74,7 +85,8 @@ describe("private V2 capture persistence wiring", () => {
     expect(quality).toContain("busy: saving");
     expect(quality.indexOf("{saving")).toBeLessThan(quality.indexOf(": canSave"));
     expect(quality).toContain("위상 결합 4D 추정 · 실측 3D 아님");
-    expect(quality.indexOf("삭제할 때까지 비공개로 보관됩니다")).toBeLessThan(quality.indexOf("<Pressable"));
+    expect(firstInteractiveIndex(quality)).toBeGreaterThan(-1);
+    expect(quality.indexOf("삭제할 때까지 비공개로 보관됩니다")).toBeLessThan(firstInteractiveIndex(quality));
     expect(session).toContain("원본 영상은 업로드하지 않았고, 파생된 대표 슛폼 데이터만 비공개로 저장했습니다");
   });
 
@@ -95,15 +107,15 @@ describe("private V2 capture persistence wiring", () => {
 describe("V1-independent V2 profile UI", () => {
   it("keeps every changed profile action labelled, stateful, focusable, and at least 44 points", () => {
     for (const source of [read("app/(tabs)/profile.tsx"), read("components/profile/motion-grid.tsx")]) {
-      const pressables = [...source.matchAll(/<Pressable\b[\s\S]*?<\/Pressable>/g)].map((match) => match[0]);
-      expect(pressables.length).toBeGreaterThan(0);
-      for (const pressable of pressables) {
-        expect(pressable).toContain("accessibilityLabel=");
-        expect(pressable).toContain('accessibilityRole="button"');
-        expect(pressable).toContain("accessibilityState=");
-        expect(pressable).toContain("disabled=");
-        expect(pressable).toContain("focusable");
-        expect(pressable).toContain("onFocus=");
+      const controls = interactiveBlocks(source);
+      expect(controls.length).toBeGreaterThan(0);
+      for (const control of controls) {
+        expect(control).toContain("accessibilityLabel=");
+        expect(control).toContain('accessibilityRole="button"');
+        expect(control).toContain("accessibilityState=");
+        expect(control).toContain("disabled=");
+        expect(control).toContain("focusable");
+        expect(control).toContain("onFocus=");
       }
       expect(source).toContain("outlineStyle");
       expect(source).toMatch(/minHeight: (?:44|4[5-9]|[5-9]\d|\d{3,})/);
