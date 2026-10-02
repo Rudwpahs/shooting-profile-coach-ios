@@ -97,11 +97,20 @@ describe("liquid interaction foundation: module boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("adds no rendering, shader or physics engine to the app", () => {
+  it("keeps rendering, shader and physics engines out of Liquid; Expo GL belongs only to Film Space", () => {
     const pkg = JSON.parse(read("package.json")) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
     const installed = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
     const forbidden = /^(@shopify\/react-native-skia|three|@react-three\/.*|expo-gl|expo-three|gl-react.*|react-native-webgl|pixi\.js|ogl|regl|glslify|matter-js|cannon(-es)?|@dimforge\/.*|planck(-js)?|box2d.*|p2|react-native-physics.*)$/;
-    expect(installed.filter((name) => forbidden.test(name))).toEqual([]);
+    const installedEngines = installed.filter((name) => forbidden.test(name));
+
+    expect(installedEngines.filter((name) => name !== "expo-gl")).toEqual([]);
+    expect(installedEngines).toContain("expo-gl");
+
+    const filmRenderer = read("components/shooting-profile/film-slice-gl-renderer.native.tsx");
+    expect(runtimeImports(filmRenderer)).toContain("expo-gl");
+    for (const file of liquidFiles) {
+      expect(runtimeImports(read(file))).not.toContain("expo-gl");
+    }
   });
 });
 
