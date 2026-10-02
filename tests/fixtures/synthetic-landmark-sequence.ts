@@ -2,6 +2,63 @@ import type { Vector3 } from "@/lib/pose-motion";
 import type { KinematicBoneIdV1 } from "@/lib/shooting-profile/kinematics";
 import type { CaptureViewV2, LandmarkSequenceV2, ShootingHandV2, SourceLandmarkV2 } from "@/lib/shooting-profile/types";
 
+/**
+ * Shape of one synthetic shot. Every field has a default that reproduces the
+ * canonical fixture exactly; the preview library varies them to produce
+ * visibly different (still synthetic, still template-length) shooting forms.
+ * Angles are in radians, lengths in template shoulder breadths.
+ */
+export type SyntheticShotStyleV1 = Readonly<{
+  /** Pelvis height at the deepest dip (negative = down). */
+  dipDepth: number;
+  /** Pelvis height after the legs extend. */
+  jumpHeight: number;
+  /** Shot phase at which the shooting arm starts lifting toward the set point. */
+  armLiftStart: number;
+  /** Arm progress reached at the set point (phase 0.7) before the release drive; higher = earlier, higher set. */
+  setPointHold: number;
+  /** Multiplier on the vertical reach of the arms at release (1 = canonical). */
+  releaseHeight: number;
+  /** Rotation of the shooting arm's release directions toward +z (radians): positive releases lower and further forward. */
+  releaseElevation: number;
+  /** Sideways component of the shooting upper arm at release (elbow flare). */
+  elbowFlare: number;
+  /** Forward (+z) component of the forearm at follow-through. */
+  followThroughReach: number;
+  /** Multiplier on the sideways spread of both thighs (stance width). */
+  stanceWidth: number;
+  /** Multiplier on the vertical component of the flexed legs at the dip (<1 = deeper knee bend). */
+  dipKneeBend: number;
+  /** Torso tilt toward +z (forward lean), radians. */
+  forwardLean: number;
+  /** Torso tilt toward +x (shooting-side lean for a right-hander), radians. */
+  sideLean: number;
+  /** Pelvis drift along +x over the shot (shooting-side drift when positive). */
+  sideDrift: number;
+  /** Multiplier on how vertical the thighs become when the legs extend (hip drive). */
+  hipDrive: number;
+  /** Lowers the off-hand's reach at release (0 = canonical mirror of the shooting arm). */
+  offHandTuck: number;
+}>;
+
+export const DEFAULT_SYNTHETIC_SHOT_STYLE: SyntheticShotStyleV1 = Object.freeze({
+  dipDepth: -0.55,
+  jumpHeight: 0.55,
+  armLiftStart: 0.55,
+  setPointHold: 0.18,
+  releaseHeight: 1,
+  releaseElevation: 0,
+  elbowFlare: 0.20,
+  followThroughReach: 0.12,
+  stanceWidth: 1,
+  dipKneeBend: 1,
+  forwardLean: 0,
+  sideLean: 0,
+  sideDrift: 0.03,
+  hipDrive: 1,
+  offHandTuck: 0,
+});
+
 type SyntheticLandmarkSequenceOptions = {
   view: "front" | "shooting_side";
   shootingHand?: "left" | "right";
@@ -10,12 +67,16 @@ type SyntheticLandmarkSequenceOptions = {
   durationScale?: number;
   anchorScheduleShift?: number;
   noiseAmplitude?: number;
+  style?: Partial<SyntheticShotStyleV1>;
 };
 
 type SyntheticLandmarkSessionOptions = {
   mode: "basic_1_plus_1" | "high_accuracy_3_plus_3";
   shootingHand?: "left" | "right";
   sideAnchorScheduleShift?: number;
+  anchorScheduleShift?: number;
+  durationScale?: number;
+  style?: Partial<SyntheticShotStyleV1>;
 };
 
 const DISPLAY_WIDTH = 1080;
@@ -72,18 +133,21 @@ function intervalProgress(phase: number, start: number, end: number): number {
   return Math.max(0, Math.min(1, (phase - start) / (end - start)));
 }
 
-function rootHeightAtPhase(phase: number): number {
+function rootHeightAtPhase(phase: number, style: SyntheticShotStyleV1): number {
+  const dip = style.dipDepth;
+  const risen = dip + 0.03;
   if (phase <= 0.2) return 0;
-  if (phase <= 0.25) return interpolate(0, -0.55, intervalProgress(phase, 0.2, 0.25));
-  if (phase <= 0.5) return interpolate(-0.55, -0.52, intervalProgress(phase, 0.25, 0.5));
-  if (phase <= 0.55) return interpolate(-0.52, 0.55, intervalProgress(phase, 0.5, 0.55));
-  return 0.55;
+  if (phase <= 0.25) return interpolate(0, dip, intervalProgress(phase, 0.2, 0.25));
+  if (phase <= 0.5) return interpolate(dip, risen, intervalProgress(phase, 0.25, 0.5));
+  if (phase <= 0.55) return interpolate(risen, style.jumpHeight, intervalProgress(phase, 0.5, 0.55));
+  return style.jumpHeight;
 }
 
-function releaseArmProgress(phase: number): number {
-  if (phase <= 0.55) return 0;
-  if (phase <= 0.7) return 0.18 * intervalProgress(phase, 0.55, 0.7);
-  return interpolate(0.18, 1, intervalProgress(phase, 0.7, 0.75));
+function releaseArmProgress(phase: number, style: SyntheticShotStyleV1): number {
+  const start = style.armLiftStart;
+  if (phase <= start) return 0;
+  if (phase <= 0.7) return style.setPointHold * intervalProgress(phase, start, 0.7);
+  return interpolate(style.setPointHold, 1, intervalProgress(phase, 0.7, 0.75));
 }
 
 function legExtensionProgress(phase: number): number {
@@ -93,9 +157,34 @@ function legExtensionProgress(phase: number): number {
   return intervalProgress(phase, 0.55, 0.6);
 }
 
+/** Rotates a direction about the x axis (y toward +z), keeping it unit length. */
+function tiltForward(direction: Vector3, radians: number): Vector3 {
+  if (radians === 0) return direction;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return unit({ x: direction.x, y: direction.y * cos - direction.z * sin, z: direction.y * sin + direction.z * cos });
+}
+
+/** Rotates a direction about the z axis (y toward +x), keeping it unit length. */
+function tiltSideways(direction: Vector3, radians: number): Vector3 {
+  if (radians === 0) return direction;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return unit({ x: direction.x * cos + direction.y * sin, y: direction.y * cos - direction.x * sin, z: direction.z });
+}
+
+/** Multiplies one component of a direction and re-normalises; a multiplier of 1 returns the input unchanged. */
+function stretch(direction: Vector3, axis: "x" | "y" | "z", multiplier: number): Vector3 {
+  if (multiplier === 1) return direction;
+  return unit({ ...direction, [axis]: direction[axis] * multiplier });
+}
+
 /** Builds a closed template-length skeleton in canonical +y-up coordinates. */
-function syntheticPose(phase: number): { root: Vector3; joints: Record<number, Vector3> } {
-  const root = { x: 0.03 * phase, y: rootHeightAtPhase(phase), z: -0.025 * phase };
+function syntheticPose(
+  phase: number,
+  style: SyntheticShotStyleV1 = DEFAULT_SYNTHETIC_SHOT_STYLE,
+): { root: Vector3; joints: Record<number, Vector3> } {
+  const root = { x: style.sideDrift * phase, y: rootHeightAtPhase(phase, style), z: -0.025 * phase };
   const hipLine = unit({ x: 0.57, y: 0.52, z: 0.64 });
   const leftHip = add(root, scale(hipLine, -TEMPLATE_LENGTHS.pelvis_to_left_hip));
   const rightHip = add(root, scale(hipLine, TEMPLATE_LENGTHS.pelvis_to_right_hip));
@@ -123,36 +212,37 @@ function syntheticPose(phase: number): { root: Vector3; joints: Record<number, V
     torsoDirectionHalfDifference.y,
     torsoDirectionHalfDifference.z,
   ) ** 2);
-  const leftTorsoDirection = add(
+  const leftTorsoDirection = tiltSideways(tiltForward(add(
     scale(commonTorsoDirection, commonTorsoMagnitude),
     scale(torsoDirectionHalfDifference, -1),
-  );
-  const rightTorsoDirection = add(
+  ), style.forwardLean), style.sideLean);
+  const rightTorsoDirection = tiltSideways(tiltForward(add(
     scale(commonTorsoDirection, commonTorsoMagnitude),
     torsoDirectionHalfDifference,
-  );
+  ), style.forwardLean), style.sideLean);
   const leftShoulder = add(leftHip, scale(leftTorsoDirection, TEMPLATE_LENGTHS.left_torso));
   const rightShoulder = add(rightHip, scale(rightTorsoDirection, TEMPLATE_LENGTHS.right_torso));
 
-  const armProgress = releaseArmProgress(phase);
+  const armProgress = releaseArmProgress(phase, style);
+  const offHandReach = style.releaseHeight * (1 - style.offHandTuck);
   const leftUpperArmDirection = interpolateVector(
     unit({ x: -0.50, y: 0.58, z: 0.64 }),
-    unit({ x: -0.20, y: 0.88, z: 0.43 }),
+    stretch(unit({ x: -0.20, y: 0.88, z: 0.43 }), "y", offHandReach),
     armProgress,
   );
   const rightUpperArmDirection = interpolateVector(
     unit({ x: 0.50, y: 0.58, z: 0.64 }),
-    unit({ x: 0.20, y: 0.88, z: 0.43 }),
+    tiltForward(stretch(unit({ x: style.elbowFlare, y: 0.88, z: 0.43 }), "y", style.releaseHeight), style.releaseElevation),
     armProgress,
   );
   const leftForearmDirection = interpolateVector(
     unit({ x: -0.50, y: 0.50, z: 0.50 }),
-    unit({ x: -0.12, y: 1.20, z: 0.12 }),
+    stretch(unit({ x: -0.12, y: 1.20, z: style.followThroughReach }), "y", offHandReach),
     armProgress,
   );
   const rightForearmDirection = interpolateVector(
     unit({ x: 0.50, y: 0.50, z: 0.50 }),
-    unit({ x: 0.12, y: 1.20, z: 0.12 }),
+    tiltForward(stretch(unit({ x: 0.12, y: 1.20, z: style.followThroughReach }), "y", style.releaseHeight), style.releaseElevation),
     armProgress,
   );
   const leftElbow = add(leftShoulder, scale(leftUpperArmDirection, TEMPLATE_LENGTHS.left_upper_arm));
@@ -162,22 +252,22 @@ function syntheticPose(phase: number): { root: Vector3; joints: Record<number, V
 
   const legProgress = legExtensionProgress(phase);
   const leftThighDirection = interpolateVector(
-    unit({ x: -0.55, y: -0.62, z: -0.56 }),
-    unit({ x: -0.20, y: -0.93, z: -0.31 }),
+    stretch(stretch(unit({ x: -0.55, y: -0.62, z: -0.56 }), "x", style.stanceWidth), "y", style.dipKneeBend),
+    stretch(stretch(unit({ x: -0.20, y: -0.93, z: -0.31 }), "x", style.stanceWidth), "y", style.hipDrive),
     legProgress,
   );
   const rightThighDirection = interpolateVector(
-    unit({ x: 0.55, y: -0.62, z: -0.56 }),
-    unit({ x: 0.20, y: -0.93, z: -0.31 }),
+    stretch(stretch(unit({ x: 0.55, y: -0.62, z: -0.56 }), "x", style.stanceWidth), "y", style.dipKneeBend),
+    stretch(stretch(unit({ x: 0.20, y: -0.93, z: -0.31 }), "x", style.stanceWidth), "y", style.hipDrive),
     legProgress,
   );
   const leftShinDirection = interpolateVector(
-    unit({ x: 0.48, y: -0.63, z: 0.61 }),
+    stretch(unit({ x: 0.48, y: -0.63, z: 0.61 }), "y", style.dipKneeBend),
     unit({ x: 0.10, y: -0.94, z: 0.32 }),
     legProgress,
   );
   const rightShinDirection = interpolateVector(
-    unit({ x: -0.48, y: -0.63, z: 0.61 }),
+    stretch(unit({ x: -0.48, y: -0.63, z: 0.61 }), "y", style.dipKneeBend),
     unit({ x: -0.10, y: -0.94, z: 0.32 }),
     legProgress,
   );
@@ -198,8 +288,9 @@ function syntheticPose(phase: number): { root: Vector3; joints: Record<number, V
 
 export function syntheticLandmarkTruthDirectionsAtPhase(
   phase: number,
+  style: Partial<SyntheticShotStyleV1> = {},
 ): Record<KinematicBoneIdV1, Vector3> {
-  const pose = syntheticPose(phase);
+  const pose = syntheticPose(phase, { ...DEFAULT_SYNTHETIC_SHOT_STYLE, ...style });
   const joints = pose.joints;
   return {
     pelvis_to_left_hip: unit(subtract(joints[23], pose.root)),
@@ -304,6 +395,7 @@ export function syntheticLandmarkSequence(options: SyntheticLandmarkSequenceOpti
   const timeOffsetMs = options.timeOffsetMs ?? 0;
   const anchorScheduleShift = options.anchorScheduleShift ?? 0;
   const noiseAmplitude = options.noiseAmplitude ?? 0.000003;
+  const style: SyntheticShotStyleV1 = { ...DEFAULT_SYNTHETIC_SHOT_STYLE, ...options.style };
   if (anchorScheduleShift < -0.2 || anchorScheduleShift > 0.2) {
     throw new Error("anchorScheduleShift must keep the canonical schedule ordered");
   }
@@ -320,7 +412,7 @@ export function syntheticLandmarkSequence(options: SyntheticLandmarkSequenceOpti
     return {
       timestampMs,
       sourceLandmarks: landmarksForPose(
-        syntheticPose(phase), options.view, shootingHand, takeIndex, frameIndex, noiseAmplitude,
+        syntheticPose(phase, style), options.view, shootingHand, takeIndex, frameIndex, noiseAmplitude,
       ),
       cropRectPx: { x: 0, y: 0, width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
       modelToSourcePx: [DISPLAY_WIDTH, 0, 0, 0, DISPLAY_HEIGHT, 0, 0, 0, 1],
@@ -376,9 +468,12 @@ export function syntheticLandmarkSession(options: SyntheticLandmarkSessionOption
       shootingHand,
       takeIndex: takeIndex as 0 | 1 | 2,
       timeOffsetMs: variation.timeOffsetMs + (view === "shooting_side" ? 12_000 : 0),
-      durationScale: variation.durationScale,
-      anchorScheduleShift: view === "shooting_side" ? options.sideAnchorScheduleShift : undefined,
+      durationScale: variation.durationScale * (options.durationScale ?? 1),
+      anchorScheduleShift: view === "shooting_side"
+        ? (options.sideAnchorScheduleShift ?? options.anchorScheduleShift)
+        : options.anchorScheduleShift,
       noiseAmplitude: variation.noiseAmplitude,
+      style: options.style,
     })
   ));
   return { front: create("front"), shootingSide: create("shooting_side") };
