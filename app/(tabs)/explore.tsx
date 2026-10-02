@@ -2,8 +2,10 @@ import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
+import { GlassSurface } from "@/components/glass/glass-surface";
 import { ScreenContainer } from "@/components/screen-container";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
@@ -66,26 +68,29 @@ export default function ExploreScreen() {
       onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}
     >
       <TopBar title="탐색" />
-      <View style={styles.header}>
+      <GlassSurface variant="panel" style={styles.header}>
         <View style={styles.chips}>
           {VIEWS.map((candidate) => {
             const selected = candidate.id === view;
             return (
-              <Pressable
+              <LiquidPressable
                 key={candidate.id}
                 accessibilityLabel={`${candidate.label} 시점`}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 aria-selected={selected}
+                magnetic
                 onPress={() => setView(candidate.id)}
-                style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.pressed]}
+                rippleColor={selected ? tokens.background : tokens.foreground}
+                style={styles.chipHit}
+                surfaceStyle={[styles.chip, selected && styles.chipSelected]}
               >
                 <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{candidate.label}</Text>
-              </Pressable>
+              </LiquidPressable>
             );
           })}
         </View>
-      </View>
+      </GlassSurface>
       <ScrollView contentContainerStyle={[styles.page, { width: contentWidth }]} showsVerticalScrollIndicator={false}>
         <View style={styles.row}>
           {tileFor(3, big)}
@@ -105,9 +110,10 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { alignSelf: "center", maxWidth: MAX_WIDTH, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10, width: "100%" },
+  header: { alignSelf: "center", borderRadius: 0, borderWidth: 0, maxWidth: MAX_WIDTH, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10, width: "100%" },
   chips: { flexDirection: "row", gap: 6 },
-  chip: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 999, justifyContent: "center", minHeight: 34, paddingHorizontal: 14 },
+  chipHit: { justifyContent: "center", minHeight: 44, minWidth: 44 },
+  chip: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 999, flexGrow: 0, justifyContent: "center", minHeight: 34, paddingHorizontal: 14 },
   chipSelected: { backgroundColor: tokens.foreground },
   chipText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
   chipTextSelected: { color: tokens.background },
