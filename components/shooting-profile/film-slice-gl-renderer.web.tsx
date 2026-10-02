@@ -43,7 +43,6 @@ export function FilmSliceGLRenderer({ frames, slices, camera, style, onRendererE
   }, []);
 
   const drawNow = useCallback(() => {
-    frameRequestRef.current = null;
     const canvas = canvasRef.current;
     const engine = engineRef.current;
     if (!canvas || !engine || failedRef.current) return;
@@ -54,12 +53,22 @@ export function FilmSliceGLRenderer({ frames, slices, camera, style, onRendererE
     }
   }, [fail]);
 
+  // The first draw of a burst is immediate so a frame is on screen even where animation frames are
+  // paused (hidden window, background iframe); further calls within the same frame are coalesced.
+  const pendingDrawRef = useRef(false);
   const scheduleDraw = useCallback(() => {
-    if (frameRequestRef.current !== null || typeof requestAnimationFrame !== "function") {
-      if (typeof requestAnimationFrame !== "function") drawNow();
+    if (frameRequestRef.current !== null) {
+      pendingDrawRef.current = true;
       return;
     }
-    frameRequestRef.current = requestAnimationFrame(drawNow);
+    drawNow();
+    if (typeof requestAnimationFrame !== "function") return;
+    frameRequestRef.current = requestAnimationFrame(() => {
+      frameRequestRef.current = null;
+      if (!pendingDrawRef.current) return;
+      pendingDrawRef.current = false;
+      drawNow();
+    });
   }, [drawNow]);
 
   const resize = useCallback(() => {

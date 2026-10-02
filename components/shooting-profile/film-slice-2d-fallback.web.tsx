@@ -30,7 +30,6 @@ export function FilmSlice2DFallback({ frames, slices, camera, style }: FilmSlice
   const frameRequestRef = useRef<number | null>(null);
 
   const drawNow = useCallback(() => {
-    frameRequestRef.current = null;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const context = canvas.getContext("2d");
@@ -66,13 +65,22 @@ export function FilmSlice2DFallback({ frames, slices, camera, style }: FilmSlice
     context.globalAlpha = 1;
   }, []);
 
+  // The first draw of a burst is immediate so a frame is on screen even where animation frames are
+  // paused (hidden window, background iframe); further calls within the same frame are coalesced.
+  const pendingDrawRef = useRef(false);
   const scheduleDraw = useCallback(() => {
-    if (typeof requestAnimationFrame !== "function") {
-      drawNow();
+    if (frameRequestRef.current !== null) {
+      pendingDrawRef.current = true;
       return;
     }
-    if (frameRequestRef.current !== null) return;
-    frameRequestRef.current = requestAnimationFrame(drawNow);
+    drawNow();
+    if (typeof requestAnimationFrame !== "function") return;
+    frameRequestRef.current = requestAnimationFrame(() => {
+      frameRequestRef.current = null;
+      if (!pendingDrawRef.current) return;
+      pendingDrawRef.current = false;
+      drawNow();
+    });
   }, [drawNow]);
 
   const resize = useCallback(() => {
