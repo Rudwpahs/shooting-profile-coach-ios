@@ -90,7 +90,7 @@ export const PREVIEW_SHOT_ARCHETYPES: readonly PreviewShotArchetypeV1[] = Object
     durationScale: 1.1,
   }),
   archetype(5, "shallow-dip-rhythm", "얕은 딥 리듬", {
-    style: { dipDepth: -0.46, jumpHeight: 0.45, dipKneeBend: 1.45 },
+    style: { dipDepth: -0.46, jumpHeight: 0.45, dipKneeBend: 1.45, releaseElevation: 0.1, elbowFlare: 0.26, stanceWidth: 0.9 },
   }),
   archetype(6, "one-motion-smooth", "원모션 · 부드러운 상승", {
     style: { setPointHold: 0.5, armLiftStart: 0.24, releaseElevation: -0.1, elbowFlare: 0.16, dipKneeBend: 0.9 },
