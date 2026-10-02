@@ -10,6 +10,7 @@ on:
       - work/hoophub-liquid-dock-v1
       - work/hoophub-unified-web-film-preview-v1
       - work/hoophub-preview-shot-library-v1
+      - work/hoophub-reference-minimal-v1
   workflow_dispatch:
 
 permissions:
