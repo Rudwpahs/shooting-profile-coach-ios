@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { GlassSurface } from "@/components/glass/glass-surface";
 import { ScreenContainer } from "@/components/screen-container";
@@ -27,7 +27,7 @@ const FALLBACK_WIDTH = 375;
  * users' skeletons appear here only after a public opt-in contract exists.
  * Famous-player footage is never foundational content. Every entry comes from
  * the explore source, which the install-free preview extends with its
- * synthetic shot library; each mosaic loads its stills only once it is listed.
+ * synthetic shot library; each mosaic loads its stills lazily after it mounts.
  */
 export default function ExploreScreen() {
   const router = useRouter();
@@ -71,19 +71,11 @@ export default function ExploreScreen() {
           })}
         </View>
       </GlassSurface>
-      <FlatList
-        contentContainerStyle={[styles.page, { width: contentWidth }]}
-        data={motions}
-        initialNumToRender={2}
-        keyExtractor={(motion) => motion.id}
-        maxToRenderPerBatch={2}
-        renderItem={({ item }) => (
-          <ExploreMosaic big={big} motion={item} onOpen={open} tile={tile} view={view} />
-        )}
-        showsVerticalScrollIndicator={false}
-        style={styles.list}
-        windowSize={5}
-      />
+      <ScrollView contentContainerStyle={[styles.page, { width: contentWidth }]} showsVerticalScrollIndicator={false} style={styles.list}>
+        {motions.map((motion) => (
+          <ExploreMosaic key={motion.id} big={big} motion={motion} onOpen={open} tile={tile} view={view} />
+        ))}
+      </ScrollView>
     </ScreenContainer>
   );
 }
@@ -96,7 +88,7 @@ type ExploreMosaicProps = {
   onOpen: (href: string) => void;
 };
 
-/** One motion as five phase stills; the stills arrive once this entry is listed, so the list stays light. */
+/** One motion as five phase stills; the stills arrive after mount (one build at a time), so the list stays light. */
 function ExploreMosaic({ motion, view, tile, big, onOpen }: ExploreMosaicProps) {
   const [stills, setStills] = useState<ExploreMotionStillsV1 | null>(null);
   const activeRef = useRef(true);

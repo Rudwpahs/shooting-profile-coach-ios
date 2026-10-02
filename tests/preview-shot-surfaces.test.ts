@@ -45,7 +45,7 @@ describe("preview shot library on the real surfaces", () => {
     expect(explore).toContain('from "@/lib/explore-source"');
     expect(explore).toContain("exploreMotions()");
     expect(explore).toContain("<SkeletonGlyph");
-    expect(explore).toContain("<FlatList");
+    expect(explore).toContain("<ScrollView");
     expect(explore).not.toMatch(/@\/lib\/preview\/|@\/lib\/dev\//);
     const source = withoutComments(read("lib/explore-source.ts"));
     expect(source).toContain("ANONYMOUS_POSE_REFERENCES");
