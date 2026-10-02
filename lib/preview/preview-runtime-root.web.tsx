@@ -1,4 +1,3 @@
-import { useGlobalSearchParams, usePathname } from "expo-router";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { subscribeFilmSpaceWebMetrics } from "@/lib/film-space/web-metrics";
@@ -34,16 +33,40 @@ function isFramed(): boolean {
   }
 }
 
-/** Inside the frame: mirror the app's route to the outer page. Same origin only. */
+/**
+ * Inside the frame: mirror the app's route to the outer page, same origin
+ * only. Expo Router drives the browser history, so wrapping pushState and
+ * replaceState (plus popstate for back/forward) reports every navigation.
+ */
 function PreviewFrameRouteSync() {
-  const pathname = usePathname();
-  const params = useGlobalSearchParams();
-  const serializedParams = JSON.stringify(params);
   useEffect(() => {
     if (typeof window === "undefined" || !isFramed()) return;
-    const message: RouteMessage = { type: ROUTE_MESSAGE, href: window.location.href };
-    window.parent.postMessage(message, window.location.origin);
-  }, [pathname, serializedParams]);
+    const report = () => {
+      const message: RouteMessage = { type: ROUTE_MESSAGE, href: window.location.href };
+      window.parent.postMessage(message, window.location.origin);
+    };
+    const wrap = (method: "pushState" | "replaceState") => {
+      const original = window.history[method];
+      const wrapped = function (this: History, ...args: Parameters<History["pushState"]>) {
+        const result = original.apply(this, args);
+        report();
+        return result;
+      };
+      window.history[method] = wrapped as History[typeof method];
+      return () => {
+        if (window.history[method] === wrapped) window.history[method] = original;
+      };
+    };
+    const restorePush = wrap("pushState");
+    const restoreReplace = wrap("replaceState");
+    window.addEventListener("popstate", report);
+    report();
+    return () => {
+      restorePush();
+      restoreReplace();
+      window.removeEventListener("popstate", report);
+    };
+  }, []);
   return null;
 }
 
