@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
+import { LiquidPressable } from "@/components/ui/liquid";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
 import type { SkeletonGlyphData } from "@/lib/skeleton/pose-motion-glyph";
@@ -24,12 +25,15 @@ export function StoryStrip({ items }: { items: readonly StoryItem[] }) {
   return (
     <View style={styles.row}>
       {items.map((item) => (
-        <Pressable
+        <LiquidPressable
           key={item.key}
           accessibilityLabel={item.accessibilityLabel}
           accessibilityRole="button"
+          magnetic
           onPress={item.onPress}
-          style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+          ripple={false}
+          style={styles.item}
+          surfaceStyle={styles.itemSurface}
         >
           <View style={[styles.ring, (item.kind === "capture" || item.accent) && styles.ringAccent]}>
             {item.kind === "capture" ? (
@@ -41,7 +45,7 @@ export function StoryStrip({ items }: { items: readonly StoryItem[] }) {
             )}
           </View>
           <Text numberOfLines={1} style={styles.label}>{item.label}</Text>
-        </Pressable>
+        </LiquidPressable>
       ))}
     </View>
   );
@@ -49,12 +53,12 @@ export function StoryStrip({ items }: { items: readonly StoryItem[] }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 14, paddingHorizontal: 14, paddingVertical: 8 },
-  item: { alignItems: "center", gap: 4, minHeight: 44, minWidth: RING, width: RING + 6 },
+  item: { minHeight: 44, minWidth: RING, width: RING + 6 },
+  itemSurface: { alignItems: "center", gap: 4 },
   ring: { alignItems: "center", borderColor: tokens.border, borderRadius: RING / 2, borderWidth: 2, height: RING, justifyContent: "center", width: RING },
   ringAccent: { borderColor: tokens.primary },
   inner: { borderRadius: INNER / 2, height: INNER, overflow: "hidden", width: INNER },
   plus: { alignItems: "center", backgroundColor: tokens.primary, borderRadius: INNER / 2, height: INNER, justifyContent: "center", width: INNER },
   plusText: { color: tokens.primaryForeground, fontSize: 26, fontWeight: "800", lineHeight: 30 },
   label: { ...typography.label, color: tokens.foreground },
-  pressed: { opacity: 0.6, transform: [{ scale: 0.97 }] },
 });
