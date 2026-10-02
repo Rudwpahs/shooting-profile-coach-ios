@@ -11,26 +11,31 @@ import {
   View,
 } from "react-native";
 
+import { FilmSliceGLRenderer } from "@/components/shooting-profile/film-slice-gl-renderer.native";
 import { tokens } from "@/constants/tokens";
+import { resolveFilmSpaceLocalFrameGLTextureSources } from "@/lib/film-space/gl-texture-source";
+import { createFilmSpaceLocalFrameCacheController } from "@/lib/film-space/local-frame-cache-lifecycle";
 import {
-  disposeFilmSpaceFrames,
-  extractFilmSpaceFrames,
-} from "@/lib/film-space/frame-source.native";
+  disposeFilmSpaceLocalFrames,
+  extractFilmSpaceLocalFrames,
+} from "@/lib/film-space/local-frame-cache.native";
 import { resolveFilmSpaceSamplingPlan } from "@/lib/film-space/sampling";
+import {
+  createFilmSpaceSliceStack,
+  normalizeFilmSpaceCamera,
+} from "@/lib/film-space/slice-stack";
 import type { LocalFilmClipRefV1 } from "@/lib/film-space/types";
 
 const STAGE_HEIGHT = 320;
 const MIN_ZOOM = 0.8;
 const MAX_ZOOM = 1.5;
-const SLICE_DEPTH_X_PX = 150;
-const SLICE_DEPTH_Y_PX = 90;
 
 type FilmSpaceViewerProps = Readonly<{
   clip: LocalFilmClipRefV1;
   onSourceUnavailable?: (clip: LocalFilmClipRefV1) => void | Promise<void>;
 }>;
 
-type LoadedState = Awaited<ReturnType<typeof extractFilmSpaceFrames>>;
+type LoadedState = Awaited<ReturnType<typeof extractFilmSpaceLocalFrames>>;
 type ViewerState = { status: "loading" } | LoadedState;
 
 function clampZoom(value: number): number {
@@ -48,23 +53,29 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
   const [yaw, setYaw] = useState(-18);
   const [pitch, setPitch] = useState(7);
   const [zoom, setZoom] = useState(1);
+  const [glFailed, setGlFailed] = useState(false);
   const rotationStart = useRef({ yaw: -18, pitch: 7 });
-  const readyCacheRef = useRef<Extract<LoadedState, { status: "ready" }> | null>(null);
   const sourceUnavailableNotifiedRef = useRef(false);
+  const cacheControllerRef = useRef<ReturnType<typeof createFilmSpaceLocalFrameCacheController> | null>(null);
+  if (!cacheControllerRef.current) {
+    cacheControllerRef.current = createFilmSpaceLocalFrameCacheController(
+      extractFilmSpaceLocalFrames,
+      disposeFilmSpaceLocalFrames,
+    );
+  }
+  const cacheController = cacheControllerRef.current;
+
+  useEffect(() => () => {
+    void cacheController.dispose();
+  }, [cacheController]);
 
   useEffect(() => {
-    const controller = new AbortController();
     let active = true;
     setViewerState({ status: "loading" });
     setSelectedIndex(0);
-    readyCacheRef.current = null;
+    setGlFailed(false);
     sourceUnavailableNotifiedRef.current = false;
 
-    const releaseReadyCache = () => {
-      const cache = readyCacheRef.current;
-      readyCacheRef.current = null;
-      if (cache) void disposeFilmSpaceFrames(cache);
-    };
     const notifySourceUnavailable = () => {
       if (sourceUnavailableNotifiedRef.current) return;
       sourceUnavailableNotifiedRef.current = true;
@@ -76,37 +87,30 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
       notifySourceUnavailable();
       return () => {
         active = false;
-        controller.abort();
-        releaseReadyCache();
+        cacheController.suspend();
       };
     }
 
     const appStateSubscription = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active" || !active) return;
-      active = false;
-      controller.abort();
-      releaseReadyCache();
+      cacheController.suspend();
       setViewerState({ status: "cancelled" });
     });
 
-    void extractFilmSpaceFrames(clip, plan, controller.signal).then((result) => {
-      if (!active) {
-        if (result.status === "ready") void disposeFilmSpaceFrames(result);
-        return;
-      }
-      if (result.status === "ready") readyCacheRef.current = result;
+    void cacheController.load(clip, plan).then((result) => {
+      if (!active) return;
       if (result.status === "unavailable" && result.reason === "source_unavailable") {
         notifySourceUnavailable();
       }
       setViewerState(result);
     });
+
     return () => {
       appStateSubscription.remove();
       active = false;
-      controller.abort();
-      releaseReadyCache();
+      cacheController.suspend();
     };
-  }, [clip, onSourceUnavailable, plan]);
+  }, [cacheController, clip, onSourceUnavailable, plan]);
 
   const rotationResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -119,6 +123,15 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
       setPitch(Math.max(-24, Math.min(24, rotationStart.current.pitch - gesture.dy * 0.15)));
     },
   }), [pitch, yaw]);
+
+  const glTextureSources = useMemo(
+    () => (
+      viewerState.status === "ready" && !glFailed
+        ? resolveFilmSpaceLocalFrameGLTextureSources(viewerState.frames)
+        : null
+    ),
+    [glFailed, viewerState],
+  );
 
   if (viewerState.status === "loading") {
     return (
@@ -138,7 +151,7 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
         </Text>
         <Text style={styles.stateCopy}>
           {unavailable
-            ? "영상이 삭제되었거나 로컬 캐시에서 사라졌습니다. Motion과 Phase는 계속 사용할 수 있습니다."
+            ? "영상이 삭제되었거나 로컬 프레임 캐시를 만들 수 없습니다. Motion과 Phase는 계속 사용할 수 있습니다."
             : "Film Space 준비가 취소되었거나 현재 플랫폼에서 지원되지 않습니다. Motion과 Phase는 계속 사용할 수 있습니다."}
         </Text>
       </View>
@@ -148,6 +161,16 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
   const frames = viewerState.frames;
   const safeSelectedIndex = Math.min(selectedIndex, Math.max(0, frames.length - 1));
   const selectedFrame = frames[safeSelectedIndex];
+  const renderCamera = normalizeFilmSpaceCamera({
+    yawDegrees: yaw,
+    pitchDegrees: pitch,
+    zoom,
+  });
+  const sliceStack = createFilmSpaceSliceStack(
+    frames.length,
+    safeSelectedIndex,
+    renderCamera,
+  );
   const seekFromX = (locationX: number) => {
     const fraction = Math.max(0, Math.min(1, locationX / Math.max(1, scrubWidth)));
     setSelectedIndex(Math.round(fraction * Math.max(0, frames.length - 1)));
@@ -161,32 +184,34 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
         style={styles.stage}
         {...rotationResponder.panHandlers}
       >
-        {frames.map((frame, index) => {
-          const depth = frames.length <= 1 ? 0 : index / (frames.length - 1);
-          const centeredDepth = depth - 0.5;
-          const yawRadians = yaw * Math.PI / 180;
-          const pitchRadians = pitch * Math.PI / 180;
-          const translateX = centeredDepth * SLICE_DEPTH_X_PX * Math.sin(yawRadians);
-          const translateY = centeredDepth * SLICE_DEPTH_Y_PX * Math.sin(pitchRadians);
-          const selected = index === safeSelectedIndex;
+        {glTextureSources ? (
+          <FilmSliceGLRenderer
+            camera={renderCamera}
+            onRendererError={() => setGlFailed(true)}
+            slices={sliceStack}
+            sources={glTextureSources}
+            style={styles.glStage}
+          />
+        ) : sliceStack.map((slice) => {
+          const frame = frames[slice.index];
           return (
             <Image
-              key={`${frame.requestedTimestampMs}-${index}`}
+              key={`${frame.requestedTimestampMs}-${slice.index}`}
               contentFit="contain"
-              source={frame.imageRef}
+              source={{ uri: frame.localUri }}
               style={[
                 styles.slice,
                 {
-                  opacity: selected ? 0.92 : 0.035,
+                  opacity: slice.opacity,
                   transform: [
                     { perspective: 780 },
-                    { translateX },
-                    { translateY },
-                    { rotateY: `${yaw}deg` },
-                    { rotateX: `${pitch}deg` },
-                    { scale: zoom * (0.84 + depth * 0.16) },
+                    { translateX: slice.translateXPx },
+                    { translateY: slice.translateYPx },
+                    { rotateY: `${renderCamera.yawDegrees}deg` },
+                    { rotateX: `${renderCamera.pitchDegrees}deg` },
+                    { scale: slice.scale },
                   ],
-                  zIndex: selected ? frames.length + 1 : index,
+                  zIndex: slice.zIndex,
                 },
               ]}
             />
@@ -257,6 +282,7 @@ export function FilmSpaceViewer({ clip, onSourceUnavailable }: FilmSpaceViewerPr
 const styles = StyleSheet.create({
   container: { backgroundColor: tokens.background },
   stage: { backgroundColor: tokens.stage, height: STAGE_HEIGHT, overflow: "hidden", position: "relative" },
+  glStage: { height: "100%", width: "100%" },
   slice: { height: 230, left: 45, position: "absolute", top: 44, width: 240 },
   zoomControls: { pointerEvents: "box-none", position: "absolute", right: 6, top: 6 },
   iconButton: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderColor: tokens.border, borderRadius: 10, borderWidth: 1, height: 44, justifyContent: "center", marginBottom: 4, minHeight: 44, minWidth: 44, width: 44 },

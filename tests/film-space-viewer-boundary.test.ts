@@ -13,10 +13,20 @@ const webSource = readFileSync(
 
 describe("film-space viewer boundary", () => {
   it("keeps the native viewer local-only, bounded, cancellable, fail-closed, and source-time labeled", () => {
-    expect(nativeSource).toMatch(/extractFilmSpaceFrames/);
-    expect(nativeSource).toMatch(/disposeFilmSpaceFrames/);
+    expect(nativeSource).toMatch(/extractFilmSpaceLocalFrames/);
+    expect(nativeSource).toMatch(/disposeFilmSpaceLocalFrames/);
+    expect(nativeSource).toMatch(/createFilmSpaceLocalFrameCacheController/);
+    expect(nativeSource).not.toMatch(/frame-source\.native|extractFilmSpaceFrames|disposeFilmSpaceFrames/);
     expect(nativeSource).toMatch(/resolveFilmSpaceSamplingPlan/);
-    expect(nativeSource).toMatch(/AbortController/);
+    expect(nativeSource).toMatch(/createFilmSpaceSliceStack/);
+    expect(nativeSource).toMatch(/normalizeFilmSpaceCamera/);
+    expect(nativeSource).toMatch(/resolveFilmSpaceLocalFrameGLTextureSources/);
+    expect(nativeSource).toMatch(/FilmSliceGLRenderer/);
+    expect(nativeSource).toMatch(/glTextureSources\s*\?/);
+    expect(nativeSource).toMatch(/<Image/);
+    expect(nativeSource).toMatch(/localUri/);
+    expect(nativeSource).toMatch(/\.suspend\(\)/);
+    expect(nativeSource).toMatch(/\.dispose\(\)/);
     expect(nativeSource).toMatch(/AppState/);
     expect(nativeSource).toMatch(/addEventListener\(\s*["']change["']/);
     expect(nativeSource).toMatch(/PanResponder/);
