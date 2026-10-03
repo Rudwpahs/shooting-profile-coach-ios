@@ -39,6 +39,23 @@ export type SyntheticShotStyleV1 = Readonly<{
   hipDrive: number;
   /** Lowers the off-hand's reach at release (0 = canonical mirror of the shooting arm). */
   offHandTuck: number;
+  /**
+   * How far the legs re-extend after the dip (1 = canonical full extension at release;
+   * smaller keeps the knees flexed through release, a set shot off bent legs).
+   */
+  legExtension: number;
+  /** Rotation of the shoulder line and both arms about the vertical axis (radians): turned vs square shoulders. */
+  torsoTurn: number;
+  /** Extra forward tilt of the shooting forearm at release (radians), beyond `releaseElevation`: a bent, pushing elbow. */
+  forearmForward: number;
+  /** Multiplier on the sideways component of the off-hand at release (1 = canonical; >1 guide hand out wide). */
+  offHandFlare: number;
+  /** Forward (+z) offset of the shooting-side thigh (the other foot stays): a staggered stance. */
+  footStagger: number;
+  /** 0 = the off-hand mirrors the shooting arm at release; 1 = it hangs at the side (a one-hand release). */
+  offHandDrop: number;
+  /** 0 = both legs re-extend after the dip; 1 = the off-hand-side leg lifts, knee forward, through release. */
+  freeLegLift: number;
 }>;
 
 export const DEFAULT_SYNTHETIC_SHOT_STYLE: SyntheticShotStyleV1 = Object.freeze({
@@ -57,6 +74,13 @@ export const DEFAULT_SYNTHETIC_SHOT_STYLE: SyntheticShotStyleV1 = Object.freeze(
   sideDrift: 0.03,
   hipDrive: 1,
   offHandTuck: 0,
+  legExtension: 1,
+  torsoTurn: 0,
+  forearmForward: 0,
+  offHandFlare: 1,
+  footStagger: 0,
+  offHandDrop: 0,
+  freeLegLift: 0,
 });
 
 type SyntheticLandmarkSequenceOptions = {
@@ -150,11 +174,26 @@ function releaseArmProgress(phase: number, style: SyntheticShotStyleV1): number 
   return interpolate(style.setPointHold, 1, intervalProgress(phase, 0.7, 0.75));
 }
 
-function legExtensionProgress(phase: number): number {
+function legExtensionProgress(phase: number, style: SyntheticShotStyleV1): number {
   if (phase <= 0.23) return 1;
   if (phase <= 0.25) return interpolate(1, 0, intervalProgress(phase, 0.23, 0.25));
   if (phase <= 0.55) return 0;
-  return intervalProgress(phase, 0.55, 0.6);
+  // After the dip the legs re-extend only as far as the style allows (1 = canonical).
+  return intervalProgress(phase, 0.55, 0.6) * style.legExtension;
+}
+
+/** Rotates a direction about the vertical axis (x toward +z), keeping it unit length. */
+function rotateAboutY(direction: Vector3, radians: number): Vector3 {
+  if (radians === 0) return direction;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return unit({ x: direction.x * cos + direction.z * sin, y: direction.y, z: direction.z * cos - direction.x * sin });
+}
+
+/** Adds a forward component to a direction and re-normalises; zero returns the input unchanged. */
+function stagger(direction: Vector3, forward: number): Vector3 {
+  if (forward === 0) return direction;
+  return unit({ ...direction, z: direction.z + forward });
 }
 
 /** Rotates a direction about the x axis (y toward +z), keeping it unit length. */
@@ -179,10 +218,21 @@ function stretch(direction: Vector3, axis: "x" | "y" | "z", multiplier: number):
   return unit({ ...direction, [axis]: direction[axis] * multiplier });
 }
 
-/** Builds a closed template-length skeleton in canonical +y-up coordinates. */
+/** Mirrors a direction across the body's midline. */
+function mirrorX(direction: Vector3): Vector3 {
+  return { x: -direction.x, y: direction.y, z: direction.z };
+}
+
+/**
+ * Builds a closed template-length skeleton in canonical +y-up coordinates.
+ * Limb directions are authored for a right-handed shooter; a left-handed
+ * shooter swaps the arm and leg roles across the midline (the canonical
+ * limbs are mirror pairs, so the default shot is identical either way).
+ */
 function syntheticPose(
   phase: number,
   style: SyntheticShotStyleV1 = DEFAULT_SYNTHETIC_SHOT_STYLE,
+  shootingHand: ShootingHandV2 = "right",
 ): { root: Vector3; joints: Record<number, Vector3> } {
   const root = { x: style.sideDrift * phase, y: rootHeightAtPhase(phase, style), z: -0.025 * phase };
   const hipLine = unit({ x: 0.57, y: 0.52, z: 0.64 });
@@ -192,7 +242,7 @@ function syntheticPose(
   // This is the same closed-shoulder construction used by synthetic-dual-view:
   // the observed shoulder line is exactly one template shoulder breadth while
   // both torso edges retain their independently fixed template lengths.
-  const shoulderDirection = unit({ x: 0.61, y: 0.48, z: 0.63 });
+  const shoulderDirection = rotateAboutY(unit({ x: 0.61, y: 0.48, z: 0.63 }), style.torsoTurn);
   const hipSeparation = scale(
     hipLine,
     TEMPLATE_LENGTHS.pelvis_to_left_hip + TEMPLATE_LENGTHS.pelvis_to_right_hip,
@@ -225,56 +275,88 @@ function syntheticPose(
 
   const armProgress = releaseArmProgress(phase, style);
   const offHandReach = style.releaseHeight * (1 - style.offHandTuck);
-  const leftUpperArmDirection = interpolateVector(
-    unit({ x: -0.50, y: 0.58, z: 0.64 }),
-    stretch(unit({ x: -0.20, y: 0.88, z: 0.43 }), "y", offHandReach),
-    armProgress,
+  // The arms hang from the shoulders, so they turn with the shoulder line.
+  // A dropped off-hand hangs from the ready pose onward: the two-view solver
+  // cannot place a bone that lies horizontal in both views, so the arm must
+  // never swing through horizontal on its way down. Use the lever at 1.
+  const hangingUpperArm = unit({ x: -0.35, y: -0.90, z: 0.25 });
+  const hangingForearm = unit({ x: -0.20, y: -0.80, z: 0.55 });
+  const offHandUpperArmRest = interpolateVector(unit({ x: -0.50, y: 0.58, z: 0.64 }), hangingUpperArm, style.offHandDrop);
+  const offHandForearmRest = interpolateVector(unit({ x: -0.50, y: 0.50, z: 0.50 }), hangingForearm, style.offHandDrop);
+  const offHandUpperArmTarget = interpolateVector(
+    stretch(stretch(unit({ x: -0.20, y: 0.88, z: 0.43 }), "x", style.offHandFlare), "y", offHandReach),
+    hangingUpperArm,
+    style.offHandDrop,
   );
-  const rightUpperArmDirection = interpolateVector(
+  const offHandForearmTarget = interpolateVector(
+    stretch(stretch(unit({ x: -0.12, y: 1.20, z: style.followThroughReach }), "x", style.offHandFlare), "y", offHandReach),
+    hangingForearm,
+    style.offHandDrop,
+  );
+  const leftUpperArmDirection = rotateAboutY(interpolateVector(
+    offHandUpperArmRest,
+    offHandUpperArmTarget,
+    armProgress,
+  ), style.torsoTurn);
+  const rightUpperArmDirection = rotateAboutY(interpolateVector(
     unit({ x: 0.50, y: 0.58, z: 0.64 }),
     tiltForward(stretch(unit({ x: style.elbowFlare, y: 0.88, z: 0.43 }), "y", style.releaseHeight), style.releaseElevation),
     armProgress,
-  );
-  const leftForearmDirection = interpolateVector(
-    unit({ x: -0.50, y: 0.50, z: 0.50 }),
-    stretch(unit({ x: -0.12, y: 1.20, z: style.followThroughReach }), "y", offHandReach),
+  ), style.torsoTurn);
+  const leftForearmDirection = rotateAboutY(interpolateVector(
+    offHandForearmRest,
+    offHandForearmTarget,
     armProgress,
-  );
-  const rightForearmDirection = interpolateVector(
+  ), style.torsoTurn);
+  const rightForearmDirection = rotateAboutY(interpolateVector(
     unit({ x: 0.50, y: 0.50, z: 0.50 }),
-    tiltForward(stretch(unit({ x: 0.12, y: 1.20, z: style.followThroughReach }), "y", style.releaseHeight), style.releaseElevation),
+    tiltForward(
+      stretch(unit({ x: 0.12, y: 1.20, z: style.followThroughReach }), "y", style.releaseHeight),
+      style.releaseElevation + style.forearmForward,
+    ),
     armProgress,
-  );
-  const leftElbow = add(leftShoulder, scale(leftUpperArmDirection, TEMPLATE_LENGTHS.left_upper_arm));
-  const rightElbow = add(rightShoulder, scale(rightUpperArmDirection, TEMPLATE_LENGTHS.right_upper_arm));
-  const leftWrist = add(leftElbow, scale(leftForearmDirection, TEMPLATE_LENGTHS.left_forearm));
-  const rightWrist = add(rightElbow, scale(rightForearmDirection, TEMPLATE_LENGTHS.right_forearm));
+  ), style.torsoTurn);
+  const swap = shootingHand === "left";
+  const leftElbow = add(leftShoulder, scale(swap ? mirrorX(rightUpperArmDirection) : leftUpperArmDirection, TEMPLATE_LENGTHS.left_upper_arm));
+  const rightElbow = add(rightShoulder, scale(swap ? mirrorX(leftUpperArmDirection) : rightUpperArmDirection, TEMPLATE_LENGTHS.right_upper_arm));
+  const leftWrist = add(leftElbow, scale(swap ? mirrorX(rightForearmDirection) : leftForearmDirection, TEMPLATE_LENGTHS.left_forearm));
+  const rightWrist = add(rightElbow, scale(swap ? mirrorX(leftForearmDirection) : rightForearmDirection, TEMPLATE_LENGTHS.right_forearm));
 
-  const legProgress = legExtensionProgress(phase);
+  const legProgress = legExtensionProgress(phase, style);
+  // After the dip the off-hand-side leg may lift instead of re-extending (knee forward, shin hanging).
+  const freeLegLift = phase > 0.55 ? style.freeLegLift * intervalProgress(phase, 0.55, 0.6) : 0;
   const leftThighDirection = interpolateVector(
-    stretch(stretch(unit({ x: -0.55, y: -0.62, z: -0.56 }), "x", style.stanceWidth), "y", style.dipKneeBend),
-    stretch(stretch(unit({ x: -0.20, y: -0.93, z: -0.31 }), "x", style.stanceWidth), "y", style.hipDrive),
-    legProgress,
+    interpolateVector(
+      stretch(stretch(unit({ x: -0.55, y: -0.62, z: -0.56 }), "x", style.stanceWidth), "y", style.dipKneeBend),
+      stretch(stretch(unit({ x: -0.20, y: -0.93, z: -0.31 }), "x", style.stanceWidth), "y", style.hipDrive),
+      legProgress,
+    ),
+    unit({ x: -0.32, y: -0.50, z: 0.80 }),
+    freeLegLift,
   );
   const rightThighDirection = interpolateVector(
-    stretch(stretch(unit({ x: 0.55, y: -0.62, z: -0.56 }), "x", style.stanceWidth), "y", style.dipKneeBend),
-    stretch(stretch(unit({ x: 0.20, y: -0.93, z: -0.31 }), "x", style.stanceWidth), "y", style.hipDrive),
+    stagger(stretch(stretch(unit({ x: 0.55, y: -0.62, z: -0.56 }), "x", style.stanceWidth), "y", style.dipKneeBend), style.footStagger),
+    stagger(stretch(stretch(unit({ x: 0.20, y: -0.93, z: -0.31 }), "x", style.stanceWidth), "y", style.hipDrive), style.footStagger),
     legProgress,
   );
   const leftShinDirection = interpolateVector(
-    stretch(unit({ x: 0.48, y: -0.63, z: 0.61 }), "y", style.dipKneeBend),
-    unit({ x: 0.10, y: -0.94, z: 0.32 }),
-    legProgress,
+    interpolateVector(
+      stretch(unit({ x: 0.48, y: -0.63, z: 0.61 }), "y", style.dipKneeBend),
+      unit({ x: 0.10, y: -0.94, z: 0.32 }),
+      legProgress,
+    ),
+    unit({ x: 0.12, y: -0.96, z: -0.25 }),
+    freeLegLift,
   );
   const rightShinDirection = interpolateVector(
     stretch(unit({ x: -0.48, y: -0.63, z: 0.61 }), "y", style.dipKneeBend),
     unit({ x: -0.10, y: -0.94, z: 0.32 }),
     legProgress,
   );
-  const leftKnee = add(leftHip, scale(leftThighDirection, TEMPLATE_LENGTHS.left_thigh));
-  const rightKnee = add(rightHip, scale(rightThighDirection, TEMPLATE_LENGTHS.right_thigh));
-  const leftAnkle = add(leftKnee, scale(leftShinDirection, TEMPLATE_LENGTHS.left_shin));
-  const rightAnkle = add(rightKnee, scale(rightShinDirection, TEMPLATE_LENGTHS.right_shin));
+  const leftKnee = add(leftHip, scale(swap ? mirrorX(rightThighDirection) : leftThighDirection, TEMPLATE_LENGTHS.left_thigh));
+  const rightKnee = add(rightHip, scale(swap ? mirrorX(leftThighDirection) : rightThighDirection, TEMPLATE_LENGTHS.right_thigh));
+  const leftAnkle = add(leftKnee, scale(swap ? mirrorX(rightShinDirection) : leftShinDirection, TEMPLATE_LENGTHS.left_shin));
+  const rightAnkle = add(rightKnee, scale(swap ? mirrorX(leftShinDirection) : rightShinDirection, TEMPLATE_LENGTHS.right_shin));
 
   return {
     root,
@@ -289,8 +371,9 @@ function syntheticPose(
 export function syntheticLandmarkTruthDirectionsAtPhase(
   phase: number,
   style: Partial<SyntheticShotStyleV1> = {},
+  shootingHand: ShootingHandV2 = "right",
 ): Record<KinematicBoneIdV1, Vector3> {
-  const pose = syntheticPose(phase, { ...DEFAULT_SYNTHETIC_SHOT_STYLE, ...style });
+  const pose = syntheticPose(phase, { ...DEFAULT_SYNTHETIC_SHOT_STYLE, ...style }, shootingHand);
   const joints = pose.joints;
   return {
     pelvis_to_left_hip: unit(subtract(joints[23], pose.root)),
@@ -412,7 +495,7 @@ export function syntheticLandmarkSequence(options: SyntheticLandmarkSequenceOpti
     return {
       timestampMs,
       sourceLandmarks: landmarksForPose(
-        syntheticPose(phase, style), options.view, shootingHand, takeIndex, frameIndex, noiseAmplitude,
+        syntheticPose(phase, style, shootingHand), options.view, shootingHand, takeIndex, frameIndex, noiseAmplitude,
       ),
       cropRectPx: { x: 0, y: 0, width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
       modelToSourcePx: [DISPLAY_WIDTH, 0, 0, 0, DISPLAY_HEIGHT, 0, 0, 0, 1],

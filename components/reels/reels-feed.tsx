@@ -31,7 +31,10 @@ export type ReelsFeedProps = {
   appState: AppStateStatus;
   reducedMotion: boolean | null;
   insets: ReelOverlayInsets;
-  onClose: () => void;
+  /** `null` when the feed lives inside a tab: no close affordance is drawn. */
+  onClose: (() => void) | null;
+  /** False hides the virtual view chips. */
+  viewChips?: boolean;
   onOpenAnalysis: ((profileId: string) => void) | null;
   onStateChange?: (state: ReelFeedState) => void;
 };
@@ -45,7 +48,7 @@ export type ReelsFeedProps = {
  */
 export function ReelsFeed({
   items, width, height, initialIndex, initialPlayback = "auto", focused, appState, reducedMotion, insets,
-  onClose, onOpenAnalysis, onStateChange,
+  onClose, viewChips = true, onOpenAnalysis, onStateChange,
 }: ReelsFeedProps) {
   const [state, dispatch] = useReducer(transitionReelFeedState, undefined, () => createReelFeedState(items.length, initialIndex, initialPlayback));
   const [view, setView] = useState<RepresentativeViewId>(DEFAULT_VIEW);
@@ -104,9 +107,10 @@ export function ReelsFeed({
       reducedMotion={reducedMotion}
       role={reelMediaRole(index, state.activeIndex)}
       view={view}
+      viewChips={viewChips}
       width={width}
     />
-  ), [appState, focused, height, insets, onClose, onNext, onOpenAnalysis, onPrevious, onTogglePlayback, reducedMotion, state.activeIndex, state.count, state.playback, view, width]);
+  ), [appState, focused, height, insets, onClose, onNext, onOpenAnalysis, onPrevious, onTogglePlayback, reducedMotion, state.activeIndex, state.count, state.playback, view, viewChips, width]);
 
   if (!(height > 0) || !(width > 0) || items.length === 0) return null;
 

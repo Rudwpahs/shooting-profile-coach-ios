@@ -40,6 +40,16 @@ describe("reel model", () => {
     expect(reelLine(reference)).toBe(reference.reference.styleTitle);
   });
 
+  it("lets Explore name a profile reel honestly instead of 내 슛폼, and reads that name first", () => {
+    const explore = { ...profile, title: "SHOT 12", line: "앞으로 기운 릴리스 · 미리보기 합성 예시" };
+    expect(reelTitle(explore)).toBe("SHOT 12");
+    expect(reelLine(explore)).toBe("앞으로 기운 릴리스 · 미리보기 합성 예시");
+    expect(reelAccessibilityName(explore)).toBe("SHOT 12 릴");
+    expect(reelAnalysisProfileId(explore)).toBe("demo-profile-1");
+    // Without a name, a profile reel is still mine.
+    expect(reelTitle({ ...explore, title: undefined, line: undefined })).toBe("내 슛폼");
+  });
+
   it("exposes analysis only for a profile", () => {
     expect(reelAnalysisProfileId(profile)).toBe("demo-profile-1");
     expect(reelAnalysisProfileId(reference)).toBeNull();

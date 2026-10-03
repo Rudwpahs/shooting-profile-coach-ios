@@ -1,155 +1,80 @@
+import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { GlassSurface } from "@/components/glass/glass-surface";
+import { ReelsFeed } from "@/components/reels/reels-feed";
 import { ScreenContainer } from "@/components/screen-container";
-import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
-import { LiquidPressable } from "@/components/ui/liquid";
-import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
-import { typography } from "@/constants/typography";
-import { exploreMotions, type ExploreMotionStillsV1, type ExploreMotionV1 } from "@/lib/explore-source";
-import type { GlyphView } from "@/lib/skeleton/pose-motion-glyph";
-
-const VIEWS: readonly { id: GlyphView; label: string }[] = [
-  { id: "front", label: "정면" },
-  { id: "oblique", label: "사선" },
-  { id: "side", label: "측면" },
-];
-const GAP = 2;
-const MAX_WIDTH = 680;
-const FALLBACK_WIDTH = 375;
+import { useAppStateStatus } from "@/hooks/use-app-state";
+import { useExploreFeed } from "@/hooks/use-explore-feed";
+import { useReduceMotion } from "@/hooks/use-reduce-motion";
+import { exploreMotions } from "@/lib/explore-source";
+import { FORMPATH_FLAGS } from "@/lib/feature-flags";
+import { minimalAnalysisHref } from "@/lib/shooting-profile/analysis-presentation";
 
 /**
- * 탐색: a grid of anonymous skeleton motion. Today the only lawful public
- * content is the CMU optical-mocap reference, shown once per shot phase; other
- * users' skeletons appear here only after a public opt-in contract exists.
- * Famous-player footage is never foundational content. Every entry comes from
- * the explore source, which the install-free preview extends with its
- * synthetic shot library; each mosaic loads its stills lazily after it mounts.
+ * 탐색: other people's shooting forms, one per screen. The same vertical feed
+ * as Reels, inside the tab: no close affordance (the tab bar is the way out)
+ * and no virtual view chips (the figure is the content, not a camera). Today
+ * the only lawful public content is the CMU optical-mocap reference; the
+ * install-free preview adds its synthetic library through the explore source,
+ * and each reel is built on first approach so the first one paints at once.
+ * Opening 분석 lands on the minimal analysis surface.
  */
 export default function ExploreScreen() {
   const router = useRouter();
-  const { width: windowWidth } = useWindowDimensions();
-  const [measuredWidth, setMeasuredWidth] = useState(0);
-  const [view, setView] = useState<GlyphView>("oblique");
-  const motions = exploreMotions();
-  // The window can report 0 before layout (static web render); measure the
-  // screen itself and fall back to a phone width so tiles never go negative.
-  const contentWidth = Math.min(measuredWidth || windowWidth || FALLBACK_WIDTH, MAX_WIDTH);
-  const tile = Math.max(1, Math.floor((contentWidth - GAP * 2) / 3));
-  const big = tile * 2 + GAP;
-  const open = useCallback((href: string) => router.push(href as never), [router]);
+  const insets = useSafeAreaInsets();
+  const appState = useAppStateStatus();
+  const reducedMotion = useReduceMotion();
+  const focused = useIsFocused();
+  const window = useWindowDimensions();
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const { items, onActiveIndex } = useExploreFeed(exploreMotions());
 
+  // The feed takes the tab scene's own size (the tab bar sits below it);
+  // until layout reports it, the window size stands in so the first reel
+  // paints at once, including on the static web render.
+  const onLayout = useCallback((event: LayoutChangeEvent) => {
+    const next = { width: Math.round(event.nativeEvent.layout.width), height: Math.round(event.nativeEvent.layout.height) };
+    setSize((current) => (current.width === next.width && current.height === next.height ? current : next));
+  }, []);
+  const width = size.width > 0 ? size.width : Math.round(window.width);
+  const height = size.height > 0 ? size.height : Math.round(window.height);
+  const onOpenAnalysis = useCallback((profileId: string) => {
+    const item = items.find((candidate) => candidate.kind === "profile" && candidate.profileId === profileId);
+    router.push(minimalAnalysisHref(profileId, item?.kind === "profile" ? item.title : undefined) as never);
+  }, [items, router]);
+
+  // No safe-area edges here: the feed is full-bleed and hands the top inset to its own chrome.
   return (
-    <ScreenContainer
-      containerClassName="bg-background"
-      onLayout={(event) => setMeasuredWidth(Math.round(event.nativeEvent.layout.width))}
-    >
-      <TopBar title="탐색" />
-      <GlassSurface variant="panel" style={styles.header}>
-        <View style={styles.chips}>
-          {VIEWS.map((candidate) => {
-            const selected = candidate.id === view;
-            return (
-              <LiquidPressable
-                key={candidate.id}
-                accessibilityLabel={`${candidate.label} 시점`}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                aria-selected={selected}
-                magnetic
-                onPress={() => setView(candidate.id)}
-                rippleColor={selected ? tokens.background : tokens.foreground}
-                style={styles.chipHit}
-                surfaceStyle={[styles.chip, selected && styles.chipSelected]}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{candidate.label}</Text>
-              </LiquidPressable>
-            );
-          })}
+    <ScreenContainer containerClassName="bg-background" edges={[]} onLayout={onLayout} style={styles.screen} testID="explore-feed-screen">
+      {width > 0 && height > 0 && items.length > 0 ? (
+        <ReelsFeed
+          appState={appState}
+          focused={focused}
+          height={height}
+          initialIndex={0}
+          insets={{ top: insets.top, bottom: 0 }}
+          items={items}
+          onClose={null}
+          onOpenAnalysis={FORMPATH_FLAGS.representative4DViewer ? onOpenAnalysis : null}
+          onStateChange={(state) => onActiveIndex(state.activeIndex)}
+          reducedMotion={reducedMotion}
+          viewChips={false}
+          width={width}
+        />
+      ) : (
+        <View accessibilityLabel="탐색 피드를 준비하는 중" style={styles.pending}>
+          <ActivityIndicator color={tokens.mutedForeground} />
         </View>
-      </GlassSurface>
-      <ScrollView contentContainerStyle={[styles.page, { width: contentWidth }]} showsVerticalScrollIndicator={false} style={styles.list}>
-        {motions.map((motion) => (
-          <ExploreMosaic key={motion.id} big={big} motion={motion} onOpen={open} tile={tile} view={view} />
-        ))}
-      </ScrollView>
+      )}
     </ScreenContainer>
   );
 }
 
-type ExploreMosaicProps = {
-  motion: ExploreMotionV1;
-  view: GlyphView;
-  tile: number;
-  big: number;
-  onOpen: (href: string) => void;
-};
-
-/** One motion as five phase stills; the stills arrive after mount (one build at a time), so the list stays light. */
-function ExploreMosaic({ motion, view, tile, big, onOpen }: ExploreMosaicProps) {
-  const [stills, setStills] = useState<ExploreMotionStillsV1 | null>(null);
-  const activeRef = useRef(true);
-
-  useEffect(() => {
-    activeRef.current = true;
-    void motion.load().then((loaded) => {
-      if (activeRef.current) setStills(loaded);
-    });
-    return () => {
-      activeRef.current = false;
-    };
-  }, [motion]);
-
-  const tileFor = (index: number, size: number) => {
-    const still = stills?.stills[index];
-    if (!still) return <View style={[styles.pending, { width: size, height: size }]} />;
-    return (
-      <Pressable
-        accessibilityLabel={`${motion.shortLabel} ${still.label} 위상 열기`}
-        accessibilityRole="button"
-        onPress={() => onOpen(motion.href)}
-        style={({ pressed }) => [pressed && styles.pressed]}
-      >
-        <SkeletonGlyph accessible={false} accessibilityLabel={still.label} data={still.glyph(view)} height={size} width={size} />
-      </Pressable>
-    );
-  };
-
-  return (
-    <View style={styles.mosaic}>
-      <View style={styles.row}>
-        {tileFor(3, big)}
-        <View style={styles.column}>
-          {tileFor(0, tile)}
-          {tileFor(1, tile)}
-        </View>
-      </View>
-      <View style={styles.row}>
-        {tileFor(2, tile)}
-        {tileFor(4, tile)}
-      </View>
-      <Text numberOfLines={1} style={styles.caption}>{motion.caption}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  header: { alignSelf: "center", borderRadius: 0, borderWidth: 0, maxWidth: MAX_WIDTH, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10, width: "100%" },
-  chips: { flexDirection: "row", gap: 6 },
-  chipHit: { justifyContent: "center", minHeight: 44, minWidth: 44 },
-  chip: { alignItems: "center", backgroundColor: tokens.elevatedSurface, borderRadius: 999, flexGrow: 0, justifyContent: "center", minHeight: 34, paddingHorizontal: 14 },
-  chipSelected: { backgroundColor: tokens.foreground },
-  chipText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },
-  chipTextSelected: { color: tokens.background },
-  list: { flex: 1 },
-  page: { alignSelf: "center", gap: 18, paddingBottom: 32 },
-  mosaic: { gap: GAP },
-  row: { flexDirection: "row", gap: GAP },
-  column: { gap: GAP },
-  pending: { backgroundColor: tokens.stage },
-  caption: { ...typography.label, color: tokens.mutedForeground, paddingHorizontal: 14, paddingTop: 10 },
-  pressed: { opacity: 0.6 },
+  screen: { backgroundColor: tokens.stage, flex: 1 },
+  pending: { alignItems: "center", flex: 1, justifyContent: "center" },
 });

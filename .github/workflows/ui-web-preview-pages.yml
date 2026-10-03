@@ -11,6 +11,7 @@ on:
       - work/hoophub-unified-web-film-preview-v1
       - work/hoophub-preview-shot-library-v1
       - work/hoophub-reference-minimal-v1
+      - work/hoophub-explore-reels-minimal-v1
   workflow_dispatch:
 
 permissions:

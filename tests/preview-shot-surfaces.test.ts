@@ -7,6 +7,7 @@ import { previewExploreMotions } from "@/lib/preview/preview-explore-motions";
 import { PREVIEW_PROFILE_IDS, buildPreviewData, previewUser } from "@/lib/preview/preview-runtime";
 import { PREVIEW_SHOT_ARCHETYPES } from "@/lib/preview/preview-shot-library";
 import { createPreviewShootingProfileSource } from "@/lib/preview/preview-shooting-profile-source";
+import { reelAnalysisProfileId, reelLine, reelTitle } from "@/lib/reels/reel-model";
 import { resolveShotInspectionModes } from "@/lib/shooting-profile/shot-inspection";
 
 
@@ -44,8 +45,8 @@ describe("preview shot library on the real surfaces", () => {
     const explore = withoutComments(read("app/(tabs)/explore.tsx"));
     expect(explore).toContain('from "@/lib/explore-source"');
     expect(explore).toContain("exploreMotions()");
-    expect(explore).toContain("<SkeletonGlyph");
-    expect(explore).toContain("<ScrollView");
+    expect(explore).toContain("<ReelsFeed");
+    expect(explore).toContain("useExploreFeed(");
     expect(explore).not.toMatch(/@\/lib\/preview\/|@\/lib\/dev\//);
     const source = withoutComments(read("lib/explore-source.ts"));
     expect(source).toContain("ANONYMOUS_POSE_REFERENCES");
@@ -66,8 +67,16 @@ describe("preview shot library on the real surfaces", () => {
     const stills = await motions[0].load();
     expect(stills.stills.map((still) => still.label)).toEqual(["준비", "딥", "상승", "릴리스", "팔로우스루"]);
     expect(Object.keys(stills.stills[3].glyph("oblique").points).length).toBeGreaterThan(0);
-    // Ordinary production exposes the anonymous reference only.
+    // The one-per-screen feed gets a profile reel named honestly, never "내 슛폼", that opens the same analysis.
+    const reel = await motions[11].reel();
+    expect(reel.kind).toBe("profile");
+    expect(reelTitle(reel)).toBe("SHOT 12");
+    expect(reelLine(reel)).toContain("합성");
+    expect(reelAnalysisProfileId(reel)).toBe(PREVIEW_SHOT_ARCHETYPES[11].id);
+    expect(reel.kind === "profile" && reel.profile.frames.length).toBe(101);
+    // Ordinary production exposes the anonymous reference only, and its reel is the reference itself.
     expect(exploreMotions().every((motion) => motion.kind === "anonymous_reference")).toBe(true);
+    expect((await exploreMotions()[0].reel()).kind).toBe("reference");
   });
 
   it("keeps Home at its production density: latest, recommendation, reference", () => {

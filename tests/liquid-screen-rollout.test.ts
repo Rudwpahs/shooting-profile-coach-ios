@@ -50,12 +50,14 @@ describe("Liquid + Glass screen rollout", () => {
     expect(analysis).toContain("<LiquidPressable");
   });
 
-  it("keeps Explore motion tiles stable while making only selector chrome liquid/glass", () => {
+  it("lets Explore inherit the Reel chrome: the feed owns the Liquid controls, the screen adds none of its own", () => {
     const explore = read("app/(tabs)/explore.tsx");
-    expect(explore).toContain('<GlassSurface variant="panel"');
-    expect(explore).toContain("<LiquidPressable");
-    expect(explore).toContain("<Pressable");
-    expect(explore).toContain("<SkeletonGlyph");
+    expect(explore).toContain("<ReelsFeed");
+    // No second layer of chrome over the feed: no panel, chip row or bespoke pressables in the screen itself.
+    expect(explore).not.toMatch(/<GlassSurface|<LiquidPressable|<Pressable/);
+    const overlay = read("components/reels/reel-overlay.tsx");
+    expect(overlay).toContain("<LiquidPressable");
+    expect(overlay).toContain('testID="reel-analysis"');
   });
 
   it("keeps Reel media, caption and progress outside Liquid glass controls", () => {
