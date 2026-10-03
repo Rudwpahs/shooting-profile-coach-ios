@@ -447,8 +447,8 @@ service cloud.firestore {
 
     // Access-call maxima: observation create 2; capture create Basic 7 / High 7;
     // revision create 2; publication create 1; subordinate delete 3 or fewer;
-    // profile-head delete Basic 4 / High 8; film clip create 1; film head create 6;
-    // film clip delete 2; film head delete 6.
+    // profile-head delete Basic 4 / High 8.
+    // Film shots: clip create 1; head create 6; clip delete 2; head delete 6.
 
     match /users/{userId} {
       allow read: if signedInOwner(userId);
