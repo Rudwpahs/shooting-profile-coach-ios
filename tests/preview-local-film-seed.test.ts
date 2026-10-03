@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -140,11 +140,20 @@ describe("preview-local film seed", () => {
     expect(PREVIEW_LOCAL_FILM_MANIFEST_PATH).toBe("preview-local/film-shots.json");
   });
 
-  it("stays out of the repository, out of the preview runtime's network boundary, and out of the Pages export", () => {
-    expect(readFileSync(".gitignore", "utf8")).toContain("public/preview-local/");
+  it("stays out of the repository, out of every web export, out of the preview runtime's network boundary, and out of the Pages export", () => {
+    // Outside public/: Expo copies public/ into every web export, including an ordinary production export.
+    const gitignore = readFileSync(".gitignore", "utf8");
+    expect(gitignore).toMatch(/^\/preview-local\/$/m);
+    expect(gitignore).not.toContain("public/preview-local/");
+    expect(existsSync("public/preview-local")).toBe(false);
     const workflow = readFileSync(".github/workflows/ui-web-preview-pages.yml", "utf8");
     expect(workflow).toMatch(/-e web-preview-dist\/preview-local/);
+    expect(workflow).toMatch(/-e web-production-check\/preview-local/);
     expect(workflow).toContain("preview-local|");
+    // The local serve script is the only thing that puts the folder next to a bundle, and only on localhost.
+    const serve = readFileSync("scripts/preview-local-serve.mjs", "utf8");
+    expect(serve).toContain('"preview-local"');
+    expect(serve).toMatch(/127\.0\.0\.1|0\.0\.0\.0/);
     const root = readFileSync("lib/preview/preview-runtime-root.web.tsx", "utf8");
     expect(root).toContain("<PreviewLocalFilmSeed");
     const bridge = readFileSync("lib/preview/preview-local-film-seed.tsx", "utf8");

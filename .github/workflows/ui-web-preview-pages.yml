@@ -70,6 +70,10 @@ jobs:
             echo "Demo fixture, preview runtime or named-player research content leaked into an ordinary production export" >&2
             exit 1
           fi
+          if [ -e web-production-check/preview-local ]; then
+            echo "Local-only preview film shots reached the production export" >&2
+            exit 1
+          fi
           rm -rf web-production-check
 
       - name: Export production UI preview
