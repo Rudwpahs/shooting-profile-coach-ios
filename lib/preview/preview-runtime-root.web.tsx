@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { subscribeFilmSpaceWebMetrics } from "@/lib/film-space/web-metrics";
+import { PreviewLocalFilmSeed } from "@/lib/preview/preview-local-film-seed";
 
 /**
  * Web preview outer shell. On a phone-width browser the real app fills the
@@ -153,6 +154,7 @@ export function PreviewRuntimeRoot({ children }: { children: ReactNode }) {
     <>
       {children}
       <PreviewFrameRouteSync />
+      <PreviewLocalFilmSeed />
     </>
   );
 }
