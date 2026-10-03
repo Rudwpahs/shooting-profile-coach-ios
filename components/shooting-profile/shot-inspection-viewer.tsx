@@ -3,7 +3,6 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { FilmSpaceViewer } from "@/components/shooting-profile/film-space-viewer";
 import { PhaseSpaceViewer } from "@/components/shooting-profile/phase-space-viewer";
-import { SequenceViewer } from "@/components/shooting-profile/sequence-viewer";
 import { tokens } from "@/constants/tokens";
 import {
   evictLocalFilmClipFromAssociation,
@@ -33,7 +32,6 @@ type ShotInspectionViewerProps = Readonly<{
 }>;
 
 const MODE_LABELS: Readonly<Record<ShotInspectionMode, string>> = {
-  motion: "Motion",
   phase: "Phase",
   film: "Film",
 };
@@ -52,7 +50,7 @@ export function ShotInspectionViewer({
   experimentalEnabled,
 }: ShotInspectionViewerProps) {
   const [association, setAssociation] = useState<LocalFilmAssociationV1 | null>(null);
-  const [mode, setMode] = useState<ShotInspectionMode>("motion");
+  const [mode, setMode] = useState<ShotInspectionMode>("phase");
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,7 +58,7 @@ export function ShotInspectionViewer({
     if (!experimentalEnabled) {
       setAssociation(null);
       setSelectedSlotId(null);
-      setMode("motion");
+      setMode("phase");
       return () => { active = false; };
     }
     void loadLocalFilmAssociation(profileId)
@@ -105,24 +103,16 @@ export function ShotInspectionViewer({
       setAssociation(next);
       const nextSlotId = next?.clips[0]?.slotId ?? null;
       setSelectedSlotId(nextSlotId);
-      if (!nextSlotId) setMode("motion");
+      if (!nextSlotId) setMode("phase");
     } catch {
       setAssociation(null);
       setSelectedSlotId(null);
-      setMode("motion");
+      setMode("phase");
     }
   }, [profileId]);
 
-  if (!experimentalEnabled) {
-    return (
-      <SequenceViewer
-        confidence={confidence}
-        highlightJoint={highlightJoint}
-        profile={profile}
-        shootingHand={shootingHand}
-      />
-    );
-  }
+  // Motion is the stage above this surface; with the experimental flag off there is nothing extra here.
+  if (!experimentalEnabled) return null;
 
   const localClip = clips.find((clip) => clip.slotId === selectedSlotId) ?? clips[0] ?? null;
 
@@ -152,14 +142,6 @@ export function ShotInspectionViewer({
         })}
       </View>
 
-      {mode === "motion" ? (
-        <SequenceViewer
-          confidence={confidence}
-          highlightJoint={highlightJoint}
-          profile={profile}
-          shootingHand={shootingHand}
-        />
-      ) : null}
       {mode === "phase" ? (
         <PhaseSpaceViewer
           highlightJoint={highlightJoint}

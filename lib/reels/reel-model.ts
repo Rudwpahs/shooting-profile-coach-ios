@@ -1,4 +1,6 @@
 import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
+import type { FilmShotV1 } from "@/lib/film-space/film-shots";
+import type { LocalFilmClipRefV1 } from "@/lib/film-space/types";
 import { relativeDayLabel } from "@/lib/format/relative-day";
 import type { RepresentativePose4DV2, ShootingHandV2 } from "@/lib/shooting-profile/types";
 
@@ -28,9 +30,20 @@ export type ReferenceReel = {
   reference: AnonymousPoseReference;
 };
 
-export type ReelItem = ProfileReel | ReferenceReel;
+/** My own footage kept on this device without a pose: the media is the film itself. */
+export type FilmReel = {
+  kind: "film";
+  id: string;
+  shotId: string;
+  title: string;
+  createdAt: Date;
+  clips: readonly LocalFilmClipRefV1[];
+};
+
+export type ReelItem = ProfileReel | ReferenceReel | FilmReel;
 
 const REFERENCE_ATTRIBUTION = "CMU optical mocap";
+const FILM_LINE = "내 영상 · 이 기기에만 보관";
 
 export function profileReelId(profileId: string): string {
   return `profile:${profileId}`;
@@ -40,24 +53,43 @@ export function referenceReelId(referenceId: string): string {
   return `reference:${referenceId}`;
 }
 
+export function filmReelId(shotId: string): string {
+  return `film:${shotId}`;
+}
+
+/** Whether a reel id (for example from a deep link) names one of my film shots. */
+export function isFilmReelId(reelId: string | undefined): boolean {
+  return typeof reelId === "string" && reelId.startsWith("film:");
+}
+
+export function filmShotReel(shot: FilmShotV1): FilmReel {
+  return { kind: "film", id: filmReelId(shot.id), shotId: shot.id, title: shot.title, createdAt: new Date(shot.createdAtMs), clips: shot.clips };
+}
+
 const MY_PROFILE_TITLE = "내 슛폼";
 
 /** The small label: whose motion this is, never a person's name. */
 export function reelTitle(item: ReelItem): string {
-  return item.kind === "profile" ? item.title ?? MY_PROFILE_TITLE : item.reference.shortLabel;
+  if (item.kind === "profile") return item.title ?? MY_PROFILE_TITLE;
+  if (item.kind === "film") return item.title;
+  return item.reference.shortLabel;
 }
 
-/** The single line under the label: honest recency for mine, the style title for a reference. */
+/** The single line under the label: honest recency for mine, the style title for a reference, footage-only for a film shot. */
 export function reelLine(item: ReelItem): string {
-  return item.kind === "profile" ? item.line ?? relativeDayLabel(item.createdAt) : item.reference.styleTitle;
+  if (item.kind === "profile") return item.line ?? relativeDayLabel(item.createdAt);
+  if (item.kind === "film") return `${relativeDayLabel(item.createdAt)} · ${FILM_LINE}`;
+  return item.reference.styleTitle;
 }
 
 /** The name VoiceOver reads first. */
 export function reelAccessibilityName(item: ReelItem): string {
-  return item.kind === "profile" ? `${item.title ?? MY_PROFILE_TITLE} 릴` : `${item.reference.shortLabel} 참조 릴, ${REFERENCE_ATTRIBUTION}`;
+  if (item.kind === "profile") return `${item.title ?? MY_PROFILE_TITLE} 릴`;
+  if (item.kind === "film") return `${item.title} 영상 릴`;
+  return `${item.reference.shortLabel} 참조 릴, ${REFERENCE_ATTRIBUTION}`;
 }
 
-/** The analysis route exists only for a saved profile. */
+/** The analysis route exists only for a saved profile; a film shot has no pose to analyse. */
 export function reelAnalysisProfileId(item: ReelItem): string | null {
   return item.kind === "profile" ? item.profileId : null;
 }

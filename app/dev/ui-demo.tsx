@@ -9,7 +9,8 @@ const LEGACY_SCREEN_ROUTES = {
   home: "/",
   explore: "/explore",
   profile: "/profile",
-  analysis: process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1" ? "/private-analysis/preview-shot-001" : "/profile",
+  // An analysis belongs to a saved profile; the real entry is the Profile grid.
+  analysis: "/profile",
   reels: "/reels",
   capture: "/private-capture",
   reference: "/library",

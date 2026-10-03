@@ -21,6 +21,8 @@ export type WebLocalVideoSourceV1 = Readonly<{
   width: number;
   height: number;
   sizeBytes: number;
+  /** The picked file itself, held only so a saved film shot can keep it on this device. Never sent anywhere. */
+  blob?: Blob;
   /** Releases the object URL. Idempotent. */
   revoke(): void;
 }>;
@@ -90,6 +92,7 @@ export async function createWebLocalVideoSource(
         width: Math.round(metadata.width),
         height: Math.round(metadata.height),
         sizeBytes: file.size,
+        ...(typeof Blob !== "undefined" && file instanceof Blob ? { blob: file } : {}),
         revoke,
       },
     };

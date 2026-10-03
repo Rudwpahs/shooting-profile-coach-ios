@@ -63,14 +63,19 @@ describe("apple design foundations", () => {
     const topBar = read("components/ui/top-bar.tsx");
     expect(topBar).toContain("TOP_BAR_HEIGHT = 44");
     expect(topBar).toContain('accessibilityRole="header"');
-    for (const screen of ["app/(tabs)/index.tsx", "app/(tabs)/profile.tsx", "app/private-analysis/[id].tsx", "components/shooting-profile/capture-session.tsx"]) {
+    for (const screen of ["app/(tabs)/index.tsx", "app/(tabs)/profile.tsx", "components/shooting-profile/capture-session.tsx"]) {
       expect(read(screen), screen).toContain("<TopBar");
     }
-    // Explore is a full-bleed reel like the Reels route: the tab bar answers "where am I" and the feed's own 44-point
-    // controls sit over the stage, so it carries no second bar.
+    // Every full-screen player (Explore, 참조 동작, Reels, analysis) is the same reel: the feed's own 44-point controls
+    // answer "how do I get out" (the back control) or the tab bar answers "where am I", so none carries a second bar.
+    for (const screen of ["app/(tabs)/explore.tsx", "app/(tabs)/library.tsx", "app/private-analysis/[id].tsx"]) {
+      expect(read(screen), screen).not.toContain("<TopBar");
+    }
     expect(read("app/(tabs)/explore.tsx")).toContain("<ReelsFeed");
-    expect(read("app/(tabs)/explore.tsx")).not.toContain("<TopBar");
-    expect(read("app/private-analysis/[id].tsx")).toContain('name="chevron-left"');
+    expect(read("app/(tabs)/library.tsx")).toContain("<ReelsFeed");
+    expect(read("components/analysis/analysis-stage.tsx")).toContain("<ReelsFeed");
+    expect(read("components/reels/reel-overlay.tsx")).toContain('name="arrow-left"');
+    expect(read("components/reels/reel-overlay.tsx")).toContain("CONTROL = 44");
     expect(read("components/shooting-profile/capture-session.tsx")).not.toContain("FORMPATH / PRIVATE CAPTURE");
   });
 

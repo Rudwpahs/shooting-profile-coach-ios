@@ -16,8 +16,10 @@ import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
+import { useFilmShots } from "@/hooks/use-film-shots";
 import { evaluateSignupGate } from "@/lib/compliance/signup-gate";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
+import { deleteFilmShot } from "@/lib/film-space/film-shots";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
@@ -34,6 +36,7 @@ import {
 import { personalPoseToCorrectedMotion, type PersonalPoseCandidate, type PersonalPoseCorrection } from "@/lib/personal-pose";
 import type { PoseMotion } from "@/lib/pose-motion";
 import { useProfile } from "@/lib/profile-store";
+import { filmReelId } from "@/lib/reels/reel-model";
 import {
   clearOwnerOperationIfMatching,
   ownerGenerationMatches,
@@ -96,6 +99,10 @@ export default function PersonalProfileTab() {
   const [heroView, setHeroView] = useState<RepresentativeViewId>("oblique");
   const [accountOpen, setAccountOpen] = useState(false);
   const [measuredWidth, setMeasuredWidth] = useState(0);
+  // My own footage on this device (no pose analysis): film tiles after the profiles, opened as film reels.
+  const filmShots = useFilmShots();
+  const [deletingFilmShotId, setDeletingFilmShotId] = useState<string | null>(null);
+  const [filmNotice, setFilmNotice] = useState<{ kind: "notice" | "error"; text: string } | null>(null);
   const currentOwnerUidRef = useRef<string | null>(null);
   const v1LoadGenerationRef = useRef(0);
   const v2LoadGenerationRef = useRef(0);
@@ -359,6 +366,35 @@ export default function PersonalProfileTab() {
     router.push(`/private-analysis/${profileId}` as never);
   }, [router]);
 
+  const openFilm = useCallback((shotId: string) => {
+    router.push(`/reels?start=${encodeURIComponent(filmReelId(shotId))}` as never);
+  }, [router]);
+
+  const deleteFilm = useCallback(async (shotId: string) => {
+    if (deletingFilmShotId !== null) return;
+    setDeletingFilmShotId(shotId);
+    setFilmNotice(null);
+    try {
+      await deleteFilmShot(shotId);
+      setFilmNotice({ kind: "notice", text: "이 기기에 보관한 영상을 삭제했습니다." });
+    } catch {
+      setFilmNotice({ kind: "error", text: "이 기기에 보관한 영상을 삭제하지 못했습니다. 다시 시도해 주세요." });
+    } finally {
+      setDeletingFilmShotId(null);
+    }
+  }, [deletingFilmShotId]);
+
+  const confirmDeleteFilm = useCallback((shotId: string) => {
+    Alert.alert(
+      "내 영상 삭제",
+      "이 기기에 보관한 영상과 연결 정보를 삭제할까요? 어디에도 올라간 적이 없어 되돌릴 수 없습니다.",
+      [
+        { text: "취소", style: "cancel" },
+        { text: "삭제", style: "destructive", onPress: () => { void deleteFilm(shotId); } },
+      ],
+    );
+  }, [deleteFilm]);
+
   const selectedFluid = selectedPose ? privatePoseFluid(selectedPose) : null;
   const latestSummary = v2Records[0];
   const latestRecord = latestSummary ? v2Glyphs[latestSummary.id] : undefined;
@@ -406,6 +442,8 @@ export default function PersonalProfileTab() {
           locked={!user}
           stats={[
             { value: FORMPATH_FLAGS.profileV2 ? v2Records.length : 0, label: "대표 슛폼" },
+            // A store that cannot be read is an unknown count, never a confident zero.
+            { value: filmShots.status === "error" ? null : filmShots.shots.length, label: "내 영상" },
             { value: poses.length, label: "기존 분석" },
           ]}
         />
@@ -417,16 +455,41 @@ export default function PersonalProfileTab() {
               <>
                 <MotionGrid
                   canOpen={FORMPATH_FLAGS.profileV2 && FORMPATH_FLAGS.representative4DViewer}
+                  deletingFilmShotId={deletingFilmShotId}
                   deletingProfileId={visibleDeletingProfileId}
                   error={visibleV2Error}
+                  filmShots={filmShots.shots}
                   glyphs={v2Glyphs}
                   loading={visibleV2Loading}
                   onDelete={confirmDeleteV2}
+                  onDeleteFilm={confirmDeleteFilm}
                   onOpen={openV2}
+                  onOpenFilm={openFilm}
                   records={v2Records}
                   width={contentWidth}
                 />
                 {visibleV2Notice ? <Text accessibilityLiveRegion="polite" style={styles.noticeText}>{visibleV2Notice}</Text> : null}
+                {filmNotice ? (
+                  <Text accessibilityLiveRegion={filmNotice.kind === "error" ? "assertive" : "polite"} style={filmNotice.kind === "error" ? styles.errorText : styles.noticeText}>{filmNotice.text}</Text>
+                ) : null}
+                {filmShots.status === "error" ? (
+                  <View style={styles.filmError} testID="film-shots-error">
+                    <Text accessibilityLiveRegion="polite" style={styles.filmErrorText}>이 기기에 보관한 영상을 읽지 못했습니다. 영상이 삭제된 것은 아닙니다.</Text>
+                    <Pressable
+                      accessibilityLabel="내 영상 다시 읽기"
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: false }}
+                      disabled={false}
+                      focusable
+                      onBlur={() => setFocusedControl((current) => current === "film-retry" ? null : current)}
+                      onFocus={() => setFocusedControl("film-retry")}
+                      onPress={filmShots.reload}
+                      style={({ pressed }) => [styles.filmRetry, focusStyle(focusedControl === "film-retry"), pressed && styles.pressed]}
+                    >
+                      <Text style={styles.filmRetryText}>다시 읽기</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
               </>
             )}
           </View>
@@ -546,5 +609,9 @@ const styles = StyleSheet.create({
   poseName: { ...typography.body, color: tokens.foreground, flex: 1 },
   deleteButton: { alignItems: "center", borderRadius: 10, height: 48, justifyContent: "center", minHeight: 48, minWidth: 48, width: 48 },
   viewerWrap: { marginHorizontal: 14, marginTop: 10 },
+  filmError: { alignItems: "center", flexDirection: "row", gap: 10, paddingHorizontal: 14, paddingTop: 8 },
+  filmErrorText: { ...typography.caption, color: tokens.destructive, flex: 1 },
+  filmRetry: { alignItems: "center", borderColor: tokens.border, borderRadius: 10, borderWidth: 1, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 12 },
+  filmRetryText: { ...typography.label, color: tokens.foreground },
   pressed: { opacity: 0.75 },
 });

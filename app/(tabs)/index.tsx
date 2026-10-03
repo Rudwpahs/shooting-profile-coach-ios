@@ -4,6 +4,7 @@ import { useState } from "react";
 import { HomeFeed } from "@/components/home/home-feed";
 import { ScreenContainer } from "@/components/screen-container";
 import { TopBar } from "@/components/ui/top-bar";
+import { useFilmShots } from "@/hooks/use-film-shots";
 import { useLatestRepresentativeProfile } from "@/hooks/use-latest-representative-profile";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
@@ -29,6 +30,8 @@ export default function HomeScreen() {
   const { profile } = useProfile();
   const { user, loading: authLoading } = useFirebaseAuth();
   const latest = useLatestRepresentativeProfile(user, authLoading);
+  // My own footage on this device; there is no pose analysis behind it, so it plays as film in Reels.
+  const filmShots = useFilmShots();
   const [measuredWidth, setMeasuredWidth] = useState(0);
   const width = Math.min(measuredWidth || FALLBACK_WIDTH, MAX_WIDTH);
 
@@ -39,6 +42,8 @@ export default function HomeScreen() {
     >
       <TopBar wordmark="Hoop Hub" />
       <HomeFeed
+        filmShots={filmShots.shots}
+        filmShotsStatus={filmShots.status}
         focusTitle={getPracticeFocus(profile.goal).title}
         goalLabel={GOAL_LABELS[profile.goal]}
         latest={latest}
@@ -47,10 +52,11 @@ export default function HomeScreen() {
         onOpenProfile={() => router.navigate("/profile" as never)}
         onOpenReel={(reelId) => {
           // Hand Reels what Home is already showing, so it opens on the same item without a second fetch.
-          setReelHandoff({ items: homeReelItems(latest, ANONYMOUS_POSE_REFERENCES), startId: reelId });
+          setReelHandoff({ items: homeReelItems(latest, ANONYMOUS_POSE_REFERENCES, filmShots.shots), startId: reelId });
           router.push(`/reels?start=${encodeURIComponent(reelId)}` as never);
         }}
         onOpenReference={() => router.push("/library" as never)}
+        onRetryFilmShots={filmShots.reload}
         reference={ANONYMOUS_POSE_REFERENCES[0]}
         viewerEnabled={FORMPATH_FLAGS.representative4DViewer}
         width={width}

@@ -1,29 +1,20 @@
 /**
- * How the analysis route presents a profile. Explore opens the minimal
- * surface (one stage, one caption, the phase line, details behind one
- * sheet); every other entry keeps the full three-layer layout.
+ * The analysis route's display name and link. The route is the same stage
+ * every player uses; the only thing a caller adds is the honest name the
+ * form was shown under (SHOT 12, 내 슛폼), which is accepted only as a short
+ * plain string and never a file name or a link.
  */
-export type AnalysisPresentation = "full" | "minimal";
-
-export const MINIMAL_ANALYSIS_PARAM = "presentation";
-const MINIMAL_VALUE = "minimal";
 const TITLE_PARAM = "title";
 const FALLBACK_TITLE = "슛폼";
-/** A short plain display name: letters, digits, Hangul, spaces and the middle dot; never markup or a link. */
 const DISPLAY_TITLE = /^[A-Za-z0-9가-힣 ·]{1,24}$/;
 
-/** Only the exact value selects the minimal surface; anything else is the full layout. */
-export function resolveAnalysisPresentation(param: string | string[] | undefined): AnalysisPresentation {
-  return param === MINIMAL_VALUE ? "minimal" : "full";
-}
-
 /** The display name carried on the route, or the plain fallback when it is missing or not a plain name. */
-export function minimalAnalysisTitle(param: string | string[] | undefined): string {
+export function analysisTitle(param: string | string[] | undefined): string {
   return typeof param === "string" && DISPLAY_TITLE.test(param) ? param : FALLBACK_TITLE;
 }
 
-/** The route Explore pushes for a profile id that the route already validates as opaque. */
-export function minimalAnalysisHref(profileId: string, title?: string): string {
-  const base = `/private-analysis/${encodeURIComponent(profileId)}?${MINIMAL_ANALYSIS_PARAM}=${MINIMAL_VALUE}`;
-  return title && DISPLAY_TITLE.test(title) ? `${base}&${TITLE_PARAM}=${encodeURIComponent(title)}` : base;
+/** The route Explore and Home push for a profile id that the route already validates as opaque. */
+export function analysisHref(profileId: string, title?: string): string {
+  const base = `/private-analysis/${encodeURIComponent(profileId)}`;
+  return title && DISPLAY_TITLE.test(title) ? `${base}?${TITLE_PARAM}=${encodeURIComponent(title)}` : base;
 }

@@ -4,8 +4,10 @@ import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-nativ
 
 import { CaptureSession } from "@/components/shooting-profile/capture-session";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
+import { isFilmShotId } from "@/lib/film-space/film-shots";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-contract";
+import { filmReelId } from "@/lib/reels/reel-model";
 import {
   saveShootingProfileV2,
   type SaveShootingProfileInputV2,
@@ -26,6 +28,11 @@ export default function PrivateCaptureRoute() {
   }, [router]);
 
   const complete = useCallback((savedProfileId: string) => {
+    // Footage kept without pose analysis is a film shot: it opens as a film reel, since there is no analysis to show.
+    if (isFilmShotId(savedProfileId)) {
+      router.replace(`/reels?start=${encodeURIComponent(filmReelId(savedProfileId))}` as never);
+      return;
+    }
     if (
       FORMPATH_FLAGS.profileV2
       && FORMPATH_FLAGS.captureV2
@@ -46,13 +53,13 @@ export default function PrivateCaptureRoute() {
   if (!captureEnabled || (!authLoading && !user)) return <Redirect href="/profile" />;
 
   // Install-free web preview: the same capture screen, with the browser file chooser as the
-  // clip source and the preview profile as the save target. The literal gate folds away otherwise.
+  // clip source; the clips are kept as a film shot on this device. The literal gate folds away otherwise.
   if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1" && Platform.OS === "web") {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const preview = require("@/lib/preview/preview-capture-session") as typeof import("@/lib/preview/preview-capture-session");
     return (
       <preview.PreviewCaptureSession
-        completionActionLabel="저장된 대표 슛폼 열기"
+        completionActionLabel="내 영상 릴 열기"
         onClose={close}
         onComplete={complete}
       />

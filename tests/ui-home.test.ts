@@ -34,6 +34,19 @@ describe("home around the motion loop", () => {
     expect(stories).toContain("accessibilityLabel={item.accessibilityLabel}");
   });
 
+  it("lets the story row scroll sideways instead of clipping film shots and the reference at a compact width", () => {
+    expect(stories).toMatch(/<ScrollView[\s\S]*?horizontal/);
+    expect(stories).toContain('testID="story-strip"');
+    expect(stories).not.toMatch(/\.slice\(0,\s*\d/);
+  });
+
+  it("tells a film-store read failure apart from an empty strip and offers a retry", () => {
+    expect(home).toContain('testID="film-shots-error"');
+    expect(home).toContain("이 기기에 보관한 영상을 읽지 못했습니다");
+    expect(home).toContain('accessibilityLabel="내 영상 다시 읽기"');
+    expect(home).toContain("filmShots.reload");
+  });
+
   it("shows honest recency and confidence as form, never fake engagement", () => {
     expect(home).toContain("relativeDayLabel(latest.summary.createdAt.toDate())");
     expect(home).toContain("representativeConfidence(latest.record.profile)");

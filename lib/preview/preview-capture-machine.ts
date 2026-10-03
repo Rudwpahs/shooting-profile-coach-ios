@@ -1,9 +1,9 @@
 import type { CaptureController } from "@/components/shooting-profile/capture-session";
+import type { FilmShotClipInputV1 } from "@/lib/film-space/film-shot-media";
 import { createLocalFilmClipRef, dropLocalFilmRef, retainAcceptedLocalFilmRef } from "@/lib/film-space/local-association";
 import type { LocalFilmClipRefV1 } from "@/lib/film-space/types";
 import { describeWebLocalVideoRejection, type WebLocalVideoSourceV1 } from "@/lib/film-space/web-local-video";
 import type { WebLocalVideoPickResult } from "@/lib/film-space/web-local-video-picker";
-import { PREVIEW_PROFILE_ID, type PreviewData } from "@/lib/preview/preview-runtime";
 import {
   captureSessionReducer,
   createCaptureSession,
@@ -13,20 +13,20 @@ import type { CaptureProtocolV2, ShootingHandV2 } from "@/lib/shooting-profile/t
 
 /**
  * The preview's capture data source. It drives the unchanged capture state
- * machine, but where the device would record or pick a clip and run on-device
- * pose detection, the browser picks a local video file instead: the clip's
- * object URL becomes the slot's Film source and the synthetic sequence stands
- * in for the accepted pose. Saving associates the picked clips with the
- * primary preview profile so Analysis → Film shows the user's own footage.
- * No pose analysis happens here and nothing leaves the browser.
+ * machine, but where the device would record a clip and run on-device pose
+ * detection, the browser picks a local video file and that is all the
+ * evidence there is: the slot is accepted as film, the session ends in film
+ * review instead of a representative profile, and saving keeps the clips as
+ * one film shot on this device. No pose analysis happens here and nothing
+ * leaves the browser.
  */
 
 export type PreviewLocalVideoPick = WebLocalVideoPickResult;
 
 export type PreviewCaptureMachinePorts = Readonly<{
-  data: PreviewData;
   pickLocalVideo(source: "camera" | "library"): Promise<PreviewLocalVideoPick>;
-  saveAssociation(profileId: string, clips: readonly LocalFilmClipRefV1[]): Promise<void>;
+  /** Keeps the clips (with their files) as a film shot and returns its id. */
+  saveFilmShot(clips: readonly FilmShotClipInputV1[]): Promise<string>;
 }>;
 
 export type PreviewCaptureMachine = Omit<CaptureController, "state" | "canSave"> & Readonly<{
@@ -47,6 +47,7 @@ export function createPreviewCaptureMachine(ports: PreviewCaptureMachinePorts): 
   const active = new Map<string, ActiveRequest>();
   const sources = new Map<string, WebLocalVideoSourceV1>();
   const refs = new Map<string, LocalFilmClipRefV1>();
+  const files = new Map<string, Blob>();
 
   const notify = () => {
     for (const listener of listeners) listener();
@@ -61,11 +62,13 @@ export function createPreviewCaptureMachine(ports: PreviewCaptureMachinePorts): 
   const revokeSlot = (slotId: string) => {
     sources.get(slotId)?.revoke();
     sources.delete(slotId);
+    files.delete(slotId);
     dropLocalFilmRef(refs, slotId);
   };
   const revokeAll = () => {
     for (const slotId of [...sources.keys()]) revokeSlot(slotId);
     refs.clear();
+    files.clear();
   };
   const invalidateSession = () => {
     sessionToken += 1;
@@ -73,23 +76,12 @@ export function createPreviewCaptureMachine(ports: PreviewCaptureMachinePorts): 
     revokeAll();
   };
 
-  const aggregateIfReady = () => {
-    if (state.status !== "ready_to_aggregate") return;
-    dispatch({ type: "AGGREGATE_STARTED" });
-    dispatch({
-      type: "AGGREGATE_COMPLETED",
-      sessionGeneration: state.sessionGeneration,
-      profile: ports.data.profile,
-      confidence: ports.data.record.confidence,
-    });
-  };
-
   return {
     get state() {
       return state;
     },
     get canSave() {
-      return state.status === "result_review";
+      return state.status === "film_review";
     },
 
     subscribe(listener) {
@@ -165,8 +157,7 @@ export function createPreviewCaptureMachine(ports: PreviewCaptureMachinePorts): 
         width: pick.source.width,
         height: pick.source.height,
       });
-      const sequence = ports.data.sequenceFor(slot.view, slot.takeIndex);
-      if (!clip || !sequence) {
+      if (!clip) {
         pick.source.revoke();
         dispatch({ type: "SLOT_REJECTED", slotId, requestId, generation, reason: describeWebLocalVideoRejection("metadata_unavailable") });
         return;
@@ -174,9 +165,11 @@ export function createPreviewCaptureMachine(ports: PreviewCaptureMachinePorts): 
 
       sources.get(slotId)?.revoke();
       sources.set(slotId, pick.source);
+      if (pick.source.blob) files.set(slotId, pick.source.blob);
+      else files.delete(slotId);
       retainAcceptedLocalFilmRef(refs, clip);
-      dispatch({ type: "SLOT_ACCEPTED", slotId, requestId, generation, sequence });
-      aggregateIfReady();
+      // Footage is the whole evidence: the slot is accepted as film, never as a pose.
+      dispatch({ type: "SLOT_FILM_ACCEPTED", slotId, requestId, generation });
     },
 
     retakeSlot(slotId) {
@@ -195,17 +188,19 @@ export function createPreviewCaptureMachine(ports: PreviewCaptureMachinePorts): 
     },
 
     async save() {
-      if (state.status !== "result_review") return;
+      if (state.status !== "film_review") return;
       const sessionGeneration = state.sessionGeneration;
       dispatch({ type: "SAVE_STARTED" });
+      const clips: FilmShotClipInputV1[] = [...refs.values()].map((clip) => ({ ...clip, blob: files.get(clip.slotId) }));
       try {
-        await ports.saveAssociation(PREVIEW_PROFILE_ID, [...refs.values()]);
-        // The association now owns the object URLs; this machine must not revoke them.
+        const shotId = await ports.saveFilmShot(clips);
+        // The film shot now owns the object URLs; this machine must not revoke them.
         sources.clear();
         refs.clear();
-        dispatch({ type: "SAVE_SUCCEEDED", sessionGeneration, profileId: PREVIEW_PROFILE_ID });
+        files.clear();
+        dispatch({ type: "SAVE_SUCCEEDED", sessionGeneration, profileId: shotId });
       } catch {
-        dispatch({ type: "SAVE_FAILED", sessionGeneration, reason: "브라우저 안에서 로컬 영상을 연결하지 못했습니다. 다시 시도하세요." });
+        dispatch({ type: "SAVE_FAILED", sessionGeneration, reason: "브라우저 안에서 영상을 보관하지 못했습니다. 다시 시도하세요." });
       }
     },
 

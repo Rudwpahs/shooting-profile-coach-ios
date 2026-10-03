@@ -7,6 +7,10 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      // Film Space ships platform files only (`.web.tsx` / `.native.tsx`); Vitest has no platform
+      // extension resolution, so the import analyser needs one concrete target. Tests that render
+      // it mock the module; this only makes the path resolvable. Listed before "@" so it wins.
+      "@/components/shooting-profile/film-space-viewer": path.join(rootDir, "components/shooting-profile/film-space-viewer.web.tsx"),
       "@": rootDir,
       // Render tests mount the real components through react-native-web in jsdom.
       "react-native": "react-native-web",

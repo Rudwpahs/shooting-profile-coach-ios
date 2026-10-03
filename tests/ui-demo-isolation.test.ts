@@ -23,9 +23,10 @@ describe("UI demo fixtures stay isolated from normal production", () => {
     expect(gate).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
   });
 
-  it("feeds the preview runtime, which production reaches only behind build-time-foldable gates", () => {
-    expect(previewRuntime).toContain('from "@/lib/dev/ui-demo-fixtures"');
-    expect(previewRuntime).toContain("buildUiDemoFixtures()");
+  it("no longer feeds the preview runtime: the preview holds one signed-in user and no synthetic profile", () => {
+    expect(previewRuntime).not.toMatch(/ui-demo-fixtures|buildUiDemoFixtures|syntheticLandmarkSession|@\/tests\//);
+    expect(previewRuntime).toContain("export const previewUser");
+    expect(previewRuntime).not.toMatch(/summaries|sequenceFor|recordFor|buildPreviewData|PREVIEW_PROFILE_ID/);
   });
 
   it("builds fixtures from the synthetic session only: no network, no account, no real person", () => {

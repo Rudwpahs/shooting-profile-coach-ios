@@ -61,12 +61,15 @@ export function reelShouldPlay(policy: ReelPlaybackPolicy): boolean {
   });
 }
 
-/** Stored phases play at 40 ms; the reference keeps its 1850 ms cycle across the same 101 steps. */
+/** Stored phases play at 40 ms; the reference keeps its 1850 ms cycle across the same 101 steps; film has no frame grid. */
 export function reelFrameIntervalMs(item: ReelItem): number {
-  return item.kind === "profile" ? PROFILE_FRAME_INTERVAL_MS : REFERENCE_LOOP_MS / REEL_LAST_FRAME;
+  if (item.kind === "reference") return REFERENCE_LOOP_MS / REEL_LAST_FRAME;
+  return PROFILE_FRAME_INTERVAL_MS;
 }
 
-/** The release still every neighbour shows, so becoming active never jumps. */
+/** The release still every neighbour shows, so becoming active never jumps. Film starts at its first slice. */
 export function reelStartFrame(item: ReelItem): number {
-  return item.kind === "profile" ? representativeReleaseFrameIndex(item.profile) : REFERENCE_RELEASE_FRAME;
+  if (item.kind === "profile") return representativeReleaseFrameIndex(item.profile);
+  if (item.kind === "film") return 0;
+  return REFERENCE_RELEASE_FRAME;
 }

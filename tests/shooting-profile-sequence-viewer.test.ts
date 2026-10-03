@@ -343,9 +343,11 @@ describe("viewer and private route static safety", () => {
     expect(routeSource).toContain("분석을 불러오는 중");
     expect(routeSource).toContain("다시 시도");
     expect(routeSource).toContain("프로필로 돌아가기");
-    expect(routeSource).toContain("ShotInspectionViewer");
+    // The route mounts the reel stage; the inspection coordinator (Phase / Film) lives behind its 동작 정보 sheet.
+    expect(routeSource).toContain("<AnalysisStage");
+    expect(readFileSync("components/analysis/analysis-stage.tsx", "utf8")).toContain("<ShotInspectionViewer");
     expect(inspectionSource).toContain("if (!experimentalEnabled)");
-    expect(inspectionSource).toContain("<SequenceViewer");
+    expect(inspectionSource).not.toContain("<SequenceViewer");
     expect(routeSource).toContain("shootingHand={loadState.record.shootingHand}");
     expect(routeSource).toContain("confidence={loadState.record.confidence}");
     expect(routeSource).not.toContain("const [profile, setProfile]");

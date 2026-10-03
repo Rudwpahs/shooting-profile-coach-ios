@@ -56,6 +56,7 @@ const STEP_TITLES: Readonly<Record<CaptureSessionState["status"], string>> = {
   ready_to_aggregate: "결합 중",
   aggregating: "결합 중",
   result_review: "확인",
+  film_review: "영상 보관",
   saving: "확인",
   complete: "저장 완료",
   cancelled: "멈춤",
@@ -255,12 +256,25 @@ export function CaptureSessionView({ controller, completionActionLabel, onClose,
           </View>
         ) : null}
 
+        {(state.status === "film_review" || (state.status === "saving" && !state.profile)) && state.mode ? (
+          <View style={styles.stack} testID="capture-film-review">
+            <View style={styles.filmReview}>
+              <MaterialCommunityIcons name="filmstrip" size={28} color={tokens.foreground} />
+              <Text accessibilityRole="header" style={styles.filmReviewTitle}>영상만 보관합니다</Text>
+              <Text accessibilityLiveRegion="polite" style={styles.filmReviewCopy}>이 기기에서는 포즈 분석을 하지 않았습니다. 선택한 영상은 이 기기에만 남고, 어디에도 업로드되지 않습니다. 대표 슛폼 분석은 iPhone 앱에서 촬영할 때 만들어집니다.</Text>
+            </View>
+            {primary("film-save", saving ? "보관 중" : "내 영상으로 보관", () => void controller.save(), saving || !controller.canSave)}
+            <Text numberOfLines={1} style={styles.retakeLine}>다른 영상으로 바꾸려면 클립 하나만 다시 선택하세요</Text>
+            {renderSlots()}
+          </View>
+        ) : null}
+
         {state.status === "complete" ? (
           <View style={styles.center}>
             <View style={styles.completeIcon}>
               <MaterialCommunityIcons name="lock" size={28} color={tokens.primaryForeground} />
             </View>
-            <Text accessibilityLiveRegion="polite" style={styles.centerLine}>원본 영상은 업로드하지 않았고, 파생된 대표 슛폼 데이터만 비공개로 저장했습니다.</Text>
+            <Text accessibilityLiveRegion="polite" style={styles.centerLine}>{state.savedProfileId?.startsWith("film-shot-") ? "원본 영상은 업로드하지 않았고, 이 기기에만 내 영상으로 보관했습니다." : "원본 영상은 업로드하지 않았고, 파생된 대표 슛폼 데이터만 비공개로 저장했습니다."}</Text>
             {primary("complete", completionActionLabel, () => state.savedProfileId && onComplete(state.savedProfileId), !state.savedProfileId)}
           </View>
         ) : null}
@@ -278,7 +292,7 @@ export function CaptureSessionView({ controller, completionActionLabel, onClose,
           <View style={styles.center}>
             <MaterialCommunityIcons name="alert-circle-outline" size={44} color={tokens.warning} />
             <Text accessibilityLiveRegion="assertive" style={styles.errorLine}>{state.errorMessage ?? "세션을 계속하지 못했습니다."}</Text>
-            {primary("retry", state.recoveryStatus === "result_review" ? "리뷰로 돌아가기" : "클립 확인하기", controller.retrySession)}
+            {primary("retry", state.recoveryStatus === "result_review" || state.recoveryStatus === "film_review" ? "리뷰로 돌아가기" : "클립 확인하기", controller.retrySession)}
           </View>
         ) : null}
       </ScrollView>
@@ -288,6 +302,9 @@ export function CaptureSessionView({ controller, completionActionLabel, onClose,
 
 const styles = StyleSheet.create({
   page: { alignSelf: "center", paddingBottom: 36, paddingTop: 6 },
+  filmReview: { alignItems: "flex-start", backgroundColor: tokens.surface, borderRadius: 16, gap: 8, padding: 16 },
+  filmReviewTitle: { ...typography.headline, color: tokens.foreground },
+  filmReviewCopy: { ...typography.callout, color: tokens.mutedForeground },
   close: { height: 44, minHeight: 44, minWidth: 44, paddingHorizontal: 4 },
   closeSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
   closeText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },

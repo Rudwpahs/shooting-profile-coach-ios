@@ -17,12 +17,18 @@ vi.mock("expo-haptics", () => ({
   ImpactFeedbackStyle: { Light: "light", Medium: "medium", Heavy: "heavy", Rigid: "rigid", Soft: "soft" },
   NotificationFeedbackType: { Success: "success", Warning: "warning", Error: "error" },
 }));
-// The full inspection surface (Motion/Phase/Film) has its own suites; here it only has to be reachable from the sheet.
+const storage = new Map<string, string>();
+vi.mock("@react-native-async-storage/async-storage", () => ({ default: {
+  getItem: async (key: string) => storage.get(key) ?? null,
+  setItem: async (key: string, value: string) => { storage.set(key, value); },
+  removeItem: async (key: string) => { storage.delete(key); },
+} }));
+// The inspection surface (Phase / Film) has its own suites; here it only has to be reachable from the sheet.
 vi.mock("@/components/shooting-profile/shot-inspection-viewer", () => ({
   ShotInspectionViewer: ({ profileId }: { profileId: string }) => <div data-testid="shot-inspection-viewer">inspection {profileId}</div>,
 }));
 
-const { MinimalAnalysis } = await import("@/components/analysis/minimal-analysis");
+const { AnalysisStage } = await import("@/components/analysis/analysis-stage");
 const { syntheticRepresentative } = await import("@/tests/fixtures/reel-fixtures");
 
 const { profile, confidence } = syntheticRepresentative();
@@ -36,6 +42,7 @@ beforeEach(() => {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
+  storage.clear();
 });
 afterEach(async () => {
   await act(async () => root.unmount());
@@ -45,11 +52,12 @@ afterEach(async () => {
 const byLabel = (label: string) => document.body.querySelector<HTMLElement>(`[aria-label="${label}"]`);
 const byTestId = (id: string) => Array.from(document.body.querySelectorAll(`[data-testid="${id}"]`)) as HTMLElement[];
 const click = async (element: HTMLElement | null) => { expect(element).not.toBeNull(); await act(async () => element!.click()); };
+const stageLabel = () => (document.body.querySelector('[data-testid="reel-tap"]:not([aria-disabled="true"])') as HTMLElement | null)?.getAttribute("aria-label") ?? "";
 
-type Props = Partial<React.ComponentProps<typeof MinimalAnalysis>>;
+type Props = Partial<React.ComponentProps<typeof AnalysisStage>>;
 const render = (props: Props = {}) => act(async () => {
   root.render(
-    <MinimalAnalysis
+    <AnalysisStage
       appState="active"
       confidence={confidence}
       experimentalEnabled
@@ -68,60 +76,41 @@ const render = (props: Props = {}) => act(async () => {
   );
 });
 
-describe("minimal analysis", () => {
-  it("shows one stage, the name, one finding line, the phase line and five phase markers, and nothing else", async () => {
+describe("analysis stage", () => {
+  it("is the same reel as every player: one stage, the name with band and finding, rail, camera menu, phase dots, back control", async () => {
     await render();
-    expect(byTestId("minimal-analysis")).toHaveLength(1);
-    expect(byTestId("minimal-analysis-stage")).toHaveLength(1);
+    expect(byTestId("analysis-stage")).toHaveLength(1);
+    expect(byTestId("reels-feed")).toHaveLength(1);
     expect(container.querySelector("svg")).not.toBeNull();
-    expect(container.textContent).toContain("SHOT 12");
-    expect(byTestId("minimal-analysis-line")).toHaveLength(1);
-    expect(byTestId("reel-progress").length).toBeGreaterThanOrEqual(1);
-    const markers = ["준비", "딥", "상승", "릴리스", "팔로우스루"].map((label) => byLabel(`${label} 단계 보기`));
-    expect(markers.every((marker) => marker !== null)).toBe(true);
-    expect(byLabel("뒤로 가기")).not.toBeNull();
-    expect(byLabel("자세히")).not.toBeNull();
+    expect(stageLabel()).toContain("SHOT 12 릴, 1/1, 재생 중");
+    expect(byTestId("reel-caption")[0].textContent).toContain("SHOT 12");
+    expect(byTestId("reel-caption")[0].textContent).toMatch(/Basic|High|재촬영/);
+    for (const name of ["릴 닫기", "시점 선택", "좋아요", "동작 메모", "동작 정보", "릴리스 단계 보기"]) expect(byLabel(name), name).not.toBeNull();
     // The three-layer surface is not on screen until asked for.
     expect(byTestId("shot-inspection-viewer")).toHaveLength(0);
-    expect(container.textContent).not.toMatch(/FLUID MOTION|Motion 보기|Phase 보기/);
+    expect(byTestId("analysis-layers")).toHaveLength(0);
+    expect(container.textContent).not.toMatch(/FLUID MOTION|Motion 보기/);
   });
 
-  it("tapping the stage pauses and resumes; a phase marker seeks and holds that phase", async () => {
+  it("opens the inspection, details and evidence in 동작 정보, holds playback behind it, and closes again", async () => {
     await render();
-    const stage = () => byLabel("동작 화면 일시정지") ?? byLabel("동작 화면 재생");
-    expect(byLabel("동작 화면 일시정지")).not.toBeNull();
-    await click(stage());
-    expect(byLabel("동작 화면 재생")).not.toBeNull();
-    expect(byTestId("reel-pause-indicator")).toHaveLength(1);
-    await click(stage());
-    expect(byLabel("동작 화면 일시정지")).not.toBeNull();
-    await click(byLabel("릴리스 단계 보기"));
-    expect(byLabel("릴리스 단계 보기")!.getAttribute("aria-pressed")).toBe("true");
-    expect(byLabel("동작 화면 재생")).not.toBeNull();
-    expect(container.textContent).toContain("릴리스");
-  });
-
-  it("opens the full inspection, details and evidence in one sheet, suspends playback behind it, and closes again", async () => {
-    await render();
-    await click(byLabel("자세히"));
+    await click(byLabel("동작 정보"));
+    expect(byTestId("analysis-layers")).toHaveLength(1);
     expect(byTestId("shot-inspection-viewer")).toHaveLength(1);
     expect(document.body.textContent).toContain("inspection preview-shot-012");
-    expect(byLabel("자세히")!.getAttribute("aria-expanded")).toBe("true");
-    expect(byLabel("동작 화면 재생")).not.toBeNull();
-    await click(byLabel("자세히 닫기"));
-    expect(byTestId("shot-inspection-viewer")).toHaveLength(0);
-    expect(byLabel("동작 화면 일시정지")).not.toBeNull();
+    expect(document.body.textContent).toContain("자세히");
+    expect(document.body.textContent).toContain("위상 · 각도 · 증거");
+    expect(stageLabel()).toContain("일시정지됨");
+    await click(byLabel("동작 정보 닫기"));
+    expect(byTestId("analysis-layers")).toHaveLength(0);
+    expect(stageLabel()).toContain("재생 중");
   });
 
-  it("never autoplays under Reduce Motion or while unfocused, and goes back from the top control", async () => {
+  it("goes back from the top control and never autoplays under Reduce Motion", async () => {
     const onBack = vi.fn();
-    await render({ reducedMotion: true, onBack });
-    expect(byLabel("동작 화면 재생")).not.toBeNull();
-    await click(byLabel("뒤로 가기"));
+    await render({ onBack, reducedMotion: true });
+    expect(stageLabel()).toContain("일시정지됨");
+    await click(byLabel("릴 닫기"));
     expect(onBack).toHaveBeenCalledTimes(1);
-    await act(async () => root.unmount());
-    root = createRoot(container);
-    await render({ focused: false });
-    expect(byLabel("동작 화면 재생")).not.toBeNull();
   });
 });

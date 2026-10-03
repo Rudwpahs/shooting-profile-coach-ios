@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -18,9 +18,7 @@ function sourceFiles(root: string): string[] {
 /** Production files that are allowed to reach the preview runtime, only through the build-time-foldable gate. */
 const GATED_PREVIEW_SITES = [
   "app/_layout.tsx",
-  "app/private-analysis/[id].tsx",
   "app/private-capture.tsx",
-  "lib/explore-source.ts",
   "lib/feature-flags.ts",
   "lib/firebase-auth.tsx",
   "lib/shooting-profile-source.ts",
@@ -60,6 +58,18 @@ describe("PreviewRuntime stays isolated from ordinary production", () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  it("carries no synthetic shot library: the preview shows the reference and the owner's own footage only", () => {
+    expect(existsSync("lib/preview/preview-shot-library.ts")).toBe(false);
+    expect(existsSync("lib/preview/preview-explore-motions.ts")).toBe(false);
+    for (const file of sourceFiles("lib/preview")) {
+      expect(withoutComments(read(file)), file).not.toMatch(/preview-shot|PREVIEW_SHOT|PREVIEW_PROFILE_ID|syntheticLandmarkSession|@\/tests\/|buildUiDemoFixtures/);
+    }
+    // The analysis route and the explore source no longer need the preview runtime at all.
+    for (const file of ["app/private-analysis/[id].tsx", "lib/explore-source.ts", "app/dev/ui-demo.tsx"]) {
+      expect(withoutComments(read(file)), file).not.toMatch(/@\/lib\/preview\/|preview-shot|EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD/);
+    }
   });
 
   it("never talks to Firebase, the network or storage from the preview runtime", () => {

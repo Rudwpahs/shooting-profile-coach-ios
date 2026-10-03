@@ -8,6 +8,10 @@ const routeSource = readFileSync(
   resolve(process.cwd(), "app/private-analysis/[id].tsx"),
   "utf8",
 );
+const stageSource = readFileSync(
+  resolve(process.cwd(), "components/analysis/analysis-stage.tsx"),
+  "utf8",
+);
 const flagSource = readFileSync(
   resolve(process.cwd(), "lib/feature-flags.ts"),
   "utf8",
@@ -18,34 +22,37 @@ const viewerSource = readFileSync(
 );
 
 describe("shot inspection coordinator", () => {
-  it("defaults to Motion and keeps Phase and an honest Film tab when local film is missing", () => {
+  it("defaults to Phase and keeps an honest Film tab when local film is missing: the reel stage is the motion", () => {
     const model = resolveShotInspectionModes({ experimentalEnabled: true, hasLocalFilm: false });
-    expect(model.defaultMode).toBe("motion");
-    expect(model.enabledModes).toEqual(["motion", "phase", "film"]);
+    expect(model.defaultMode).toBe("phase");
+    expect(model.enabledModes).toEqual(["phase", "film"]);
     expect(model.filmSourceAvailable).toBe(false);
   });
 
-  it("lists Film only when the experimental gate is on, and marks the source available only with a local clip", () => {
+  it("lists nothing when the experimental gate is off, and marks the Film source available only with a local clip", () => {
     expect(resolveShotInspectionModes({ experimentalEnabled: false, hasLocalFilm: true }).enabledModes)
-      .toEqual(["motion"]);
+      .toEqual([]);
     const withClip = resolveShotInspectionModes({ experimentalEnabled: true, hasLocalFilm: true });
-    expect(withClip.enabledModes).toEqual(["motion", "phase", "film"]);
+    expect(withClip.enabledModes).toEqual(["phase", "film"]);
     expect(withClip.filmSourceAvailable).toBe(true);
   });
 
-  it("routes private analysis through ShotInspectionViewer instead of mounting SequenceViewer directly", () => {
-    expect(routeSource).toMatch(/ShotInspectionViewer/);
-    expect(routeSource).not.toMatch(/<SequenceViewer/);
-    expect(routeSource).toMatch(/profileId=/);
-    expect(routeSource).toMatch(/highlightJoint=/);
+  it("routes private analysis through the reel stage, which mounts ShotInspectionViewer behind 동작 정보 instead of SequenceViewer", () => {
+    expect(routeSource).toMatch(/<AnalysisStage/);
+    expect(routeSource).not.toMatch(/<SequenceViewer|ShotInspectionViewer/);
+    expect(stageSource).toMatch(/<ShotInspectionViewer/);
+    expect(stageSource).not.toMatch(/<SequenceViewer/);
+    expect(stageSource).toMatch(/profileId=/);
+    expect(stageSource).toMatch(/highlightJoint=/);
+    expect(viewerSource).not.toMatch(/SequenceViewer|"motion"/);
   });
 
-  it("evicts unavailable local film, supports clip selection, and fails closed to Motion", () => {
+  it("evicts unavailable local film, supports clip selection, and fails closed to Phase", () => {
     expect(viewerSource).toMatch(/evictLocalFilmClipFromAssociation/);
     expect(viewerSource).toMatch(/onSourceUnavailable/);
     expect(viewerSource).toMatch(/selectedSlotId/);
     expect(viewerSource).toMatch(/clips\.map/);
-    expect(viewerSource).toMatch(/setMode\(["']motion["']\)/);
+    expect(viewerSource).toMatch(/setMode\(["']phase["']\)/);
   });
 
   it("keeps the new inspection surface behind a separate default-off public env flag and existing rollout gate", () => {

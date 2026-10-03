@@ -47,7 +47,9 @@ describe("Liquid + Glass screen rollout", () => {
     expect(dock).toContain('<GlassSurface variant="bar"');
     expect(dock).toContain("<LiquidPressable");
     expect(profile).toContain("<LiquidPressable");
-    expect(analysis).toContain("<LiquidPressable");
+    // The analysis route is the reel stage; its Liquid controls live in the shared reel chrome.
+    expect(analysis).toContain("<AnalysisStage");
+    expect(read("components/reels/reel-overlay.tsx")).toContain("<LiquidPressable");
   });
 
   it("lets Explore inherit the Reel chrome: the feed owns the Liquid controls, the screen adds none of its own", () => {
@@ -66,7 +68,7 @@ describe("Liquid + Glass screen rollout", () => {
     expect(overlay).toContain('<GlassSurface');
     expect(overlay).toContain("<LiquidPressable");
     expect(overlay).toContain("<ReelProgress");
-    expect(overlay).toContain("style={styles.caption}");
+    expect(overlay).toContain("styles.caption,");
     expect(item).toContain("<Pressable");
     expect(item).toContain('accessibilityRole="adjustable"');
     expect(item).not.toContain("<LiquidPressable");
