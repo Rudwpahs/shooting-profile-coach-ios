@@ -123,7 +123,8 @@ flowchart LR
 
 | 목적 | 문서 |
 |---|---|
-| AI 제품 구조 (필독) | `docs/HOOPHUB_AI_PRODUCT_ARCHITECTURE.md` |\n| 현재 구현 상태 | `docs/IMPLEMENTATION_STATUS.md` |
+| AI 제품 구조 (필독) | `docs/HOOPHUB_AI_PRODUCT_ARCHITECTURE.md` |
+| 현재 구현 상태 | `docs/IMPLEMENTATION_STATUS.md` |
 | product / data boundary | `docs/PROJECT_MAP.md` |
 | 개발·test·checkpoint 규칙 | `docs/DEVELOPMENT_WORKFLOW.md` |
 | multi-view capture | `docs/authorized-multiview-capture-kit.md` |
