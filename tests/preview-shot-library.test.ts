@@ -108,24 +108,69 @@ describe("preview shot library", () => {
     }
     expect(closest).toBeGreaterThan(0.12);
 
+    // The traits a stored, pelvis-centred profile can still show at release: arm direction, torso lean,
+    // stance, knee extension, where the guide hand is and whether the free leg is lifted.
     const metrics = records.map(({ entry, record }) => {
       const hand = entry.shootingHand;
+      const off = hand === "right" ? "left" : "right";
       const { profile } = record;
       return {
         releaseForward: (joint(profile, 75, `${hand}Wrist`).z - joint(profile, 75, `${hand}Shoulder`).z).toFixed(2),
-        kneeBend: (joint(profile, 40, `${hand}Knee`).y - joint(profile, 40, `${hand}Hip`).y).toFixed(2),
-        stance: Math.abs(joint(profile, 0, "leftAnkle").x - joint(profile, 0, "rightAnkle").x).toFixed(2),
-        lean: (joint(profile, 0, `${hand}Shoulder`).z - joint(profile, 0, `${hand}Hip`).z).toFixed(2),
-        liftAt40: (joint(profile, 40, `${hand}Wrist`).y - joint(profile, 40, `${hand}Shoulder`).y).toFixed(2),
+        lean: (joint(profile, 75, `${hand}Shoulder`).z - joint(profile, 75, `${hand}Hip`).z).toFixed(2),
+        stance: Math.abs(joint(profile, 0, "leftAnkle").x - joint(profile, 0, "rightAnkle").x).toFixed(1),
+        kneeAtRelease: (joint(profile, 75, `${hand}Knee`).y - joint(profile, 75, `${hand}Hip`).y).toFixed(1),
+        guideHand: (joint(profile, 75, `${off}Wrist`).y - joint(profile, 75, `${off}Shoulder`).y).toFixed(1),
+        freeKnee: (joint(profile, 75, `${off}Knee`).z - joint(profile, 75, `${off}Hip`).z).toFixed(1),
       };
     });
     expect(new Set(metrics.map((metric) => metric.releaseForward)).size).toBeGreaterThanOrEqual(8);
-    expect(new Set(metrics.map((metric) => metric.kneeBend)).size).toBeGreaterThanOrEqual(6);
-    expect(new Set(metrics.map((metric) => metric.stance)).size).toBeGreaterThanOrEqual(6);
-    expect(new Set(metrics.map((metric) => metric.lean)).size).toBeGreaterThanOrEqual(4);
-    expect(new Set(metrics.map((metric) => metric.liftAt40)).size).toBeGreaterThanOrEqual(4);
+    expect(new Set(metrics.map((metric) => metric.lean)).size).toBeGreaterThanOrEqual(5);
+    expect(new Set(metrics.map((metric) => metric.stance)).size).toBeGreaterThanOrEqual(2);
+    expect(new Set(metrics.map((metric) => metric.kneeAtRelease)).size).toBeGreaterThanOrEqual(3);
+    expect(new Set(metrics.map((metric) => metric.guideHand)).size).toBeGreaterThanOrEqual(3);
+    expect(new Set(metrics.map((metric) => metric.freeKnee)).size).toBeGreaterThanOrEqual(2);
+    // Each family is present: both hands up with feet planted, a hanging guide hand, a lifted leg, and both.
+    expect(metrics.filter((metric) => Number(metric.guideHand) < 0).length).toBeGreaterThanOrEqual(8);
+    expect(metrics.filter((metric) => Number(metric.freeKnee) > 0.4).length).toBeGreaterThanOrEqual(6);
     // The summary line each analysis opens on is not one sentence repeated.
     expect(new Set(records.map(({ record }) => primaryFinding(record.profile).line)).size).toBeGreaterThanOrEqual(3);
+  });
+
+  it("differs at a glance: in the tile's oblique glyph every pair moves some joint by at least 12% of body height at release and 2% on average across the anchors", () => {
+    // What the Profile tile and the Explore feed actually draw: the oblique projection, fitted per figure.
+    const glyphAt = (record: (typeof records)[number]["record"], frame: number) => (
+      representativeGlyph(record.profile.frames[frame], "oblique", record.shootingHand).points
+    );
+    const bodyHeight = (points: Record<string, { x: number; y: number }>) => {
+      const ys = Object.values(points).map((point) => point.y);
+      return Math.max(...ys) - Math.min(...ys);
+    };
+    const ANCHORS = [0, 25, 50, 75, 100] as const;
+    const JOINTS = [...PERSISTED_JOINT_NAMES_V2];
+    let closestRelease = Number.POSITIVE_INFINITY;
+    let closestMean = Number.POSITIVE_INFINITY;
+    for (let a = 0; a < records.length; a += 1) {
+      for (let b = a + 1; b < records.length; b += 1) {
+        const label = `${records[a].entry.key} vs ${records[b].entry.key}`;
+        const scale = (bodyHeight(glyphAt(records[a].record, 0)) + bodyHeight(glyphAt(records[b].record, 0))) / 2;
+        const releaseA = glyphAt(records[a].record, representativeReleaseFrameIndex(records[a].record.profile));
+        const releaseB = glyphAt(records[b].record, representativeReleaseFrameIndex(records[b].record.profile));
+        const releaseMax = Math.max(...JOINTS.map((name) => Math.hypot(releaseA[name].x - releaseB[name].x, releaseA[name].y - releaseB[name].y))) / scale;
+        let total = 0;
+        for (const frame of ANCHORS) {
+          const pa = glyphAt(records[a].record, frame);
+          const pb = glyphAt(records[b].record, frame);
+          for (const name of JOINTS) total += Math.hypot(pa[name].x - pb[name].x, pa[name].y - pb[name].y);
+        }
+        const mean = total / (ANCHORS.length * JOINTS.length) / scale;
+        closestRelease = Math.min(closestRelease, releaseMax);
+        closestMean = Math.min(closestMean, mean);
+        expect(releaseMax, `${label} at release`).toBeGreaterThanOrEqual(0.12);
+        expect(mean, `${label} across anchors`).toBeGreaterThanOrEqual(0.02);
+      }
+    }
+    expect(closestRelease).toBeGreaterThanOrEqual(0.12);
+    expect(closestMean).toBeGreaterThanOrEqual(0.02);
   });
 
   it("never names a real player and stays declared synthetic", () => {

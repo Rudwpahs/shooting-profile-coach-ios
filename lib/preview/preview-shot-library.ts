@@ -75,93 +75,98 @@ const archetype = (
   confidence: spec.confidence ?? BASIC_CONFIDENCE,
 });
 
+/**
+ * Twenty-four archetypes that differ in the pose itself, because a stored
+ * profile is pelvis-centred and phase-normalised: dip depth, jump height and
+ * tempo vanish, while release height, arm direction, elbow, lean, shoulder
+ * turn, knee flexion, stance and the guide hand all survive and are what the
+ * release still on a Profile tile actually shows. The glyph-space test in
+ * `tests/preview-shot-library.test.ts` keeps every pair apart at a glance.
+ */
 export const PREVIEW_SHOT_ARCHETYPES: readonly PreviewShotArchetypeV1[] = Object.freeze([
+  // Both feet planted, guide hand up.
   archetype(1, "canonical-balanced", "균형 잡힌 기본 리듬", {}),
-  archetype(2, "compact-quick-release", "컴팩트 · 빠른 릴리스", {
-    style: { dipKneeBend: 1.45, armLiftStart: 0.5, setPointHold: 0.3, releaseHeight: 0.96, releaseElevation: 0.2, elbowFlare: 0.22, offHandTuck: 0.2, stanceWidth: 0.7 },
+  archetype(2, "compact-quick-release", "컴팩트 · 슈팅 발을 앞에 둔 빠른 릴리스", {
+    mode: "high_accuracy_3_plus_3",
+    style: { footStagger: 1.2, legExtension: 0.6 },
     anchorScheduleShift: -0.08,
     durationScale: 0.9,
+    confidence: 0.7656,
   }),
-  archetype(3, "high-set-point", "높은 셋포인트 릴리스", {
-    style: { releaseElevation: -0.3, armLiftStart: 0.46, setPointHold: 0.4, elbowFlare: 0.1 },
+  archetype(3, "fadeaway", "뒤로 젖히며 넘기는 페이드어웨이", {
+    style: { forwardLean: -0.7, releaseElevation: -0.4 },
   }),
-  archetype(4, "deep-dip-rhythm", "깊은 딥 리듬", {
-    style: { dipDepth: -0.68, jumpHeight: 0.6, dipKneeBend: 0.62, forwardLean: 0.08, offHandTuck: 0.3, releaseElevation: 0.08 },
-    durationScale: 1.1,
+  archetype(4, "forward-lean-tuck", "앞으로 기울이고 가이드 핸드를 모은 릴리스", {
+    style: { forwardLean: 0.7, offHandTuck: 0.85 },
   }),
-  archetype(5, "shallow-dip-rhythm", "얕은 딥 리듬", {
-    style: { dipDepth: -0.46, jumpHeight: 0.45, dipKneeBend: 1.45, releaseElevation: 0.1, elbowFlare: 0.26, stanceWidth: 0.9 },
-  }),
-  archetype(6, "one-motion-smooth", "원모션 · 부드러운 상승", {
-    style: { setPointHold: 0.5, armLiftStart: 0.24, releaseElevation: -0.1, elbowFlare: 0.16, dipKneeBend: 0.9 },
-  }),
-  archetype(7, "two-stage-set", "투스테이지 셋 · 멈춤 후 릴리스", {
-    style: { setPointHold: 0.1, armLiftStart: 0.6, releaseElevation: -0.2, elbowFlare: 0.12, releaseHeight: 1.08 },
-    anchorScheduleShift: 0.06,
-    durationScale: 1.15,
-  }),
-  archetype(8, "forward-lean", "앞으로 기운 릴리스", {
-    style: { forwardLean: 0.3, sideDrift: 0.05, releaseElevation: 0.18 },
-  }),
-  archetype(9, "upright-release", "곧게 선 릴리스", {
-    style: { forwardLean: -0.14, releaseElevation: -0.2, stanceWidth: 0.9 },
-  }),
-  archetype(10, "wide-stance", "넓은 스탠스", {
-    style: { stanceWidth: 1.55, dipDepth: -0.6, dipKneeBend: 0.85 },
-  }),
-  archetype(11, "narrow-stance", "좁은 스탠스", {
-    style: { stanceWidth: 0.55, forwardLean: -0.05, releaseElevation: -0.12 },
-  }),
-  archetype(12, "strong-hip-drive", "강한 힙 드라이브", {
+  archetype(5, "stagger-back", "슈팅 발을 뒤로 뺀 스탠스", {
     mode: "high_accuracy_3_plus_3",
-    style: { hipDrive: 1.5, jumpHeight: 0.75, dipDepth: -0.65, dipKneeBend: 0.6, stanceWidth: 1.3, forwardLean: 0.12 },
-    confidence: 0.8824,
+    style: { footStagger: -1.2 },
+    confidence: 0.7806,
   }),
-  archetype(13, "low-jump-quick", "낮은 점프 · 빠른 릴리스", {
-    style: { jumpHeight: 0.3, armLiftStart: 0.5, setPointHold: 0.12, hipDrive: 0.8, releaseElevation: 0.22 },
-    anchorScheduleShift: -0.1,
+  archetype(6, "wide-squat-set", "넓게 디디고 무릎을 굽힌 채 쏘는 셋 슛", {
+    style: { stanceWidth: 5, legExtension: 0 },
   }),
-  archetype(14, "high-jump-release", "높은 점프 릴리스", {
-    mode: "high_accuracy_3_plus_3",
-    style: { jumpHeight: 0.85, dipDepth: -0.62, armLiftStart: 0.44, setPointHold: 0.42, dipKneeBend: 1.1, hipDrive: 1.3, releaseElevation: -0.22, stanceWidth: 0.8 },
-    confidence: 0.7967,
+  archetype(7, "lean-back-stride", "앞발을 내딛고 뒤로 젖히는 릴리스", {
+    style: { forwardLean: -0.85, footStagger: 1.2 },
   }),
-  archetype(15, "early-elbow-lift", "이른 팔꿈치 리프트", {
-    style: { armLiftStart: 0.36, setPointHold: 0.35, elbowFlare: 0.36, releaseElevation: 0.1, stanceWidth: 1.1 },
+  archetype(8, "lean-forward-trail-foot", "앞으로 기울이고 뒷발을 끌며 쏘는 릴리스", {
+    style: { forwardLean: 0.75, offHandTuck: 0.85, footStagger: -1.2 },
   }),
-  archetype(16, "delayed-elbow-lift", "늦은 팔꿈치 리프트", {
-    style: { armLiftStart: 0.66, setPointHold: 0.1, elbowFlare: 0.14, releaseElevation: 0.14, sideLean: 0.08 },
+  archetype(9, "bent-knees-lean-away", "반대쪽으로 기울이고 무릎을 굽힌 채 쏘는 릴리스", {
+    style: { sideLean: -0.55, legExtension: 0 },
   }),
-  archetype(17, "pronounced-follow-through", "길게 뻗는 팔로우스루", {
-    style: { followThroughReach: 0.3, releaseHeight: 1.1, releaseElevation: -0.08, elbowFlare: 0.16, stanceWidth: 1.12 },
+  // Guide hand hanging at the side (one-hand forms).
+  archetype(10, "one-hand-release", "가이드 핸드를 내린 원핸드 릴리스", {
+    style: { offHandDrop: 1 },
   }),
-  archetype(18, "short-follow-through", "짧은 팔로우스루", {
-    style: { followThroughReach: -0.2, releaseHeight: 0.85, releaseElevation: 0.25, elbowFlare: 0.24, dipKneeBend: 1.15 },
+  archetype(11, "one-hand-fadeaway", "원핸드 · 뒤로 젖히며 넘기는 페이드어웨이", {
+    style: { offHandDrop: 1, forwardLean: -0.7, releaseElevation: -0.4 },
   }),
-  archetype(19, "shooting-side-drift", "슈팅 쪽으로 흐르는 체중", {
-    style: { sideDrift: 0.16, sideLean: 0.16, stanceWidth: 1.15 },
-  }),
-  archetype(20, "slow-rhythm", "느린 리듬 · 늦게 올리는 셋", {
-    style: { setPointHold: 0.08, armLiftStart: 0.64, dipKneeBend: 0.85, forwardLean: -0.06, stanceWidth: 0.95, sideLean: -0.08, offHandTuck: 0.25 },
-    anchorScheduleShift: 0.1,
-    durationScale: 1.3,
-  }),
-  archetype(21, "fast-rhythm", "빠른 리듬 · 함께 올라가는 팔", {
-    style: { setPointHold: 0.3, armLiftStart: 0.42, dipKneeBend: 1.2, forwardLean: 0.1, elbowFlare: 0.3, sideLean: 0.06, stanceWidth: 0.9 },
-    anchorScheduleShift: -0.12,
-    durationScale: 0.8,
-  }),
-  archetype(22, "left-handed-compact", "왼손 · 컴팩트 셋", {
+  archetype(12, "one-hand-forward-bent", "왼손 · 원핸드 · 앞으로 기울이고 무릎을 굽힌 릴리스", {
     shootingHand: "left",
-    style: { dipDepth: -0.5, setPointHold: 0.3, armLiftStart: 0.5, dipKneeBend: 1.15, forwardLean: 0.12, stanceWidth: 1.2, releaseElevation: 0.1, sideLean: -0.1 },
+    style: { offHandDrop: 1, forwardLean: 0.75, legExtension: 0.3 },
   }),
-  archetype(23, "off-hand-tucked", "오프핸드를 낮게 두는 릴리스", {
-    style: { offHandTuck: 0.55, elbowFlare: 0.3 },
+  archetype(13, "one-hand-stride", "원핸드 · 슈팅 발을 앞에 둔 릴리스", {
+    style: { offHandDrop: 1, footStagger: 1.2 },
   }),
-  archetype(24, "elbow-flare", "벌어진 팔꿈치", {
+  archetype(14, "one-hand-trail-foot", "원핸드 · 슈팅 발을 뒤로 뺀 릴리스", {
+    style: { offHandDrop: 1, footStagger: -1.2 },
+  }),
+  archetype(15, "one-hand-wide-squat", "원핸드 · 넓게 디디고 무릎을 굽힌 셋 슛", {
     mode: "high_accuracy_3_plus_3",
-    style: { elbowFlare: 0.48, releaseElevation: 0.06 },
-    confidence: 0.7775,
+    style: { offHandDrop: 1, stanceWidth: 5, legExtension: 0 },
+    confidence: 0.7799,
+  }),
+  archetype(16, "one-hand-lean-back-stride", "원핸드 · 앞발을 내딛고 뒤로 젖히는 릴리스", {
+    style: { offHandDrop: 1, forwardLean: -0.85, footStagger: 1.2 },
+  }),
+  archetype(17, "one-hand-forward-trail-foot", "원핸드 · 앞으로 기울이고 뒷발을 끌며 무릎을 굽힌 릴리스", {
+    style: { offHandDrop: 1, forwardLean: 0.75, legExtension: 0.3, footStagger: -1.2 },
+  }),
+  // Off-hand-side leg lifted through release (kick-leg forms).
+  archetype(18, "kick-leg-release", "한 다리를 들어 올리는 릴리스", {
+    style: { freeLegLift: 1, sideLean: 0.2 },
+  }),
+  archetype(19, "kick-forward-lean", "다리를 들고 앞으로 기울여 가이드 핸드를 모은 릴리스", {
+    style: { freeLegLift: 1, sideLean: 0.2, forwardLean: 0.7, offHandTuck: 0.85 },
+  }),
+  archetype(20, "kick-trail-foot", "다리를 들고 굽힌 디딤발을 뒤로 뺀 릴리스", {
+    style: { freeLegLift: 1, sideLean: 0.2, footStagger: -0.9, legExtension: 0 },
+  }),
+  archetype(21, "kick-fadeaway", "다리를 들고 뒤로 젖히는 러너", {
+    style: { freeLegLift: 1, forwardLean: -0.5, releaseElevation: -0.3 },
+  }),
+  // Leg lifted and guide hand hanging (one-hand runner forms).
+  archetype(22, "kick-one-hand", "다리를 들고 가이드 핸드를 내린 원핸드 러너", {
+    style: { freeLegLift: 1, offHandDrop: 1, forwardLean: 0.25 },
+  }),
+  archetype(23, "kick-one-hand-forward-bent", "왼손 · 원핸드 러너 · 앞으로 기울이고 무릎을 굽힌 릴리스", {
+    shootingHand: "left",
+    style: { freeLegLift: 1, offHandDrop: 1, forwardLean: 0.75, legExtension: 0, sideLean: 0.3 },
+  }),
+  archetype(24, "kick-one-hand-trail-foot", "원핸드 러너 · 굽힌 디딤발을 뒤로 뺀 릴리스", {
+    style: { freeLegLift: 1, offHandDrop: 1, forwardLean: 0.25, footStagger: -0.9, legExtension: 0 },
   }),
 ]);
 
