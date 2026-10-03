@@ -3,6 +3,13 @@
 Status: **DESIGN LOCKED — implementation is not implied by this document**
 Date: 2026-10-01
 
+> **Product-topology note (2026-10-04):** The canonical product-level architecture is now
+> [`docs/HOOPHUB_AI_PRODUCT_ARCHITECTURE.md`](../../HOOPHUB_AI_PRODUCT_ARCHITECTURE.md).
+> This document remains authoritative for the compute-efficient Coach experiments and evaluation
+> ladder, but its internal `Decision Core -> retrieval -> Coach model` stages are components of
+> the single **Shot Coach AI** at the product level, not separate user-facing AIs. The shipping
+> target is local-first and a Qwen3-4B training baseline does not imply a 4B phone runtime.
+
 ## Goal
 
 Build Hoop Hub's coaching intelligence so that accuracy improves primarily through better motion evidence, deterministic diagnosis, curated research evidence, and player feedback — not by scaling the language model first.
