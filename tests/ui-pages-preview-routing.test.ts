@@ -21,9 +21,10 @@ describe("GitHub Pages UI preview routing", () => {
     expect(homeRoute).toContain("useLatestRepresentativeProfile(user, authLoading)");
   });
 
-  it("pre-renders the preview analysis route for static hosting without changing production route semantics", () => {
+  it("keeps the analysis route dynamic for static hosting: no pre-rendered pages, no preview gate, production semantics unchanged", () => {
     expect(analysisRoute).toMatch(/export (async )?function generateStaticParams/);
-    expect(analysisRoute).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
+    expect(analysisRoute).not.toContain("EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD");
+    expect(analysisRoute).not.toMatch(/preview-shot|@\/lib\/preview\//);
     expect(analysisRoute).toContain("return [];");
     expect(analysisRoute).toContain("<AnalysisStage");
     expect(analysisRoute).toContain("experimentalEnabled");

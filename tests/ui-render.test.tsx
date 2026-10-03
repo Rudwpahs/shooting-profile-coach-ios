@@ -72,6 +72,30 @@ vi.mock("@/components/screen-container", () => ({
     return <div>{children}</div>;
   },
 }));
+// Device-local state (film shots, reactions) lives in AsyncStorage; an in-memory map stands in for it.
+const storage = new Map<string, string>();
+vi.mock("@react-native-async-storage/async-storage", () => ({
+  default: {
+    getItem: async (key: string) => storage.get(key) ?? null,
+    setItem: async (key: string, value: string) => { storage.set(key, value); },
+    removeItem: async (key: string) => { storage.delete(key); },
+  },
+}));
+
+/** A film shot as the store keeps it: footage references only, never a file name. */
+function seedFilmShot(id: string, title: string, createdAtMs: number) {
+  const shot = {
+    version: "film_shot_v1",
+    id,
+    title,
+    createdAtMs,
+    clips: [{ slotId: "front-0", view: "front", takeIndex: 0, uri: `blob:https://rudwpahs.github.io/${id}`, durationMs: 4433, width: 512, height: 910 }],
+  };
+  storage.set(`hoophub:film-shots:v1:shot:${id}`, JSON.stringify(shot));
+  const index = JSON.parse(storage.get("hoophub:film-shots:v1:index") ?? "[]") as string[];
+  storage.set("hoophub:film-shots:v1:index", JSON.stringify([id, ...index]));
+  return shot;
+}
 
 const shootingProfiles = await import("@/lib/firebase-shooting-profiles");
 const { HoopHubTabBar } = await import("@/components/hoophub-tab-bar");
@@ -107,6 +131,7 @@ beforeEach(() => {
   root = createRoot(container);
   push.mockClear();
   navigate.mockClear();
+  storage.clear();
   authState.user = null;
   authState.loading = false;
   latestState = { status: "signed-out" };
@@ -320,6 +345,61 @@ describe("motion grid", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("film shots", () => {
+  it("home: my film shots are stories, newest first, between the capture action and the reference, and open Reels at the shot", async () => {
+    authState.user = { uid: "owner-1", email: "owner@example.com" };
+    latestState = { status: "empty" };
+    seedFilmShot("film-shot-a-1", "내 슛폼 1", Date.UTC(2026, 9, 1));
+    seedFilmShot("film-shot-a-2", "내 슛폼 2", Date.UTC(2026, 9, 2));
+    await render(<HomeScreen />);
+    await settle(() => labelsContaining("내 영상 릴 열기").length);
+
+    const stories = Array.from(container.querySelectorAll("[aria-label]")).map((el) => el.getAttribute("aria-label"));
+    const capture = stories.indexOf("슛폼 촬영");
+    const newest = stories.indexOf("내 슛폼 2 내 영상 릴 열기");
+    const oldest = stories.indexOf("내 슛폼 1 내 영상 릴 열기");
+    const reference = stories.indexOf("MOTION 01 참조 모션 열기");
+    expect(capture).toBeGreaterThan(-1);
+    expect(newest).toBeGreaterThan(capture);
+    expect(oldest).toBeGreaterThan(newest);
+    expect(reference).toBeGreaterThan(oldest);
+    expect(container.textContent).toContain("내 슛폼 2");
+    expect(container.textContent).not.toMatch(/IMG_|\.mp4|blob:/i);
+
+    await click(byLabel("내 슛폼 2 내 영상 릴 열기"));
+    expect(push).toHaveBeenCalledWith("/reels?start=film%3Afilm-shot-a-2");
+  });
+
+  it("profile: a film shot is a tile that opens Reels, counts under 내 영상, and replaces the empty line", async () => {
+    authState.user = { uid: "owner-1", email: "owner@example.com" };
+    seedFilmShot("film-shot-a-1", "내 슛폼 1", Date.UTC(2026, 9, 1));
+    await render(<ProfileScreen />);
+    await settle(() => labelsContaining("이 기기에만 보관").length);
+
+    const tiles = labelsContaining("내 영상 · 이 기기에만 보관 · 포즈 분석 없음");
+    expect(tiles).toHaveLength(1);
+    expect(tiles[0].getAttribute("aria-label")).toContain("내 슛폼 1");
+    expect(tiles[0].getAttribute("aria-label")).toContain("1개 클립");
+    expect(container.textContent).toContain("내 슛폼 1");
+    expect(container.textContent).toContain("내 영상");
+    expect(container.textContent).not.toContain("첫 슛폼을 촬영하면 여기에 쌓입니다");
+    expect(container.textContent).not.toMatch(/IMG_|\.mp4|blob:/i);
+
+    await click(tiles[0]);
+    expect(push).toHaveBeenCalledWith("/reels?start=film%3Afilm-shot-a-1");
+  });
+
+  it("grid: a film tile being deleted is busy and disabled like a profile tile", async () => {
+    const shot = { version: "film_shot_v1" as const, id: "film-shot-b-1", title: "내 슛폼 1", createdAtMs: Date.UTC(2026, 9, 1), clips: [{ slotId: "front-0", view: "front" as const, takeIndex: 0, uri: "blob:https://rudwpahs.github.io/b1", durationMs: 4433, width: 512, height: 910 }] };
+    await render(<MotionGrid canOpen deletingFilmShotId={shot.id} deletingProfileId={null} error={null} filmShots={[shot]} glyphs={{}} loading={false} onDelete={vi.fn()} onDeleteFilm={vi.fn()} onOpen={vi.fn()} onOpenFilm={vi.fn()} records={[]} width={375} />);
+    const tile = labelsContaining("내 영상 · 이 기기에만 보관 · 포즈 분석 없음")[0];
+    expect(tile.getAttribute("aria-busy")).toBe("true");
+    expect(tile.getAttribute("aria-disabled")).toBe("true");
+    expect(container.textContent).toContain("삭제 중");
+    expect(container.textContent).not.toContain("첫 슛폼을 촬영하면 여기에 쌓입니다");
   });
 });
 

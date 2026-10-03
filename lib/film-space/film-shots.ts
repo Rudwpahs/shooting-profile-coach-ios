@@ -37,6 +37,18 @@ export function isFilmShotId(id: string): boolean {
   return typeof id === "string" && id.startsWith(FILM_SHOT_ID_PREFIX) && OPAQUE_ID.test(id);
 }
 
+const listeners = new Set<() => void>();
+
+/** Fires after a shot is saved or deleted on this device, so an open surface can re-list without a focus hook. */
+export function subscribeFilmShots(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+function notifyFilmShotsChanged(): void {
+  for (const listener of [...listeners]) listener();
+}
+
 const recordKey = (id: string) => `${RECORD_PREFIX}${id}`;
 
 async function readIndex(): Promise<string[]> {
@@ -129,6 +141,7 @@ export async function saveFilmShot(
   const shot: FilmShotV1 = { version: VERSION, id, title, createdAtMs, clips };
   await AsyncStorage.setItem(recordKey(id), JSON.stringify(shot));
   await writeIndex([id, ...existing.filter((entry) => entry !== id)]);
+  notifyFilmShotsChanged();
   return shot;
 }
 
@@ -152,4 +165,5 @@ export async function deleteFilmShot(id: string, options: FilmShotOptions = {}):
   await deleteLocalFilmAssociation(id);
   await AsyncStorage.removeItem(recordKey(id));
   await writeIndex((await readIndex()).filter((entry) => entry !== id));
+  notifyFilmShotsChanged();
 }

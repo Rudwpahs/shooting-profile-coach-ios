@@ -24,17 +24,12 @@ import {
 const OPAQUE_PROFILE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 /**
- * Static web export: the install-free preview pre-renders its deterministic
- * preview profile pages (`preview-shot-001`, …) so GitHub Pages can serve
- * them without a server. Ordinary builds return no params, which leaves the
- * dynamic route exactly as it was.
+ * Static web export: no analysis page is pre-rendered. A saved profile is
+ * reached from Profile, Home or Reels at runtime, and the install-free preview
+ * keeps footage only, so there is never a deterministic id to emit. The
+ * dynamic route stays exactly as it is.
  */
 export function generateStaticParams(): { id: string }[] {
-  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const preview = require("@/lib/preview/preview-runtime") as typeof import("@/lib/preview/preview-runtime");
-    return preview.PREVIEW_PROFILE_IDS.map((id) => ({ id }));
-  }
   return [];
 }
 

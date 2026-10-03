@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
 import { CaptureSessionView, type CaptureController } from "@/components/shooting-profile/capture-session";
-import { saveLocalFilmAssociation } from "@/lib/film-space/local-association";
+import { saveFilmShot } from "@/lib/film-space/film-shots";
 import { pickWebLocalVideo } from "@/lib/film-space/web-local-video-picker";
 import { createPreviewCaptureMachine } from "@/lib/preview/preview-capture-machine";
-import { buildPreviewData } from "@/lib/preview/preview-runtime";
 
 type PreviewCaptureSessionProps = Readonly<{
   completionActionLabel: string;
@@ -14,14 +13,14 @@ type PreviewCaptureSessionProps = Readonly<{
 
 /**
  * The real capture screen with the preview's data source: the browser file
- * chooser stands in for the camera and the library, and saving associates
- * the chosen local clips with the preview profile for Analysis → Film.
+ * chooser stands in for the camera and the library, and saving keeps the
+ * chosen clips as a film shot on this device, the same device-local store the
+ * app uses for footage without pose analysis. Nothing leaves the browser.
  */
 export function PreviewCaptureSession({ completionActionLabel, onClose, onComplete }: PreviewCaptureSessionProps) {
   const machine = useMemo(() => createPreviewCaptureMachine({
-    data: buildPreviewData(),
     pickLocalVideo: (source) => pickWebLocalVideo({ capture: source === "camera" }),
-    saveAssociation: (profileId, clips) => saveLocalFilmAssociation(profileId, clips),
+    saveFilmShot: async (clips) => (await saveFilmShot({ clips })).id,
   }), []);
   const state = useSyncExternalStore(machine.subscribe, () => machine.state, () => machine.state);
 

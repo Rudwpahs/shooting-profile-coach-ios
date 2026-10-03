@@ -11,13 +11,16 @@ import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
 import type { LatestRepresentativeState } from "@/hooks/use-latest-representative-profile";
 import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
+import type { FilmShotV1 } from "@/lib/film-space/film-shots";
 import { relativeDayLabel } from "@/lib/format/relative-day";
-import { profileReelId, referenceReelId } from "@/lib/reels/reel-model";
+import { filmReelId, profileReelId, referenceReelId } from "@/lib/reels/reel-model";
 import { poseMotionGlyph } from "@/lib/skeleton/pose-motion-glyph";
 
 export type HomeFeedProps = {
   width: number;
   latest: LatestRepresentativeState;
+  /** The owner's own footage kept on this device without pose analysis; newest first in the strip. */
+  filmShots?: readonly FilmShotV1[];
   reference: AnonymousPoseReference;
   goalLabel: string;
   focusTitle: string;
@@ -37,7 +40,7 @@ export type HomeFeedProps = {
  * preview does; there is no detail screen and no separate expand control.
  * Presentational, so the route and the development demo render the same thing.
  */
-export function HomeFeed({ width, latest, reference, goalLabel, focusTitle, viewerEnabled, onOpenCapture, onOpenProfile, onOpenReference, onOpenAnalysis, onOpenReel }: HomeFeedProps) {
+export function HomeFeed({ width, latest, filmShots = [], reference, goalLabel, focusTitle, viewerEnabled, onOpenCapture, onOpenProfile, onOpenReference, onOpenAnalysis, onOpenReel }: HomeFeedProps) {
   const stageHeight = Math.round(width * 0.9);
   const referenceAvatar = useMemo(() => poseMotionGlyph(reference.motion, { view: "side", progress: 0.75 }), [reference.motion]);
   const silhouette = useMemo(() => poseMotionGlyph(reference.motion, { view: "oblique", progress: 0.75 }), [reference.motion]);
@@ -48,6 +51,9 @@ export function HomeFeed({ width, latest, reference, goalLabel, focusTitle, view
   const stories: StoryItem[] = [
     { key: "capture", kind: "capture", label: "촬영", accessibilityLabel: "슛폼 촬영", onPress: onOpenCapture },
     ...(ownAvatar ? [{ key: "own", kind: "glyph" as const, glyph: ownAvatar, accent: true, label: "내 슛폼", accessibilityLabel: "내 슛폼 프로필 열기", onPress: onOpenProfile }] : []),
+    ...[...filmShots]
+      .sort((left, right) => right.createdAtMs - left.createdAtMs)
+      .map((shot) => ({ key: `film-${shot.id}`, kind: "film" as const, label: shot.title, accessibilityLabel: `${shot.title} 내 영상 릴 열기`, onPress: () => onOpenReel(filmReelId(shot.id)) })),
     { key: "reference", kind: "glyph", glyph: referenceAvatar, label: reference.shortLabel, accessibilityLabel: `${reference.shortLabel} 참조 모션 열기`, onPress: onOpenReference },
   ];
 

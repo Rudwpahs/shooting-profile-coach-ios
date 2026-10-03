@@ -57,6 +57,11 @@ export function filmReelId(shotId: string): string {
   return `film:${shotId}`;
 }
 
+/** Whether a reel id (for example from a deep link) names one of my film shots. */
+export function isFilmReelId(reelId: string | undefined): boolean {
+  return typeof reelId === "string" && reelId.startsWith("film:");
+}
+
 export function filmShotReel(shot: FilmShotV1): FilmReel {
   return { kind: "film", id: filmReelId(shot.id), shotId: shot.id, title: shot.title, createdAt: new Date(shot.createdAtMs), clips: shot.clips };
 }

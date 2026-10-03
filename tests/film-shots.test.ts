@@ -19,7 +19,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-const { deleteFilmShot, isFilmShotId, listFilmShots, restoreFilmShot, saveFilmShot } = await import("@/lib/film-space/film-shots");
+const { deleteFilmShot, isFilmShotId, listFilmShots, restoreFilmShot, saveFilmShot, subscribeFilmShots } = await import("@/lib/film-space/film-shots");
 const { loadLocalFilmAssociation } = await import("@/lib/film-space/local-association");
 const { createMemoryFilmShotMedia } = await import("@/lib/film-space/film-shot-media");
 
@@ -89,6 +89,19 @@ describe("film shots", () => {
     expect(await listFilmShots({ media })).toEqual([]);
     expect(await loadLocalFilmAssociation(shot.id)).toBeNull();
     expect(media.stored(shot.id)).toEqual([]);
+  });
+
+  it("tells subscribers after a save and after a delete, and stops after unsubscribe", async () => {
+    const media = createMemoryFilmShotMedia();
+    const seen = vi.fn();
+    const stop = subscribeFilmShots(seen);
+    const shot = await saveFilmShot({ clips: [{ ...clip("front-0", "front", "blob:s"), blob: blob("s") }] }, { media, now });
+    expect(seen).toHaveBeenCalledTimes(1);
+    await deleteFilmShot(shot.id, { media });
+    expect(seen).toHaveBeenCalledTimes(2);
+    stop();
+    await saveFilmShot({ clips: [{ ...clip("front-0", "front", "blob:t"), blob: blob("t") }] }, { media, now });
+    expect(seen).toHaveBeenCalledTimes(2);
   });
 
   it("refuses clips that are not device-local and never stores a file name", async () => {

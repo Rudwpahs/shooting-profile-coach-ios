@@ -41,11 +41,12 @@ describe("the web preview is the actual HoopHub app", () => {
     }
   });
 
-  it("reaches Analysis from Home, Profile and Reels through the real dynamic route, which the preview build pre-renders", () => {
+  it("reaches Analysis from Home, Profile and Reels through the real dynamic route; the preview pre-renders no analysis page because it keeps footage only", () => {
     expect(read("app/(tabs)/profile.tsx")).toContain("/private-analysis/");
     expect(reels).toContain("`/private-analysis/${profileId}`");
     expect(analysis).toMatch(/export (async )?function generateStaticParams/);
-    expect(analysis).toContain("preview-shot-001");
+    expect(analysis).toContain("return [];");
+    expect(analysis).not.toMatch(/preview-shot|@\/lib\/preview\//);
     expect(analysis).toContain("<AnalysisStage");
     expect(analysis).toContain("experimentalEnabled");
     expect(read("components/analysis/analysis-stage.tsx")).toContain("<ShotInspectionViewer");
@@ -98,7 +99,8 @@ describe("the web preview is the actual HoopHub app", () => {
     for (const screen of ["explore", "profile", "analysis", "reels", "capture", "reference"]) {
       expect(legacyDemo).toContain(`${screen}:`);
     }
-    expect(legacyDemo).toContain('"/private-analysis/preview-shot-001"');
+    expect(legacyDemo).toContain('analysis: "/profile"');
+    expect(legacyDemo).not.toMatch(/preview-shot|EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD/);
     expect(liquidLab).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
     expect(liquidLab).toMatch(/if \(!LIQUID_LAB_ENABLED\) return <Redirect href="\/" \/>/);
     expect(existsSync("app/+not-found.tsx")).toBe(true);
@@ -114,7 +116,9 @@ describe("the web preview is the actual HoopHub app", () => {
     expect(workflow).toContain("test -f web-preview-dist/profile.html");
     expect(workflow).toContain("test -f web-preview-dist/reels.html");
     expect(workflow).toContain("test -f web-preview-dist/private-capture.html");
-    expect(workflow).toContain("test -f web-preview-dist/private-analysis/preview-shot-001.html");
+    // No synthetic analysis page is pre-rendered any more: the preview's own shots are footage on the viewer's device.
+    expect(workflow).not.toContain("preview-shot-001.html");
+    expect(workflow).toContain("- work/hoophub-film-shots-reel-stage-v1");
     expect(workflow).toContain("test -f web-preview-dist/404.html");
     expect(workflow).not.toContain('Expected /dev/ui-demo static route was not emitted');
     expect(workflow).toContain("tests/ui-actual-app-preview.test.ts");

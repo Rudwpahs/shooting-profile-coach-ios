@@ -18,8 +18,8 @@ function entry(id: string, reel: ReelItem | Error, calls: string[]): ExploreMoti
   return {
     id,
     shortLabel: id,
-    caption: `${id} · 합성`,
-    kind: "synthetic_preview",
+    caption: `${id} · 테스트`,
+    kind: "anonymous_reference",
     href: `/private-analysis/${id}`,
     load: async () => ({ stills: [] }),
     reel: async () => {

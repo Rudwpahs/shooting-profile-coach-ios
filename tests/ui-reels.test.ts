@@ -69,12 +69,12 @@ describe("preview reels", () => {
   const legacyDemo = read("app/dev/ui-demo.tsx");
   const previewRuntime = read("lib/preview/preview-runtime.ts");
 
-  it("opens the real Reels route from the preview with the synthetic profile and the anonymous references, not a second feed", () => {
+  it("opens the real Reels route from the preview with my film shots and the anonymous references: no second feed, no synthetic profile", () => {
     expect(legacyDemo).not.toContain("<ReelsFeed");
     expect(legacyDemo).toContain('"/reels"');
     expect(route).toContain("<ReelsFeed");
-    expect(route).toContain("homeReelItems(latest, ANONYMOUS_POSE_REFERENCES)");
-    expect(previewRuntime).toContain("reels");
+    expect(route).toContain("homeReelItems(latest, ANONYMOUS_POSE_REFERENCES, filmShots.shots)");
+    expect(previewRuntime).not.toMatch(/preview-shot|reels/);
   });
 });
 

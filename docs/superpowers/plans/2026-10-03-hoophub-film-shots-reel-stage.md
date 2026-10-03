@@ -42,15 +42,17 @@ Files: `lib/reels/reel-model.ts`, `lib/reels/reel-sources.ts`, `lib/reels/reel-p
 
 Files: `components/reels/reel-overlay.tsx` (rewritten), `hooks/use-device-reactions.ts`, `components/reels/reel-sheets.tsx`, `components/reels/reel-item.tsx`, `components/reels/reels-feed.tsx`, `components/reels/reel-motion-player.tsx` (seek), `app/(tabs)/library.tsx`, `app/(tabs)/explore.tsx`, `app/reels.tsx`, `app/private-analysis/[id].tsx`, `components/shooting-profile/shot-inspection-viewer.tsx` (Phase/Film only), `lib/shooting-profile/shot-inspection.ts`, `lib/shooting-profile/analysis-presentation.ts` (title/href only); remove `components/analysis/minimal-analysis.tsx`; tests `tests/reels-render.test.tsx`, `tests/reference-library-render.test.tsx`, `tests/analysis-stage-render.test.tsx`, `tests/ui-reels.test.ts`, `tests/liquid-screen-rollout.test.ts`, `tests/ui-apple-design.test.ts`, `tests/analysis-presentation.test.ts`.
 
-- [ ] RED/GREEN per surface. Chrome contract: heading (optional) top-left, camera menu top-right (skeleton media only), rail heart/memo/info (48-pt), caption title + attribution + current phase, five phase markers that seek and hold, play hint while paused, sheets suspend playback, like/memo device-local with honest copy, info sheet body supplied by the surface.
-- [ ] Commit.
+- [x] RED/GREEN per surface. Chrome contract: heading (optional) top-left, camera menu top-right (skeleton media only), rail heart/memo/info (48-pt), caption title + attribution + current phase, five phase markers that seek and hold, play hint while paused, sheets suspend playback, like/memo device-local with honest copy, info sheet body supplied by the surface. (The analysis route became `components/analysis/analysis-stage.tsx`; no separate `reel-sheets.tsx` was needed.)
+- [x] Commit.
 
 ### Task E: remove the synthetic library; film shots on Profile, Home, Reels
 
 Files: delete `lib/preview/preview-shot-library.ts`, `lib/preview/preview-explore-motions.ts`, `tests/preview-shot-library.test.ts`, `tests/preview-shot-surfaces.test.ts`; `lib/preview/preview-runtime.ts`, `lib/preview/preview-shooting-profile-source.ts`, `lib/preview/preview-capture-machine.ts`, `lib/preview/preview-capture-session.tsx`, `app/private-capture.tsx`, `lib/explore-source.ts` (no gate), `app/private-analysis/[id].tsx` (no static params gate), `components/profile/motion-grid.tsx` (film tiles), `app/(tabs)/profile.tsx`, `app/(tabs)/index.tsx`, `components/home/home-feed.tsx`, `hooks/use-film-shots.ts`, `.github/workflows/ui-web-preview-pages.yml`; tests `tests/preview-film-shots.test.ts`, `tests/preview-capture-controller.test.ts`, `tests/preview-shooting-profile-source.test.ts`, `tests/preview-runtime-isolation.test.ts`, `tests/ui-render.test.tsx`.
 
-- [ ] RED/GREEN. Preview capture: picks become film evidence, save creates a film shot, completion opens Reels at it. Profile grid: film tiles open Reels. Home: film shot stories. Isolation: production export grep 0 hits; preview export pages exist.
-- [ ] Commit.
+- [x] RED/GREEN. Preview capture: picks become film evidence, save creates a film shot, completion opens Reels at it. Profile grid: film tiles open Reels (long-press deletes after a confirm). Home: film shot stories. Reels: a deep link to a film shot waits for the device list. Film shots notify open surfaces through `subscribeFilmShots` (no focus hook). Isolation: production export grep 0 hits; preview export pages exist (no pre-rendered analysis page any more).
+- [x] Commit.
+
+Note on the isolation rule "the preview runtime never touches storage": the preview's capture saves through the production `saveFilmShot` module, which is the app's own device-local store for footage (AsyncStorage index + IndexedDB files on the web). The preview adds no store of its own; the owner asked for the two real pairs to survive as "내 슛폼 1·2", which requires persistence on the viewer's device.
 
 ### Task F: verification, PR, merge
 

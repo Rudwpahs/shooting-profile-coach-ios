@@ -3,14 +3,13 @@ import { referenceReelId, type ReelItem } from "@/lib/reels/reel-model";
 import { poseMotionGlyph, type GlyphView, type SkeletonGlyphData } from "@/lib/skeleton/pose-motion-glyph";
 
 /**
- * What the Explore screen can browse. Production is the anonymous optical
- * mocap reference only: other people's skeletons appear here only after a
- * public opt-in contract exists, and famous-player footage never does. The
- * install-free preview adds its synthetic shot library behind the
- * build-time-foldable gate so the screen can show that forms differ.
+ * What the Explore screen can browse: the anonymous optical mocap reference
+ * only. Other people's skeletons appear here only after a public opt-in
+ * contract exists, famous-player footage never does, and nothing synthetic
+ * stands in for either.
  */
 
-export type ExploreMotionKind = "anonymous_reference" | "synthetic_preview";
+export type ExploreMotionKind = "anonymous_reference";
 
 export type ExploreMotionStillV1 = Readonly<{
   /** Shot phase label (준비 · 딥 · 상승 · 릴리스 · 팔로우스루). */
@@ -53,23 +52,10 @@ export function referenceExploreMotion(reference: AnonymousPoseReference): Explo
   });
 }
 
-function productionExploreMotions(): readonly ExploreMotionV1[] {
-  return Object.freeze(ANONYMOUS_POSE_REFERENCES.map(referenceExploreMotion));
-}
-
 let cached: readonly ExploreMotionV1[] | null = null;
 
 export function exploreMotions(): readonly ExploreMotionV1[] {
   if (cached) return cached;
-  const references = productionExploreMotions();
-  // Literal gate: Metro inlines the public env var and folds the dead branch, so an ordinary
-  // production bundle never contains the preview shot library.
-  if (process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1") {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const preview = require("@/lib/preview/preview-explore-motions") as typeof import("@/lib/preview/preview-explore-motions");
-    cached = Object.freeze([...references, ...preview.previewExploreMotions()]);
-    return cached;
-  }
-  cached = references;
+  cached = Object.freeze(ANONYMOUS_POSE_REFERENCES.map(referenceExploreMotion));
   return cached;
 }

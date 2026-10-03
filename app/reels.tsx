@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ReelsFeed } from "@/components/reels/reels-feed";
 import { tokens } from "@/constants/tokens";
 import { useAppStateStatus } from "@/hooks/use-app-state";
+import { useFilmShots } from "@/hooks/use-film-shots";
 import { useLatestRepresentativeProfile } from "@/hooks/use-latest-representative-profile";
 import { useReduceMotion } from "@/hooks/use-reduce-motion";
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
@@ -13,6 +14,7 @@ import { FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { initialReelIndex } from "@/lib/reels/reel-feed-state";
 import { takeReelHandoff, type ReelHandoff } from "@/lib/reels/reel-handoff";
+import { isFilmReelId } from "@/lib/reels/reel-model";
 import { homeReelItems } from "@/lib/reels/reel-sources";
 
 const ENTER_MS = 220;
@@ -37,10 +39,13 @@ export default function ReelsRoute() {
   const { user, loading: authLoading } = useFirebaseAuth();
   // Only a deep link without a handoff loads anything; Home's own state is reused otherwise.
   const latest = useLatestRepresentativeProfile(handoff ? null : user, authLoading);
-  const items = useMemo(() => handoff?.items ?? homeReelItems(latest, ANONYMOUS_POSE_REFERENCES), [handoff, latest]);
+  const filmShots = useFilmShots(!handoff);
+  const items = useMemo(() => handoff?.items ?? homeReelItems(latest, ANONYMOUS_POSE_REFERENCES, filmShots.shots), [filmShots.shots, handoff, latest]);
   const startId = typeof params.start === "string" ? params.start : handoff?.startId;
   const initialIndex = useMemo(() => initialReelIndex(items, startId), [items, startId]);
   const listKey = useMemo(() => items.map((item) => item.id).join("|"), [items]);
+  // A deep link to one of my film shots waits for the device list, so the feed opens on that shot instead of jumping to it.
+  const waitingForFilm = !handoff && isFilmReelId(startId) && filmShots.status === "loading";
 
   const [focused, setFocused] = useState(true);
   useFocusEffect(useCallback(() => {
@@ -77,19 +82,21 @@ export default function ReelsRoute() {
           { opacity: enter, transform: [{ scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] },
         ]}
       >
-        <ReelsFeed
-          key={listKey}
-          appState={appState}
-          focused={focused}
-          height={height}
-          initialIndex={initialIndex}
-          insets={{ top: insets.top, bottom: insets.bottom }}
-          items={items}
-          onClose={onClose}
-          onOpenAnalysis={FORMPATH_FLAGS.representative4DViewer ? onOpenAnalysis : null}
-          reducedMotion={reducedMotion}
-          width={width}
-        />
+        {waitingForFilm ? null : (
+          <ReelsFeed
+            key={listKey}
+            appState={appState}
+            focused={focused}
+            height={height}
+            initialIndex={initialIndex}
+            insets={{ top: insets.top, bottom: insets.bottom }}
+            items={items}
+            onClose={onClose}
+            onOpenAnalysis={FORMPATH_FLAGS.representative4DViewer ? onOpenAnalysis : null}
+            reducedMotion={reducedMotion}
+            width={width}
+          />
+        )}
       </Animated.View>
     </View>
   );

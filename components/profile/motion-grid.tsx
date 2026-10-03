@@ -1,3 +1,4 @@
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View, type ViewStyle } from "react-native";
 
@@ -6,6 +7,8 @@ import { representativeConfidence, representativeGlyph, representativeReleaseFra
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { LiquidPressable } from "@/components/ui/liquid";
 import { tokens } from "@/constants/tokens";
+import { typography } from "@/constants/typography";
+import type { FilmShotV1 } from "@/lib/film-space/film-shots";
 import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-contract";
 import type { ShootingProfileSummaryV2, ShootingProfileViewerRecordV2 } from "@/lib/firebase-shooting-profiles";
 
@@ -13,13 +16,18 @@ type MotionGridProps = {
   records: readonly ShootingProfileSummaryV2[];
   /** Full records already fetched for the owner, keyed by profile id. */
   glyphs: Readonly<Record<string, ShootingProfileViewerRecordV2>>;
+  /** The owner's own footage kept on this device without pose analysis; shown as film tiles after the profiles. */
+  filmShots?: readonly FilmShotV1[];
   loading: boolean;
   error: string | null;
   deletingProfileId: string | null;
+  deletingFilmShotId?: string | null;
   canOpen: boolean;
   width: number;
   onOpen: (profileId: string) => void;
   onDelete: (profileId: string) => void;
+  onOpenFilm?: (shotId: string) => void;
+  onDeleteFilm?: (shotId: string) => void;
 };
 
 const GAP = 2;
@@ -37,12 +45,17 @@ function createdDate(record: ShootingProfileSummaryV2): string {
 }
 
 /**
- * The owner's representative profiles as a 3-column skeleton grid. Each tile is
- * the release-proxy still; tap opens the analysis, long-press deletes (also
- * exposed as an accessibility action). Honesty lives in the accessibility
- * label, not in on-screen paragraphs: mode, date, band, and the boundary.
+ * The owner's representative profiles as a 3-column skeleton grid, followed by
+ * the owner's film shots. Each profile tile is the release-proxy still; a film
+ * tile is the footage icon and the shot's name. Tap opens the analysis (or the
+ * film reel), long-press deletes (also exposed as an accessibility action).
+ * Honesty lives in the accessibility label, not in on-screen paragraphs: mode,
+ * date, band, and the boundary; for footage, that no pose was analysed.
  */
-export function MotionGrid({ records, glyphs, loading, error, deletingProfileId, canOpen, width, onOpen, onDelete }: MotionGridProps) {
+export function MotionGrid({
+  records, glyphs, filmShots = [], loading, error, deletingProfileId, deletingFilmShotId = null, canOpen, width,
+  onOpen, onDelete, onOpenFilm, onDeleteFilm,
+}: MotionGridProps) {
   const [focusedControl, setFocusedControl] = useState<string | null>(null);
   const tile = Math.max(1, Math.floor((width - GAP * (COLUMNS - 1)) / COLUMNS));
 
@@ -61,13 +74,17 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
       </View>
     );
   }
-  if (records.length === 0) {
+  if (records.length === 0 && filmShots.length === 0) {
     return (
       <View style={styles.state}>
         <Text accessibilityLiveRegion="polite" style={styles.stateText}>첫 슛폼을 촬영하면 여기에 쌓입니다</Text>
       </View>
     );
   }
+
+  // One delete at a time across both kinds, as the route enforces: a long press elsewhere
+  // while one is in flight would only open a confirm that goes nowhere.
+  const deleteIdle = deletingProfileId === null && deletingFilmShotId === null;
 
   return (
     <View>
@@ -76,9 +93,7 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
           const deleting = deletingProfileId === record.id;
           const validId = isOpaqueShootingProfileIdV2(record.id);
           const disabled = !canOpen || deleting || !validId;
-          // One delete at a time, as the route enforces: a long press elsewhere
-          // while one is in flight would only open a confirm that goes nowhere.
-          const canDelete = validId && deletingProfileId === null;
+          const canDelete = validId && deleteIdle;
           const full = glyphs[record.id];
           const confidence = full ? representativeConfidence(full.profile) : record.mode === "high_accuracy_3_plus_3" ? "high" : "basic";
           const band = confidence === "recapture" ? "재촬영 필요" : confidence === "high" ? "High" : "Basic";
@@ -131,6 +146,41 @@ export function MotionGrid({ records, glyphs, loading, error, deletingProfileId,
             </LiquidPressable>
           );
         })}
+        {filmShots.map((shot) => {
+          const deleting = deletingFilmShotId === shot.id;
+          const disabled = deleting;
+          const canDelete = deleteIdle;
+          const label = `${shot.title} · 내 영상 · 이 기기에만 보관 · 포즈 분석 없음 · ${shot.clips.length}개 클립 · ${new Date(shot.createdAtMs).toLocaleDateString("ko-KR")} · 열기`;
+          const focusKey = `film-${shot.id}`;
+          return (
+            <LiquidPressable
+              key={shot.id}
+              accessibilityActions={[{ name: "longpress", label: "삭제" }]}
+              accessibilityLabel={label}
+              accessibilityRole="button"
+              accessibilityState={{ disabled, busy: deleting }}
+              aria-busy={deleting}
+              aria-disabled={disabled}
+              disabled={disabled}
+              focusable
+              magnetic
+              onAccessibilityAction={(event) => {
+                if (event.nativeEvent.actionName === "longpress" && canDelete) onDeleteFilm?.(shot.id);
+              }}
+              onBlur={() => setFocusedControl((current) => current === focusKey ? null : current)}
+              onFocus={() => setFocusedControl(focusKey)}
+              onLongPress={() => { if (canDelete) onDeleteFilm?.(shot.id); }}
+              onPress={() => onOpenFilm?.(shot.id)}
+              rippleColor={tokens.foreground}
+              style={[styles.tileHit, { width: tile, height: tile }, focusRing(focusedControl === focusKey)]}
+              surfaceStyle={[styles.tile, styles.filmTile, { width: tile, height: tile }, deleting && styles.deleting]}
+            >
+              <MaterialCommunityIcons name="filmstrip" size={Math.round(tile * 0.3)} color={tokens.stageForeground} />
+              <Text numberOfLines={1} style={styles.filmTitle}>{shot.title}</Text>
+              {deleting ? <Text accessibilityLiveRegion="polite" style={styles.deletingText}>삭제 중</Text> : null}
+            </LiquidPressable>
+          );
+        })}
       </View>
       <Text style={styles.hint}>길게 눌러 삭제</Text>
     </View>
@@ -141,6 +191,8 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
   tileHit: { minHeight: 72, minWidth: 52 },
   tile: { backgroundColor: tokens.stage, minHeight: 72, minWidth: 52, overflow: "hidden", position: "relative" },
+  filmTile: { alignItems: "center", gap: 6, justifyContent: "center", paddingHorizontal: 8 },
+  filmTitle: { ...typography.label, color: tokens.stageForeground, textAlign: "center" },
   pending: { alignItems: "center", justifyContent: "center" },
   dot: { borderRadius: 4, height: 8, pointerEvents: "none", position: "absolute", right: 6, top: 6, width: 8 },
   dotHigh: { backgroundColor: tokens.analysisHighConfidence },

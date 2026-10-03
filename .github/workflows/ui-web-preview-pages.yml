@@ -12,6 +12,7 @@ on:
       - work/hoophub-preview-shot-library-v1
       - work/hoophub-reference-minimal-v1
       - work/hoophub-explore-reels-minimal-v1
+      - work/hoophub-film-shots-reel-stage-v1
   workflow_dispatch:
 
 permissions:
@@ -84,9 +85,9 @@ jobs:
           test -f web-preview-dist/profile.html
           test -f web-preview-dist/reels.html
           test -f web-preview-dist/private-capture.html
-          test -f web-preview-dist/private-analysis/preview-shot-001.html
+          test -f web-preview-dist/library.html
           test -f web-preview-dist/404.html
-          if grep -l "Unmatched Route" web-preview-dist/index.html web-preview-dist/private-analysis/preview-shot-001.html; then
+          if grep -l "Unmatched Route" web-preview-dist/index.html web-preview-dist/explore.html web-preview-dist/reels.html; then
             echo "A pre-rendered preview page shows the unmatched-route screen" >&2
             exit 1
           fi
