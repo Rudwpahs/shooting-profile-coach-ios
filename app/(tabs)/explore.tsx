@@ -1,10 +1,11 @@
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { ActivityIndicator, StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ReelsFeed } from "@/components/reels/reels-feed";
+import { ScreenContainer } from "@/components/screen-container";
 import { tokens } from "@/constants/tokens";
 import { useAppStateStatus } from "@/hooks/use-app-state";
 import { useExploreFeed } from "@/hooks/use-explore-feed";
@@ -28,26 +29,32 @@ export default function ExploreScreen() {
   const appState = useAppStateStatus();
   const reducedMotion = useReduceMotion();
   const focused = useIsFocused();
+  const window = useWindowDimensions();
   const [size, setSize] = useState({ width: 0, height: 0 });
   const { items, onActiveIndex } = useExploreFeed(exploreMotions());
 
-  // The feed needs the tab scene's own size: the tab bar sits below it and
-  // the window can report 0 before layout on the static web render.
+  // The feed takes the tab scene's own size (the tab bar sits below it);
+  // until layout reports it, the window size stands in so the first reel
+  // paints at once, including on the static web render.
   const onLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setSize({ width: Math.round(width), height: Math.round(height) });
+    const next = { width: Math.round(event.nativeEvent.layout.width), height: Math.round(event.nativeEvent.layout.height) };
+    setSize((current) => (current.width === next.width && current.height === next.height ? current : next));
   }, []);
+  const width = size.width > 0 ? size.width : Math.round(window.width);
+  const height = size.height > 0 ? size.height : Math.round(window.height);
   const onOpenAnalysis = useCallback((profileId: string) => {
-    router.push(minimalAnalysisHref(profileId) as never);
-  }, [router]);
+    const item = items.find((candidate) => candidate.kind === "profile" && candidate.profileId === profileId);
+    router.push(minimalAnalysisHref(profileId, item?.kind === "profile" ? item.title : undefined) as never);
+  }, [items, router]);
 
+  // No safe-area edges here: the feed is full-bleed and hands the top inset to its own chrome.
   return (
-    <View onLayout={onLayout} style={styles.screen} testID="explore-feed-screen">
-      {size.width > 0 && size.height > 0 && items.length > 0 ? (
+    <ScreenContainer containerClassName="bg-background" edges={[]} onLayout={onLayout} style={styles.screen} testID="explore-feed-screen">
+      {width > 0 && height > 0 && items.length > 0 ? (
         <ReelsFeed
           appState={appState}
           focused={focused}
-          height={size.height}
+          height={height}
           initialIndex={0}
           insets={{ top: insets.top, bottom: 0 }}
           items={items}
@@ -56,14 +63,14 @@ export default function ExploreScreen() {
           onStateChange={(state) => onActiveIndex(state.activeIndex)}
           reducedMotion={reducedMotion}
           viewChips={false}
-          width={size.width}
+          width={width}
         />
       ) : (
         <View accessibilityLabel="탐색 피드를 준비하는 중" style={styles.pending}>
           <ActivityIndicator color={tokens.mutedForeground} />
         </View>
       )}
-    </View>
+    </ScreenContainer>
   );
 }
 

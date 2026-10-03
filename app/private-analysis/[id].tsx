@@ -1,10 +1,11 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
+import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AnalysisDetails, AnalysisEvidence, AnalysisSummaryLine } from "@/components/analysis/analysis-layers";
+import { MinimalAnalysis } from "@/components/analysis/minimal-analysis";
 import { ShotInspectionViewer } from "@/components/shooting-profile/shot-inspection-viewer";
 import {
   buildShootingProfileViewerKey,
@@ -15,8 +16,11 @@ import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
+import { useAppStateStatus } from "@/hooks/use-app-state";
+import { useReduceMotion } from "@/hooks/use-reduce-motion";
 import { FORMPATH_EXPERIMENTAL_FLAGS, FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
+import { minimalAnalysisTitle, resolveAnalysisPresentation } from "@/lib/shooting-profile/analysis-presentation";
 import {
   getShootingProfileV2,
   type ShootingProfileViewerRecordV2,
@@ -63,10 +67,21 @@ type ViewerLoadState =
  * record arrives.
  */
 export default function PrivateAnalysisRoute() {
-  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+  const { id, presentation, title } = useLocalSearchParams<{ id?: string | string[]; presentation?: string | string[]; title?: string | string[] }>();
   const router = useRouter();
   const { user, loading: authLoading } = useFirebaseAuth();
   const profileId = opaqueProfileId(id);
+  // Explore opens the minimal surface; it needs the same playback inputs the Reels route has.
+  const minimal = resolveAnalysisPresentation(presentation) === "minimal";
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const appState = useAppStateStatus();
+  const reducedMotion = useReduceMotion();
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    return () => setFocused(false);
+  }, []));
   const currentKey = user && profileId ? buildShootingProfileViewerKey(user.uid, profileId) : null;
   const [loadState, setLoadState] = useState<ViewerLoadState>({ status: "idle" });
   const [retryGeneration, setRetryGeneration] = useState(0);
@@ -182,6 +197,28 @@ export default function PrivateAnalysisRoute() {
 
   if (!profileId) return <Redirect href="/profile" />;
 
+  if (minimal) {
+    return (
+      <View style={styles.minimalScreen}>
+        <MinimalAnalysis
+          appState={appState}
+          confidence={loadState.record.confidence}
+          experimentalEnabled={FORMPATH_EXPERIMENTAL_FLAGS.shotInspectionV1}
+          focused={focused}
+          height={height}
+          insets={{ top: insets.top, bottom: insets.bottom }}
+          onBack={goBack}
+          profile={loadState.record.profile}
+          profileId={profileId}
+          reducedMotion={reducedMotion}
+          shootingHand={loadState.record.shootingHand}
+          title={minimalAnalysisTitle(title)}
+          width={width}
+        />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <TopBar
@@ -227,6 +264,7 @@ export default function PrivateAnalysisRoute() {
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: tokens.background, flex: 1 },
+  minimalScreen: { backgroundColor: tokens.stage, flex: 1 },
   page: { alignSelf: "center", maxWidth: 680, paddingBottom: 40, width: "100%" },
   iconButton: { height: 44, minHeight: 44, minWidth: 44, width: 44 },
   iconButtonSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },

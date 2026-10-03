@@ -25,6 +25,8 @@ vi.mock("expo-router", () => ({
   useLocalSearchParams: () => ({}),
 }));
 vi.mock("expo-haptics", () => ({ impactAsync: vi.fn(), ImpactFeedbackStyle: { Light: "light" } }));
+// Explore reads tab focus from the navigator, which has no jsdom runtime.
+vi.mock("@react-navigation/native", () => ({ useIsFocused: () => true }));
 vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 20, left: 0, right: 0 }),
   SafeAreaView: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
@@ -65,8 +67,8 @@ vi.mock("@/lib/profile-store", () => ({
   useProfile: () => ({ profile: { goal: "consistency" }, ready: true, updateProfile: vi.fn(), clearProfile: vi.fn() }),
 }));
 vi.mock("@/components/screen-container", () => ({
-  ScreenContainer: ({ children, onLayout }: { children?: React.ReactNode; onLayout?: (event: { nativeEvent: { layout: { width: number } } }) => void }) => {
-    onLayout?.({ nativeEvent: { layout: { width: 375 } } });
+  ScreenContainer: ({ children, onLayout }: { children?: React.ReactNode; onLayout?: (event: { nativeEvent: { layout: { width: number; height: number } } }) => void }) => {
+    onLayout?.({ nativeEvent: { layout: { width: 375, height: 700 } } });
     return <div>{children}</div>;
   },
 }));
@@ -169,21 +171,22 @@ describe("bottom bar", () => {
 });
 
 describe("explore", () => {
-  it("shows one tile per shot phase of the anonymous reference and switches views", async () => {
+  it("shows the anonymous reference as one full-screen reel: no view chips, no close control, no analysis for a reference", async () => {
     await render(<ExploreScreen />);
+    const reels = () => container.querySelectorAll('[data-testid="reel-item-reference"]').length;
+    await settle(reels);
 
-    const tiles = labelsContaining("위상 열기");
-    expect(tiles).toHaveLength(5);
-    expect(tiles.every((tile) => tile.getAttribute("aria-label")?.startsWith("MOTION 01"))).toBe(true);
-    expect(container.querySelectorAll('[data-testid="skeleton-svg"]').length).toBeGreaterThanOrEqual(5);
-    expect(container.textContent).toContain("MOTION 01 · CMU optical mocap");
+    expect(container.querySelectorAll('[data-testid="reels-feed"]')).toHaveLength(1);
+    expect(reels()).toBe(1);
+    expect(container.querySelector('[data-testid="reel-tap"]')?.getAttribute("aria-label")).toContain("MOTION 01 참조 릴, CMU optical mocap, 1/1");
+    expect(container.querySelectorAll('[data-testid="skeleton-svg"]').length).toBeGreaterThanOrEqual(1);
+    expect(container.textContent).toContain("MOTION 01");
     expect(container.textContent).not.toMatch(/Curry|Paul George/);
-
-    expect(byLabel("사선 시점")?.getAttribute("aria-selected")).toBe("true");
-    await click(byLabel("측면 시점"));
-    expect(byLabel("측면 시점")?.getAttribute("aria-selected")).toBe("true");
-    await click(tiles[0]);
-    expect(push).toHaveBeenCalledWith("/library");
+    for (const id of ["reel-view-front", "reel-view-oblique", "reel-view-side", "reel-close", "reel-analysis"]) {
+      expect(container.querySelectorAll(`[data-testid="${id}"]`), id).toHaveLength(0);
+    }
+    expect(labelsContaining("위상 열기")).toHaveLength(0);
+    expect(labelsContaining("시점")).toHaveLength(0);
   });
 });
 

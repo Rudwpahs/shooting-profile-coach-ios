@@ -70,7 +70,8 @@ describe("explore tab", () => {
     expect(explore).not.toMatch(/정면|사선|측면|<ScrollView|<FlatList|TopBar/);
     // The feed takes the tab scene's own measured size; the tab bar stays below it.
     expect(explore).toContain("onLayout=");
-    expect(explore).toContain("height={size.height}");
+    expect(explore).toContain("height={height}");
+    expect(explore).toContain("useWindowDimensions()");
     expect(explore).toContain("useSafeAreaInsets()");
     expect(explore).toContain("useIsFocused()");
   });
@@ -78,7 +79,7 @@ describe("explore tab", () => {
   it("builds reels progressively and opens the minimal analysis surface", () => {
     expect(explore).toContain("useExploreFeed(");
     expect(explore).toContain("onActiveIndex(state.activeIndex)");
-    expect(explore).toContain("minimalAnalysisHref(profileId)");
+    expect(explore).toContain("minimalAnalysisHref(profileId,");
     const feed = readFileSync("lib/explore-feed.ts", "utf8");
     expect(feed).toMatch(/EXPLORE_FEED_AHEAD = [1-3];/);
     expect(feed).not.toMatch(/from "react-native"|from "react"/);
