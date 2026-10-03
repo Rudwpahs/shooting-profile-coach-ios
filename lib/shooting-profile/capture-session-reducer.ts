@@ -18,10 +18,15 @@ export type CaptureSessionStatus =
   | "ready_to_aggregate"
   | "aggregating"
   | "result_review"
+  /** Every slot holds footage but no accepted pose: the session can only be kept as a device-local film shot. */
+  | "film_review"
   | "saving"
   | "complete"
   | "cancelled"
   | "error";
+
+/** What a slot's acceptance rests on: an accepted landmark sequence, or footage alone. */
+export type CaptureSlotEvidence = "pose" | "film";
 
 export type CaptureSlotStatus =
   | "empty"
@@ -37,7 +42,7 @@ export type CaptureProgress = {
   total: number;
 };
 
-export type CaptureSessionRecoveryStatus = "mode_select" | "setup" | "collecting" | "result_review";
+export type CaptureSessionRecoveryStatus = "mode_select" | "setup" | "collecting" | "result_review" | "film_review";
 
 export type OwnerValueEnvelope<T> = {
   ownerUid: string;
@@ -86,7 +91,7 @@ export function clearOwnerOperationIfMatching(
 }
 
 export function captureSessionRetainsSaveToken(status: CaptureSessionStatus): boolean {
-  return status === "result_review" || status === "saving";
+  return status === "result_review" || status === "film_review" || status === "saving";
 }
 
 export type CaptureSessionSlot = ReturnType<typeof buildCapturePlan>[number] & {
@@ -96,6 +101,7 @@ export type CaptureSessionSlot = ReturnType<typeof buildCapturePlan>[number] & {
   requestId?: string;
   progress?: CaptureProgress;
   sequence?: LandmarkSequenceV2;
+  evidence?: CaptureSlotEvidence;
   rejectionReason?: string;
 };
 
@@ -290,6 +296,13 @@ export type CaptureSessionAction =
     generation: number;
     sequence: LandmarkSequenceV2;
   }
+  /** Footage was kept for the slot but no pose was analysed (no detector on this platform). */
+  | {
+    type: "SLOT_FILM_ACCEPTED";
+    slotId: string;
+    requestId: string;
+    generation: number;
+  }
   | {
     type: "SLOT_REJECTED";
     slotId: string;
@@ -359,6 +372,8 @@ function clearDerivedSession(state: CaptureSessionState): CaptureSessionState {
 function deriveCollectionState(state: CaptureSessionState): CaptureSessionState {
   const allAccepted = state.slots.length > 0
     && state.slots.every((slot) => slot.status === "accepted");
+  // One slot of footage without a pose is enough to rule out aggregation: the session is a film shot.
+  const filmOnly = allAccepted && state.slots.some((slot) => slot.evidence === "film");
   const slots = state.slots.map((slot, index, allSlots) => ({
     ...slot,
     enabled: !allAccepted
@@ -367,7 +382,7 @@ function deriveCollectionState(state: CaptureSessionState): CaptureSessionState 
   }));
   return {
     ...clearDerivedSession(state),
-    status: allAccepted ? "ready_to_aggregate" : "collecting",
+    status: filmOnly ? "film_review" : allAccepted ? "ready_to_aggregate" : "collecting",
     slots,
   };
 }
@@ -484,6 +499,29 @@ export function captureSessionReducer(
           requestId: undefined,
           progress: { stage: "complete", completed: 1, total: 1 },
           sequence: action.sequence,
+          evidence: "pose",
+          rejectionReason: undefined,
+        }),
+      );
+      return deriveCollectionState(next);
+    }
+    case "SLOT_FILM_ACCEPTED": {
+      if (state.status !== "collecting") return state;
+      const slot = state.slots.find((candidate) => candidate.id === action.slotId);
+      if (!slot || !matchingRequest(slot, action.requestId, action.generation)) return state;
+      const next = updateMatchingSlot(
+        state,
+        action.slotId,
+        action.requestId,
+        action.generation,
+        (candidate) => ({
+          ...candidate,
+          status: "accepted",
+          enabled: false,
+          requestId: undefined,
+          progress: { stage: "complete", completed: 1, total: 1 },
+          sequence: undefined,
+          evidence: "film",
           rejectionReason: undefined,
         }),
       );
@@ -502,6 +540,7 @@ export function captureSessionReducer(
           requestId: undefined,
           progress: undefined,
           sequence: undefined,
+          evidence: undefined,
           rejectionReason: action.reason,
         }),
       );
@@ -520,6 +559,7 @@ export function captureSessionReducer(
           requestId: undefined,
           progress: undefined,
           sequence: undefined,
+          evidence: undefined,
           rejectionReason: undefined,
         }),
       );
@@ -530,13 +570,11 @@ export function captureSessionReducer(
       if (index < 0 || state.mode === null) return state;
       const target = state.slots[index];
       const collectionRecovery = state.status === "error" && state.recoveryStatus === "collecting";
-      const validState = state.status === "collecting"
-        || state.status === "ready_to_aggregate"
-        || state.status === "result_review"
-        || collectionRecovery;
+      const reviewing = state.status === "ready_to_aggregate" || state.status === "result_review" || state.status === "film_review";
+      const validState = state.status === "collecting" || reviewing || collectionRecovery;
       const validTarget = state.status === "collecting"
         ? target.status !== "empty"
-        : state.status === "ready_to_aggregate" || state.status === "result_review"
+        : reviewing
           ? target.status === "accepted"
           : target.status === "accepted" || target.status === "rejected" || target.status === "cancelled";
       if (!validState || !validTarget) return state;
@@ -548,6 +586,7 @@ export function captureSessionReducer(
         requestId: undefined,
         progress: undefined,
         sequence: undefined,
+        evidence: undefined,
         rejectionReason: undefined,
       } : slot);
       return deriveCollectionState(clearDerivedSession({ ...state, slots }));
@@ -580,7 +619,7 @@ export function captureSessionReducer(
         recoveryStatus: "collecting",
       };
     case "SAVE_STARTED":
-      return state.status === "result_review" && state.profile !== undefined
+      return (state.status === "result_review" && state.profile !== undefined) || state.status === "film_review"
         ? { ...state, status: "saving", errorMessage: undefined, recoveryStatus: undefined }
         : state;
     case "SAVE_SUCCEEDED":
@@ -595,7 +634,8 @@ export function captureSessionReducer(
           ...state,
           status: "error",
           errorMessage: action.reason,
-          recoveryStatus: "result_review",
+          // A save that started from a film review returns there: nothing was aggregated.
+          recoveryStatus: state.profile === undefined ? "film_review" : "result_review",
         }
         : state;
     case "SESSION_ERROR":
@@ -612,11 +652,13 @@ export function captureSessionReducer(
         ? state.recoveryStatus
         : state.status === "mode_select"
           ? "mode_select"
-          : state.status === "result_review" || state.status === "saving"
-            ? "result_review"
-            : state.status === "setup"
-              ? "setup"
-              : "collecting";
+          : state.status === "film_review" || (state.status === "saving" && state.profile === undefined)
+            ? "film_review"
+            : state.status === "result_review" || state.status === "saving"
+              ? "result_review"
+              : state.status === "setup"
+                ? "setup"
+                : "collecting";
       return {
         ...state,
         status: "cancelled",

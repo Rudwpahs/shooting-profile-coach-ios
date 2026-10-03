@@ -25,7 +25,7 @@ function statusCopy(slot: CaptureSessionSlot): string {
     const progress = slot.progress;
     return progress && progress.total > 0 ? `기기 내 포즈 분석 중 · ${progress.completed}/${progress.total}` : "기기 내 포즈 분석 준비 중";
   }
-  if (slot.status === "accepted") return "통과";
+  if (slot.status === "accepted") return slot.evidence === "film" ? "영상 보관" : "통과";
   if (slot.status === "rejected") return "재촬영 필요";
   if (slot.status === "cancelled") return "선택 취소";
   return slot.enabled ? "촬영 가능" : "이전 클립 통과 후";
