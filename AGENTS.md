@@ -10,6 +10,19 @@ This repository uses a layered agent workflow. Treat these rules as the default 
 
 These are agent workflow tools, not runtime application dependencies. Do not add them to the production Expo bundle.
 
+## Canonical Hoop Hub AI architecture
+
+For any task that touches Motion/Pose, shot diagnosis, Coach, `ml/coach/`, recommendation logic,
+Miner/HoopDB integration, AI inference/deployment, model conversion/distillation, or
+personalization, **read `docs/HOOPHUB_AI_PRODUCT_ARCHITECTURE.md` before planning or editing**.
+
+That document is the product-level AI source of truth. In the MVP, Hoop Hub has **two product AI
+systems**: local Motion AI and Shot Coach AI. Decision Core is internal to Shot Coach,
+personalization is later context rather than a third MVP AI, routine shot analysis must not depend
+on a hosted LLM/API, and the initial product scope remains shooting analysis. Older specs remain
+useful for their experiments/details but do not override that topology unless a later reviewed
+architecture decision explicitly supersedes it.
+
 ## Project-local skills
 
 Project-local Agent Skills live under `.agents/skills/` and are selected by task intent.
