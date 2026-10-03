@@ -3,6 +3,18 @@
 Design: `docs/superpowers/specs/2026-10-01-hoophub-compute-efficient-coach-design.md`
 Status: **architecture locked; implementation work remains**
 
+## 2026-10-03 main-state reconciliation
+
+Current integration base: `main@a9d717f` after PR #32.
+
+- B2-C scenario/evaluation infrastructure is already on `main` (merge `3462c2f`): 560 versioned scenarios, train/dev/held-out isolation, leakage audit, evaluator, retrieval scaffold, frozen Python Coach V1 models and contract JSON Schemas.
+- The repository currently lacks the TypeScript files referenced by the Python parity documentation (`lib/coach/contract.ts`, `tests/coach-parity.test.ts`).
+- The app has `RepresentativePose4DV2` but no production `RepresentativePose4DV2 -> CoachRequestV1` bridge.
+- Physical-iPhone/device-only QA is external / NOT EVIDENCED and is **not a prerequisite for continued software implementation**. Do not make it the next action.
+- The next executable slice is `docs/superpowers/plans/2026-10-03-hoophub-coach-bridge-v1.md`: restore cross-language contract parity and implement the deterministic structured-evidence bridge.
+- Do not start Qwen/QLoRA training in that slice. Training remains downstream of the frozen evaluation/gold review gate.
+
+
 Execution plans:
 - Coach Training v0: `docs/superpowers/plans/2026-10-01-hoophub-coach-training-v0.md`
 - Personalization v1: `docs/superpowers/plans/2026-10-01-hoophub-personalization-v1.md`
