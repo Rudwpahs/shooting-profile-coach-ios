@@ -2,6 +2,10 @@
 
 이 프로젝트는 **제품 runtime**, **검증된 motion asset**, **검토 evidence**, **재현 도구**를 서로 다르게 취급한다. 이 구분이 무너지면 검토용 single-view pose가 제품 3D처럼 보이는 문제가 다시 발생한다.
 
+AI 관련 구현의 제품-level source of truth는 [`HOOPHUB_AI_PRODUCT_ARCHITECTURE.md`](HOOPHUB_AI_PRODUCT_ARCHITECTURE.md)다.
+MVP는 **Local Motion AI + Shot Coach AI의 두 AI 구조**이며, Decision Core는 Shot Coach 내부 구성요소다.
+Miner는 농구 전반의 지식을 계속 수집할 수 있지만 초기 제품 범위는 슛 분석으로 유지한다.
+
 | 구역 | 경로 | 역할 | 제품 실행 포함 여부 |
 | --- | --- | --- | --- |
 | App UI | `app/`, `components/` | iPhone·web 화면과 interaction | 포함 |
