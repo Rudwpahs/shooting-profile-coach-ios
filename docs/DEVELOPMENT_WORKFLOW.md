@@ -10,6 +10,14 @@
 
 이 도구들은 개발 보조 도구이며 Expo 앱의 runtime dependency로 포함하지 않는다.
 
+## AI architecture preflight
+
+AI-related work must first read [`HOOPHUB_AI_PRODUCT_ARCHITECTURE.md`](HOOPHUB_AI_PRODUCT_ARCHITECTURE.md).
+This applies to Motion/Pose, Decision Core, Coach, recommendation, Miner/HoopDB integration,
+inference/deployment, distillation/model conversion, and personalization work. The MVP product
+topology is two AIs — Local Motion AI and Shot Coach AI — with routine analysis designed to avoid
+mandatory hosted-LLM inference.
+
 ## Stage 0 — Problem statement
 
 한 번에 하나의 문제만 정의한다. Superpowers 방식으로 작업을 작은 탐색(spike), 제한된 변경(bounded), 구조 변경(architectural) 중 하나로 보고 필요한 수준만큼 계획한다. 예를 들어 “Curry 3D를 더 자연스럽게”가 아니라, “single-view candidate가 3D viewer에 공급되지 않도록 막고 calibrated capture admission path를 만든다”처럼 acceptance criterion을 쓴다.
