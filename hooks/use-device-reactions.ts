@@ -8,9 +8,39 @@ import { useCallback, useEffect, useState } from "react";
  */
 
 const NOTE_LIMIT = 2000;
+const REFERENCE_REEL_PREFIX = "reference:";
 
 export function reactionStorageKey(reelId: string, field: "like" | "note"): string {
   return `hoophub:reaction:v1:${reelId}:${field}`;
+}
+
+/**
+ * The first 참조 동작 screen kept its like and memo under `hoophub:reference:<id>:like|note`.
+ * Only a reference reel has such a past; every other reel kind returns null.
+ */
+export function legacyReactionStorageKey(reelId: string, field: "like" | "note"): string | null {
+  if (!reelId.startsWith(REFERENCE_REEL_PREFIX)) return null;
+  return `hoophub:reference:${reelId.slice(REFERENCE_REEL_PREFIX.length)}:${field}`;
+}
+
+/**
+ * The v1 key always wins. When it is absent and the reel is a reference, the
+ * legacy value is read and carried forward under the v1 key; a failed
+ * migration write never hides the value that was just read.
+ */
+async function readReaction(reelId: string, field: "like" | "note"): Promise<string | null> {
+  const current = await AsyncStorage.getItem(reactionStorageKey(reelId, field));
+  if (current !== null) return current;
+  const legacyKey = legacyReactionStorageKey(reelId, field);
+  if (!legacyKey) return null;
+  const legacy = await AsyncStorage.getItem(legacyKey);
+  if (legacy === null) return null;
+  try {
+    await AsyncStorage.setItem(reactionStorageKey(reelId, field), legacy);
+  } catch {
+    // The legacy entry stays where it is; the next read migrates again.
+  }
+  return legacy;
 }
 
 export type DeviceReactions = Readonly<{
@@ -36,7 +66,7 @@ export function useDeviceReactions(reelId: string): DeviceReactions {
   useEffect(() => {
     let active = true;
     setReady(false);
-    void Promise.all([AsyncStorage.getItem(reactionStorageKey(reelId, "like")), AsyncStorage.getItem(reactionStorageKey(reelId, "note"))])
+    void Promise.all([readReaction(reelId, "like"), readReaction(reelId, "note")])
       .then(([storedLike, storedNote]) => {
         if (!active) return;
         setLiked(storedLike === "1");

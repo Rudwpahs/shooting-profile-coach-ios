@@ -44,12 +44,32 @@ describe("film shots on the product surfaces", () => {
     expect(grid).not.toMatch(/clip\.uri|\.mp4/);
   });
 
-  it("Reels: a deep link to a film shot waits for the device list and rebuilds Home's order", () => {
+  it("Reels: a deep link to a film shot waits for the device list, surfaces a store failure with a retry, and tells a missing shot apart from it", () => {
     const route = read("app/reels.tsx");
     expect(route).toContain("useFilmShots(");
     expect(route).toContain("homeReelItems(latest, ANONYMOUS_POSE_REFERENCES, filmShots.shots)");
     expect(route).toContain("isFilmReelId(startId)");
     expect(route).toContain('filmShots.status === "loading"');
+    expect(route).toContain('filmShots.status === "error"');
+    expect(route).toContain("<FilmReelUnavailable");
+    const unavailable = read("components/reels/film-reel-unavailable.tsx");
+    expect(unavailable).toContain('"film-reel-storage-error"');
+    expect(unavailable).toContain('"film-reel-missing"');
+    expect(unavailable).toMatch(/accessibilityLabel="다시 읽기"/);
+    expect(unavailable).toMatch(/accessibilityLabel="닫기"/);
+    expect(unavailable).toContain("영상이 삭제된 것은 아닙니다");
+    expect(unavailable).toContain("이 영상은 이 기기에 없습니다");
+  });
+
+  it("Profile: a film-store read failure is shown apart from the remote list, with a retry, and the 내 영상 count is not a confident zero", () => {
+    const profile = read("app/(tabs)/profile.tsx");
+    expect(profile).toContain('testID="film-shots-error"');
+    expect(profile).toContain('accessibilityLabel="내 영상 다시 읽기"');
+    expect(profile).toContain("filmShots.reload");
+    expect(profile).toMatch(/filmShots\.status === "error" \? null : filmShots\.shots\.length/);
+    const stats = read("components/profile/profile-stats.tsx");
+    expect(stats).toContain("value: number | null");
+    expect(stats).toContain("확인 불가");
   });
 
   it("Capture: a saved film shot completes into Reels at the shot, and the preview capture keeps footage as a film shot", () => {

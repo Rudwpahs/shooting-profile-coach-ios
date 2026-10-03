@@ -316,6 +316,24 @@ describe("reels feed", () => {
     expect(byTestId("film-space-viewer")[0].textContent).toContain("shooting_side-0");
   });
 
+  it("lets the Film viewer take pointer input on a film reel: the stage tap layer passes touches through, while a skeleton reel keeps tap-to-pause", async () => {
+    await render({ items: [filmShot, items[1]], onClose: null });
+    const filmTap = tap();
+    // The layer still exists for VoiceOver (next/previous reel) but never sits between a finger and the Film controls.
+    expect(filmTap.getAttribute("aria-label")).toContain("내 슛폼 1 영상 릴");
+    expect(filmTap.style.pointerEvents).toBe("none");
+    expect(byTestId("reel-film-active")).toHaveLength(1);
+    const side = container.querySelector('[aria-label="측면 1 로컬 영상 보기"]') as HTMLElement;
+    await act(async () => { side.click(); });
+    expect(byTestId("film-space-viewer")[0].textContent).toContain("shooting_side-0");
+
+    await remount();
+    await render();
+    expect(tap().style.pointerEvents).not.toBe("none");
+    await act(async () => { tap().click(); });
+    expect(label()).toContain("일시정지됨");
+  });
+
   it("tells the truth when a film shot's clips are not on this device", async () => {
     await render({ items: [{ ...filmShot, id: "film:empty", clips: [] }, items[1]], onClose: null });
     expect(byTestId("film-space-viewer")).toHaveLength(0);

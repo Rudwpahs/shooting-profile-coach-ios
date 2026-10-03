@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { LiquidPressable } from "@/components/ui/liquid";
@@ -20,12 +20,19 @@ const INNER = RING - 6;
 /**
  * The row of circles at the top of Home: the capture action first, then the
  * skeletons that exist today (the owner's own, the anonymous reference) and
- * the owner's own footage kept on this device as film shots. No placeholder
+ * the owner's own footage kept on this device as film shots. The row scrolls
+ * sideways, so every item stays reachable on a compact screen. No placeholder
  * people.
  */
 export function StoryStrip({ items }: { items: readonly StoryItem[] }) {
   return (
-    <View style={styles.row}>
+    <ScrollView
+      contentContainerStyle={styles.row}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.strip}
+      testID="story-strip"
+    >
       {items.map((item) => (
         <LiquidPressable
           key={item.key}
@@ -53,11 +60,12 @@ export function StoryStrip({ items }: { items: readonly StoryItem[] }) {
           <Text numberOfLines={1} style={styles.label}>{item.label}</Text>
         </LiquidPressable>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  strip: { flexGrow: 0 },
   row: { flexDirection: "row", gap: 14, paddingHorizontal: 14, paddingVertical: 8 },
   item: { minHeight: 44, minWidth: RING, width: RING + 6 },
   itemSurface: { alignItems: "center", gap: 4 },

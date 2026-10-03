@@ -43,6 +43,7 @@ export default function HomeScreen() {
       <TopBar wordmark="Hoop Hub" />
       <HomeFeed
         filmShots={filmShots.shots}
+        filmShotsStatus={filmShots.status}
         focusTitle={getPracticeFocus(profile.goal).title}
         goalLabel={GOAL_LABELS[profile.goal]}
         latest={latest}
@@ -55,6 +56,7 @@ export default function HomeScreen() {
           router.push(`/reels?start=${encodeURIComponent(reelId)}` as never);
         }}
         onOpenReference={() => router.push("/library" as never)}
+        onRetryFilmShots={filmShots.reload}
         reference={ANONYMOUS_POSE_REFERENCES[0]}
         viewerEnabled={FORMPATH_FLAGS.representative4DViewer}
         width={width}

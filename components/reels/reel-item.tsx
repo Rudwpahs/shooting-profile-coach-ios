@@ -36,6 +36,8 @@ type ReelItemProps = {
 };
 
 const PHASE_COUNT = 5;
+/** Film media takes its own touches; the tap layer must never sit between a finger and the Film controls. */
+const PASS_THROUGH = { pointerEvents: "none" } as const;
 /** The nearest of the five shot phases for a loop fraction. */
 function phaseAtProgress(fraction: number): number {
   return Math.max(0, Math.min(PHASE_COUNT - 1, Math.round(fraction * (PHASE_COUNT - 1))));
@@ -124,7 +126,8 @@ export function ReelItem({
         ) : null}
       </View>
 
-      {/* Layer 2: interaction. */}
+      {/* Layer 2: interaction. On a film reel the Film viewer owns touch (clip tabs, scrub, rotate, zoom), so this
+          layer passes pointer events through and remains only for VoiceOver's next/previous reel actions. */}
       <Pressable
         accessibilityActions={[
           ...(skeleton ? [{ name: "activate", label: playing ? "일시정지" : "재생" }] : []),
@@ -141,7 +144,7 @@ export function ReelItem({
         disabled={!active}
         onAccessibilityAction={onAccessibilityAction}
         onPress={toggle}
-        style={({ pressed }) => [styles.tap, { width, height }, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.tap, { width, height }, film ? PASS_THROUGH : null, pressed && !film && styles.pressed]}
         testID="reel-tap"
       />
 

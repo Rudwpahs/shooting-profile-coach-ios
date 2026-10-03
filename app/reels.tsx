@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { FilmReelUnavailable } from "@/components/reels/film-reel-unavailable";
 import { ReelsFeed } from "@/components/reels/reels-feed";
 import { tokens } from "@/constants/tokens";
 import { useAppStateStatus } from "@/hooks/use-app-state";
@@ -44,8 +45,18 @@ export default function ReelsRoute() {
   const startId = typeof params.start === "string" ? params.start : handoff?.startId;
   const initialIndex = useMemo(() => initialReelIndex(items, startId), [items, startId]);
   const listKey = useMemo(() => items.map((item) => item.id).join("|"), [items]);
-  // A deep link to one of my film shots waits for the device list, so the feed opens on that shot instead of jumping to it.
-  const waitingForFilm = !handoff && isFilmReelId(startId) && filmShots.status === "loading";
+  // A deep link to one of my film shots never falls through to another reel: it waits for the device list, shows a
+  // store failure with a retry, and tells a shot that is really not on this device apart from that failure.
+  const filmDeepLink = !handoff && isFilmReelId(startId);
+  const filmGate: "ready" | "loading" | "error" | "missing" = !filmDeepLink
+    ? "ready"
+    : filmShots.status === "loading"
+      ? "loading"
+      : filmShots.status === "error"
+        ? "error"
+        : items.some((item) => item.id === startId)
+          ? "ready"
+          : "missing";
 
   const [focused, setFocused] = useState(true);
   useFocusEffect(useCallback(() => {
@@ -82,7 +93,11 @@ export default function ReelsRoute() {
           { opacity: enter, transform: [{ scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] },
         ]}
       >
-        {waitingForFilm ? null : (
+        {filmGate === "loading" ? null : filmGate === "error" ? (
+          <FilmReelUnavailable insets={{ top: insets.top, bottom: insets.bottom }} kind="error" onClose={onClose} onRetry={filmShots.reload} />
+        ) : filmGate === "missing" ? (
+          <FilmReelUnavailable insets={{ top: insets.top, bottom: insets.bottom }} kind="missing" onClose={onClose} />
+        ) : (
           <ReelsFeed
             key={listKey}
             appState={appState}

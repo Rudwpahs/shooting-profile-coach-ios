@@ -442,7 +442,8 @@ export default function PersonalProfileTab() {
           locked={!user}
           stats={[
             { value: FORMPATH_FLAGS.profileV2 ? v2Records.length : 0, label: "대표 슛폼" },
-            { value: filmShots.shots.length, label: "내 영상" },
+            // A store that cannot be read is an unknown count, never a confident zero.
+            { value: filmShots.status === "error" ? null : filmShots.shots.length, label: "내 영상" },
             { value: poses.length, label: "기존 분석" },
           ]}
         />
@@ -470,6 +471,24 @@ export default function PersonalProfileTab() {
                 {visibleV2Notice ? <Text accessibilityLiveRegion="polite" style={styles.noticeText}>{visibleV2Notice}</Text> : null}
                 {filmNotice ? (
                   <Text accessibilityLiveRegion={filmNotice.kind === "error" ? "assertive" : "polite"} style={filmNotice.kind === "error" ? styles.errorText : styles.noticeText}>{filmNotice.text}</Text>
+                ) : null}
+                {filmShots.status === "error" ? (
+                  <View style={styles.filmError} testID="film-shots-error">
+                    <Text accessibilityLiveRegion="polite" style={styles.filmErrorText}>이 기기에 보관한 영상을 읽지 못했습니다. 영상이 삭제된 것은 아닙니다.</Text>
+                    <Pressable
+                      accessibilityLabel="내 영상 다시 읽기"
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: false }}
+                      disabled={false}
+                      focusable
+                      onBlur={() => setFocusedControl((current) => current === "film-retry" ? null : current)}
+                      onFocus={() => setFocusedControl("film-retry")}
+                      onPress={filmShots.reload}
+                      style={({ pressed }) => [styles.filmRetry, focusStyle(focusedControl === "film-retry"), pressed && styles.pressed]}
+                    >
+                      <Text style={styles.filmRetryText}>다시 읽기</Text>
+                    </Pressable>
+                  </View>
                 ) : null}
               </>
             )}
@@ -590,5 +609,9 @@ const styles = StyleSheet.create({
   poseName: { ...typography.body, color: tokens.foreground, flex: 1 },
   deleteButton: { alignItems: "center", borderRadius: 10, height: 48, justifyContent: "center", minHeight: 48, minWidth: 48, width: 48 },
   viewerWrap: { marginHorizontal: 14, marginTop: 10 },
+  filmError: { alignItems: "center", flexDirection: "row", gap: 10, paddingHorizontal: 14, paddingTop: 8 },
+  filmErrorText: { ...typography.caption, color: tokens.destructive, flex: 1 },
+  filmRetry: { alignItems: "center", borderColor: tokens.border, borderRadius: 10, borderWidth: 1, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 12 },
+  filmRetryText: { ...typography.label, color: tokens.foreground },
   pressed: { opacity: 0.75 },
 });

@@ -74,9 +74,14 @@ vi.mock("@/components/screen-container", () => ({
 }));
 // Device-local state (film shots, reactions) lives in AsyncStorage; an in-memory map stands in for it.
 const storage = new Map<string, string>();
+/** When set, every read of the film-shot store fails, the way a broken IndexedDB/AsyncStorage does. */
+const filmStorage = { fail: false };
 vi.mock("@react-native-async-storage/async-storage", () => ({
   default: {
-    getItem: async (key: string) => storage.get(key) ?? null,
+    getItem: async (key: string) => {
+      if (filmStorage.fail && key.startsWith("hoophub:film-shots:")) throw new Error("storage unavailable");
+      return storage.get(key) ?? null;
+    },
     setItem: async (key: string, value: string) => { storage.set(key, value); },
     removeItem: async (key: string) => { storage.delete(key); },
   },
@@ -132,6 +137,7 @@ beforeEach(() => {
   push.mockClear();
   navigate.mockClear();
   storage.clear();
+  filmStorage.fail = false;
   authState.user = null;
   authState.loading = false;
   latestState = { status: "signed-out" };
@@ -390,6 +396,66 @@ describe("film shots", () => {
 
     await click(tiles[0]);
     expect(push).toHaveBeenCalledWith("/reels?start=film%3Afilm-shot-a-1");
+  });
+
+  it("home: the story row scrolls sideways, so every film shot and the reference stay reachable at a compact width", async () => {
+    authState.user = { uid: "owner-1", email: "owner@example.com" };
+    latestState = { status: "empty" };
+    for (let index = 1; index <= 6; index += 1) seedFilmShot(`film-shot-s-${index}`, `내 슛폼 ${index}`, Date.UTC(2026, 9, index));
+    await render(<HomeScreen />);
+    await settle(() => labelsContaining("내 영상 릴 열기").length);
+
+    const strip = container.querySelector('[data-testid="story-strip"]') as HTMLElement | null;
+    expect(strip).not.toBeNull();
+    expect(["auto", "scroll"]).toContain(getComputedStyle(strip!).overflowX);
+    // Nothing is cut: six film shots plus the capture action and the reference, in order, with the reference last.
+    const stories = Array.from(strip!.querySelectorAll("[aria-label]")).map((el) => el.getAttribute("aria-label"));
+    expect(stories).toHaveLength(8);
+    expect(stories[0]).toBe("슛폼 촬영");
+    expect(stories.slice(1, 7)).toEqual([6, 5, 4, 3, 2, 1].map((index) => `내 슛폼 ${index} 내 영상 릴 열기`));
+    expect(stories[7]).toBe("MOTION 01 참조 모션 열기");
+  });
+
+  it("home: a film store that cannot be read says so and offers a retry, instead of looking like every video was deleted", async () => {
+    authState.user = { uid: "owner-1", email: "owner@example.com" };
+    latestState = { status: "empty" };
+    seedFilmShot("film-shot-a-1", "내 슛폼 1", Date.UTC(2026, 9, 1));
+    filmStorage.fail = true;
+    await render(<HomeScreen />);
+    await settle(() => container.querySelectorAll('[data-testid="film-shots-error"]').length);
+
+    expect(container.querySelector('[data-testid="film-shots-error"]')).not.toBeNull();
+    expect(container.textContent).toContain("이 기기에 보관한 영상을 읽지 못했습니다");
+    expect(container.textContent).not.toContain("내 슛폼 1");
+    expect(byLabel("MOTION 01 참조 모션 열기")).not.toBeNull();
+
+    filmStorage.fail = false;
+    await click(byLabel("내 영상 다시 읽기"));
+    await settle(() => labelsContaining("내 영상 릴 열기").length);
+    expect(container.querySelector('[data-testid="film-shots-error"]')).toBeNull();
+    expect(byLabel("내 슛폼 1 내 영상 릴 열기")).not.toBeNull();
+  });
+
+  it("profile: a film store read failure is its own line with a retry, separate from the remote profile list, and never a confident zero", async () => {
+    authState.user = { uid: "owner-1", email: "owner@example.com" };
+    seedFilmShot("film-shot-a-1", "내 슛폼 1", Date.UTC(2026, 9, 1));
+    filmStorage.fail = true;
+    await render(<ProfileScreen />);
+    await settle(() => container.querySelectorAll('[data-testid="film-shots-error"]').length);
+
+    expect(container.querySelector('[data-testid="film-shots-error"]')).not.toBeNull();
+    expect(container.textContent).toContain("이 기기에 보관한 영상을 읽지 못했습니다");
+    // The remote list is fine (empty), so its own copy stays; the film count is unknown, not zero.
+    expect(container.textContent).toContain("첫 슛폼을 촬영하면 여기에 쌓입니다");
+    expect(byLabel("내 영상 0")).toBeNull();
+    expect(labelsContaining("내 영상 확인 불가")).toHaveLength(1);
+
+    filmStorage.fail = false;
+    await click(byLabel("내 영상 다시 읽기"));
+    await settle(() => labelsContaining("이 기기에만 보관").length);
+    expect(container.querySelector('[data-testid="film-shots-error"]')).toBeNull();
+    expect(labelsContaining("내 영상 · 이 기기에만 보관 · 포즈 분석 없음")).toHaveLength(1);
+    expect(byLabel("내 영상 1")).not.toBeNull();
   });
 
   it("grid: a film tile being deleted is busy and disabled like a profile tile", async () => {

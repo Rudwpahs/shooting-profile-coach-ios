@@ -29,6 +29,8 @@ export function useFilmShots(enabled = true): FilmShotsState {
 
   const load = useCallback(() => {
     const generation = ++generationRef.current;
+    // A retry shows as loading, never as a confident empty list; the last good list stays until the read settles.
+    setState((current) => (current.status === "loading" ? current : { status: "loading", shots: current.shots }));
     void (async () => {
       try {
         const listed = await listFilmShots();

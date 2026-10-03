@@ -9,6 +9,7 @@ import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { SkeletonLoop } from "@/components/skeleton/skeleton-loop";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
+import type { FilmShotsStatus } from "@/hooks/use-film-shots";
 import type { LatestRepresentativeState } from "@/hooks/use-latest-representative-profile";
 import type { AnonymousPoseReference } from "@/lib/anonymous-pose-library";
 import type { FilmShotV1 } from "@/lib/film-space/film-shots";
@@ -21,6 +22,9 @@ export type HomeFeedProps = {
   latest: LatestRepresentativeState;
   /** The owner's own footage kept on this device without pose analysis; newest first in the strip. */
   filmShots?: readonly FilmShotV1[];
+  /** "error" means the device store could not be read: an empty strip must not look like deleted footage. */
+  filmShotsStatus?: FilmShotsStatus;
+  onRetryFilmShots?: () => void;
   reference: AnonymousPoseReference;
   goalLabel: string;
   focusTitle: string;
@@ -40,7 +44,7 @@ export type HomeFeedProps = {
  * preview does; there is no detail screen and no separate expand control.
  * Presentational, so the route and the development demo render the same thing.
  */
-export function HomeFeed({ width, latest, filmShots = [], reference, goalLabel, focusTitle, viewerEnabled, onOpenCapture, onOpenProfile, onOpenReference, onOpenAnalysis, onOpenReel }: HomeFeedProps) {
+export function HomeFeed({ width, latest, filmShots = [], filmShotsStatus = "ready", onRetryFilmShots, reference, goalLabel, focusTitle, viewerEnabled, onOpenCapture, onOpenProfile, onOpenReference, onOpenAnalysis, onOpenReel }: HomeFeedProps) {
   const stageHeight = Math.round(width * 0.9);
   const referenceAvatar = useMemo(() => poseMotionGlyph(reference.motion, { view: "side", progress: 0.75 }), [reference.motion]);
   const silhouette = useMemo(() => poseMotionGlyph(reference.motion, { view: "oblique", progress: 0.75 }), [reference.motion]);
@@ -68,6 +72,23 @@ export function HomeFeed({ width, latest, filmShots = [], reference, goalLabel, 
   return (
     <ScrollView contentContainerStyle={[styles.page, { width }]} showsVerticalScrollIndicator={false}>
       <StoryStrip items={stories} />
+      {filmShotsStatus === "error" ? (
+        <View style={styles.filmError} testID="film-shots-error">
+          <Text accessibilityLiveRegion="polite" style={styles.filmErrorText}>이 기기에 보관한 영상을 읽지 못했습니다. 영상이 삭제된 것은 아닙니다.</Text>
+          {onRetryFilmShots ? (
+            <Pressable
+              accessibilityLabel="내 영상 다시 읽기"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: false }}
+              disabled={false}
+              onPress={onRetryFilmShots}
+              style={({ pressed }) => [styles.filmRetry, pressed && styles.stagePressed]}
+            >
+              <Text style={styles.filmRetryText}>다시 읽기</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {latest.status === "ready" ? (
         <FeedCard
@@ -156,4 +177,8 @@ const styles = StyleSheet.create({
   silhouette: { left: 0, opacity: 0.16, pointerEvents: "none", position: "absolute", top: 0 },
   placeholderText: { ...typography.callout, color: tokens.mutedForeground },
   stagePressed: { opacity: 0.92 },
+  filmError: { alignItems: "center", flexDirection: "row", gap: 10, paddingHorizontal: 14, paddingBottom: 6 },
+  filmErrorText: { ...typography.caption, color: tokens.destructive, flex: 1 },
+  filmRetry: { alignItems: "center", borderColor: tokens.border, borderRadius: 10, borderWidth: 1, justifyContent: "center", minHeight: 44, minWidth: 44, paddingHorizontal: 12 },
+  filmRetryText: { ...typography.label, color: tokens.foreground },
 });
