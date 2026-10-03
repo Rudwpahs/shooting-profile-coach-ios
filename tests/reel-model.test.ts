@@ -5,6 +5,8 @@ import { representativeConfidence } from "@/components/skeleton/representative-g
 import { ANONYMOUS_POSE_REFERENCES } from "@/lib/anonymous-pose-library";
 import { relativeDayLabel } from "@/lib/format/relative-day";
 import {
+  filmReelId,
+  filmShotReel,
   profileReelId,
   reelAccessibilityName,
   reelAnalysisProfileId,
@@ -15,6 +17,8 @@ import {
 import { homeReelItems } from "@/lib/reels/reel-sources";
 import type { LatestRepresentativeState } from "@/hooks/use-latest-representative-profile";
 import type { ShootingProfileSummaryV2 } from "@/lib/firebase-shooting-profiles";
+import type { FilmShotV1 } from "@/lib/film-space/film-shots";
+import { reelStartFrame } from "@/lib/reels/reel-playback";
 import { anonymousReferenceReel, syntheticProfileReel, syntheticRepresentative } from "@/tests/fixtures/reel-fixtures";
 
 // The projection helpers live beside the analysis viewer, which pulls React Native in; node tests mock the runtime.
@@ -60,6 +64,27 @@ describe("reel model", () => {
     expect(reelConfidence(reference)).toBe("basic");
   });
 
+  it("models a device-local film shot as a reel with its own name, an honest line and no analysis", () => {
+    const shot: FilmShotV1 = {
+      version: "film_shot_v1",
+      id: "film-shot-abc-1",
+      title: "내 슛폼 1",
+      createdAtMs: new Date(2026, 9, 2, 10, 0, 0).getTime(),
+      clips: [{ slotId: "front-0", view: "front", takeIndex: 0, uri: "blob:front", durationMs: 3533, width: 1080, height: 1920 }],
+    };
+    const reel = filmShotReel(shot);
+    expect(reel).toMatchObject({ kind: "film", id: "film:film-shot-abc-1", shotId: "film-shot-abc-1", title: "내 슛폼 1" });
+    expect(reel.kind === "film" && reel.clips).toHaveLength(1);
+    expect(reelTitle(reel)).toBe("내 슛폼 1");
+    expect(reelLine(reel)).toContain("내 영상");
+    expect(reelLine(reel)).toContain(relativeDayLabel(new Date(shot.createdAtMs)));
+    expect(reelAccessibilityName(reel)).toBe("내 슛폼 1 영상 릴");
+    expect(reelAnalysisProfileId(reel)).toBeNull();
+    expect(reelConfidence(reel)).toBe("basic");
+    expect(reelStartFrame(reel)).toBe(0);
+    expect(filmReelId("film-shot-abc-1")).toBe("film:film-shot-abc-1");
+  });
+
   it("builds ids that identify the kind and survive a route param", () => {
     expect(profileReelId("abc-123")).toBe("profile:abc-123");
     expect(referenceReelId(reference.reference.id)).toBe(reference.id);
@@ -84,6 +109,18 @@ describe("home reel items", () => {
     expect(items[0]).toMatchObject({ kind: "profile", id: "profile:demo-profile-1", profileId: "demo-profile-1", shootingHand: "right", createdAt });
     expect(items.slice(1).map((item) => item.id)).toEqual(ANONYMOUS_POSE_REFERENCES.map((candidate) => `reference:${candidate.id}`));
     expect(new Set(items.map((item) => item.id)).size).toBe(items.length);
+  });
+
+  it("puts my film shots between my profile and the references, newest first, whatever order they arrive in", () => {
+    const older: FilmShotV1 = { version: "film_shot_v1", id: "film-shot-a-1", title: "내 슛폼 1", createdAtMs: new Date(2026, 9, 1).getTime(), clips: [] };
+    const newer: FilmShotV1 = { version: "film_shot_v1", id: "film-shot-b-2", title: "내 슛폼 2", createdAtMs: new Date(2026, 9, 2).getTime(), clips: [] };
+    const items = homeReelItems(ready, ANONYMOUS_POSE_REFERENCES, [older, newer]);
+    expect(items.map((item) => item.kind)).toEqual(["profile", "film", "film", ...ANONYMOUS_POSE_REFERENCES.map(() => "reference")]);
+    expect(items[1].id).toBe(filmReelId(newer.id));
+    expect(items[2].id).toBe(filmReelId(older.id));
+    expect(new Set(items.map((item) => item.id)).size).toBe(items.length);
+    // Without film shots the list is exactly what it was.
+    expect(homeReelItems(ready, ANONYMOUS_POSE_REFERENCES).map((item) => item.kind)).toEqual(["profile", ...ANONYMOUS_POSE_REFERENCES.map(() => "reference")]);
   });
 
   it("offers only references when there is no profile to show", () => {

@@ -1,7 +1,8 @@
 import { useMemo, useRef } from "react";
 import { Animated, Pressable, StyleSheet, View, type AccessibilityActionEvent, type AppStateStatus } from "react-native";
 
-import { ReelMotionPlayer, reelConfidence, reelStageBounds, reelStagePadding, reelStillGlyph } from "@/components/reels/reel-motion-player";
+import { ReelFilmMedia } from "@/components/reels/reel-film-media";
+import { ReelMotionPlayer, isSkeletonReel, reelConfidence, reelStageBounds, reelStagePadding, reelStillGlyph } from "@/components/reels/reel-motion-player";
 import { REEL_STAGE_BOTTOM, REEL_STAGE_TOP, ReelOverlay, type ReelOverlayInsets } from "@/components/reels/reel-overlay";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
@@ -44,20 +45,23 @@ export function ReelItem({
   onViewChange, onTogglePlayback, onNext, onPrevious, onClose, viewChips = true, onOpenAnalysis,
 }: ReelItemProps) {
   const active = role === "active";
-  const playing = reelShouldPlay({ active, focused, appState, playback, reducedMotion });
+  // A film reel has no skeleton clock: its media is the local clip itself.
+  const skeleton = isSkeletonReel(item) ? item : null;
+  const film = item.kind === "film" ? item : null;
+  const playing = skeleton !== null && reelShouldPlay({ active, focused, appState, playback, reducedMotion });
   const startFrame = reelStartFrame(item);
   // The item is the whole viewport; the figure is fitted between the chrome bands.
   const stageTop = insets.top + REEL_STAGE_TOP;
   const stageHeight = Math.max(1, height - stageTop - (insets.bottom + REEL_STAGE_BOTTOM));
   const progress = useRef(new Animated.Value(reelProgress(startFrame))).current;
-  const still = useMemo(() => (role === "adjacent" ? reelStillGlyph(item, view) : null), [item, role, view]);
-  const bounds = useMemo(() => (role === "adjacent" ? reelStageBounds(item, view) : null), [item, role, view]);
+  const still = useMemo(() => (skeleton && role === "adjacent" ? reelStillGlyph(skeleton, view) : null), [skeleton, role, view]);
+  const bounds = useMemo(() => (skeleton && role === "adjacent" ? reelStageBounds(skeleton, view) : null), [skeleton, role, view]);
   const analysisId = reelAnalysisProfileId(item);
 
-  const state = playing ? "재생 중" : "일시정지됨";
+  const state = skeleton ? (playing ? "재생 중" : "일시정지됨") : "영상";
   const label = `${reelAccessibilityName(item)}, ${index + 1}/${count}, ${active ? state : "대기"} · ${reelLine(item)}`;
 
-  const toggle = () => onTogglePlayback(playing);
+  const toggle = () => { if (skeleton) onTogglePlayback(playing); };
   const onAccessibilityAction = (event: AccessibilityActionEvent) => {
     const name = event.nativeEvent.actionName;
     if (name === "activate") toggle();
@@ -74,8 +78,10 @@ export function ReelItem({
     >
       {/* Layer 1: media. (A future subject cutout would sit between this and the skeleton.) */}
       <View style={[styles.stage, { width, height: stageHeight, top: stageTop }]} testID={`reel-stage-${active ? "active" : role === "adjacent" ? "still" : "idle"}`}>
-        {active ? (
-          <ReelMotionPlayer height={stageHeight} item={item} playing={playing} progress={progress} startFrame={startFrame} view={view} width={width} />
+        {film ? (
+          role !== "idle" ? <ReelFilmMedia active={active} height={stageHeight} item={film} width={width} /> : null
+        ) : skeleton && active ? (
+          <ReelMotionPlayer height={stageHeight} item={skeleton} playing={playing} progress={progress} startFrame={startFrame} view={view} width={width} />
         ) : still && bounds ? (
           <SkeletonGlyph
             accessible={false}
@@ -93,11 +99,11 @@ export function ReelItem({
       {/* Layer 2: interaction. */}
       <Pressable
         accessibilityActions={[
-          { name: "activate", label: playing ? "일시정지" : "재생" },
+          ...(skeleton ? [{ name: "activate", label: playing ? "일시정지" : "재생" }] : []),
           { name: "increment", label: "다음 릴" },
           { name: "decrement", label: "이전 릴" },
         ]}
-        accessibilityHint="두 번 탭하면 일시정지 또는 재생, 위아래로 쓸어 넘기면 다음 또는 이전 릴"
+        accessibilityHint={skeleton ? "두 번 탭하면 일시정지 또는 재생, 위아래로 쓸어 넘기면 다음 또는 이전 릴" : "위아래로 쓸어 넘기면 다음 또는 이전 릴"}
         accessibilityLabel={label}
         accessibilityRole="adjustable"
         accessibilityState={{ disabled: !active }}
@@ -120,7 +126,7 @@ export function ReelItem({
           onClose={onClose}
           onOpenAnalysis={analysisId && onOpenAnalysis ? () => onOpenAnalysis(analysisId) : null}
           onViewChange={onViewChange}
-          paused={active && !playing}
+          paused={skeleton !== null && active && !playing}
           progress={progress}
           view={view}
           viewChips={viewChips}

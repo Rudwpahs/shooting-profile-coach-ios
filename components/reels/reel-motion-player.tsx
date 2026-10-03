@@ -23,15 +23,22 @@ export function reelConfidence(item: ReelItem): SkeletonConfidence {
   return item.kind === "profile" ? representativeConfidence(item.profile) : "basic";
 }
 
+/** A film reel has no skeleton; callers choose the film media instead of these helpers. */
+export type SkeletonReel = Exclude<ReelItem, { kind: "film" }>;
+
+export function isSkeletonReel(item: ReelItem): item is SkeletonReel {
+  return item.kind !== "film";
+}
+
 /** One fit per Reel and view: the loop, the neighbour still and the paused frame share it, so the figure never jumps. */
-export function reelStageBounds(item: ReelItem, view: RepresentativeViewId): GlyphBounds {
+export function reelStageBounds(item: SkeletonReel, view: RepresentativeViewId): GlyphBounds {
   if (item.kind === "profile") return representativeSequenceBounds(item.profile, view, item.shootingHand);
   const { motion } = item.reference;
   return glyphBounds(Array.from({ length: BOUNDS_SAMPLES }, (_, index) => poseMotionGlyph(motion, { view, progress: index / (BOUNDS_SAMPLES - 1) }).points));
 }
 
 /** The glyph of one frame on the shared 101-step grid. */
-export function reelFrameGlyph(item: ReelItem, view: RepresentativeViewId, frame: number): SkeletonGlyphData {
+export function reelFrameGlyph(item: SkeletonReel, view: RepresentativeViewId, frame: number): SkeletonGlyphData {
   if (item.kind === "profile") {
     const index = Math.max(0, Math.min(item.profile.frames.length - 1, Math.round(frame)));
     return representativeGlyph(item.profile.frames[index], view, item.shootingHand);
@@ -40,7 +47,7 @@ export function reelFrameGlyph(item: ReelItem, view: RepresentativeViewId, frame
 }
 
 /** The release still a neighbour shows and the active Reel starts from. */
-export function reelStillGlyph(item: ReelItem, view: RepresentativeViewId): SkeletonGlyphData {
+export function reelStillGlyph(item: SkeletonReel, view: RepresentativeViewId): SkeletonGlyphData {
   return reelFrameGlyph(item, view, reelStartFrame(item));
 }
 
@@ -49,7 +56,7 @@ export function reelStagePadding(width: number, height: number): number {
 }
 
 type ReelMotionPlayerProps = {
-  item: ReelItem;
+  item: SkeletonReel;
   view: RepresentativeViewId;
   width: number;
   height: number;
