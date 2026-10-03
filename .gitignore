@@ -83,3 +83,8 @@ graphify-out/
 
 # Playwright MCP session output (screenshots live in artifacts/)
 .playwright-mcp/
+
+# Local-only preview film shots: the owner's own clips plus a manifest, served next to a local preview build by
+# scripts/preview-local-serve.mjs. Kept outside public/ on purpose (Expo copies public/ into every web export).
+# Never committed; the Pages workflow fails if this folder ever reaches an export.
+/preview-local/

@@ -66,8 +66,12 @@ jobs:
         shell: bash
         run: |
           pnpm exec expo export --platform web --output-dir web-production-check
-          if grep -R -E "demo-fixture-|demo_fixture_recapture|syntheticLandmarkSession|preview-shot-|preview-user|PreviewRuntimeRoot|PreviewCaptureSession|preview-shot-library|canonical-balanced|compact-quick-release|previewExploreMotions|SyntheticShotStyle|Stephen Curry|Paul George|IMAGE-LIFTED 3D ANALYSIS|PLAYER_MONOCULAR_3D_ANALYSES" web-production-check; then
+          if grep -R -E "demo-fixture-|demo_fixture_recapture|syntheticLandmarkSession|preview-shot-|preview-user|PreviewRuntimeRoot|PreviewCaptureSession|preview-shot-library|canonical-balanced|compact-quick-release|previewExploreMotions|SyntheticShotStyle|preview-local|PreviewLocalFilmSeed|Stephen Curry|Paul George|IMAGE-LIFTED 3D ANALYSIS|PLAYER_MONOCULAR_3D_ANALYSES" web-production-check; then
             echo "Demo fixture, preview runtime or named-player research content leaked into an ordinary production export" >&2
+            exit 1
+          fi
+          if [ -e web-production-check/preview-local ]; then
+            echo "Local-only preview film shots reached the production export" >&2
             exit 1
           fi
           rm -rf web-production-check
@@ -87,6 +91,11 @@ jobs:
           test -f web-preview-dist/private-capture.html
           test -f web-preview-dist/library.html
           test -f web-preview-dist/404.html
+          # Local-only preview film shots (a developer's own clips) live in gitignored public/preview-local/ and must never ship.
+          if [ -e web-preview-dist/preview-local ]; then
+            echo "Local-only preview film shots reached the preview export" >&2
+            exit 1
+          fi
           if grep -l "Unmatched Route" web-preview-dist/index.html web-preview-dist/explore.html web-preview-dist/reels.html; then
             echo "A pre-rendered preview page shows the unmatched-route screen" >&2
             exit 1
