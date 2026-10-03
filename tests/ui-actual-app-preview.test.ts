@@ -46,12 +46,13 @@ describe("the web preview is the actual HoopHub app", () => {
     expect(reels).toContain("`/private-analysis/${profileId}`");
     expect(analysis).toMatch(/export (async )?function generateStaticParams/);
     expect(analysis).toContain("preview-shot-001");
-    expect(analysis).toContain("<ShotInspectionViewer");
+    expect(analysis).toContain("<AnalysisStage");
     expect(analysis).toContain("experimentalEnabled");
+    expect(read("components/analysis/analysis-stage.tsx")).toContain("<ShotInspectionViewer");
   });
 
-  it("mounts Motion, Phase and Film inside the real shot inspection coordinator, with Film available on web", () => {
-    expect(inspection).toContain("<SequenceViewer");
+  it("mounts Phase and Film inside the real shot inspection coordinator behind the reel stage, with Film available on web", () => {
+    expect(inspection).not.toContain("<SequenceViewer");
     expect(inspection).toContain("<PhaseSpaceViewer");
     expect(inspection).toContain("<FilmSpaceViewer");
     expect(inspection).toMatch(/Platform\.OS === "ios" \|\| Platform\.OS === "web"/);

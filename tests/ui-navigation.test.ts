@@ -63,15 +63,15 @@ describe("explore tab", () => {
     expect(exploreSource).toContain("CMU optical mocap");
   });
 
-  it("is one form per screen: the Reels feed inside the tab, with no close affordance and no view chips", () => {
+  it("is one form per screen: the Reels feed inside the tab, with a heading instead of a close affordance and no chip row", () => {
     expect(explore).toContain("<ReelsFeed");
     expect(explore).toContain("onClose={null}");
-    expect(explore).toContain("viewChips={false}");
-    expect(explore).not.toMatch(/정면|사선|측면|<ScrollView|<FlatList|TopBar/);
+    expect(explore).toContain('heading="탐색"');
+    expect(explore).not.toMatch(/viewChips|정면|사선|측면|<ScrollView|<FlatList|TopBar/);
     // The feed takes the tab scene's own measured size; the tab bar stays below it.
     expect(explore).toContain("onLayout=");
     expect(explore).toContain("height={height}");
-    expect(explore).toContain("useWindowDimensions()");
+    expect(explore).toContain("useTabSceneSize()");
     expect(explore).toContain("useSafeAreaInsets()");
     expect(explore).toContain("useIsFocused()");
   });
@@ -79,7 +79,7 @@ describe("explore tab", () => {
   it("builds reels progressively and opens the minimal analysis surface", () => {
     expect(explore).toContain("useExploreFeed(");
     expect(explore).toContain("onActiveIndex(state.activeIndex)");
-    expect(explore).toContain("minimalAnalysisHref(profileId,");
+    expect(explore).toContain("analysisHref(profileId,");
     const feed = readFileSync("lib/explore-feed.ts", "utf8");
     expect(feed).toMatch(/EXPLORE_FEED_AHEAD = [1-3];/);
     expect(feed).not.toMatch(/from "react-native"|from "react"/);

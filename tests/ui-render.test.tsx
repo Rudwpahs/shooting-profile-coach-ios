@@ -171,7 +171,7 @@ describe("bottom bar", () => {
 });
 
 describe("explore", () => {
-  it("shows the anonymous reference as one full-screen reel: no view chips, no close control, no analysis for a reference", async () => {
+  it("shows the anonymous reference as one full-screen reel in the shared chrome: heading, camera menu, rail, no close control, no analysis for a reference", async () => {
     await render(<ExploreScreen />);
     const reels = () => container.querySelectorAll('[data-testid="reel-item-reference"]').length;
     await settle(reels);
@@ -180,13 +180,23 @@ describe("explore", () => {
     expect(reels()).toBe(1);
     expect(container.querySelector('[data-testid="reel-tap"]')?.getAttribute("aria-label")).toContain("MOTION 01 참조 릴, CMU optical mocap, 1/1");
     expect(container.querySelectorAll('[data-testid="skeleton-svg"]').length).toBeGreaterThanOrEqual(1);
+    expect(container.querySelector('[data-testid="reel-heading"]')?.textContent).toBe("탐색");
     expect(container.textContent).toContain("MOTION 01");
     expect(container.textContent).not.toMatch(/Curry|Paul George/);
+    // The view chips are gone: the three views live behind the one camera icon until it is opened.
     for (const id of ["reel-view-front", "reel-view-oblique", "reel-view-side", "reel-close", "reel-analysis"]) {
       expect(container.querySelectorAll(`[data-testid="${id}"]`), id).toHaveLength(0);
     }
     expect(labelsContaining("위상 열기")).toHaveLength(0);
-    expect(labelsContaining("시점")).toHaveLength(0);
+    expect(labelsContaining("시점 선택")).toHaveLength(1);
+    for (const label of ["좋아요", "동작 메모", "동작 정보", "릴리스 단계 보기"]) expect(labelsContaining(label), label).toHaveLength(1);
+    await click(byLabel("시점 선택"));
+    expect(container.querySelectorAll('[data-testid="reel-view-side"]')).toHaveLength(1);
+    // A reference has no analysis of its own: 동작 정보 opens provenance without an analysis entry.
+    await click(byLabel("동작 정보"));
+    expect(document.body.querySelectorAll('[data-testid="reel-analysis"]')).toHaveLength(0);
+    expect(document.body.textContent).toContain("CMU");
+    await click(document.body.querySelector('[aria-label="동작 정보 닫기"]') as HTMLElement | null);
   });
 });
 

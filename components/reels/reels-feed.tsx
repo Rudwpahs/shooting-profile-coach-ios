@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { FlatList, type AppStateStatus, type NativeScrollEvent, type NativeSyntheticEvent, type ViewToken } from "react-native";
 
 import { ReelItem } from "@/components/reels/reel-item";
-import type { ReelOverlayInsets } from "@/components/reels/reel-overlay";
+import type { ReelInfo, ReelOverlayInsets } from "@/components/reels/reel-overlay";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
 import {
   clampReelIndex,
@@ -33,8 +33,10 @@ export type ReelsFeedProps = {
   insets: ReelOverlayInsets;
   /** `null` when the feed lives inside a tab: no close affordance is drawn. */
   onClose: (() => void) | null;
-  /** False hides the virtual view chips. */
-  viewChips?: boolean;
+  /** A screen title at the top left when there is no close control (참조 동작, 탐색). */
+  heading?: string | null;
+  /** The surface's provenance body and one action for 동작 정보, per item. */
+  renderInfo?: (item: ReelItemModel) => ReelInfo | undefined;
   onOpenAnalysis: ((profileId: string) => void) | null;
   onStateChange?: (state: ReelFeedState) => void;
 };
@@ -48,7 +50,7 @@ export type ReelsFeedProps = {
  */
 export function ReelsFeed({
   items, width, height, initialIndex, initialPlayback = "auto", focused, appState, reducedMotion, insets,
-  onClose, viewChips = true, onOpenAnalysis, onStateChange,
+  onClose, heading = null, renderInfo, onOpenAnalysis, onStateChange,
 }: ReelsFeedProps) {
   const [state, dispatch] = useReducer(transitionReelFeedState, undefined, () => createReelFeedState(items.length, initialIndex, initialPlayback));
   const [view, setView] = useState<RepresentativeViewId>(DEFAULT_VIEW);
@@ -93,8 +95,10 @@ export function ReelsFeed({
       appState={appState}
       count={state.count}
       focused={focused}
+      heading={heading}
       height={height}
       index={index}
+      info={renderInfo?.(item)}
       insets={insets}
       item={item}
       onClose={onClose}
@@ -107,10 +111,9 @@ export function ReelsFeed({
       reducedMotion={reducedMotion}
       role={reelMediaRole(index, state.activeIndex)}
       view={view}
-      viewChips={viewChips}
       width={width}
     />
-  ), [appState, focused, height, insets, onClose, onNext, onOpenAnalysis, onPrevious, onTogglePlayback, reducedMotion, state.activeIndex, state.count, state.playback, view, viewChips, width]);
+  ), [appState, focused, heading, height, insets, onClose, onNext, onOpenAnalysis, onPrevious, onTogglePlayback, reducedMotion, renderInfo, state.activeIndex, state.count, state.playback, view, width]);
 
   if (!(height > 0) || !(width > 0) || items.length === 0) return null;
 

@@ -3,22 +3,28 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const route = readFileSync("app/private-analysis/[id].tsx", "utf8");
+const analysisStage = readFileSync("components/analysis/analysis-stage.tsx", "utf8");
 const layers = readFileSync("components/analysis/analysis-layers.tsx", "utf8");
 const inspection = readFileSync("components/shooting-profile/shot-inspection-viewer.tsx", "utf8");
 const viewer = readFileSync("components/shooting-profile/sequence-viewer.tsx", "utf8");
 
 describe("analysis in three layers", () => {
-  it("opens on the inspection stage, a band and one finding, with the numbers one tap deeper", () => {
-    const summary = route.indexOf("<AnalysisSummaryLine");
-    const stage = route.indexOf("<ShotInspectionViewer");
-    const details = route.indexOf("<AnalysisDetails");
-    const evidence = route.indexOf("<AnalysisEvidence");
+  it("opens on the reel stage with a band and one finding; the inspection, the numbers and the evidence sit one tap deeper in 동작 정보", () => {
+    expect(route).toContain("<AnalysisStage");
+    const summary = analysisStage.indexOf("<AnalysisSummaryLine");
+    const stage = analysisStage.indexOf("<ShotInspectionViewer");
+    const details = analysisStage.indexOf("<AnalysisDetails");
+    const evidence = analysisStage.indexOf("<AnalysisEvidence");
     expect(summary).toBeGreaterThan(-1);
     expect(stage).toBeGreaterThan(summary);
     expect(details).toBeGreaterThan(stage);
     expect(evidence).toBeGreaterThan(details);
-    expect(inspection).toContain("<SequenceViewer");
-    expect(route).not.toMatch(/PRIVATE ANALYSIS|나의 대표 슛폼|소유자 계정에서만 불러온/);
+    // The reel is the motion: the inspection surface no longer carries its own Motion tab.
+    expect(inspection).not.toContain("<SequenceViewer");
+    expect(inspection).toContain("<PhaseSpaceViewer");
+    for (const source of [route, analysisStage]) {
+      expect(source).not.toMatch(/PRIVATE ANALYSIS|나의 대표 슛폼|소유자 계정에서만 불러온/);
+    }
   });
 
   it("keeps the percentage and the conventions in layer 2, collapsed by default", () => {
@@ -58,7 +64,8 @@ describe("analysis in three layers", () => {
   });
 
   it("puts one visual highlight on the skeleton: the joint behind the primary finding", () => {
-    expect(route).toContain("highlightJoint={primaryFinding(loadState.record.profile).joint}");
+    expect(analysisStage).toContain("primaryFinding(profile)");
+    expect(analysisStage).toContain("highlightJoint={finding.joint}");
     expect(inspection).toContain("highlightJoint={highlightJoint}");
     expect(viewer).toContain("highlightJoint?: PersistedJointNameV2;");
     const stage = viewer.slice(viewer.indexOf("<Svg"), viewer.indexOf("</Svg>"));

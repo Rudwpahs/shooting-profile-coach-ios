@@ -1,9 +1,9 @@
-import { useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, View, type AccessibilityActionEvent, type AppStateStatus } from "react-native";
 
 import { ReelFilmMedia } from "@/components/reels/reel-film-media";
 import { ReelMotionPlayer, isSkeletonReel, reelConfidence, reelStageBounds, reelStagePadding, reelStillGlyph } from "@/components/reels/reel-motion-player";
-import { REEL_STAGE_BOTTOM, REEL_STAGE_TOP, ReelOverlay, type ReelOverlayInsets } from "@/components/reels/reel-overlay";
+import { REEL_STAGE_BOTTOM, REEL_STAGE_TOP, ReelOverlay, type ReelInfo, type ReelOverlayInsets } from "@/components/reels/reel-overlay";
 import type { RepresentativeViewId } from "@/components/shooting-profile/sequence-viewer";
 import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { tokens } from "@/constants/tokens";
@@ -30,9 +30,16 @@ type ReelItemProps = {
   onNext: () => void;
   onPrevious: () => void;
   onClose: (() => void) | null;
-  viewChips?: boolean;
+  heading?: string | null;
+  info?: ReelInfo;
   onOpenAnalysis: ((profileId: string) => void) | null;
 };
+
+const PHASE_COUNT = 5;
+/** The nearest of the five shot phases for a loop fraction. */
+function phaseAtProgress(fraction: number): number {
+  return Math.max(0, Math.min(PHASE_COUNT - 1, Math.round(fraction * (PHASE_COUNT - 1))));
+}
 
 /**
  * One viewport of the feed, layered like a post: the stage (the active
@@ -42,18 +49,39 @@ type ReelItemProps = {
  */
 export function ReelItem({
   item, index, count, width, height, role, playback, focused, appState, reducedMotion, view, insets,
-  onViewChange, onTogglePlayback, onNext, onPrevious, onClose, viewChips = true, onOpenAnalysis,
+  onViewChange, onTogglePlayback, onNext, onPrevious, onClose, heading = null, info, onOpenAnalysis,
 }: ReelItemProps) {
   const active = role === "active";
   // A film reel has no skeleton clock: its media is the local clip itself.
   const skeleton = isSkeletonReel(item) ? item : null;
   const film = item.kind === "film" ? item : null;
-  const playing = skeleton !== null && reelShouldPlay({ active, focused, appState, playback, reducedMotion });
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const playing = skeleton !== null && !sheetOpen && reelShouldPlay({ active, focused, appState, playback, reducedMotion });
   const startFrame = reelStartFrame(item);
   // The item is the whole viewport; the figure is fitted between the chrome bands.
   const stageTop = insets.top + REEL_STAGE_TOP;
   const stageHeight = Math.max(1, height - stageTop - (insets.bottom + REEL_STAGE_BOTTOM));
   const progress = useRef(new Animated.Value(reelProgress(startFrame))).current;
+
+  // The caption and the dots follow the loop: the nearest shot phase, updated only when it changes.
+  const [activePhase, setActivePhase] = useState<number | null>(skeleton ? phaseAtProgress(reelProgress(startFrame)) : null);
+  useEffect(() => {
+    if (!skeleton) return;
+    const id = progress.addListener(({ value }) => {
+      const phase = phaseAtProgress(value);
+      setActivePhase((current) => (current === phase ? current : phase));
+    });
+    return () => progress.removeListener(id);
+  }, [progress, skeleton]);
+  const [seek, setSeek] = useState<{ frame: number; token: number } | null>(null);
+  const onSeekPhase = useCallback((phase: number) => {
+    const frame = Math.round((phase / (PHASE_COUNT - 1)) * 100);
+    setSeek((current) => ({ frame, token: (current?.token ?? 0) + 1 }));
+    setActivePhase(phase);
+    progress.setValue(reelProgress(frame));
+    // A seek holds the chosen phase: pause what was playing.
+    if (playing) onTogglePlayback(true);
+  }, [onTogglePlayback, playing, progress]);
   const still = useMemo(() => (skeleton && role === "adjacent" ? reelStillGlyph(skeleton, view) : null), [skeleton, role, view]);
   const bounds = useMemo(() => (skeleton && role === "adjacent" ? reelStageBounds(skeleton, view) : null), [skeleton, role, view]);
   const analysisId = reelAnalysisProfileId(item);
@@ -81,7 +109,7 @@ export function ReelItem({
         {film ? (
           role !== "idle" ? <ReelFilmMedia active={active} height={stageHeight} item={film} width={width} /> : null
         ) : skeleton && active ? (
-          <ReelMotionPlayer height={stageHeight} item={skeleton} playing={playing} progress={progress} startFrame={startFrame} view={view} width={width} />
+          <ReelMotionPlayer height={stageHeight} item={skeleton} playing={playing} progress={progress} seek={seek} startFrame={startFrame} view={view} width={width} />
         ) : still && bounds ? (
           <SkeletonGlyph
             accessible={false}
@@ -120,16 +148,20 @@ export function ReelItem({
       {/* Layer 3: chrome. Neighbours carry it too so a swipe lands on a finished Reel. */}
       {role !== "idle" ? (
         <ReelOverlay
+          activePhase={skeleton ? activePhase : null}
+          heading={heading}
           height={height}
+          info={info}
           insets={insets}
           item={item}
           onClose={onClose}
           onOpenAnalysis={analysisId && onOpenAnalysis ? () => onOpenAnalysis(analysisId) : null}
+          onSeekPhase={skeleton && active ? onSeekPhase : null}
+          onSheetChange={setSheetOpen}
           onViewChange={onViewChange}
-          paused={skeleton !== null && active && !playing}
+          paused={skeleton !== null && active && !playing && !sheetOpen}
           progress={progress}
           view={view}
-          viewChips={viewChips}
           width={width}
         />
       ) : null}

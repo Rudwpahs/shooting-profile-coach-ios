@@ -65,6 +65,8 @@ type ReelMotionPlayerProps = {
   /** Written every frame with the loop fraction, for the progress line. */
   progress: Animated.Value;
   startFrame: number;
+  /** A request to jump to a frame; a new token applies it once, and playback holds or resumes as the caller decides. */
+  seek?: Readonly<{ frame: number; token: number }> | null;
 };
 
 /**
@@ -73,10 +75,20 @@ type ReelMotionPlayerProps = {
  * for the profile's 101 phases is computed once per view for this item
  * only; neighbours never run it.
  */
-export function ReelMotionPlayer({ item, view, width, height, playing, progress, startFrame }: ReelMotionPlayerProps) {
+export function ReelMotionPlayer({ item, view, width, height, playing, progress, startFrame, seek = null }: ReelMotionPlayerProps) {
   const clockRef = useRef<ReelFrameClock>(createReelFrameClock(startFrame));
   const [frame, setFrame] = useState(startFrame);
   const interval = reelFrameIntervalMs(item);
+
+  // A seek re-anchors the clock at the requested frame; the caller decides whether playback holds.
+  const seekToken = seek?.token ?? null;
+  useEffect(() => {
+    if (!seek) return;
+    clockRef.current = createReelFrameClock(seek.frame);
+    setFrame(clockRef.current.frame);
+    progress.setValue(reelProgress(clockRef.current.frame));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new token is the request; the frame travels with it.
+  }, [seekToken]);
 
   // A different Reel starts from its own release still.
   const itemRef = useRef(item.id);

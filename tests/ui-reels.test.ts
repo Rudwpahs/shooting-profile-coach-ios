@@ -88,9 +88,11 @@ describe("reels chrome contract", () => {
     expect(progress).toContain("REEL_PROGRESS_HEIGHT = 2");
   });
 
-  it("fakes nothing social", () => {
-    expect(reels).not.toMatch(/좋아요|댓글|팔로우|팔로워|공유하기|follower|likes|comments|shares|\bDM\b|bookmark/i);
-    expect(overlay).not.toMatch(/name="(heart|comment|share|send|account-plus)/);
+  it("fakes nothing social: the like and the memo are device-local and say so; no counts, follows, shares or DMs", () => {
+    expect(reels).not.toMatch(/댓글|팔로우|팔로워|공유하기|follower|likes|comments|shares|\bDM\b|bookmark/i);
+    expect(overlay).not.toMatch(/name="(share|send|account-plus|bookmark)/);
+    expect(overlay).toContain("이 기기에만 저장");
+    expect(overlay).not.toMatch(/좋아요 \$\{|좋아요\s*\d/);
   });
 
   it("keeps the analysis viewer separate and reuses the projection helpers instead of copying the maths", () => {

@@ -86,14 +86,14 @@ describe("preview shot library on the real surfaces", () => {
     expect(home).toContain("ANONYMOUS_POSE_REFERENCES[0]");
   });
 
-  it("keeps Motion, Phase and Film tabs for a profile with no local clip and shows an honest Film fallback", () => {
+  it("keeps Phase and Film tabs for a profile with no local clip and shows an honest Film fallback", () => {
     const model = resolveShotInspectionModes({ experimentalEnabled: true, hasLocalFilm: false });
-    expect(model.enabledModes).toEqual(["motion", "phase", "film"]);
+    expect(model.enabledModes).toEqual(["phase", "film"]);
     expect(model.filmSourceAvailable).toBe(false);
     const viewer = read("components/shooting-profile/shot-inspection-viewer.tsx");
     expect(viewer).toContain("연결된 로컬 원본 영상이 없습니다");
     expect(viewer).toContain('mode === "film" && !localClip');
-    expect(viewer).toContain("<SequenceViewer");
+    expect(viewer).not.toContain("<SequenceViewer");
     expect(viewer).toContain("<PhaseSpaceViewer");
     expect(viewer).not.toMatch(/측정된 물리|actual 4D|synchronized representative/i);
   });

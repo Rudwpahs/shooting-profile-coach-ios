@@ -25,7 +25,7 @@ describe("GitHub Pages UI preview routing", () => {
     expect(analysisRoute).toMatch(/export (async )?function generateStaticParams/);
     expect(analysisRoute).toContain('process.env.EXPO_PUBLIC_HOOPHUB_UI_PREVIEW_BUILD === "1"');
     expect(analysisRoute).toContain("return [];");
-    expect(analysisRoute).toContain("<ShotInspectionViewer");
+    expect(analysisRoute).toContain("<AnalysisStage");
     expect(analysisRoute).toContain("experimentalEnabled");
   });
 

@@ -1,31 +1,25 @@
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Redirect, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AnalysisDetails, AnalysisEvidence, AnalysisSummaryLine } from "@/components/analysis/analysis-layers";
-import { MinimalAnalysis } from "@/components/analysis/minimal-analysis";
-import { ShotInspectionViewer } from "@/components/shooting-profile/shot-inspection-viewer";
+import { AnalysisStage } from "@/components/analysis/analysis-stage";
 import {
   buildShootingProfileViewerKey,
   canRenderShootingProfileViewerRecord,
   getRepresentativeFocusStyle,
 } from "@/components/shooting-profile/sequence-viewer";
-import { LiquidPressable } from "@/components/ui/liquid";
-import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
 import { useAppStateStatus } from "@/hooks/use-app-state";
 import { useReduceMotion } from "@/hooks/use-reduce-motion";
 import { FORMPATH_EXPERIMENTAL_FLAGS, FORMPATH_FLAGS } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
-import { minimalAnalysisTitle, resolveAnalysisPresentation } from "@/lib/shooting-profile/analysis-presentation";
+import { analysisTitle } from "@/lib/shooting-profile/analysis-presentation";
 import {
   getShootingProfileV2,
   type ShootingProfileViewerRecordV2,
 } from "@/lib/shooting-profile-source";
-import { primaryFinding } from "@/lib/skeleton/analysis-evidence";
 
 const OPAQUE_PROFILE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -58,21 +52,18 @@ type ViewerLoadState =
   | { status: "error"; key: string };
 
 /**
- * 분석, in three layers: the motion/phase/local-film inspection surface with
- * one finding (layer 1), the numbers behind it (layer 2, collapsed), and
- * per-joint evidence with the boundary of what the record is (layer 3,
- * collapsed). Motion fallback remains the existing SequenceViewer inside the
- * coordinator. Access rules are unchanged: both viewer flags, the signed-in
- * owner, an opaque id, and a request key that must still be current when the
- * record arrives.
+ * 분석: the same reel stage every player uses, for one saved profile. The
+ * stage is the motion; 동작 정보 holds the inspection surface (Phase Space,
+ * Film), the numbers and the per-joint evidence. Access rules are unchanged:
+ * both viewer flags, the signed-in owner, an opaque id, and a request key
+ * that must still be current when the record arrives.
  */
 export default function PrivateAnalysisRoute() {
-  const { id, presentation, title } = useLocalSearchParams<{ id?: string | string[]; presentation?: string | string[]; title?: string | string[] }>();
+  const { id, title } = useLocalSearchParams<{ id?: string | string[]; title?: string | string[] }>();
   const router = useRouter();
   const { user, loading: authLoading } = useFirebaseAuth();
   const profileId = opaqueProfileId(id);
-  // Explore opens the minimal surface; it needs the same playback inputs the Reels route has.
-  const minimal = resolveAnalysisPresentation(presentation) === "minimal";
+  // The stage needs the same playback inputs the Reels route has.
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const appState = useAppStateStatus();
@@ -197,77 +188,30 @@ export default function PrivateAnalysisRoute() {
 
   if (!profileId) return <Redirect href="/profile" />;
 
-  if (minimal) {
-    return (
-      <View style={styles.minimalScreen}>
-        <MinimalAnalysis
-          appState={appState}
-          confidence={loadState.record.confidence}
-          experimentalEnabled={FORMPATH_EXPERIMENTAL_FLAGS.shotInspectionV1}
-          focused={focused}
-          height={height}
-          insets={{ top: insets.top, bottom: insets.bottom }}
-          onBack={goBack}
-          profile={loadState.record.profile}
-          profileId={profileId}
-          reducedMotion={reducedMotion}
-          shootingHand={loadState.record.shootingHand}
-          title={minimalAnalysisTitle(title)}
-          width={width}
-        />
-      </View>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <TopBar
-        left={(
-          <LiquidPressable
-            accessibilityLabel="대표 슛폼 분석에서 뒤로 가기"
-            accessibilityRole="button"
-            accessibilityState={{ disabled: false }}
-            focusable
-            magnetic
-            onBlur={() => setFocusedControl((current) => current === "viewer-back" ? null : current)}
-            onFocus={() => setFocusedControl("viewer-back")}
-            onPress={goBack}
-            rippleColor={tokens.foreground}
-            style={[styles.iconButton, getRepresentativeFocusStyle(focusedControl === "viewer-back", "light")]}
-            surfaceStyle={styles.iconButtonSurface}
-          >
-            <MaterialCommunityIcons name="chevron-left" size={28} color={tokens.foreground} />
-          </LiquidPressable>
-        )}
-        title="대표 슛폼"
+    <View style={styles.stageScreen}>
+      <AnalysisStage
+        appState={appState}
+        confidence={loadState.record.confidence}
+        experimentalEnabled={FORMPATH_EXPERIMENTAL_FLAGS.shotInspectionV1}
+        focused={focused}
+        height={height}
+        insets={{ top: insets.top, bottom: insets.bottom }}
+        onBack={goBack}
+        profile={loadState.record.profile}
+        profileId={profileId}
+        reducedMotion={reducedMotion}
+        shootingHand={loadState.record.shootingHand}
+        title={analysisTitle(title)}
+        width={width}
       />
-      <ScrollView contentContainerStyle={styles.page}>
-        <AnalysisSummaryLine profile={loadState.record.profile} />
-        <ShotInspectionViewer
-          confidence={loadState.record.confidence}
-          experimentalEnabled={FORMPATH_EXPERIMENTAL_FLAGS.shotInspectionV1}
-          highlightJoint={primaryFinding(loadState.record.profile).joint}
-          profile={loadState.record.profile}
-          profileId={profileId}
-          shootingHand={loadState.record.shootingHand}
-        />
-        <AnalysisDetails
-          confidence={loadState.record.confidence}
-          profile={loadState.record.profile}
-          shootingHand={loadState.record.shootingHand}
-        />
-        <AnalysisEvidence profile={loadState.record.profile} />
-      </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: tokens.background, flex: 1 },
-  minimalScreen: { backgroundColor: tokens.stage, flex: 1 },
-  page: { alignSelf: "center", maxWidth: 680, paddingBottom: 40, width: "100%" },
-  iconButton: { height: 44, minHeight: 44, minWidth: 44, width: 44 },
-  iconButtonSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
+  stageScreen: { backgroundColor: tokens.stage, flex: 1 },
   centerState: { alignItems: "center", flex: 1, justifyContent: "center", padding: 24 },
   stateTitle: { ...typography.title, color: tokens.foreground, marginTop: 14, textAlign: "center" },
   stateCopy: { ...typography.callout, color: tokens.mutedForeground, marginTop: 6, maxWidth: 420, textAlign: "center" },
