@@ -31,7 +31,10 @@ type ReelOverlayProps = {
   paused: boolean;
   view: RepresentativeViewId;
   onViewChange: (view: RepresentativeViewId) => void;
-  onClose: () => void;
+  /** `null` draws no close affordance: the feed lives inside a tab and the tab bar is the way out. */
+  onClose: (() => void) | null;
+  /** False hides the virtual view chips (Explore browses other forms; the figure is not a camera control). */
+  viewChips?: boolean;
   /** `null` hides the action (a reference has no analysis of its own). */
   onOpenAnalysis: (() => void) | null;
   width: number;
@@ -46,13 +49,13 @@ type ReelOverlayProps = {
  * action at the bottom-right, the progress line along the bottom, and a play
  * indicator only while paused. The centre stays clear unless paused.
  */
-export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenAnalysis, width, height, insets, progress }: ReelOverlayProps) {
+export function ReelOverlay({ item, paused, view, onViewChange, onClose, viewChips = true, onOpenAnalysis, width, height, insets, progress }: ReelOverlayProps) {
   const top = insets.top + 6;
   const progressBottom = insets.bottom + 8;
   return (
     <View style={[styles.layer, { width, height }]} testID="reel-overlay">
-      <GlassSurface variant="bar" style={[styles.topRow, { top, width }]}>
-        <LiquidPressable
+      {onClose || viewChips ? <GlassSurface variant="bar" style={[styles.topRow, { top, width }]}>
+        {onClose ? <LiquidPressable
           accessibilityLabel="릴 닫기"
           accessibilityRole="button"
           accessibilityState={{ disabled: false }}
@@ -65,8 +68,8 @@ export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenA
           testID="reel-close"
         >
           <MaterialCommunityIcons name="arrow-left" size={26} color={tokens.stageForeground} />
-        </LiquidPressable>
-        <View style={styles.chips}>
+        </LiquidPressable> : <View style={styles.control} />}
+        {viewChips ? <View style={styles.chips}>
           {REEL_VIEWS.map((candidate) => {
             const selected = candidate.id === view;
             return (
@@ -88,8 +91,8 @@ export function ReelOverlay({ item, paused, view, onViewChange, onClose, onOpenA
               </LiquidPressable>
             );
           })}
-        </View>
-      </GlassSurface>
+        </View> : null}
+      </GlassSurface> : null}
 
       {paused ? (
         <View

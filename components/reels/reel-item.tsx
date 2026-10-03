@@ -28,7 +28,8 @@ type ReelItemProps = {
   onTogglePlayback: (playing: boolean) => void;
   onNext: () => void;
   onPrevious: () => void;
-  onClose: () => void;
+  onClose: (() => void) | null;
+  viewChips?: boolean;
   onOpenAnalysis: ((profileId: string) => void) | null;
 };
 
@@ -40,7 +41,7 @@ type ReelItemProps = {
  */
 export function ReelItem({
   item, index, count, width, height, role, playback, focused, appState, reducedMotion, view, insets,
-  onViewChange, onTogglePlayback, onNext, onPrevious, onClose, onOpenAnalysis,
+  onViewChange, onTogglePlayback, onNext, onPrevious, onClose, viewChips = true, onOpenAnalysis,
 }: ReelItemProps) {
   const active = role === "active";
   const playing = reelShouldPlay({ active, focused, appState, playback, reducedMotion });
@@ -122,6 +123,7 @@ export function ReelItem({
           paused={active && !playing}
           progress={progress}
           view={view}
+          viewChips={viewChips}
           width={width}
         />
       ) : null}

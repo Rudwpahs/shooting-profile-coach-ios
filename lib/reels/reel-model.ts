@@ -16,6 +16,10 @@ export type ProfileReel = {
   shootingHand: ShootingHandV2;
   confidence: number;
   createdAt: Date;
+  /** Explore names a profile honestly ("SHOT 12"); absent for my own profile. */
+  title?: string;
+  /** The one line under that name; absent for my own profile (recency is shown). */
+  line?: string;
 };
 
 export type ReferenceReel = {
@@ -36,19 +40,21 @@ export function referenceReelId(referenceId: string): string {
   return `reference:${referenceId}`;
 }
 
+const MY_PROFILE_TITLE = "내 슛폼";
+
 /** The small label: whose motion this is, never a person's name. */
 export function reelTitle(item: ReelItem): string {
-  return item.kind === "profile" ? "내 슛폼" : item.reference.shortLabel;
+  return item.kind === "profile" ? item.title ?? MY_PROFILE_TITLE : item.reference.shortLabel;
 }
 
 /** The single line under the label: honest recency for mine, the style title for a reference. */
 export function reelLine(item: ReelItem): string {
-  return item.kind === "profile" ? relativeDayLabel(item.createdAt) : item.reference.styleTitle;
+  return item.kind === "profile" ? item.line ?? relativeDayLabel(item.createdAt) : item.reference.styleTitle;
 }
 
 /** The name VoiceOver reads first. */
 export function reelAccessibilityName(item: ReelItem): string {
-  return item.kind === "profile" ? "내 슛폼 릴" : `${item.reference.shortLabel} 참조 릴, ${REFERENCE_ATTRIBUTION}`;
+  return item.kind === "profile" ? `${item.title ?? MY_PROFILE_TITLE} 릴` : `${item.reference.shortLabel} 참조 릴, ${REFERENCE_ATTRIBUTION}`;
 }
 
 /** The analysis route exists only for a saved profile. */

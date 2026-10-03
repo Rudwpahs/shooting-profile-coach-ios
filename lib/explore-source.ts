@@ -1,4 +1,5 @@
 import { ANONYMOUS_POSE_REFERENCES, type AnonymousPoseReference } from "@/lib/anonymous-pose-library";
+import { referenceReelId, type ReelItem } from "@/lib/reels/reel-model";
 import { poseMotionGlyph, type GlyphView, type SkeletonGlyphData } from "@/lib/skeleton/pose-motion-glyph";
 
 /**
@@ -29,6 +30,8 @@ export type ExploreMotionV1 = Readonly<{
   href: string;
   /** The five phase stills, loaded on demand so a long list stays light. */
   load(): Promise<ExploreMotionStillsV1>;
+  /** The full-screen reel for the one-per-screen feed, built on demand. */
+  reel(): Promise<ReelItem>;
 }>;
 
 export function referenceExploreMotion(reference: AnonymousPoseReference): ExploreMotionV1 {
@@ -38,6 +41,7 @@ export function referenceExploreMotion(reference: AnonymousPoseReference): Explo
       glyph: (view: GlyphView) => poseMotionGlyph(reference.motion, { view, progress: frame.progress }),
     })),
   });
+  const reel: ReelItem = Object.freeze({ kind: "reference" as const, id: referenceReelId(reference.id), reference });
   return Object.freeze({
     id: `reference:${reference.id}`,
     shortLabel: reference.shortLabel,
@@ -45,6 +49,7 @@ export function referenceExploreMotion(reference: AnonymousPoseReference): Explo
     kind: "anonymous_reference",
     href: "/library",
     load: async () => stills,
+    reel: async () => reel,
   });
 }
 

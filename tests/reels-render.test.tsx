@@ -155,6 +155,20 @@ describe("reels feed", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("inside a tab (Explore) draws no close control and no view chips, keeps the 분석 action, and names the reel from the item", async () => {
+    const onOpenAnalysis = vi.fn();
+    const named = [{ ...items[0], title: "SHOT 01", line: "균형 잡힌 기본 리듬 · 미리보기 합성 예시" }, items[1]];
+    await render({ items: named, onClose: null, viewChips: false, onOpenAnalysis });
+    expect(byTestId("reel-close")).toHaveLength(0);
+    for (const id of ["front", "oblique", "side"]) expect(byTestId(`reel-view-${id}`)).toHaveLength(0);
+    expect(byTestId("reel-analysis").length).toBeGreaterThanOrEqual(1);
+    expect(label()).toContain("SHOT 01 릴, 1/2, 재생 중");
+    expect(container.textContent).toContain("SHOT 01");
+    expect(container.textContent).toContain("균형 잡힌 기본 리듬");
+    await act(async () => { byTestId("reel-analysis")[0].click(); });
+    expect(onOpenAnalysis).toHaveBeenCalledWith("demo-profile-1");
+  });
+
   it("never forces autoplay under Reduce Motion, but a tap plays", async () => {
     await render({ reducedMotion: true });
     expect(label()).toContain("일시정지됨");

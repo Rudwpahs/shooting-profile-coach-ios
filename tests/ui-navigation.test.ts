@@ -6,13 +6,6 @@ const layout = readFileSync("app/(tabs)/_layout.tsx", "utf8");
 const tabBar = readFileSync("components/hoophub-tab-bar.tsx", "utf8");
 const explore = readFileSync("app/(tabs)/explore.tsx", "utf8");
 
-function expectEveryPressableToBeAccessible(source: string) {
-  const controls = source.match(/<(?:Pressable|LiquidPressable)\b/g)?.length ?? 0;
-  expect(controls).toBeGreaterThan(0);
-  expect(source.match(/accessibilityRole=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
-  expect(source.match(/accessibilityLabel=/g)?.length ?? 0).toBeGreaterThanOrEqual(controls);
-}
-
 describe("bottom navigation", () => {
   it("shows 홈 · 탐색 · 프로필 as tabs and keeps the other routes reachable but hidden", () => {
     for (const name of ["index", "explore", "profile"]) {
@@ -58,30 +51,37 @@ describe("bottom navigation", () => {
 });
 
 describe("explore tab", () => {
-  it("builds its grid from the explore source, whose production content is the anonymous reference only, never named-player analyses", () => {
+  it("browses the explore source, whose production content is the anonymous reference only, never named-player analyses", () => {
     const exploreSource = readFileSync("lib/explore-source.ts", "utf8");
     expect(explore).toContain('from "@/lib/explore-source"');
+    expect(explore).toContain("exploreMotions()");
     expect(exploreSource).toContain("ANONYMOUS_POSE_REFERENCES");
     for (const source of [explore, exploreSource]) {
       expect(source).not.toMatch(/PLAYER_MONOCULAR_3D_ANALYSES|PLAYER_SOURCE_SKELETON_REVIEWS|PLAYER_VIDEO_REVIEW_RECORDS/);
       expect(source).not.toMatch(/Curry|Paul George/);
     }
-    expect(explore).toContain("SkeletonGlyph");
-    expect(exploreSource).toContain("poseMotionGlyph");
+    expect(exploreSource).toContain("CMU optical mocap");
   });
 
-  it("measures its own width and never lays out a negative tile", () => {
+  it("is one form per screen: the Reels feed inside the tab, with no close affordance and no view chips", () => {
+    expect(explore).toContain("<ReelsFeed");
+    expect(explore).toContain("onClose={null}");
+    expect(explore).toContain("viewChips={false}");
+    expect(explore).not.toMatch(/정면|사선|측면|<ScrollView|<FlatList|TopBar/);
+    // The feed takes the tab scene's own measured size; the tab bar stays below it.
     expect(explore).toContain("onLayout=");
-    expect(explore).toContain("Math.max(1, Math.floor((contentWidth - GAP * 2) / 3))");
-    expect(explore).toContain("FALLBACK_WIDTH");
+    expect(explore).toContain("height={size.height}");
+    expect(explore).toContain("useSafeAreaInsets()");
+    expect(explore).toContain("useIsFocused()");
   });
 
-  it("keeps every tile and chip accessible and labels the source in one line", () => {
-    expectEveryPressableToBeAccessible(explore);
-    expect(explore).toContain("accessibilityState={{ selected }}");
-    // The one-line source caption comes from the explore source and is rendered under each mosaic.
-    expect(readFileSync("lib/explore-source.ts", "utf8")).toContain("CMU optical mocap");
-    expect(explore).toContain("{motion.caption}");
+  it("builds reels progressively and opens the minimal analysis surface", () => {
+    expect(explore).toContain("useExploreFeed(");
+    expect(explore).toContain("onActiveIndex(state.activeIndex)");
+    expect(explore).toContain("minimalAnalysisHref(profileId)");
+    const feed = readFileSync("lib/explore-feed.ts", "utf8");
+    expect(feed).toMatch(/EXPLORE_FEED_AHEAD = [1-3];/);
+    expect(feed).not.toMatch(/from "react-native"|from "react"/);
     // Instagram density: no eyebrow/kicker lines or paragraphs of explanation.
     expect(explore).not.toMatch(/kicker|eyebrow|lead:|detail:/);
   });
