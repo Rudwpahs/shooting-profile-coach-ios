@@ -33,10 +33,10 @@ Release-frame max joint displacement vs canonical: 3–7 % of body height for mo
 
 **Acceptance (test):** for every pair, in the oblique glyph the Profile tile draws, max joint displacement at the release frame ≥ 0.12 of the glyph's body height, and the mean joint displacement over the five anchor frames ≥ 0.04. Every archetype still reconstructs through the unchanged pipeline.
 
-- [ ] Write the failing test; run `corepack pnpm vitest run tests/preview-shot-library.test.ts` → fails on the current library.
-- [ ] Add style fields with canonical defaults; run `tests/synthetic-*` and `tests/shooting-profile-*` → unchanged.
-- [ ] Redesign the archetypes; iterate with the probe until the test passes with margin.
-- [ ] Commit.
+- [x] Write the failing test; run `corepack pnpm vitest run tests/preview-shot-library.test.ts` → failed at 3.5% (canonical vs compact).
+- [x] Add style fields with canonical defaults (`legExtension`, `torsoTurn`, `forearmForward`, `offHandFlare`, `footStagger`, `offHandDrop`, `freeLegLift`); generator suite unchanged.
+- [x] Redesign the archetypes around four families; measured closest pair 13.1% at release, 2.2% mean. Envelope notes: a bone horizontal in both views cannot be solved; forward arm directions and shoulder turn fail release detection; a lifted leg tolerates lean-forward, tuck, side lean and stagger-back only.
+- [x] Commit `fac970c`.
 
 ### Task 2: Explore as a one-per-screen feed
 
@@ -49,9 +49,9 @@ Release-frame max joint displacement vs canonical: 3–7 % of body height for mo
 
 **Acceptance:** Explore renders `ReelsFeed`, one item per viewport, no view chips, no close control; items load progressively (active + 2 ahead) without blocking the first paint; tapping 분석 opens `/private-analysis/<id>?presentation=minimal`; production still lists only the anonymous reference.
 
-- [ ] Failing tests for the feed model and the overlay variants → implement → green.
-- [ ] Rewrite `explore.tsx`; update the source pins; green.
-- [ ] Commit.
+- [x] Failing tests for the feed model and the overlay variants → implement → green.
+- [x] Rewrite `explore.tsx`; update the source pins; green.
+- [x] Commit `6b19da9`.
 
 ### Task 3: minimal analysis presentation
 
@@ -63,7 +63,7 @@ Release-frame max joint displacement vs canonical: 3–7 % of body height for mo
 
 **Acceptance:** with `presentation=minimal` the route shows one stage, one caption, back control, five phase markers and a 자세히 button; the sheet exposes Motion/Phase/Film, details and evidence unchanged; without the param the full layout is byte-identical.
 
-- [ ] Failing tests → implement → green. Commit.
+- [x] Failing tests → implement → green (`tests/analysis-presentation.test.ts` 5, `tests/minimal-analysis-render.test.tsx` 4). Commit: see git log.
 
 ### Task 4: verification and integration
 
