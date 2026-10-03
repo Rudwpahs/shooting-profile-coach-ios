@@ -13,7 +13,7 @@
   <img alt="Status" src="https://img.shields.io/badge/status-prototype-orange">
 </p>
 
-[Project Map](docs/PROJECT_MAP.md) · [Implementation Status](docs/IMPLEMENTATION_STATUS.md) · [Workflow](docs/DEVELOPMENT_WORKFLOW.md) · [Todo](todo.md)
+[Project Map](docs/PROJECT_MAP.md) · [AI Architecture](docs/HOOPHUB_AI_PRODUCT_ARCHITECTURE.md) · [Implementation Status](docs/IMPLEMENTATION_STATUS.md) · [Workflow](docs/DEVELOPMENT_WORKFLOW.md) · [Todo](todo.md)
 
 </div>
 
@@ -123,6 +123,7 @@ flowchart LR
 
 | 목적 | 문서 |
 |---|---|
+| AI 제품 구조 (필독) | `docs/HOOPHUB_AI_PRODUCT_ARCHITECTURE.md` |
 | 현재 구현 상태 | `docs/IMPLEMENTATION_STATUS.md` |
 | product / data boundary | `docs/PROJECT_MAP.md` |
 | 개발·test·checkpoint 규칙 | `docs/DEVELOPMENT_WORKFLOW.md` |
