@@ -275,7 +275,7 @@ export function ReelOverlay({
                 style={({ pressed }) => [styles.dotHit, pressed && styles.pressed]}
                 testID={`reel-phase-${index}`}
               >
-                <View style={[styles.dot, selected && styles.dotSelected]} />
+                <View style={[styles.dot, activePhase !== null && index <= activePhase && styles.dotReached, selected && styles.dotSelected]} />
               </Pressable>
             );
           })}
@@ -414,6 +414,7 @@ const styles = StyleSheet.create({
   dots: { flexDirection: "row", left: 0, paddingHorizontal: 10, position: "absolute" },
   dotHit: { alignItems: "center", flex: 1, justifyContent: "center", minHeight: 48 },
   dot: { backgroundColor: tokens.border, borderRadius: 4, height: 8, width: 8 },
+  dotReached: { backgroundColor: tokens.primary },
   dotSelected: { backgroundColor: tokens.primary, borderRadius: 6, height: 12, width: 12 },
   modal: { flex: 1, justifyContent: "flex-end" },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: tokens.background, opacity: 0.65 },
