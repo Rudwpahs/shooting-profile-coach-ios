@@ -7,6 +7,7 @@ import {
 import { deleteDoc, doc } from "firebase/firestore";
 
 import { firestore } from "@/lib/firebase";
+import { createFirebaseFilmShotDeletionPortsV1, eraseEveryCloudFilmShotV1 } from "@/lib/firebase-film-shot-deletion";
 import {
   listFirebasePrivatePoses,
   removeFirebasePrivatePose,
@@ -24,6 +25,8 @@ export type AccountDeletionPort = {
   deleteV2Profile: (profileId: string) => Promise<void>;
   listLegacyPoseIds: () => Promise<string[]>;
   deleteLegacyPose: (poseId: string) => Promise<void>;
+  /** Erases every film shot the owner kept in the cloud, from any build; resolves when there is none. */
+  eraseCloudFilmShots: () => Promise<void>;
   deleteLegacyRoot: () => Promise<void>;
   deleteAuthUser: () => Promise<void>;
 };
@@ -47,6 +50,7 @@ export async function runAccountDeletion(port: AccountDeletionPort): Promise<voi
     await port.deleteLegacyPose(poseId);
   }
 
+  await port.eraseCloudFilmShots();
   await port.deleteLegacyRoot();
   await port.deleteAuthUser();
 }
@@ -90,6 +94,10 @@ export async function deleteFirebaseAccount(user: User, password: string): Promi
     },
     deleteLegacyPose: async (poseId) => {
       await removeFirebasePrivatePose(user, poseId);
+    },
+    eraseCloudFilmShots: async () => {
+      // Runs in every build: footage another build of the app kept must not outlive the account.
+      await eraseEveryCloudFilmShotV1({ uid: user.uid, ports: createFirebaseFilmShotDeletionPortsV1() });
     },
     deleteLegacyRoot: async () => {
       await deleteDoc(doc(db, "users", user.uid));

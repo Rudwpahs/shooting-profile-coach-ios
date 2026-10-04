@@ -3,9 +3,13 @@ import type { LocalFilmViewV1 } from "@/lib/film-space/types";
 /**
  * CLOUD FILM SHOT CONTRACT (v1). The owner's own footage, kept in their
  * private Firebase Storage prefix only when they opted in for that shot: one
- * object per clip, one Firestore clip document per clip, one head. This module
- * is the single source of the shapes `firestore.rules` and `storage.rules`
- * enforce. It is pure: no Firebase imports, no network, no file names.
+ * object per clip, one Firestore clip document per clip, one head. The head is
+ * the journal: it is written first, as `uploading`, so a document names every
+ * object an upload may create and an interrupted upload can always be found
+ * and erased; it becomes `complete` only over all of its clip documents. This
+ * module is the single source of the shapes `firestore.rules` and
+ * `storage.rules` enforce. It is pure: no Firebase imports, no network, no
+ * file names.
  */
 
 export const FILM_SHOT_SCHEMA_VERSION_V1 = 1 as const;
@@ -32,6 +36,8 @@ const OPAQUE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 export type FilmShotContentTypeV1 = typeof FILM_SHOT_CONTENT_TYPES_V1[number];
 export type FilmShotDeletionStateV1 = "active" | "in_progress";
+/** `uploading` from the moment the head exists until every clip document is written; only `complete` is a kept shot. */
+export type FilmShotStatusV1 = "uploading" | "complete";
 
 export type FilmShotCloudClipInputV1 = Readonly<{
   slotId: string;
@@ -57,7 +63,7 @@ type FilmShotCommonV1 = Readonly<{
 
 export type FilmShotHeadV1 = FilmShotCommonV1 & Readonly<{
   recordType: typeof FILM_SHOT_HEAD_RECORD_TYPE_V1;
-  status: "complete";
+  status: FilmShotStatusV1;
   deletionState: FilmShotDeletionStateV1;
   shotId: string;
   title: string;
@@ -86,10 +92,13 @@ export type FilmShotObjectUploadV1 = Readonly<{ slotId: string; storagePath: str
 export type FilmShotWritePlanV1 = Readonly<{
   shotId: string;
   title: string;
-  /** Objects first: the clip documents bind these paths and the head is published over the documents. */
+  /** First: the head as `uploading`, naming every clip, so nothing is ever uploaded that no document names. */
+  headCreate: PlannedFilmShotWriteV1;
   objectUploads: readonly FilmShotObjectUploadV1[];
+  /** After the objects: each clip document binds its object path to this owner and shot. */
   clipWrites: readonly PlannedFilmShotWriteV1[];
-  headWrite: PlannedFilmShotWriteV1;
+  /** Last: an update that changes only the status and the update time. */
+  headComplete: PlannedFilmShotWriteV1;
 }>;
 
 const COMMON_KEYS = ["ownerUid", "schemaVersion", "recordType", "boundary", "dataClass", "retentionClass", "consentReference", "createdAt", "updatedAt"] as const;
@@ -223,9 +232,9 @@ function validateClipInput(clip: FilmShotCloudClipInputV1, name: string): FilmSh
 }
 
 /**
- * Plans the writes for one cloud film shot: objects first (uploads), then one
- * clip document per clip, then the head. `timestamp` is the Firestore
- * serverTimestamp placeholder so no client clock is written.
+ * Plans the writes for one cloud film shot: the head as `uploading`, then the
+ * objects, then one clip document per clip, then the completion. `timestamp`
+ * is the Firestore serverTimestamp placeholder so no client clock is written.
  */
 export function buildFilmShotWritePlanV1(args: {
   uid: string;
@@ -252,9 +261,22 @@ export function buildFilmShotWritePlanV1(args: {
     createdAt: args.timestamp,
     updatedAt: args.timestamp,
   });
+  const headPath = filmShotHeadPathV1(uid, shotId);
   return {
     shotId,
     title,
+    headCreate: {
+      path: headPath,
+      data: {
+        ...common(FILM_SHOT_HEAD_RECORD_TYPE_V1),
+        status: "uploading",
+        deletionState: "active",
+        shotId,
+        title,
+        clipIds,
+        clipCount: clipIds.length,
+      },
+    },
     objectUploads: clips.map((clip) => ({ slotId: clip.slotId, storagePath: filmShotStoragePathV1(uid, shotId, clip.slotId), contentType: clip.contentType })),
     clipWrites: clips.map((clip) => ({
       path: filmShotClipPathV1(uid, shotId, clip.slotId),
@@ -272,18 +294,7 @@ export function buildFilmShotWritePlanV1(args: {
         storagePath: filmShotStoragePathV1(uid, shotId, clip.slotId),
       },
     })),
-    headWrite: {
-      path: filmShotHeadPathV1(uid, shotId),
-      data: {
-        ...common(FILM_SHOT_HEAD_RECORD_TYPE_V1),
-        status: "complete",
-        deletionState: "active",
-        shotId,
-        title,
-        clipIds,
-        clipCount: clipIds.length,
-      },
-    },
+    headComplete: { path: headPath, data: { status: "complete", updatedAt: args.timestamp } },
   };
 }
 
@@ -294,7 +305,8 @@ export function validateFilmShotHeadV1(value: unknown, uid: string, shotId: stri
   const ownerUid = requireUid(uid);
   const expectedShotId = requireShotId(shotId);
   validateCommon(head, ownerUid, FILM_SHOT_HEAD_RECORD_TYPE_V1, "film shot head");
-  if (head.shotId !== expectedShotId || head.status !== "complete") throw new Error("film shot head path identity is invalid");
+  if (head.shotId !== expectedShotId) throw new Error("film shot head path identity is invalid");
+  if (head.status !== "uploading" && head.status !== "complete") throw new Error("film shot head status is invalid");
   if (head.deletionState !== "active" && head.deletionState !== "in_progress") throw new Error("film shot head deletion state is invalid");
   const title = requireTitle(head.title);
   const clipIds = requireClipIds(head.clipIds);
@@ -309,7 +321,7 @@ export function validateFilmShotHeadV1(value: unknown, uid: string, shotId: stri
     consentReference: FILM_SHOT_CONSENT_REFERENCE_V1,
     createdAt: head.createdAt,
     updatedAt: head.updatedAt,
-    status: "complete",
+    status: head.status,
     deletionState: head.deletionState,
     shotId: expectedShotId,
     title,

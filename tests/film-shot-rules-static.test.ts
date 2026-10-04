@@ -25,9 +25,16 @@ describe("cloud film shot rules", () => {
     ]) {
       expect(rules, token).toContain(token);
     }
-    // A head can only be published over existing clip documents; clips cannot be added under a published head.
+    // The head is the journal: created first as `uploading`, so a document names every object an upload may
+    // create. Clip documents are only accepted under an uploading head that names them, and the head only
+    // completes over existing clip documents.
+    expect(rules).toMatch(/function filmShotHeadAcceptsClip\(/);
+    expect(rules).toMatch(/function validFilmShotCompletionTransition\(/);
     expect(rules).toMatch(/function allFilmShotClipsExist\(/);
-    expect(rules).toMatch(/function noFilmShotHead\(/);
+    expect(rules).toMatch(/request\.resource\.data\.status == 'uploading'/);
+    expect(rules).toMatch(/affectedKeys\(\)\.hasOnly\(\['status', 'updatedAt'\]\)/);
+    // A clip document can no longer exist without a head, so nothing may be written or deleted outside one.
+    expect(rules).not.toMatch(/function noFilmShotHead\(/);
     // Titles are display names: no dot, so never a file name.
     expect(rules).toContain("^[A-Za-z0-9가-힣 ·]{1,24}$");
   });

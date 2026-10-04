@@ -11,6 +11,7 @@ function makePort(overrides: Partial<AccountDeletionPort> = {}) {
     deleteV2Profile: async (profileId) => { calls.push(`delete-v2:${profileId}`); },
     listLegacyPoseIds: async () => { calls.push("list-legacy"); return ["l1"]; },
     deleteLegacyPose: async (poseId) => { calls.push(`delete-legacy:${poseId}`); },
+    eraseCloudFilmShots: async () => { calls.push("erase-film"); },
     deleteLegacyRoot: async () => { calls.push("delete-root"); },
     deleteAuthUser: async () => { calls.push("delete-auth"); },
     ...overrides,
@@ -31,6 +32,7 @@ describe("runAccountDeletion", () => {
       "delete-v2:p1",
       "list-legacy",
       "delete-legacy:l1",
+      "erase-film",
       "delete-root",
       "delete-auth",
     ]);
@@ -61,6 +63,21 @@ describe("runAccountDeletion", () => {
     expect(calls).not.toContain("delete-root");
   });
 
+  it("never deletes the account when cloud footage could not be erased", async () => {
+    const deleteAuthUser = vi.fn(async () => undefined);
+    const { calls, port } = makePort({
+      eraseCloudFilmShots: async () => {
+        calls.push("erase-film");
+        throw new Error("footage-left");
+      },
+      deleteAuthUser,
+    });
+
+    await expect(runAccountDeletion(port)).rejects.toThrow("footage-left");
+    expect(deleteAuthUser).not.toHaveBeenCalled();
+    expect(calls).not.toContain("delete-root");
+  });
+
   it("deletes an otherwise empty account after reauth and root cleanup", async () => {
     const { calls, port } = makePort({
       listV2ProfileIds: async () => { calls.push("list-v2"); return []; },
@@ -74,6 +91,7 @@ describe("runAccountDeletion", () => {
       "resume-v2",
       "list-v2",
       "list-legacy",
+      "erase-film",
       "delete-root",
       "delete-auth",
     ]);
@@ -97,6 +115,7 @@ describe("runAccountDeletion", () => {
       "list-legacy",
       "delete-legacy:l2",
       "delete-legacy:l1",
+      "erase-film",
       "delete-root",
       "delete-auth",
     ]);

@@ -88,7 +88,7 @@ describe("film shot cloud contract", () => {
     expect(() => filmShotStoragePathV1(UID, SHOT, "sideways-0")).toThrow();
   });
 
-  it("plans uploads first, then one clip document per clip, then the head, with exact keys and server timestamps", () => {
+  it("plans the head first as uploading, then uploads, then one clip document per clip, then the completion, with exact keys and server timestamps", () => {
     const plan = buildFilmShotWritePlanV1({
       uid: UID,
       shotId: SHOT,
@@ -111,18 +111,24 @@ describe("film shot cloud contract", () => {
       "ownerUid", "recordType", "retentionClass", "schemaVersion", "shotId", "slotId", "storagePath", "takeIndex", "updatedAt", "view", "width",
     ]);
     expect(side).toMatchObject({ ownerUid: UID, schemaVersion: 1, recordType: FILM_SHOT_CLIP_RECORD_TYPE_V1, shotId: SHOT, slotId: "shooting_side-0", view: "shooting_side", takeIndex: 0, durationMs: 3433, byteLength: 2_300_000, contentType: "video/mp4", storagePath: `users/${UID}/filmShots/${SHOT}/shooting_side-0` });
-    expect(plan.headWrite.path).toBe(`users/${UID}/filmShots/${SHOT}`);
-    expect(Object.keys(plan.headWrite.data).sort()).toEqual([
+    // The head is the journal: it exists, as `uploading`, before any object does, and names every clip it may get.
+    expect(plan.headCreate.path).toBe(`users/${UID}/filmShots/${SHOT}`);
+    expect(Object.keys(plan.headCreate.data).sort()).toEqual([
       "boundary", "clipCount", "clipIds", "consentReference", "createdAt", "dataClass", "deletionState", "ownerUid",
       "recordType", "retentionClass", "schemaVersion", "shotId", "status", "title", "updatedAt",
     ]);
-    expect(plan.headWrite.data).toMatchObject({ recordType: FILM_SHOT_HEAD_RECORD_TYPE_V1, status: "complete", deletionState: "active", clipIds: ["front-0", "shooting_side-0"], clipCount: 2, title: "내 슛폼 1" });
+    expect(plan.headCreate.data).toMatchObject({ recordType: FILM_SHOT_HEAD_RECORD_TYPE_V1, status: "uploading", deletionState: "active", clipIds: ["front-0", "shooting_side-0"], clipCount: 2, title: "내 슛폼 1" });
+    // Completion changes the status and the update time, nothing else.
+    expect(plan.headComplete.path).toBe(`users/${UID}/filmShots/${SHOT}`);
+    expect(Object.keys(plan.headComplete.data).sort()).toEqual(["status", "updatedAt"]);
+    expect(plan.headComplete.data.status).toBe("complete");
     // Server timestamps, never a client clock.
     const stamp = serverTimestamp();
-    for (const write of [...plan.clipWrites, plan.headWrite]) {
+    for (const write of [...plan.clipWrites, plan.headCreate]) {
       expect((write.data.createdAt as { isEqual(other: unknown): boolean }).isEqual(stamp)).toBe(true);
       expect((write.data.updatedAt as { isEqual(other: unknown): boolean }).isEqual(stamp)).toBe(true);
     }
+    expect((plan.headComplete.data.updatedAt as { isEqual(other: unknown): boolean }).isEqual(stamp)).toBe(true);
     expect(JSON.stringify(plan)).not.toMatch(/\.mp4|IMG_|blob:|file:/);
   });
 
@@ -169,6 +175,9 @@ describe("film shot cloud contract", () => {
       expect(() => validateFilmShotHeadV1(bad, UID, SHOT), label).toThrow();
     }
     expect(validateFilmShotHeadV1(head({ deletionState: "in_progress" }), UID, SHOT).deletionState).toBe("in_progress");
+    // An upload that has not finished is a valid head too; readers decide what to do with it.
+    expect(valid.status).toBe("complete");
+    expect(validateFilmShotHeadV1(head({ status: "uploading" }), UID, SHOT).status).toBe("uploading");
   });
 
   it("validates a clip document against its path and refuses every drift", () => {

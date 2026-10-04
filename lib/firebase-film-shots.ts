@@ -1,5 +1,5 @@
-import { collection, doc, getDocFromServer, getDocsFromServer, serverTimestamp, updateDoc, writeBatch, type Firestore } from "firebase/firestore";
-import { deleteObject as deleteStorageObject, getBytes, getStorage, ref, uploadBytes, type FirebaseStorage } from "firebase/storage";
+import { doc, writeBatch, type Firestore } from "firebase/firestore";
+import { getBytes, getStorage, ref, uploadBytes, type FirebaseStorage } from "firebase/storage";
 
 import type { LocalFilmClipRefV1, LocalFilmViewV1 } from "@/lib/film-space/types";
 import { firebaseApp, firestore } from "@/lib/firebase";
@@ -13,30 +13,36 @@ import {
   type FilmShotCloudClipInputV1,
   type FilmShotContentTypeV1,
 } from "@/lib/firebase-film-shot-contract";
+import {
+  createFirebaseFilmShotDeletionPortsV1,
+  deleteCloudFilmShotV1,
+  filmShotTimestampMillisV1,
+  type FilmShotCloudDeletionPortsV1,
+  type FilmShotCloudDocumentV1,
+} from "@/lib/firebase-film-shot-deletion";
+
+export {
+  deleteCloudFilmShotV1,
+  resumePendingCloudFilmShotDeletionsV1,
+  type FilmShotCloudDocumentV1,
+} from "@/lib/firebase-film-shot-deletion";
 
 /**
  * CLOUD FILM SHOTS (v1): the owner's own footage, kept in their private
  * Firebase Storage prefix only when they opted in for that shot. This module
- * orchestrates one shot against injectable ports: objects first, then one
- * clip document per clip, then the head; every failure cleans up what it
- * knows it wrote; reads validate and fail closed; deletion mirrors creation
- * and is resumable. The Firebase adapter is at the bottom. Nothing here
- * carries a file name, EXIF or landmarks, and nothing runs in the preview
- * build (see lib/film-shot-cloud-source.ts).
+ * sends and fetches one shot against injectable ports: the head first, as
+ * `uploading`, so a document names every object before it exists; then the
+ * objects, one clip document per clip, and the completion. Every failure runs
+ * the deletion (lib/firebase-film-shot-deletion.ts); reads validate and fail
+ * closed. The Firebase adapter is at the bottom. Nothing here carries a file
+ * name, EXIF or landmarks, and this module is only loaded by a build that
+ * opted in (see lib/film-shot-cloud-source.ts).
  */
 
-export type FilmShotCloudDocumentV1 = Readonly<{ id: string; data: unknown }>;
-
-export type FilmShotCloudPortsV1 = Readonly<{
-  serverTimestamp(): unknown;
+export type FilmShotCloudPortsV1 = FilmShotCloudDeletionPortsV1 & Readonly<{
   uploadObject(storagePath: string, data: Blob, contentType: string): Promise<void>;
-  deleteObject(storagePath: string): Promise<void>;
   downloadObject(storagePath: string): Promise<Blob>;
   setDocument(path: string, data: Record<string, unknown>): Promise<void>;
-  updateDocument(path: string, data: Record<string, unknown>): Promise<void>;
-  deleteDocument(path: string): Promise<void>;
-  readDocumentFromServer(path: string): Promise<FilmShotCloudDocumentV1 | null>;
-  listDocuments(collectionPath: string): Promise<FilmShotCloudDocumentV1[]>;
 }>;
 
 export type CloudFilmShotInputV1 = Readonly<{ id: string; title: string; clips: readonly LocalFilmClipRefV1[] }>;
@@ -61,27 +67,13 @@ function contentTypeOf(blob: Blob): FilmShotContentTypeV1 {
   return (FILM_SHOT_CONTENT_TYPES_V1 as readonly string[]).includes(blob.type) ? (blob.type as FilmShotContentTypeV1) : "video/mp4";
 }
 
-function timestampMillis(value: unknown): number {
-  return typeof value === "object" && value !== null && typeof (value as { toMillis?: unknown }).toMillis === "function"
-    ? Number((value as { toMillis(): number }).toMillis())
-    : 0;
-}
-
-async function cleanupKnownPaths(paths: readonly string[], remove: (path: string) => Promise<void>): Promise<void> {
-  for (const path of [...new Set(paths)].reverse()) {
-    try {
-      await remove(path);
-    } catch {
-      // A cleanup failure must not mask the original error; the next deletion pass can retry.
-    }
-  }
-}
-
 /**
- * Uploads one film shot: every clip's file first, then the clip documents,
- * then the head. Refuses before the first call when a clip has no file or is
- * not device-local. A head write whose acknowledgement was lost is accepted
- * when the head reads back valid and active.
+ * Keeps one film shot in the cloud. Refuses before the first call when a clip
+ * has no file or is not device-local. A shot that is already kept is left as
+ * it is; a head left by an earlier attempt is erased first. Any failure erases
+ * what this attempt wrote; if that erasure fails too, the head stays behind
+ * as the journal and a later pass finishes it. A completion whose
+ * acknowledgement was lost is accepted when the head reads back kept.
  */
 export async function uploadFilmShotV1(args: {
   uid: string;
@@ -106,51 +98,57 @@ export async function uploadFilmShotV1(args: {
     };
   });
   const plan = buildFilmShotWritePlanV1({ uid, shotId: shot.id, title: shot.title, clips: inputs, timestamp: ports.serverTimestamp() });
+  const headPath = plan.headCreate.path;
 
-  const uploadedObjects: string[] = [];
-  for (const upload of plan.objectUploads) {
+  const isKept = (document: FilmShotCloudDocumentV1): boolean => {
+    const head = validateFilmShotHeadV1(document.data, uid, plan.shotId);
+    return head.status === "complete" && head.deletionState === "active";
+  };
+  const abandon = async (): Promise<void> => {
     try {
-      await ports.uploadObject(upload.storagePath, files[upload.slotId], upload.contentType);
-      uploadedObjects.push(upload.storagePath);
-    } catch (error) {
-      await cleanupKnownPaths(uploadedObjects, ports.deleteObject);
-      throw error;
+      await deleteCloudFilmShotV1({ uid, shotId: plan.shotId, ports });
+    } catch {
+      // The head stays behind as the journal; the next deletion pass finishes it. The original error is what matters.
     }
-  }
+  };
 
-  const writtenClips: string[] = [];
-  for (const write of plan.clipWrites) {
-    try {
-      await ports.setDocument(write.path, write.data);
-      writtenClips.push(write.path);
-    } catch (error) {
-      await cleanupKnownPaths(writtenClips, ports.deleteDocument);
-      await cleanupKnownPaths(uploadedObjects, ports.deleteObject);
-      throw error;
-    }
+  const earlier = await ports.readDocumentFromServer(headPath);
+  if (earlier) {
+    if (isKept(earlier)) return;
+    // An unfinished or half-deleted earlier attempt: erase it, then start clean.
+    await deleteCloudFilmShotV1({ uid, shotId: plan.shotId, ports });
   }
 
   try {
-    await ports.setDocument(plan.headWrite.path, plan.headWrite.data);
-  } catch (error) {
-    let published = false;
-    try {
-      const persisted = await ports.readDocumentFromServer(plan.headWrite.path);
-      if (persisted) {
-        const head = validateFilmShotHeadV1(persisted.data, uid, plan.shotId);
-        published = head.deletionState === "active";
-      }
-    } catch {
-      published = false;
+    await ports.setDocument(headPath, plan.headCreate.data);
+    for (const upload of plan.objectUploads) {
+      await ports.uploadObject(upload.storagePath, files[upload.slotId], upload.contentType);
     }
-    if (published) return;
-    await cleanupKnownPaths(writtenClips, ports.deleteDocument);
-    await cleanupKnownPaths(uploadedObjects, ports.deleteObject);
+    for (const write of plan.clipWrites) {
+      await ports.setDocument(write.path, write.data);
+    }
+  } catch (error) {
+    await abandon();
+    throw error;
+  }
+
+  try {
+    await ports.updateDocument(plan.headComplete.path, plan.headComplete.data);
+  } catch (error) {
+    let kept = false;
+    try {
+      const persisted = await ports.readDocumentFromServer(headPath);
+      kept = persisted !== null && isKept(persisted);
+    } catch {
+      kept = false;
+    }
+    if (kept) return;
+    await abandon();
     throw error;
   }
 }
 
-/** Active heads, newest first. Malformed or in-progress documents are never exposed. */
+/** Kept shots, newest first. Malformed, unfinished or in-progress documents are never exposed. */
 export async function listCloudFilmShotsV1(args: { uid: string; ports: FilmShotCloudPortsV1 }): Promise<CloudFilmShotHeadSummaryV1[]> {
   const { uid, ports } = args;
   const documents = await ports.listDocuments(`users/${uid}/filmShots`);
@@ -158,8 +156,8 @@ export async function listCloudFilmShotsV1(args: { uid: string; ports: FilmShotC
   for (const document of documents) {
     try {
       const head = validateFilmShotHeadV1(document.data, uid, document.id);
-      if (head.deletionState !== "active") continue;
-      summaries.push({ shotId: head.shotId, title: head.title, clipIds: head.clipIds, createdAtMs: timestampMillis(head.createdAt) });
+      if (head.status !== "complete" || head.deletionState !== "active") continue;
+      summaries.push({ shotId: head.shotId, title: head.title, clipIds: head.clipIds, createdAtMs: filmShotTimestampMillisV1(head.createdAt) });
     } catch {
       // Fail closed: a document that does not match the contract is not a shot.
     }
@@ -174,6 +172,7 @@ export async function downloadCloudFilmShotV1(args: { uid: string; shotId: strin
   const headDocument = await ports.readDocumentFromServer(headPath);
   if (!headDocument) throw new Error("cloud film shot not found");
   const head = validateFilmShotHeadV1(headDocument.data, uid, shotId);
+  if (head.status !== "complete") throw new Error("cloud film shot upload is not finished");
   if (head.deletionState !== "active") throw new Error("cloud film shot is being deleted");
   const clips: CloudFilmShotDownloadedClipV1[] = [];
   for (const slotId of head.clipIds) {
@@ -188,99 +187,23 @@ export async function downloadCloudFilmShotV1(args: { uid: string; shotId: strin
   return { shotId, title: head.title, clips };
 }
 
-/**
- * Deletes one shot: head active → in_progress, then each clip's object and
- * document, then the head. A missing head is already deleted. A failure stops
- * before the head so a later pass can resume.
- */
-export async function deleteCloudFilmShotV1(args: { uid: string; shotId: string; ports: FilmShotCloudPortsV1 }): Promise<void> {
-  const { uid, shotId, ports } = args;
-  const headPath = filmShotHeadPathV1(uid, shotId);
-  const headDocument = await ports.readDocumentFromServer(headPath);
-  if (!headDocument) return;
-  const head = validateFilmShotHeadV1(headDocument.data, uid, shotId);
-  if (head.deletionState === "active") {
-    await ports.updateDocument(headPath, { deletionState: "in_progress", updatedAt: ports.serverTimestamp() });
-  }
-  for (const slotId of head.clipIds) {
-    const clipPath = filmShotClipPathV1(uid, shotId, slotId);
-    const clipDocument = await ports.readDocumentFromServer(clipPath);
-    if (clipDocument) {
-      const clip = validateFilmShotClipV1(clipDocument.data, uid, shotId, slotId);
-      await ports.deleteObject(clip.storagePath);
-      await ports.deleteDocument(clipPath);
-    }
-  }
-  await ports.deleteDocument(headPath);
-}
-
-/** Finishes every deletion a previous session left in progress. */
-export async function resumePendingCloudFilmShotDeletionsV1(args: {
-  uid: string;
-  ports: FilmShotCloudPortsV1;
-  onDeleted?: (shotId: string) => void;
-}): Promise<void> {
-  const { uid, ports } = args;
-  const documents = await ports.listDocuments(`users/${uid}/filmShots`);
-  const pending: string[] = [];
-  for (const document of documents) {
-    try {
-      const head = validateFilmShotHeadV1(document.data, uid, document.id);
-      if (head.deletionState === "in_progress") pending.push(head.shotId);
-    } catch {
-      // Not a shot of ours to finish.
-    }
-  }
-  for (const shotId of pending.sort()) {
-    await deleteCloudFilmShotV1({ uid, shotId, ports });
-    args.onDeleted?.(shotId);
-  }
-}
-
 // ---- Firebase adapter ----
 
-function isObjectNotFound(error: unknown): boolean {
-  return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "storage/object-not-found";
-}
-
-/** Production ports over the configured Firebase app. Throws when Firebase is not configured. */
+/** Production ports over the configured Firebase app: the delete-only ports plus sending and fetching. */
 export function createFirebaseFilmShotCloudPortsV1(): FilmShotCloudPortsV1 {
   const db: Firestore | null = firestore;
   if (!firebaseApp || !db) throw new Error("Firebase Storage/Firestore 연결 설정이 아직 완료되지 않았습니다.");
   const storage: FirebaseStorage = getStorage(firebaseApp);
   return {
-    serverTimestamp: () => serverTimestamp(),
+    ...createFirebaseFilmShotDeletionPortsV1(),
     uploadObject: async (storagePath, data, contentType) => {
       await uploadBytes(ref(storage, storagePath), data, { contentType });
-    },
-    deleteObject: async (storagePath) => {
-      try {
-        await deleteStorageObject(ref(storage, storagePath));
-      } catch (error) {
-        if (!isObjectNotFound(error)) throw error;
-      }
     },
     downloadObject: async (storagePath) => new Blob([await getBytes(ref(storage, storagePath))]),
     setDocument: async (path, data) => {
       const batch = writeBatch(db);
       batch.set(doc(db, path), data);
       await batch.commit();
-    },
-    updateDocument: async (path, data) => {
-      await updateDoc(doc(db, path), data);
-    },
-    deleteDocument: async (path) => {
-      const batch = writeBatch(db);
-      batch.delete(doc(db, path));
-      await batch.commit();
-    },
-    readDocumentFromServer: async (path) => {
-      const snapshot = await getDocFromServer(doc(db, path));
-      return snapshot.exists() ? { id: snapshot.id, data: snapshot.data() } : null;
-    },
-    listDocuments: async (collectionPath) => {
-      const result = await getDocsFromServer(collection(db, collectionPath));
-      return result.docs.map((snapshot) => ({ id: snapshot.id, data: snapshot.data() }));
     },
   };
 }

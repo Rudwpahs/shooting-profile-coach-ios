@@ -72,7 +72,7 @@ function clipDocument(slotId: string, overrides: Record<string, unknown> = {}, o
 function headDocument(clipIds: string[] = ["front-0", "shooting_side-0"], overrides: Record<string, unknown> = {}) {
   return {
     ...common("film_shot_head_v1"),
-    status: "complete",
+    status: "uploading",
     deletionState: "active",
     shotId: SHOT,
     title: "내 슛폼 1",
@@ -93,12 +93,16 @@ const anonymousStorage = () => testEnv.unauthenticatedContext().storage();
 const objectPath = (slotId: string, uid = OWNER) => `users/${uid}/filmShots/${SHOT}/${slotId}`;
 const bytes = (length = 1024) => new Uint8Array(length).fill(7);
 
+const complete = () => ({ status: "complete", updatedAt: serverTimestamp() });
+
+// The client's order: the head first as `uploading`, then objects, then clip documents, then the completion.
 async function publishShot(db: Firestore, clipIds: string[] = ["front-0", "shooting_side-0"]) {
+  await succeeds(setDoc(headRef(db), headDocument(clipIds)));
   for (const slotId of clipIds) {
     await succeeds(ownerStorage().ref(objectPath(slotId)).put(bytes(), { contentType: "video/mp4" }));
     await succeeds(setDoc(clipRef(db, slotId), clipDocument(slotId)));
   }
-  await succeeds(setDoc(headRef(db), headDocument(clipIds)));
+  await succeeds(updateDoc(headRef(db), complete()));
 }
 
 beforeAll(async () => {
@@ -174,7 +178,7 @@ describe("cloud film shot objects (storage.rules)", () => {
 });
 
 describe("cloud film shot documents (firestore.rules)", () => {
-  it("publishes clip documents then the head, and the owner can read and list", async () => {
+  it("publishes the head as uploading, then clip documents, then the completion, and the owner can read and list", async () => {
     const db = ownerDb();
     await publishShot(db);
     await succeeds(getDoc(headRef(db)));
@@ -183,17 +187,32 @@ describe("cloud film shot documents (firestore.rules)", () => {
     await succeeds(getDocs(collection(db, "users", OWNER, "filmShots", SHOT, "clips")));
   });
 
-  it("refuses a head before its clips, a head naming a missing clip, and a clip under a published head", async () => {
+  it("keeps the head as the journal: no clip without an uploading head that names it, no completion over a missing clip", async () => {
     const db = ownerDb();
-    await fails(setDoc(headRef(db), headDocument()));
+    // A clip document cannot exist before its head.
+    await fails(setDoc(clipRef(db, "front-0"), clipDocument("front-0")));
+    // A head is created as an upload in progress, never already complete.
+    await fails(setDoc(headRef(db), headDocument(["front-0", "shooting_side-0"], { status: "complete" })));
+    await succeeds(setDoc(headRef(db), headDocument(["front-0", "shooting_side-0"])));
+    // Only the clips the head names are accepted.
+    await fails(setDoc(clipRef(db, "front-1"), clipDocument("front-1")));
     await succeeds(setDoc(clipRef(db, "front-0"), clipDocument("front-0")));
-    await fails(setDoc(headRef(db), headDocument(["front-0", "shooting_side-0"])));
-    await succeeds(setDoc(headRef(db), headDocument(["front-0"])));
-    await fails(setDoc(clipRef(db, "shooting_side-0"), clipDocument("shooting_side-0")));
+    // The head completes only over every clip it names, and only by changing its status and update time.
+    await fails(updateDoc(headRef(db), complete()));
+    await succeeds(setDoc(clipRef(db, "shooting_side-0"), clipDocument("shooting_side-0")));
+    await fails(updateDoc(headRef(db), { status: "complete" }));
+    await fails(updateDoc(headRef(db), { ...complete(), title: "다른 이름" }));
+    await fails(updateDoc(headRef(db), { ...complete(), clipIds: ["front-0"], clipCount: 1 }));
+    await succeeds(updateDoc(headRef(db), complete()));
+    // A kept shot is closed: no further clip, no second completion, no way back to uploading.
+    await fails(setDoc(clipRef(db, "front-1"), clipDocument("front-1")));
+    await fails(updateDoc(headRef(db), complete()));
+    await fails(updateDoc(headRef(db), { status: "uploading", updatedAt: serverTimestamp() }));
   });
 
   it("refuses every drift in a clip document", async () => {
     const db = ownerDb();
+    await succeeds(setDoc(headRef(db), headDocument(["front-0"])));
     await fails(setDoc(clipRef(db, "front-0"), clipDocument("front-0", { storagePath: `users/${OWNER}/filmShots/${SHOT}/front-1` })));
     await fails(setDoc(clipRef(db, "front-0"), clipDocument("front-0", { storagePath: `users/${INTRUDER}/filmShots/${SHOT}/front-0` })));
     await fails(setDoc(clipRef(db, "front-0"), clipDocument("front-0", { view: "shooting_side" })));
@@ -211,7 +230,6 @@ describe("cloud film shot documents (firestore.rules)", () => {
 
   it("refuses every drift in a head document", async () => {
     const db = ownerDb();
-    await succeeds(setDoc(clipRef(db, "front-0"), clipDocument("front-0")));
     await fails(setDoc(headRef(db), headDocument(["front-0"], { title: "shot.mp4" })));
     await fails(setDoc(headRef(db), headDocument(["front-0"], { title: "x".repeat(25) })));
     await fails(setDoc(headRef(db), headDocument(["front-0", "front-0"])));
@@ -232,7 +250,10 @@ describe("cloud film shot documents (firestore.rules)", () => {
     await fails(getDoc(headRef(intruder)));
     await fails(getDocs(collection(intruder, "users", OWNER, "filmShots")));
     await fails(setDoc(clipRef(intruder, "front-1"), clipDocument("front-1")));
-    await fails(setDoc(doc(intruder, "users", INTRUDER, "filmShots", SHOT), headDocument(["front-0"], { ownerUid: INTRUDER })));
+    // Neither a head in the owner's space, nor a head in their own space that claims the owner.
+    await fails(setDoc(doc(intruder, "users", OWNER, "filmShots", "film-shot-other-2"), headDocument(["front-0"], { ownerUid: INTRUDER, shotId: "film-shot-other-2" })));
+    await fails(setDoc(doc(intruder, "users", INTRUDER, "filmShots", SHOT), headDocument(["front-0"])));
+    await fails(updateDoc(headRef(intruder), { deletionState: "in_progress", updatedAt: serverTimestamp() }));
     await fails(deleteDoc(headRef(intruder)));
     await fails(getDoc(headRef(anonymousDb())));
   });
@@ -252,5 +273,23 @@ describe("cloud film shot documents (firestore.rules)", () => {
     }
     await succeeds(deleteDoc(headRef(db)));
     for (const slotId of ALL_SLOTS) await fails(getDoc(clipRef(intruderDb(), slotId)));
+  });
+
+  it("lets an unfinished upload be deleted the same way, whatever it managed to write", async () => {
+    const db = ownerDb();
+    await succeeds(setDoc(headRef(db), headDocument(["front-0", "shooting_side-0"])));
+    await succeeds(ownerStorage().ref(objectPath("front-0")).put(bytes(), { contentType: "video/mp4" }));
+    await succeeds(setDoc(clipRef(db, "front-0"), clipDocument("front-0")));
+    // Interrupted here: one object and one clip document exist, the other clip was never written.
+    await fails(deleteDoc(headRef(db)));
+    await succeeds(updateDoc(headRef(db), { deletionState: "in_progress", updatedAt: serverTimestamp() }));
+    // An upload cannot continue or complete under a head whose deletion has started.
+    await fails(setDoc(clipRef(db, "shooting_side-0"), clipDocument("shooting_side-0")));
+    await fails(updateDoc(headRef(db), complete()));
+    await succeeds(ownerStorage().ref(objectPath("front-0")).delete());
+    await succeeds(deleteDoc(clipRef(db, "front-0")));
+    // Deleting a clip document that was never written is a no-op the client may issue blindly.
+    await succeeds(deleteDoc(clipRef(db, "shooting_side-0")));
+    await succeeds(deleteDoc(headRef(db)));
   });
 });
