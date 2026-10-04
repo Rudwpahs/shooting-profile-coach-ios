@@ -6,8 +6,10 @@ service firebase.storage {
     // video content types only. The matching Firestore clip document binds this path to the owner.
     match /users/{userId}/filmShots/{shotId}/{slotId} {
       allow read: if request.auth != null && request.auth.uid == userId;
+      // `resource == null` makes the object write-once even where an overwrite is evaluated as a create.
       allow create: if request.auth != null
         && request.auth.uid == userId
+        && resource == null
         && shotId.matches('^[A-Za-z0-9_-]{1,128}$')
         && slotId.matches('^(front|shooting_side)-[0-2]$')
         && request.resource.size > 0

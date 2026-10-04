@@ -41,6 +41,8 @@ describe("cloud film shot rules", () => {
     expect(rules).toMatch(/contentType\.matches\('video\/\(mp4\|quicktime\|webm\)'\)/);
     expect(rules).toContain("^(front|shooting_side)-[0-2]$");
     expect(rules).toContain("allow update: if false;");
+    // Write-once: the emulator evaluates an overwrite as a create, so the create rule itself must refuse an existing object.
+    expect(rules).toMatch(/allow create:[\s\S]*?resource == null/);
     // Everything else in the bucket is closed.
     expect(rules).toMatch(/match \/\{allPaths=\*\*\}\s*\{\s*allow read, write: if false;/);
     expect(rules).not.toMatch(/allow read: if true|allow write: if true/);
