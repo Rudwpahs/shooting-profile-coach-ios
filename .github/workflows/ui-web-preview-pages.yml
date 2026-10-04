@@ -70,6 +70,13 @@ jobs:
             echo "Demo fixture, preview runtime or named-player research content leaked into an ordinary production export" >&2
             exit 1
           fi
+          # Raw footage stays on the device by default: without EXPO_PUBLIC_HOOPHUB_CLOUD_FILM_SHOTS_V1=1 the
+          # export must not contain the cloud film-shot upload code or its capture session. (The delete-only
+          # cascade that account deletion runs is allowed: it can only remove footage, never send it.)
+          if grep -R -E "firebaseFilmShotCloudSource|uploadFilmShotV1|WebFilmCaptureSession" web-production-check; then
+            echo "Cloud film-shot upload code leaked into an ordinary production export" >&2
+            exit 1
+          fi
           rm -rf web-production-check
 
       - name: Export production UI preview

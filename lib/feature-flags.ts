@@ -169,4 +169,9 @@ export const FORMPATH_EXPERIMENTAL_FLAGS = Object.freeze({
     (process.env.EXPO_PUBLIC_FORMPATH_SHOT_INSPECTION_V1 === "1" || PREVIEW_FLAG_OVERRIDE?.shotInspectionV1 === true)
     && FORMPATH_FLAGS.profileV2
     && FORMPATH_FLAGS.representative4DViewer,
+  // Keeping footage in the cloud is a separate, default-off product decision: the AI architecture keeps raw
+  // video on the device by default, so this is false unless the build asks for it and never true in the
+  // install-free preview. The Firebase Storage code itself sits behind the same literal in
+  // lib/film-shot-cloud-source.ts, so an ordinary bundle does not contain it.
+  cloudFilmShotsV1: process.env.EXPO_PUBLIC_HOOPHUB_CLOUD_FILM_SHOTS_V1 === "1" && PREVIEW_FLAG_OVERRIDE === null,
 });

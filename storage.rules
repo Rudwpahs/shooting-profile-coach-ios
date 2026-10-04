@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Cloud film shots (v1): the owner's own footage, one object per clip, kept only when the owner
+    // opted in for that shot. Owner-only read and delete; create once (no overwrite), bounded size,
+    // video content types only. The matching Firestore clip document binds this path to the owner.
+    match /users/{userId}/filmShots/{shotId}/{slotId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // `resource == null` makes the object write-once even where an overwrite is evaluated as a create.
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && resource == null
+        && shotId.matches('^[A-Za-z0-9_-]{1,128}$')
+        && slotId.matches('^(front|shooting_side)-[0-2]$')
+        && request.resource.size > 0
+        && request.resource.size <= 64 * 1024 * 1024
+        && request.resource.contentType.matches('video/(mp4|quicktime|webm)');
+      allow update: if false;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Nothing else in the bucket is readable or writable by clients.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

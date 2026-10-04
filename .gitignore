@@ -83,3 +83,7 @@ graphify-out/
 
 # Playwright MCP session output (screenshots live in artifacts/)
 .playwright-mcp/
+
+# Local-only preview film shots (a developer's own clips + manifest), served only by a local preview build.
+# Never committed; kept outside public/ because Expo copies public/ into every web export.
+/preview-local/

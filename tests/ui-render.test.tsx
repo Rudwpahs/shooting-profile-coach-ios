@@ -460,12 +460,31 @@ describe("film shots", () => {
 
   it("grid: a film tile being deleted is busy and disabled like a profile tile", async () => {
     const shot = { version: "film_shot_v1" as const, id: "film-shot-b-1", title: "내 슛폼 1", createdAtMs: Date.UTC(2026, 9, 1), clips: [{ slotId: "front-0", view: "front" as const, takeIndex: 0, uri: "blob:https://rudwpahs.github.io/b1", durationMs: 4433, width: 512, height: 910 }] };
-    await render(<MotionGrid canOpen deletingFilmShotId={shot.id} deletingProfileId={null} error={null} filmShots={[shot]} glyphs={{}} loading={false} onDelete={vi.fn()} onDeleteFilm={vi.fn()} onOpen={vi.fn()} onOpenFilm={vi.fn()} records={[]} width={375} />);
+    await render(<MotionGrid canOpen deletingFilmShotId={shot.id} deletingProfileId={null} error={null} filmShots={[shot]} glyphs={{}} loading={false} onDelete={vi.fn()} onFilmActions={vi.fn()} onOpen={vi.fn()} onOpenFilm={vi.fn()} records={[]} width={375} />);
     const tile = labelsContaining("내 영상 · 이 기기에만 보관 · 포즈 분석 없음")[0];
     expect(tile.getAttribute("aria-busy")).toBe("true");
     expect(tile.getAttribute("aria-disabled")).toBe("true");
     expect(container.textContent).toContain("삭제 중");
     expect(container.textContent).not.toContain("첫 슛폼을 촬영하면 여기에 쌓입니다");
+  });
+
+  it("grid: film tiles say where the footage is, and a cloud-only tile opens its actions instead of a reel", async () => {
+    const shot = { version: "film_shot_v1" as const, id: "film-shot-b-1", title: "내 슛폼 1", createdAtMs: Date.UTC(2026, 9, 1), clips: [{ slotId: "front-0", view: "front" as const, takeIndex: 0, uri: "blob:https://rudwpahs.github.io/b1", durationMs: 4433, width: 512, height: 910 }] };
+    const cloud = [
+      { shotId: shot.id, title: shot.title, clipIds: ["front-0"], createdAtMs: shot.createdAtMs },
+      { shotId: "film-shot-c-3", title: "내 슛폼 3", clipIds: ["front-0", "shooting_side-0"], createdAtMs: Date.UTC(2026, 9, 2) },
+    ];
+    const onOpenFilm = vi.fn();
+    const onFilmActions = vi.fn();
+    await render(<MotionGrid canOpen cloudFilmShots={cloud} deletingProfileId={null} error={null} filmShots={[shot]} glyphs={{}} loading={false} onDelete={vi.fn()} onFilmActions={onFilmActions} onOpen={vi.fn()} onOpenFilm={onOpenFilm} records={[]} width={375} />);
+    expect(labelsContaining("내 영상 · 이 기기와 클라우드에 보관 · 포즈 분석 없음")).toHaveLength(1);
+    expect(labelsContaining("이 기기에만 보관")).toHaveLength(0);
+    const cloudOnly = labelsContaining("내 슛폼 3 · 내 영상 · 클라우드에만 있음")[0];
+    await click(cloudOnly);
+    expect(onFilmActions).toHaveBeenCalledWith("film-shot-c-3");
+    expect(onOpenFilm).not.toHaveBeenCalled();
+    await click(labelsContaining("내 영상 · 이 기기와 클라우드에 보관")[0]);
+    expect(onOpenFilm).toHaveBeenCalledWith(shot.id);
   });
 });
 

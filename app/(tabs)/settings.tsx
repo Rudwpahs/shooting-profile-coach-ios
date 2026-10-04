@@ -2,6 +2,7 @@ import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { ScreenTitle, SectionCard, SecondaryButton, StatusPill, palette } from "@/components/formpath-ui";
 import { ScreenContainer } from "@/components/screen-container";
+import { FORMPATH_EXPERIMENTAL_FLAGS } from "@/lib/feature-flags";
 import { haptic } from "@/lib/haptics";
 import { ANONYMOUS_POSE_LIBRARY_STATUS } from "@/lib/anonymous-pose-library";
 import { useProfile } from "@/lib/profile-store";
@@ -25,7 +26,10 @@ export default function SettingsScreen() {
         </SectionCard>
         <SectionCard tone="sand">
           <Text style={styles.sectionTitle}>개인정보 보호</Text>
-          <Text style={styles.body}>프로토타입 이름은 화면 비교에만 사용하며 추천 점수에 반영하지 않습니다. 신체 치수·얼굴 인식·원본 영상은 저장하지 않으며, 개인 pose JSON은 로그인한 Firebase UID 경로에만 저장됩니다.</Text>
+          {/* The footage promise follows the build flag that could break it; by default nothing is ever uploaded. */}
+          <Text style={styles.body}>{FORMPATH_EXPERIMENTAL_FLAGS.cloudFilmShotsV1
+            ? "프로토타입 이름은 화면 비교에만 사용하며 추천 점수에 반영하지 않습니다. 신체 치수·얼굴 인식은 저장하지 않으며, 원본 영상은 '클라우드에도 보관'을 켠 샷만 내 계정 전용 비공개 저장 공간에 보관합니다. 개인 pose JSON은 로그인한 Firebase UID 경로에만 저장됩니다."
+            : "프로토타입 이름은 화면 비교에만 사용하며 추천 점수에 반영하지 않습니다. 신체 치수·얼굴 인식·원본 영상은 저장하지 않으며, 개인 pose JSON은 로그인한 Firebase UID 경로에만 저장됩니다."}</Text>
         </SectionCard>
         <SectionCard>
           <Text style={styles.sectionTitle}>로컬 데이터</Text>

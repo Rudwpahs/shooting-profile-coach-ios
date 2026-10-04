@@ -36,6 +36,18 @@
 | V2와 선수 스타일 데이터 비교 | 미구현 | source 권리·provenance·호환 metric 검증 이후 Project 3로 진행 |
 | 사용자 간 공유·peer range | 미구현 | 동의·최소화·privacy threshold 설계 이후 Project 4로 진행 |
 
+## 2026-10-04 클라우드 내 영상 v1 (`work/hoophub-cloud-film-shots-v1`, 소유자 결정 대기 · 기본 꺼짐)
+
+포즈 분석 없이 보관하는 "내 영상"(film shot)을 **샷별로 켠 경우에만** 본인 계정 전용 Firebase Storage + Firestore에 보관하는 경로를 만들었다.
+`docs/HOOPHUB_AI_PRODUCT_ARCHITECTURE.md`가 원본 영상을 기본적으로 기기에만 두도록 잠갔으므로 이 기능은 빌드 플래그 `EXPO_PUBLIC_HOOPHUB_CLOUD_FILM_SHOTS_V1=1` 뒤에 있고 **기본값은 꺼짐**이다.
+꺼진 빌드(모든 일반 빌드와 설치 없는 프리뷰)는 업로드 코드를 번들에 담지 않고(CI가 production export를 grep), 기존 "업로드하지 않습니다" 문구도 그대로 참이다. 켜는 것은 소유자의 아키텍처 결정이 필요하며 체크리스트는 `docs/release/ios-privacy-release-gate.md`에 있다.
+
+- 헤드 문서를 먼저 `uploading`으로 쓰고(journal) → 객체 → 클립 문서 → `complete` 갱신. 중간에 끊긴 업로드도 문서가 남아 찾아서 지울 수 있다. 규칙이 이 순서를 강제한다(`firestore.rules`, `storage.rules`; CI 에뮬레이터에서만 검증, 로컬 Java 없음).
+- 삭제 전용 모듈(`lib/firebase-film-shot-deletion.ts`)은 **모든 빌드**에 들어가며 계정 삭제가 클라우드 영상을 Auth 사용자보다 먼저 지운다. 실패하면 계정 삭제를 중단한다.
+- 켠 빌드의 웹: 캡처 리뷰의 "클라우드에도 보관" 스위치(기본 꺼짐), 프로필 타일의 클라우드 표시, 클라우드에만 있는 샷 내려받기·삭제. iPhone 앱은 film shot을 만들지 않으므로 목록·삭제만 가능하다.
+- 플래그와 무관하게: 프로필의 내 영상 타일은 길게 누르면 앱 내 시트가 열리고 삭제는 두 번 눌러야 한다(브라우저에서 동작하지 않던 native alert를 대체).
+- **검증하지 않은 것:** 실제 Firebase 프로젝트에 대한 업로드·내려받기·삭제·계정 삭제. 자격증명을 쓰지 않았고 실기기 검증도 없다. 설계·실행 기록: `docs/superpowers/specs/2026-10-04-hoophub-cloud-film-shots-v1-design.md`, `docs/superpowers/plans/2026-10-04-hoophub-cloud-film-shots-v1.md`.
+
 ## 2026-09-16 Hoop Hub Reels v1 (`work/hoophub-reels-v1`, 소유자 리뷰 대기)
 
 `main` @ `2ebf1d2` 위에 전체화면 세로 페이징 Reels를 추가했다. 홈의 모션 미리보기를 누르면 그 항목부터 Reels가 열리고(`app/reels.tsx`, 탭 밖 stack route라 탭 바·상단 바가 없다),

@@ -321,9 +321,155 @@ service cloud.firestore {
         && allObservationDocumentsAbsent(userId, head.captureSessionId, head.mode);
     }
 
+    // ---- Cloud film shots (v1): the owner's own footage, kept only when they opted in for that shot. ----
+    // One Storage object per clip (storage.rules), one clip document per clip, one head. The head is the
+    // journal: it is created first, as `uploading`, and names every clip, so a document exists for every
+    // object an upload may create and an interrupted upload can always be found and erased. Clip documents
+    // are accepted only under an uploading head that names them, and bind the object path to this owner
+    // and shot; the head becomes `complete` only over all of its clip documents.
+
+    function validFilmShotCommonV1(data, userId, recordType) {
+      return [
+          data.ownerUid, data.schemaVersion, data.recordType, data.boundary,
+          data.dataClass, data.retentionClass, data.consentReference
+        ] == [
+          userId, 1, recordType, 'owner_footage_only_no_pose_analysis_v1',
+          'owner_private_raw_footage_v1', 'owner_deleted_v1', 'owner_cloud_footage_consent_v1'
+        ]
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function validFilmSlotId(value) {
+      return value is string && value.matches('^(front|shooting_side)-[0-2]$');
+    }
+
+    // A display name typed by the owner: letters, digits, Hangul, space and the middle dot. Never a file name.
+    function validFilmShotTitle(value) {
+      return value is string && value.matches('^[A-Za-z0-9가-힣 ·]{1,24}$');
+    }
+
+    function validFilmShotContentType(value) {
+      return value == 'video/mp4' || value == 'video/quicktime' || value == 'video/webm';
+    }
+
+    function validFilmShotClip(data, userId, shotId, slotId) {
+      return validExactKeys(data, [
+          'ownerUid', 'schemaVersion', 'recordType', 'boundary', 'dataClass',
+          'retentionClass', 'consentReference', 'createdAt', 'updatedAt', 'shotId',
+          'slotId', 'view', 'takeIndex', 'durationMs', 'width', 'height',
+          'byteLength', 'contentType', 'storagePath'
+        ])
+        && validFilmShotCommonV1(data, userId, 'film_shot_clip_v1')
+        && validOpaqueId(shotId)
+        && validFilmSlotId(slotId)
+        && [data.shotId, data.slotId] == [shotId, slotId]
+        && validView(data.view)
+        && boundedInteger(data.takeIndex, 0, 2)
+        && data.slotId == data.view + '-' + string(data.takeIndex)
+        && boundedInteger(data.durationMs, 200, 60000)
+        && boundedInteger(data.width, 16, 8192)
+        && boundedInteger(data.height, 16, 8192)
+        && boundedInteger(data.byteLength, 1, 67108864)
+        && validFilmShotContentType(data.contentType)
+        && data.storagePath == 'users/' + userId + '/filmShots/' + shotId + '/' + slotId;
+    }
+
+    function validFilmShotClipIds(ids) {
+      return ids is list
+        && ids.size() >= 1
+        && ids.size() <= 6
+        && ids.toSet().size() == ids.size()
+        && ids.hasOnly(['front-0', 'front-1', 'front-2', 'shooting_side-0', 'shooting_side-1', 'shooting_side-2']);
+    }
+
+    function validFilmShotHead(data, userId, shotId) {
+      return validExactKeys(data, [
+          'ownerUid', 'schemaVersion', 'recordType', 'boundary', 'dataClass',
+          'retentionClass', 'consentReference', 'createdAt', 'updatedAt', 'status',
+          'deletionState', 'shotId', 'title', 'clipIds', 'clipCount'
+        ])
+        && validFilmShotCommonV1(data, userId, 'film_shot_head_v1')
+        && validOpaqueId(shotId)
+        && data.shotId == shotId
+        && (data.status == 'uploading' || data.status == 'complete')
+        && (data.deletionState == 'active' || data.deletionState == 'in_progress')
+        && validFilmShotTitle(data.title)
+        && validFilmShotClipIds(data.clipIds)
+        && data.clipCount == data.clipIds.size();
+    }
+
+    // A clip document is only written under a head whose upload is still running and that names this clip.
+    function filmShotHeadAcceptsClip(userId, shotId, slotId) {
+      let headPath = /databases/$(database)/documents/users/$(userId)/filmShots/$(shotId);
+      let head = get(headPath).data;
+      return head.status == 'uploading'
+        && head.deletionState == 'active'
+        && slotId in head.clipIds;
+    }
+
+    function filmShotHeadInProgress(userId, shotId) {
+      let headPath = /databases/$(database)/documents/users/$(userId)/filmShots/$(shotId);
+      return get(headPath).data.deletionState == 'in_progress';
+    }
+
+    function filmShotClipPresentIfListed(userId, shotId, ids, slotId) {
+      let clipPath = /databases/$(database)/documents/users/$(userId)/filmShots/$(shotId)/clips/$(slotId);
+      return !(slotId in ids) || exists(clipPath);
+    }
+
+    // At most six exists() calls: one per possible slot id named by the head.
+    function allFilmShotClipsExist(userId, shotId, ids) {
+      return filmShotClipPresentIfListed(userId, shotId, ids, 'front-0')
+        && filmShotClipPresentIfListed(userId, shotId, ids, 'front-1')
+        && filmShotClipPresentIfListed(userId, shotId, ids, 'front-2')
+        && filmShotClipPresentIfListed(userId, shotId, ids, 'shooting_side-0')
+        && filmShotClipPresentIfListed(userId, shotId, ids, 'shooting_side-1')
+        && filmShotClipPresentIfListed(userId, shotId, ids, 'shooting_side-2');
+    }
+
+    function filmShotClipAbsent(userId, shotId, slotId) {
+      let clipPath = /databases/$(database)/documents/users/$(userId)/filmShots/$(shotId)/clips/$(slotId);
+      return !exists(clipPath);
+    }
+
+    function allFilmShotClipsAbsent(userId, shotId) {
+      return filmShotClipAbsent(userId, shotId, 'front-0')
+        && filmShotClipAbsent(userId, shotId, 'front-1')
+        && filmShotClipAbsent(userId, shotId, 'front-2')
+        && filmShotClipAbsent(userId, shotId, 'shooting_side-0')
+        && filmShotClipAbsent(userId, shotId, 'shooting_side-1')
+        && filmShotClipAbsent(userId, shotId, 'shooting_side-2');
+    }
+
+    // uploading -> complete, changing nothing else, and only once every named clip document exists.
+    function validFilmShotCompletionTransition(userId, shotId) {
+      return signedInOwner(userId)
+        && validFilmShotHead(request.resource.data, userId, shotId)
+        && resource.data.status == 'uploading'
+        && resource.data.deletionState == 'active'
+        && request.resource.data.status == 'complete'
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && allFilmShotClipsExist(userId, shotId, resource.data.clipIds);
+    }
+
+    // active -> in_progress, for a kept shot and for an unfinished upload alike.
+    function validFilmShotDeletionTransition(userId, shotId) {
+      return signedInOwner(userId)
+        && validFilmShotHead(request.resource.data, userId, shotId)
+        && resource.data.deletionState == 'active'
+        && request.resource.data.deletionState == 'in_progress'
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletionState', 'updatedAt']);
+    }
+
     // Access-call maxima: observation create 2; capture create Basic 7 / High 7;
     // revision create 2; publication create 1; subordinate delete 3 or fewer;
     // profile-head delete Basic 4 / High 8.
+    // Film shots: head create 0; clip create 1; head completion 6; clip delete 1; head delete 6.
 
     match /users/{userId} {
       allow read: if signedInOwner(userId);
@@ -390,6 +536,32 @@ service cloud.firestore {
             && noProfileHead(userId, profileId)
             && validStoredCapture(userId, request.resource.data);
           allow update: if false;
+        }
+      }
+
+      // Cloud film shots: owner-only footage documents. Objects live in Storage under the same path.
+      match /filmShots/{shotId} {
+        allow read: if signedInOwner(userId);
+        allow create: if signedInOwner(userId)
+          && validFilmShotHead(request.resource.data, userId, shotId)
+          && request.resource.data.status == 'uploading'
+          && request.resource.data.deletionState == 'active'
+          && validCreateTimestamps(request.resource.data);
+        allow update: if validFilmShotCompletionTransition(userId, shotId)
+          || validFilmShotDeletionTransition(userId, shotId);
+        allow delete: if signedInOwner(userId)
+          && resource.data.deletionState == 'in_progress'
+          && allFilmShotClipsAbsent(userId, shotId);
+
+        match /clips/{slotId} {
+          allow read: if signedInOwner(userId);
+          allow create: if signedInOwner(userId)
+            && validFilmShotClip(request.resource.data, userId, shotId, slotId)
+            && validCreateTimestamps(request.resource.data)
+            && filmShotHeadAcceptsClip(userId, shotId, slotId);
+          allow update: if false;
+          allow delete: if signedInOwner(userId)
+            && filmShotHeadInProgress(userId, shotId);
         }
       }
     }

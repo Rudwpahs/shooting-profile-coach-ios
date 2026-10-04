@@ -7,6 +7,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } 
 import { PoseMotionViewer } from "@/components/pose-motion-viewer";
 import { PrivatePoseCapture } from "@/components/private-pose-capture";
 import { AccountPanel, type AccountMode } from "@/components/profile/account-panel";
+import { FilmShotActionsSheet, type FilmShotSheetBusy } from "@/components/profile/film-shot-actions-sheet";
 import { MotionGrid } from "@/components/profile/motion-grid";
 import { ProfileHero, type ProfileHeroState } from "@/components/profile/profile-hero";
 import { ProfileStats } from "@/components/profile/profile-stats";
@@ -16,10 +17,18 @@ import { LiquidPressable } from "@/components/ui/liquid";
 import { TopBar } from "@/components/ui/top-bar";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
+import { useCloudFilmShots } from "@/hooks/use-cloud-film-shots";
 import { useFilmShots } from "@/hooks/use-film-shots";
 import { evaluateSignupGate } from "@/lib/compliance/signup-gate";
 import { FORMPATH_FLAGS } from "@/lib/feature-flags";
-import { deleteFilmShot } from "@/lib/film-space/film-shots";
+import {
+  canDownloadCloudFilmShots,
+  deleteFilmShotEverywhere,
+  deleteFilmShotFromCloudOnly,
+  downloadCloudFilmShotToDevice,
+  keepFilmShotInCloud,
+  mergeFilmShotTiles,
+} from "@/lib/film-space/film-shot-cloud-actions";
 import { useFirebaseAuth } from "@/lib/firebase-auth";
 import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-contract";
 import {
@@ -101,7 +110,12 @@ export default function PersonalProfileTab() {
   const [measuredWidth, setMeasuredWidth] = useState(0);
   // My own footage on this device (no pose analysis): film tiles after the profiles, opened as film reels.
   const filmShots = useFilmShots();
+  // The owner's kept cloud shots; reads nothing and stays off in a build that did not opt in.
+  const cloudFilmShots = useCloudFilmShots(user);
   const [deletingFilmShotId, setDeletingFilmShotId] = useState<string | null>(null);
+  const [filmSheetId, setFilmSheetId] = useState<string | null>(null);
+  const [filmSheetBusy, setFilmSheetBusy] = useState<FilmShotSheetBusy>(null);
+  const [filmSheetError, setFilmSheetError] = useState<string | null>(null);
   const [filmNotice, setFilmNotice] = useState<{ kind: "notice" | "error"; text: string } | null>(null);
   const currentOwnerUidRef = useRef<string | null>(null);
   const v1LoadGenerationRef = useRef(0);
@@ -370,30 +384,73 @@ export default function PersonalProfileTab() {
     router.push(`/reels?start=${encodeURIComponent(filmReelId(shotId))}` as never);
   }, [router]);
 
-  const deleteFilm = useCallback(async (shotId: string) => {
-    if (deletingFilmShotId !== null) return;
-    setDeletingFilmShotId(shotId);
-    setFilmNotice(null);
-    try {
-      await deleteFilmShot(shotId);
-      setFilmNotice({ kind: "notice", text: "이 기기에 보관한 영상을 삭제했습니다." });
-    } catch {
-      setFilmNotice({ kind: "error", text: "이 기기에 보관한 영상을 삭제하지 못했습니다. 다시 시도해 주세요." });
-    } finally {
-      setDeletingFilmShotId(null);
-    }
-  }, [deletingFilmShotId]);
+  const filmTiles = mergeFilmShotTiles(filmShots.shots, cloudFilmShots.shots);
+  const filmSheetTarget = filmSheetId ? filmTiles.find((tile) => tile.id === filmSheetId) ?? null : null;
 
-  const confirmDeleteFilm = useCallback((shotId: string) => {
-    Alert.alert(
-      "내 영상 삭제",
-      "이 기기에 보관한 영상과 연결 정보를 삭제할까요? 어디에도 올라간 적이 없어 되돌릴 수 없습니다.",
-      [
-        { text: "취소", style: "cancel" },
-        { text: "삭제", style: "destructive", onPress: () => { void deleteFilm(shotId); } },
-      ],
+  const openFilmActions = useCallback((shotId: string) => {
+    setFilmSheetError(null);
+    setFilmSheetId(shotId);
+  }, []);
+
+  const closeFilmActions = useCallback(() => {
+    setFilmSheetId(null);
+    setFilmSheetError(null);
+  }, []);
+
+  /** One film action at a time; the sheet stays open on failure and says what is still where. */
+  const runFilmAction = async (busy: Exclude<FilmShotSheetBusy, null>, run: () => Promise<void>, done: string, failed: string) => {
+    if (filmSheetBusy !== null) return;
+    const deleting = busy === "delete" ? filmSheetId : null;
+    setFilmSheetBusy(busy);
+    setFilmSheetError(null);
+    setFilmNotice(null);
+    if (deleting) setDeletingFilmShotId(deleting);
+    try {
+      await run();
+      setFilmSheetId(null);
+      setFilmNotice({ kind: "notice", text: done });
+    } catch {
+      setFilmSheetError(failed);
+    } finally {
+      setFilmSheetBusy(null);
+      if (deleting) setDeletingFilmShotId(null);
+      cloudFilmShots.reload();
+    }
+  };
+
+  const keepFilmInCloud = () => {
+    const target = filmSheetTarget;
+    if (!target?.shot || !user) return;
+    const owner = user;
+    const shot = target.shot;
+    void runFilmAction("keep", () => keepFilmShotInCloud(owner, shot), "내 계정 전용 클라우드에도 보관했습니다.", "클라우드에 올리지 못했습니다. 이 기기의 영상은 그대로입니다.");
+  };
+
+  const downloadFilm = () => {
+    const target = filmSheetTarget;
+    if (!target || !user) return;
+    const owner = user;
+    void runFilmAction("download", () => downloadCloudFilmShotToDevice(owner, { shotId: target.id, createdAtMs: target.createdAtMs }), "클라우드의 영상을 이 기기로 내려받았습니다.", "내려받지 못했습니다. 클라우드의 영상은 그대로입니다.");
+  };
+
+  const deleteFilm = () => {
+    const target = filmSheetTarget;
+    if (!target) return;
+    const owner = user;
+    void runFilmAction(
+      "delete",
+      () => deleteFilmShotEverywhere(owner, { shotId: target.id, onDevice: target.onDevice, inCloud: target.inCloud }),
+      target.inCloud ? (target.onDevice ? "이 기기와 클라우드에서 영상을 삭제했습니다." : "클라우드에서 영상을 삭제했습니다.") : "이 기기에 보관한 영상을 삭제했습니다.",
+      target.inCloud ? "삭제를 완료하지 못했습니다. 영상이 남아 있을 수 있으니 다시 시도해 주세요." : "이 기기에 보관한 영상을 삭제하지 못했습니다. 다시 시도해 주세요.",
     );
-  }, [deleteFilm]);
+  };
+
+  const deleteFilmCloudOnly = () => {
+    const target = filmSheetTarget;
+    if (!target || !user) return;
+    const owner = user;
+    void runFilmAction("delete-cloud", () => deleteFilmShotFromCloudOnly(owner, target.id), "클라우드에서만 삭제했습니다. 이 기기의 영상은 그대로입니다.", "클라우드에서 삭제하지 못했습니다. 다시 시도해 주세요.");
+  };
 
   const selectedFluid = selectedPose ? privatePoseFluid(selectedPose) : null;
   const latestSummary = v2Records[0];
@@ -458,11 +515,12 @@ export default function PersonalProfileTab() {
                   deletingFilmShotId={deletingFilmShotId}
                   deletingProfileId={visibleDeletingProfileId}
                   error={visibleV2Error}
+                  cloudFilmShots={cloudFilmShots.shots}
                   filmShots={filmShots.shots}
                   glyphs={v2Glyphs}
                   loading={visibleV2Loading}
                   onDelete={confirmDeleteV2}
-                  onDeleteFilm={confirmDeleteFilm}
+                  onFilmActions={openFilmActions}
                   onOpen={openV2}
                   onOpenFilm={openFilm}
                   records={v2Records}
@@ -471,6 +529,9 @@ export default function PersonalProfileTab() {
                 {visibleV2Notice ? <Text accessibilityLiveRegion="polite" style={styles.noticeText}>{visibleV2Notice}</Text> : null}
                 {filmNotice ? (
                   <Text accessibilityLiveRegion={filmNotice.kind === "error" ? "assertive" : "polite"} style={filmNotice.kind === "error" ? styles.errorText : styles.noticeText}>{filmNotice.text}</Text>
+                ) : null}
+                {cloudFilmShots.status === "error" ? (
+                  <Text accessibilityLiveRegion="polite" style={styles.errorText}>클라우드에 보관한 영상 목록을 불러오지 못했습니다. 이 기기의 영상은 그대로입니다.</Text>
                 ) : null}
                 {filmShots.status === "error" ? (
                   <View style={styles.filmError} testID="film-shots-error">
@@ -569,6 +630,18 @@ export default function PersonalProfileTab() {
           />
         ) : null}
       </ScrollView>
+      <FilmShotActionsSheet
+        busy={filmSheetBusy}
+        canDownload={canDownloadCloudFilmShots()}
+        cloudAvailable={cloudFilmShots.available}
+        error={filmSheetError}
+        onClose={closeFilmActions}
+        onDelete={deleteFilm}
+        onDeleteCloudOnly={deleteFilmCloudOnly}
+        onDownload={downloadFilm}
+        onKeepInCloud={keepFilmInCloud}
+        target={filmSheetTarget}
+      />
     </ScreenContainer>
   );
 }

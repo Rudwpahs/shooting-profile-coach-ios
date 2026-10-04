@@ -15,6 +15,8 @@ export type FilmShotMedia = Readonly<{
   /** Returns the clips that can be opened now, with usable URIs; a clip whose file is gone is left out. */
   restore(shotId: string, clips: readonly LocalFilmClipRefV1[]): Promise<LocalFilmClipRefV1[]>;
   remove(shotId: string): Promise<void>;
+  /** The files this device holds for these clips, by slot id; a clip whose file is not held here is left out. */
+  readFiles(shotId: string, clips: readonly LocalFilmClipRefV1[]): Promise<Record<string, Blob>>;
 }>;
 
 /** A native device keeps the picked file URI itself; nothing to copy or mint. */
@@ -23,6 +25,7 @@ export function createPassthroughFilmShotMedia(): FilmShotMedia {
     persist: async () => undefined,
     restore: async (_shotId, clips) => [...clips],
     remove: async () => undefined,
+    readFiles: async () => ({}),
   };
 }
 
@@ -67,6 +70,15 @@ export function createMemoryFilmShotMedia(): MemoryFilmShotMedia {
     async remove(shotId) {
       blobs.delete(shotId);
       for (const k of [...urls.keys()]) if (k.startsWith(`${shotId}/`)) urls.delete(k);
+    },
+    async readFiles(shotId, clips) {
+      const forShot = blobs.get(shotId);
+      const files: Record<string, Blob> = {};
+      for (const clip of clips) {
+        const file = forShot?.get(clip.slotId);
+        if (file) files[clip.slotId] = file;
+      }
+      return files;
     },
     stored: (shotId) => [...(blobs.get(shotId)?.keys() ?? [])],
     forgetUrls: () => urls.clear(),

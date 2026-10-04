@@ -104,6 +104,18 @@ describe("film shots", () => {
     expect(seen).toHaveBeenCalledTimes(2);
   });
 
+  it("recreates a shot under a given id and time (a cloud download), replacing an existing record without duplicating it", async () => {
+    const media = createMemoryFilmShotMedia();
+    const first = await saveFilmShot({ id: "film-shot-cloud-7", createdAtMs: 1_690_000_000_000, title: "내 슛폼 7", clips: [{ ...clip("front-0", "front", "blob:a"), blob: blob("a") }] }, { media, now });
+    expect(first).toMatchObject({ id: "film-shot-cloud-7", createdAtMs: 1_690_000_000_000, title: "내 슛폼 7" });
+    await saveFilmShot({ id: "film-shot-cloud-7", createdAtMs: 1_690_000_000_000, title: "내 슛폼 7", clips: [{ ...clip("front-0", "front", "blob:b"), blob: blob("b") }] }, { media, now });
+    const listed = await listFilmShots({ media });
+    expect(listed.map((shot) => shot.id)).toEqual(["film-shot-cloud-7"]);
+    expect(listed[0].clips[0].uri).toBe("blob:b");
+    await expect(saveFilmShot({ id: "preview-shot-001", clips: [clip("front-0", "front", "blob:c")] }, { media, now })).rejects.toThrow();
+    await expect(saveFilmShot({ id: "film-shot-bad/id", clips: [clip("front-0", "front", "blob:c")] }, { media, now })).rejects.toThrow();
+  });
+
   it("refuses clips that are not device-local and never stores a file name", async () => {
     const media = createMemoryFilmShotMedia();
     await expect(saveFilmShot({ clips: [clip("front-0", "front", "https://example.com/a.mp4")] }, { media, now })).rejects.toThrow();
