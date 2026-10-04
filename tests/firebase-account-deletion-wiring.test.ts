@@ -13,6 +13,9 @@ const listShootingProfilesV2 = vi.fn(async () => { calls.push("list-v2"); return
 const deleteShootingProfileV2 = vi.fn(async (_user: unknown, profileId: string) => { calls.push(`delete-v2:${profileId}`); });
 const listFirebasePrivatePoses = vi.fn(async () => { calls.push("list-legacy"); return [{ id: "l1" }]; });
 const removeFirebasePrivatePose = vi.fn(async (_user: unknown, poseId: string) => { calls.push(`delete-legacy:${poseId}`); });
+const filmDeletionPorts = { id: "film-deletion-ports" };
+const createFirebaseFilmShotDeletionPortsV1 = vi.fn(() => filmDeletionPorts);
+const eraseEveryCloudFilmShotV1 = vi.fn(async (args: { uid: string }) => { calls.push(`erase-film:${args.uid}`); });
 
 vi.mock("firebase/auth", () => ({
   EmailAuthProvider: { credential },
@@ -21,6 +24,7 @@ vi.mock("firebase/auth", () => ({
 }));
 vi.mock("firebase/firestore", () => ({ deleteDoc, doc }));
 vi.mock("@/lib/firebase", () => ({ firestore: { id: "fake-firestore" } }));
+vi.mock("@/lib/firebase-film-shot-deletion", () => ({ createFirebaseFilmShotDeletionPortsV1, eraseEveryCloudFilmShotV1 }));
 vi.mock("@/lib/firebase-private-data", () => ({
   listFirebasePrivatePoses,
   removeFirebasePrivatePose,
@@ -60,9 +64,19 @@ describe("deleteFirebaseAccount adapter", () => {
       "delete-v2:p2",
       "list-legacy",
       "delete-legacy:l1",
+      "erase-film:owner-uid",
       "delete-root",
       "delete-auth",
     ]);
+    // Cloud footage is erased for this owner through the delete-only ports, in every build.
+    expect(eraseEveryCloudFilmShotV1).toHaveBeenCalledWith({ uid: "owner-uid", ports: filmDeletionPorts });
+  });
+
+  it("keeps the account when cloud footage could not be erased", async () => {
+    eraseEveryCloudFilmShotV1.mockImplementationOnce(async () => { throw new Error("footage-left"); });
+    await expect(deleteFirebaseAccount(user(), "current-password")).rejects.toThrow("footage-left");
+    expect(deleteDoc).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
   });
 
   it("rejects a missing email before reauthentication or destructive work", async () => {
