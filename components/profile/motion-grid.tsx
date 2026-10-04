@@ -8,7 +8,9 @@ import { SkeletonGlyph } from "@/components/skeleton/skeleton-glyph";
 import { LiquidPressable } from "@/components/ui/liquid";
 import { tokens } from "@/constants/tokens";
 import { typography } from "@/constants/typography";
+import { mergeFilmShotTiles } from "@/lib/film-space/film-shot-cloud-actions";
 import type { FilmShotV1 } from "@/lib/film-space/film-shots";
+import type { CloudFilmShotHeadSummaryV1 } from "@/lib/firebase-film-shots";
 import { isOpaqueShootingProfileIdV2 } from "@/lib/firebase-shooting-profile-contract";
 import type { ShootingProfileSummaryV2, ShootingProfileViewerRecordV2 } from "@/lib/firebase-shooting-profiles";
 
@@ -18,6 +20,8 @@ type MotionGridProps = {
   glyphs: Readonly<Record<string, ShootingProfileViewerRecordV2>>;
   /** The owner's own footage kept on this device without pose analysis; shown as film tiles after the profiles. */
   filmShots?: readonly FilmShotV1[];
+  /** The owner's kept cloud shots, or null when nothing is known about the cloud (the default in ordinary builds). */
+  cloudFilmShots?: readonly CloudFilmShotHeadSummaryV1[] | null;
   loading: boolean;
   error: string | null;
   deletingProfileId: string | null;
@@ -27,7 +31,8 @@ type MotionGridProps = {
   onOpen: (profileId: string) => void;
   onDelete: (profileId: string) => void;
   onOpenFilm?: (shotId: string) => void;
-  onDeleteFilm?: (shotId: string) => void;
+  /** Long press on a film tile, and the only press on a tile whose footage is not on this device. */
+  onFilmActions?: (shotId: string) => void;
 };
 
 const GAP = 2;
@@ -53,8 +58,8 @@ function createdDate(record: ShootingProfileSummaryV2): string {
  * date, band, and the boundary; for footage, that no pose was analysed.
  */
 export function MotionGrid({
-  records, glyphs, filmShots = [], loading, error, deletingProfileId, deletingFilmShotId = null, canOpen, width,
-  onOpen, onDelete, onOpenFilm, onDeleteFilm,
+  records, glyphs, filmShots = [], cloudFilmShots = null, loading, error, deletingProfileId, deletingFilmShotId = null, canOpen, width,
+  onOpen, onDelete, onOpenFilm, onFilmActions,
 }: MotionGridProps) {
   const [focusedControl, setFocusedControl] = useState<string | null>(null);
   const tile = Math.max(1, Math.floor((width - GAP * (COLUMNS - 1)) / COLUMNS));
@@ -74,7 +79,8 @@ export function MotionGrid({
       </View>
     );
   }
-  if (records.length === 0 && filmShots.length === 0) {
+  const filmTiles = mergeFilmShotTiles(filmShots, cloudFilmShots);
+  if (records.length === 0 && filmTiles.length === 0) {
     return (
       <View style={styles.state}>
         <Text accessibilityLiveRegion="polite" style={styles.stateText}>첫 슛폼을 촬영하면 여기에 쌓입니다</Text>
@@ -146,16 +152,17 @@ export function MotionGrid({
             </LiquidPressable>
           );
         })}
-        {filmShots.map((shot) => {
+        {filmTiles.map((shot) => {
           const deleting = deletingFilmShotId === shot.id;
           const disabled = deleting;
-          const canDelete = deleteIdle;
-          const label = `${shot.title} · 내 영상 · 이 기기에만 보관 · 포즈 분석 없음 · ${shot.clips.length}개 클립 · ${new Date(shot.createdAtMs).toLocaleDateString("ko-KR")} · 열기`;
+          const canAct = deleteIdle;
+          const where = shot.onDevice ? (shot.inCloud ? "이 기기와 클라우드에 보관" : "이 기기에만 보관") : "클라우드에만 있음";
+          const label = `${shot.title} · 내 영상 · ${where} · 포즈 분석 없음 · ${shot.clipCount}개 클립 · ${new Date(shot.createdAtMs).toLocaleDateString("ko-KR")} · ${shot.onDevice ? "열기" : "내려받기 옵션 열기"}`;
           const focusKey = `film-${shot.id}`;
           return (
             <LiquidPressable
               key={shot.id}
-              accessibilityActions={[{ name: "longpress", label: "삭제" }]}
+              accessibilityActions={[{ name: "longpress", label: "보관·삭제 옵션" }]}
               accessibilityLabel={label}
               accessibilityRole="button"
               accessibilityState={{ disabled, busy: deleting }}
@@ -165,24 +172,30 @@ export function MotionGrid({
               focusable
               magnetic
               onAccessibilityAction={(event) => {
-                if (event.nativeEvent.actionName === "longpress" && canDelete) onDeleteFilm?.(shot.id);
+                if (event.nativeEvent.actionName === "longpress" && canAct) onFilmActions?.(shot.id);
               }}
               onBlur={() => setFocusedControl((current) => current === focusKey ? null : current)}
               onFocus={() => setFocusedControl(focusKey)}
-              onLongPress={() => { if (canDelete) onDeleteFilm?.(shot.id); }}
-              onPress={() => onOpenFilm?.(shot.id)}
+              onLongPress={() => { if (canAct) onFilmActions?.(shot.id); }}
+              // Footage that is not on this device cannot be played; the tile offers the download instead.
+              onPress={() => { if (shot.onDevice) onOpenFilm?.(shot.id); else if (canAct) onFilmActions?.(shot.id); }}
               rippleColor={tokens.foreground}
               style={[styles.tileHit, { width: tile, height: tile }, focusRing(focusedControl === focusKey)]}
               surfaceStyle={[styles.tile, styles.filmTile, { width: tile, height: tile }, deleting && styles.deleting]}
             >
-              <MaterialCommunityIcons name="filmstrip" size={Math.round(tile * 0.3)} color={tokens.stageForeground} />
+              <MaterialCommunityIcons name={shot.onDevice ? "filmstrip" : "cloud-download-outline"} size={Math.round(tile * 0.3)} color={tokens.stageForeground} />
               <Text numberOfLines={1} style={styles.filmTitle}>{shot.title}</Text>
+              {shot.onDevice && shot.inCloud ? (
+                <View style={styles.cloudMark}>
+                  <MaterialCommunityIcons name="cloud-check-outline" size={14} color={tokens.stageForeground} />
+                </View>
+              ) : null}
               {deleting ? <Text accessibilityLiveRegion="polite" style={styles.deletingText}>삭제 중</Text> : null}
             </LiquidPressable>
           );
         })}
       </View>
-      <Text style={styles.hint}>길게 눌러 삭제</Text>
+      <Text style={styles.hint}>{filmTiles.length > 0 ? "길게 눌러 삭제 · 내 영상은 보관 옵션" : "길게 눌러 삭제"}</Text>
     </View>
   );
 }
@@ -193,6 +206,7 @@ const styles = StyleSheet.create({
   tile: { backgroundColor: tokens.stage, minHeight: 72, minWidth: 52, overflow: "hidden", position: "relative" },
   filmTile: { alignItems: "center", gap: 6, justifyContent: "center", paddingHorizontal: 8 },
   filmTitle: { ...typography.label, color: tokens.stageForeground, textAlign: "center" },
+  cloudMark: { pointerEvents: "none", position: "absolute", right: 6, top: 6 },
   pending: { alignItems: "center", justifyContent: "center" },
   dot: { borderRadius: 4, height: 8, pointerEvents: "none", position: "absolute", right: 6, top: 6, width: 8 },
   dotHigh: { backgroundColor: tokens.analysisHighConfidence },

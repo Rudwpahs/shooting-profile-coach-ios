@@ -28,19 +28,25 @@ describe("film shots on the product surfaces", () => {
     for (const source of [route, feed, strip]) expect(source).not.toMatch(/IMG_|\.mp4|\.mov|clip\.uri/i);
   });
 
-  it("Profile: film tiles in the grid open Reels, delete on long press after a confirm, and stay honest in the label", () => {
+  it("Profile: film tiles in the grid open Reels, offer their actions in an in-app sheet on long press, and stay honest in the label", () => {
     const profile = read("app/(tabs)/profile.tsx");
     const grid = read("components/profile/motion-grid.tsx");
     expect(profile).toContain("useFilmShots(");
-    expect(profile).toContain("deleteFilmShot(");
-    expect(profile).toMatch(/Alert\.alert\(\s*"내 영상 삭제"/);
+    expect(profile).toContain("deleteFilmShotEverywhere(");
+    // A native alert is a no-op in a browser, so the confirm lives in the sheet, which works everywhere.
+    expect(profile).toContain("<FilmShotActionsSheet");
+    expect(profile).not.toMatch(/Alert\.alert\(\s*"내 영상 삭제"/);
+    // Cloud keeping is only ever offered through the source's own availability, never a local constant.
+    expect(profile).toContain("cloudAvailable={cloudFilmShots.available}");
+    expect(read("hooks/use-cloud-film-shots.ts")).toContain("filmShotCloudSource.available && user !== null");
     expect(profile).toContain("filmReelId(shotId)");
     expect(profile).toContain("/reels?start=");
     expect(profile).toContain('label: "내 영상"');
     expect(grid).toContain("readonly FilmShotV1[]");
     expect(grid).toContain("onOpenFilm");
-    expect(grid).toContain("onDeleteFilm");
-    expect(grid).toContain("내 영상 · 이 기기에만 보관 · 포즈 분석 없음");
+    expect(grid).toContain("onFilmActions");
+    expect(grid).toContain('"이 기기에만 보관"');
+    expect(grid).toContain("· 포즈 분석 없음 ·");
     expect(grid).not.toMatch(/clip\.uri|\.mp4/);
   });
 

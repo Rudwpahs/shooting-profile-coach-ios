@@ -70,6 +70,19 @@ function createIndexedDbFilmShotMedia(): FilmShotMedia {
       }
       return restored;
     },
+    async readFiles(shotId, clips) {
+      const files: Record<string, Blob> = {};
+      for (const clip of clips) {
+        let blob: Blob | undefined;
+        try {
+          blob = await transact<Blob>("readonly", (store) => store.get(clipKey(shotId, clip.slotId)));
+        } catch {
+          blob = undefined;
+        }
+        if (blob instanceof Blob) files[clip.slotId] = blob;
+      }
+      return files;
+    },
     async remove(shotId) {
       for (const [key, uri] of [...minted.entries()]) {
         if (!key.startsWith(`${shotId}/`)) continue;
