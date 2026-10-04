@@ -195,7 +195,8 @@ describe("preview capture machine", () => {
   });
 
   it("never runs pose analysis or stands a synthetic sequence in for footage", () => {
-    const source = readFileSync("lib/preview/preview-capture-machine.ts", "utf8");
+    // The machine itself lives in production code (a web build keeps footage the same way); the preview re-exports it.
+    const source = readFileSync("lib/film-space/web-film-capture-machine.ts", "utf8");
     expect(source).toContain('type: "SLOT_FILM_ACCEPTED"');
     expect(source).not.toMatch(/sequenceFor|SLOT_ACCEPTED"|AGGREGATE_|syntheticLandmarkSession|PREVIEW_PROFILE_ID|saveAssociation/);
   });

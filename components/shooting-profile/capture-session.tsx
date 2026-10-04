@@ -23,6 +23,9 @@ type CaptureSessionProps = {
   saveProfile?: SaveRepresentativeProfile;
 };
 
+/** What the owner chose for this save. `cloud` is only ever set from the film-review switch. */
+export type CaptureSaveOptions = Readonly<{ cloud?: boolean }>;
+
 /** Everything the presentation needs from the capture hook; the hook's return type satisfies it. */
 export type CaptureController = {
   state: CaptureSessionState;
@@ -35,7 +38,11 @@ export type CaptureController = {
   retakeSlot: (slotId: string) => void;
   cancelSession: () => void;
   retrySession: () => void;
-  save: () => Promise<void> | void;
+  save: (options?: CaptureSaveOptions) => Promise<void> | void;
+  /** True only when this build and this owner can keep footage in the cloud; absent everywhere else. */
+  cloudKeepAvailable?: boolean;
+  /** Where the last film save ended up besides this device. */
+  cloudKeepResult?: "none" | "uploaded" | "failed";
 };
 
 type CaptureSessionViewProps = {
@@ -78,6 +85,14 @@ function focusStyle(focused: boolean, dark = false): ViewStyle {
   };
 }
 
+/** Says exactly where the footage ended up; the cloud is only named when this save actually reached it or tried to. */
+function completionLine(savedProfileId: string | undefined, cloudKeepResult: CaptureController["cloudKeepResult"]): string {
+  if (!savedProfileId?.startsWith("film-shot-")) return "원본 영상은 업로드하지 않았고, 파생된 대표 슛폼 데이터만 비공개로 저장했습니다.";
+  if (cloudKeepResult === "uploaded") return "이 기기에 내 영상으로 보관했고, 내 계정 전용 클라우드에도 올렸습니다.";
+  if (cloudKeepResult === "failed") return "이 기기에는 내 영상으로 보관했지만, 클라우드 업로드는 실패했습니다. 프로필에서 다시 올릴 수 있습니다.";
+  return "원본 영상은 업로드하지 않았고, 이 기기에만 내 영상으로 보관했습니다.";
+}
+
 /** Owns the capture hook; nothing else. */
 export function CaptureSession({ completionActionLabel, onClose, onComplete, saveProfile }: CaptureSessionProps) {
   const capture = useShootingProfileCapture({ saveProfile });
@@ -94,6 +109,9 @@ export function CaptureSessionView({ controller, completionActionLabel, onClose,
   const { state } = controller;
   const [focusedControl, setFocusedControl] = useState<string | null>(null);
   const [measuredWidth, setMeasuredWidth] = useState(0);
+  // Off until the owner turns it on for this shot; it is never remembered between sessions.
+  const [cloudKeep, setCloudKeep] = useState(false);
+  const cloudKeepOn = controller.cloudKeepAvailable === true && cloudKeep;
   const width = Math.min(forcedWidth ?? (measuredWidth || FALLBACK_WIDTH), MAX_WIDTH);
   const saving = state.status === "saving";
   const presentation = state.mode ? captureProtocolPresentation(state.mode, state.shootingHand) : null;
@@ -261,9 +279,31 @@ export function CaptureSessionView({ controller, completionActionLabel, onClose,
             <View style={styles.filmReview}>
               <MaterialCommunityIcons name="filmstrip" size={28} color={tokens.foreground} />
               <Text accessibilityRole="header" style={styles.filmReviewTitle}>영상만 보관합니다</Text>
-              <Text accessibilityLiveRegion="polite" style={styles.filmReviewCopy}>이 기기에서는 포즈 분석을 하지 않았습니다. 선택한 영상은 이 기기에만 남고, 어디에도 업로드되지 않습니다. 대표 슛폼 분석은 iPhone 앱에서 촬영할 때 만들어집니다.</Text>
+              <Text accessibilityLiveRegion="polite" style={styles.filmReviewCopy}>{cloudKeepOn
+                ? "이 기기에서는 포즈 분석을 하지 않았습니다. 선택한 영상은 이 기기에 남고, 내 계정 전용 비공개 저장 공간(Firebase Storage)에도 업로드됩니다. 다른 사람은 볼 수 없고, 샷이나 계정을 삭제하면 함께 지워집니다. 대표 슛폼 분석은 iPhone 앱에서 촬영할 때 만들어집니다."
+                : "이 기기에서는 포즈 분석을 하지 않았습니다. 선택한 영상은 이 기기에만 남고, 어디에도 업로드되지 않습니다. 대표 슛폼 분석은 iPhone 앱에서 촬영할 때 만들어집니다."}</Text>
             </View>
-            {primary("film-save", saving ? "보관 중" : "내 영상으로 보관", () => void controller.save(), saving || !controller.canSave)}
+            {controller.cloudKeepAvailable === true ? (
+              <Pressable
+                accessibilityHint="켜면 이 샷의 영상을 내 계정 전용 비공개 저장 공간에도 올립니다"
+                accessibilityLabel="클라우드에도 보관"
+                accessibilityRole="button"
+                accessibilityState={{ disabled: saving, selected: cloudKeep }}
+                aria-pressed={cloudKeep}
+                disabled={saving}
+                {...focus("cloud-keep")}
+                onPress={() => setCloudKeep((current) => !current)}
+                style={({ pressed }) => [styles.cloudKeep, focusStyle(focusedControl === "cloud-keep"), saving && styles.disabled, pressed && !saving && styles.pressed]}
+                testID="capture-cloud-keep"
+              >
+                <MaterialCommunityIcons name={cloudKeep ? "cloud-check" : "cloud-outline"} size={22} color={tokens.foreground} />
+                <Text style={styles.cloudKeepText}>클라우드에도 보관</Text>
+                <View style={[styles.cloudKeepTrack, cloudKeep && styles.cloudKeepTrackOn]}>
+                  <View style={[styles.cloudKeepThumb, cloudKeep && styles.cloudKeepThumbOn]} />
+                </View>
+              </Pressable>
+            ) : null}
+            {primary("film-save", saving ? "보관 중" : "내 영상으로 보관", () => void controller.save(cloudKeepOn ? { cloud: true } : undefined), saving || !controller.canSave)}
             <Text numberOfLines={1} style={styles.retakeLine}>다른 영상으로 바꾸려면 클립 하나만 다시 선택하세요</Text>
             {renderSlots()}
           </View>
@@ -274,7 +314,7 @@ export function CaptureSessionView({ controller, completionActionLabel, onClose,
             <View style={styles.completeIcon}>
               <MaterialCommunityIcons name="lock" size={28} color={tokens.primaryForeground} />
             </View>
-            <Text accessibilityLiveRegion="polite" style={styles.centerLine}>{state.savedProfileId?.startsWith("film-shot-") ? "원본 영상은 업로드하지 않았고, 이 기기에만 내 영상으로 보관했습니다." : "원본 영상은 업로드하지 않았고, 파생된 대표 슛폼 데이터만 비공개로 저장했습니다."}</Text>
+            <Text accessibilityLiveRegion="polite" style={styles.centerLine}>{completionLine(state.savedProfileId, controller.cloudKeepResult)}</Text>
             {primary("complete", completionActionLabel, () => state.savedProfileId && onComplete(state.savedProfileId), !state.savedProfileId)}
           </View>
         ) : null}
@@ -305,6 +345,12 @@ const styles = StyleSheet.create({
   filmReview: { alignItems: "flex-start", backgroundColor: tokens.surface, borderRadius: 16, gap: 8, padding: 16 },
   filmReviewTitle: { ...typography.headline, color: tokens.foreground },
   filmReviewCopy: { ...typography.callout, color: tokens.mutedForeground },
+  cloudKeep: { alignItems: "center", backgroundColor: tokens.surface, borderRadius: 12, flexDirection: "row", gap: 10, minHeight: 48, minWidth: 44, paddingHorizontal: 14 },
+  cloudKeepText: { ...typography.callout, color: tokens.foreground, flex: 1, fontWeight: "600" },
+  cloudKeepTrack: { backgroundColor: tokens.border, borderRadius: 13, height: 26, justifyContent: "center", paddingHorizontal: 3, width: 44 },
+  cloudKeepTrackOn: { backgroundColor: tokens.primary },
+  cloudKeepThumb: { backgroundColor: tokens.foreground, borderRadius: 10, height: 20, width: 20 },
+  cloudKeepThumbOn: { alignSelf: "flex-end", backgroundColor: tokens.primaryForeground },
   close: { height: 44, minHeight: 44, minWidth: 44, paddingHorizontal: 4 },
   closeSurface: { alignItems: "center", borderRadius: 22, justifyContent: "center" },
   closeText: { ...typography.callout, color: tokens.foreground, fontWeight: "600" },

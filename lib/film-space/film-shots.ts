@@ -125,22 +125,30 @@ export async function listFilmShots(options: FilmShotOptions = {}): Promise<Film
  * record and the index. Returns the shot with the clip references as stored.
  */
 export async function saveFilmShot(
-  input: Readonly<{ clips: readonly FilmShotClipInputV1[]; title?: string }>,
+  input: Readonly<{
+    clips: readonly FilmShotClipInputV1[];
+    title?: string;
+    /** Recreate a shot under its existing id (a download of the owner's cloud copy); replaces a record with that id. */
+    id?: string;
+    createdAtMs?: number;
+  }>,
   options: FilmShotOptions = {},
 ): Promise<FilmShotV1> {
   const clips = sanitizeClips(input.clips);
   if (clips.length === 0) throw new Error("a film shot needs at least one clip");
+  if (input.id !== undefined && !isFilmShotId(input.id)) throw new Error("a film shot can only be recreated under a device film shot id");
   const media = options.media ?? defaultFilmShotMedia();
   const now = options.now ?? Date.now;
   const existing = await readIndex();
-  const createdAtMs = Math.round(now());
-  const id = `${FILM_SHOT_ID_PREFIX}${createdAtMs.toString(36)}-${(existing.length + 1).toString(36)}`;
-  const title = input.title && DISPLAY_TITLE.test(input.title) ? input.title : `내 슛폼 ${existing.length + 1}`;
+  const createdAtMs = Math.round(input.createdAtMs ?? now());
+  const id = input.id ?? `${FILM_SHOT_ID_PREFIX}${createdAtMs.toString(36)}-${(existing.length + 1).toString(36)}`;
+  const others = existing.filter((entry) => entry !== id);
+  const title = input.title && DISPLAY_TITLE.test(input.title) ? input.title : `내 슛폼 ${others.length + 1}`;
   await media.persist(id, input.clips);
   await saveLocalFilmAssociation(id, clips);
   const shot: FilmShotV1 = { version: VERSION, id, title, createdAtMs, clips };
   await AsyncStorage.setItem(recordKey(id), JSON.stringify(shot));
-  await writeIndex([id, ...existing.filter((entry) => entry !== id)]);
+  await writeIndex([id, ...others]);
   notifyFilmShotsChanged();
   return shot;
 }

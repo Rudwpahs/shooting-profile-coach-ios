@@ -76,6 +76,23 @@ export default function PrivateCaptureRoute() {
     );
   }
 
+  // Opt-in cloud film shots (default off): a signed-in owner in a browser keeps footage as a film shot on
+  // this device and may also keep that one shot in their private cloud space. The browser cannot analyse a
+  // pose, so the native capture below does not apply there. The literal gate folds away in ordinary builds.
+  if (process.env.EXPO_PUBLIC_HOOPHUB_CLOUD_FILM_SHOTS_V1 === "1" && Platform.OS === "web" && user) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const web = require("@/components/shooting-profile/web-film-capture-session") as typeof import("@/components/shooting-profile/web-film-capture-session");
+    return (
+      <web.WebFilmCaptureSession
+        key={user.uid}
+        completionActionLabel="내 영상 릴 열기"
+        onClose={close}
+        onComplete={complete}
+        user={user}
+      />
+    );
+  }
+
   return (
     <CaptureSession
       key={user?.uid ?? "missing-owner"}

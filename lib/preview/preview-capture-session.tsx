@@ -29,6 +29,9 @@ export function PreviewCaptureSession({ completionActionLabel, onClose, onComple
   const controller = useMemo<CaptureController>(() => ({
     state,
     canSave: machine.canSave,
+    // The preview supplies no cloud port, so this is always false and the switch never renders.
+    cloudKeepAvailable: machine.cloudKeepAvailable,
+    cloudKeepResult: machine.cloudKeepResult,
     selectMode: machine.selectMode,
     returnToModeSelect: machine.returnToModeSelect,
     setShootingHand: machine.setShootingHand,
