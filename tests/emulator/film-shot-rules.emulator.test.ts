@@ -118,10 +118,25 @@ beforeAll(async () => {
   });
 });
 
+// testEnv.clearStorage() only deletes objects at the bucket root; film-shot objects live under nested prefixes,
+// and because they are write-once, a leftover object would refuse the next test's create.
+type StorageFolder = Readonly<{ listAll(): Promise<{ items: { delete(): Promise<void> }[]; prefixes: StorageFolder[] }> }>;
+
+async function clearEveryStorageObject(): Promise<void> {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const removeUnder = async (folder: StorageFolder): Promise<void> => {
+      const { items, prefixes } = await folder.listAll();
+      await Promise.all(items.map((item) => item.delete()));
+      for (const prefix of prefixes) await removeUnder(prefix);
+    };
+    await removeUnder(context.storage().ref() as unknown as StorageFolder);
+  });
+}
+
 afterEach(async () => {
   if (!testEnv) return;
   await testEnv.clearFirestore();
-  await testEnv.clearStorage();
+  await clearEveryStorageObject();
 });
 
 afterAll(async () => {
