@@ -31,6 +31,27 @@ describe("legal surfaces", () => {
     expect(privacySource).toContain("만 14세");
   });
 
+  it("promises device-only footage by default and names cloud keeping only in a build that opted in", () => {
+    // The promise follows the same build flag as the code that could break it, never a hand-written claim.
+    expect(privacySource).toContain("FORMPATH_EXPERIMENTAL_FLAGS.cloudFilmShotsV1");
+    expect(privacySource).toContain("이 기기에만 남으며 클라우드에 업로드하지 않습니다");
+    // The opted-in text says who decides, where it goes, who can see it and how it ends.
+    for (const phrase of ["샷마다", "비공개 Firebase Storage", "다른 사용자는 볼 수 없", "계정을 삭제하면 함께 지워집니다", "파일명과 EXIF는 저장하지 않"]) {
+      expect(privacySource, phrase).toContain(phrase);
+    }
+    const settingsSource = readFileSync("app/(tabs)/settings.tsx", "utf8");
+    expect(settingsSource).toContain("FORMPATH_EXPERIMENTAL_FLAGS.cloudFilmShotsV1");
+    expect(settingsSource).toContain("원본 영상은 저장하지 않으며");
+    expect(settingsSource).toContain("'클라우드에도 보관'을 켠 샷");
+    // The release sheets must not keep an unconditional "never uploads" once the opt-in path exists.
+    const questionnaire = readFileSync("docs/release/app-store-privacy-questionnaire.md", "utf8");
+    expect(questionnaire).toContain("EXPO_PUBLIC_HOOPHUB_CLOUD_FILM_SHOTS_V1");
+    expect(questionnaire).toMatch(/default[^\n]*off/i);
+    const gate = readFileSync("docs/release/ios-privacy-release-gate.md", "utf8");
+    expect(gate).toContain("EXPO_PUBLIC_HOOPHUB_CLOUD_FILM_SHOTS_V1");
+    expect(gate).toContain("HOOPHUB_AI_PRODUCT_ARCHITECTURE");
+  });
+
   it("documents the necessary web session cookie without inventing tracking", () => {
     expect(cookieSource).toContain("app_session_id");
     expect(cookieSource).toContain("인증");

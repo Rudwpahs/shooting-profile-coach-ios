@@ -1,5 +1,6 @@
 import { LegalDocumentScreen } from "@/components/legal/legal-document-screen";
 import { LEGAL_CONFIG, legalValue } from "@/lib/compliance/legal-config";
+import { FORMPATH_EXPERIMENTAL_FLAGS } from "@/lib/feature-flags";
 
 export default function PrivacyPolicyScreen() {
   const operator = legalValue(LEGAL_CONFIG.operatorName, "운영자명");
@@ -22,6 +23,10 @@ export default function PrivacyPolicyScreen() {
           paragraphs: [
             "회원가입과 로그인에는 Firebase Authentication을 사용하며 이메일 주소와 Firebase 사용자 식별자가 처리됩니다.",
             "슈팅 영상을 분석할 때 현재 V2 경계에서는 원본 영상, 파일명, EXIF와 얼굴 랜드마크를 클라우드에 업로드하지 않습니다. 기기에서 추출한 허용 관절의 위상 정규화 2D 관측값과 실측 3D가 아닌 대표 추정값만 사용자 UID 아래 비공개 Cloud Firestore 영역에 저장할 수 있습니다.",
+            // The footage promise follows the build flag that could break it (default off).
+            FORMPATH_EXPERIMENTAL_FLAGS.cloudFilmShotsV1
+              ? "포즈 분석 없이 '내 영상'으로 보관하는 본인 촬영 영상은 기본적으로 이 기기에만 남습니다. 사용자가 샷마다 직접 '클라우드에도 보관'을 켠 경우에만 그 샷의 영상을 사용자 UID 아래 비공개 Firebase Storage 영역에 보관하며, 파일명과 EXIF는 저장하지 않고 다른 사용자는 볼 수 없습니다. 클라우드에 보관한 영상은 앱에서 샷을 삭제하거나 계정을 삭제하면 함께 지워집니다."
+              : "포즈 분석 없이 '내 영상'으로 보관하는 본인 촬영 영상은 이 기기에만 남으며 클라우드에 업로드하지 않습니다.",
           ],
         },
         {

@@ -2,6 +2,15 @@
 
 **Decision (owner, 2026-10-04):** keep footage on the device by default; let the owner opt in **per shot** to keep a film shot in their own private cloud space so it is visible after signing in on another device. Backend: Firebase Storage + Cloud Firestore, on the Auth, Firestore and rules-test infrastructure the app already has. The "store in a DB behind login" idea is this feature; the legacy `server/` (drizzle/MySQL) is not used for footage.
 
+## Architecture gate (added 2026-10-04, after `docs/HOOPHUB_AI_PRODUCT_ARCHITECTURE.md` landed on main)
+
+The AI product architecture locks raw shooting video to the device by default and says a change that uploads raw video needs a new reviewed architecture decision (§6, and the MVP criterion "raw video remains local"). The owner's decision above predates that document and has not been reviewed against it. This lane therefore ships the feature **behind a build flag that is off by default**:
+
+- `EXPO_PUBLIC_HOOPHUB_CLOUD_FILM_SHOTS_V1=1` turns it on; nothing else does, and the install-free preview never gets it even with the flag set.
+- With the flag off (every ordinary build): no surface offers cloud keeping, every existing "never uploaded" promise stays true and unchanged, and the bundle does not contain the upload code, the Firebase source or the web capture session. The Pages workflow greps the ordinary production export for those and fails on a hit.
+- The one piece that ships in every build is **delete-only**: account deletion erases the owner's cloud film shots, so footage kept by a flag-on build can never outlive an account deleted from a flag-off build.
+- Turning the flag on in a shipped build is the owner's call and requires the reviewed architecture decision; the checklist is in `docs/release/ios-privacy-release-gate.md`. This lane does not turn it on anywhere.
+
 ## What exists today
 
 - Firestore `users/{uid}/...` holds **derived** data only (observations, capture sessions, motion profiles, revisions), owner-private, rules-tested in the emulator (`tests/emulator/`). Account deletion erases these before the Auth user.
@@ -40,7 +49,7 @@
 | `dataClass` | `"owner_private_raw_footage_v1"` |
 | `retentionClass` | `"owner_deleted_v1"` |
 | `consentReference` | `"owner_cloud_footage_consent_v1"` |
-| `status` | `"complete"` |
+| `status` | `"uploading"` \| `"complete"` (created as `uploading`; only `complete` is a kept shot) |
 | `deletionState` | `"active"` \| `"in_progress"` |
 | `shotId` | `== {shotId}` |
 | `title` | string, `^[A-Za-z0-9가-힣 ·]{1,24}$` (a display name, never a file name) |
@@ -50,32 +59,43 @@
 
 `users/{uid}/filmShots/{shotId}/clips/{slotId}` — one per clip, exact keys: the seven common fields above with `recordType: "film_shot_clip_v1"`, plus `shotId`, `slotId == {slotId}`, `view` (`front`|`shooting_side`, consistent with `slotId`), `takeIndex` (0–2, consistent), `durationMs` (int 200–60000), `width`, `height` (int 16–8192), `byteLength` (int 1–67108864), `contentType` (as above), `storagePath == "users/{uid}/filmShots/{shotId}/{slotId}"`, `createdAt`, `updatedAt`.
 
-Rules cannot see Storage, so the **client writes the object first**, then the clip document, then the head. The head create requires every `clipIds` entry to exist as a clip document owned by the same uid with the same `shotId`. A clip document can be created only while no head exists. Deletion is the mirror of motion profiles: head `active → in_progress` (owner, only those two keys change), then objects, then clip documents (allowed when the head is absent or `in_progress`), then the head (allowed only when `in_progress` and no clip document remains). Resume-on-launch finishes any `in_progress` deletion.
+**The head is the journal.** Rules cannot see Storage, and an upload interrupted after an object is stored but before any document exists (a closed tab is enough) would leave raw footage that nothing names and nothing can find. So the client writes in this order, and the rules enforce it:
+
+1. the head, created as `status: "uploading"`, `deletionState: "active"`, already naming every clip in `clipIds`;
+2. the objects;
+3. one clip document per clip — accepted only under an `uploading`, `active` head that names that slot;
+4. an update of the head to `status: "complete"` that changes only `status` and `updatedAt` and requires every named clip document to exist.
+
+From step 1 on, a Firestore document names every object the upload may create. Deletion works for a kept shot and for an unfinished upload alike: head `active → in_progress` (only those two keys change), then for every slot the head names the object and the clip document (a clip document is deletable only while its head is `in_progress`; the object paths come from the head, never from the clip documents), then the head (only when `in_progress` and no clip document remains). Every upload failure runs that deletion; if it fails too, the head stays behind and a later pass finishes it. The resume pass finishes `in_progress` deletions and removes uploads whose head has not changed for two hours, leaving a recent one alone because it may still be running elsewhere. Only `complete`, `active` heads are listed or downloaded. A retry is a no-op for a shot that is already kept and erases a leftover head before starting clean.
 
 The cloud `shotId` **is the device film-shot id** (`film-shot-…`), so a shot that exists both locally and in the cloud is one shot, and a download recreates the device record under the same id.
 
 ## Client architecture
 
-- `lib/firebase-film-shot-contract.ts` — pure: constants, validators for head/clip documents, `buildFilmShotWritePlanV1` (object uploads → clip writes → head write), storage path helper, title regex (shared with `film-shots.ts`).
-- `lib/firebase-film-shots.ts` — the orchestration against injectable ports (`uploadObject`, `deleteObject`, `downloadObject`, `setDocument`, `readDocumentFromServer`, `listHeads`, `updateDocument`, `deleteDocument`) plus the Firebase adapter (`firebase/storage` `uploadBytes` / `getBytes` / `deleteObject`, Firestore as today). Upload failure cleans the known uploaded objects and documents; a failed head write is resolved like the profile publication (read back, cleanup).
-- `lib/film-shot-cloud-source.ts` — the swappable source (production: Firebase; preview build: `available: false`, every call refuses), through the same literal gate + `require` pattern as `shooting-profile-source.ts`. Nothing in `lib/preview/` touches Firebase or Storage.
-- Device store link: `lib/film-space/film-shot-cloud-state.ts` keeps, per shot id, `{ state: "uploaded", uploadedAtMs }` in AsyncStorage so the UI can say "클라우드에도 보관됨" without a network read; cleared on cloud delete.
-- `hooks/use-cloud-film-shots.ts` — signed-in owner only: lists heads, exposes `download(shotId)` (web: bytes → `Blob` → `saveFilmShot` under the same id with the files persisted; native: `unsupported` until a native file store exists) and `remove(shotId)`.
-- Capture: `CaptureController.save(options?: { cloud?: boolean })`. The film review panel shows a switch **"클라우드에도 보관"** (default off) only when the cloud source is available and the user is signed in, with the honest sentence "켜면 선택한 영상이 내 계정 전용 비공개 저장 공간(Firebase Storage)에 업로드됩니다. 끄면 이 기기에만 남습니다." After a local save with `cloud: true`, the clips (with their files) are uploaded; the completion copy says which happened. Upload failure after a successful local save is reported as a recoverable error with retry; the local shot is never lost.
-- Profile: film tiles carry a small cloud mark when uploaded; cloud-only shots (not on this device) appear as tiles with "내려받기"; long-press offers "이 기기에서 삭제" and, when uploaded, "클라우드에서도 삭제".
-- Account deletion: `runAccountDeletion` gains `listCloudFilmShotIds` / `deleteCloudFilmShot` steps before deleting the legacy root.
+- `lib/firebase-film-shot-contract.ts` — pure: constants, validators for head/clip documents, `buildFilmShotWritePlanV1` (head create → object uploads → clip writes → head completion), path helpers, title regex.
+- `lib/firebase-film-shot-deletion.ts` — **delete-only, in every build**: `deleteCloudFilmShotV1`, `resumePendingCloudFilmShotDeletionsV1`, `eraseEveryCloudFilmShotV1` and delete-only Firebase ports. It has no way to send or fetch footage (pinned by a test). A refused owner listing means the feature's rules are not deployed, so there is nothing to erase; any other failure aborts.
+- `lib/firebase-film-shots.ts` — send and fetch against injectable ports (upload, list, download) plus the Firebase adapter (`uploadBytes` / `getBytes`). Loaded only through the cloud source.
+- `lib/film-shot-cloud-source.ts` — the swappable source: unavailable by default and in the preview (every call refuses); the Firebase source (`lib/firebase-film-shot-cloud-source.ts`) is `require`d only behind the literal flag gate so Metro folds it out of ordinary bundles.
+- `lib/film-space/web-film-capture-machine.ts` — the browser's footage-only capture machine (moved out of `lib/preview/`, which re-exports it). It saves on the device first and uploads only when the build supplied an upload port **and** the owner turned the switch on for that save; a failed upload is reported, never a lost shot. `components/shooting-profile/web-film-capture-session.tsx` is the signed-in web capture screen, reached from `app/private-capture.tsx` only behind the flag.
+- Capture: `CaptureController.save(options?: { cloud?: boolean })`, `cloudKeepAvailable`, `cloudKeepResult`. The film review panel shows the switch **"클라우드에도 보관"** (off by default) only when available; turning it on replaces the "어디에도 업로드되지 않습니다" sentence with one that names the destination, who can see it and how it is deleted. The completion copy says where the footage actually ended up.
+- Device store link: `lib/film-space/film-shot-cloud-state.ts` keeps a per-shot "kept in the cloud" note in AsyncStorage; it is a note, the cloud documents are the truth.
+- Profile: `lib/film-space/film-shot-cloud-actions.ts` (keep, download, delete everywhere — cloud copy first —, delete cloud only, list, merge into tiles), `hooks/use-cloud-film-shots.ts` (reads nothing unless the source is available and an owner is signed in), `components/profile/film-shot-actions-sheet.tsx` (an in-app sheet that states where the footage is before offering anything; delete takes two presses; it replaces the native alert, which is a no-op in a browser). Film tiles show a cloud mark when kept; a cloud-only shot is listed and can be downloaded (browser) or deleted.
+- Account deletion: `runAccountDeletion` gains `eraseCloudFilmShots`, after the legacy poses and before the root document and the Auth user, in every build.
 
 ## Platforms
 
-- Web (production build with Firebase configured): upload and download both work (`Blob` in IndexedDB).
-- iPhone: upload works for a film shot whose clip URIs are readable (`fetch(file://…)` → `Blob`); download is reported as unsupported until a native file store (expo-file-system) is adopted. Native capture does not yet produce film shots; that lane follows this one.
+- Web (production build with Firebase configured **and the flag on**): capture with the switch, keep later from the Profile, download and delete all work (`Blob` in IndexedDB).
+- iPhone: the native app does not create film shots yet, holds no clip files to send, and cannot hold a download; with the flag on it lists cloud shots and can delete them, and the sheet says the download needs a browser. A native "영상만 보관" capture and a native file store are a separate lane.
+- Every build, flag on or off: account deletion erases cloud film shots.
 - Install-free public preview: the cloud source is unavailable; the switch is hidden; no Firebase code runs.
 
 ## Promises that change (must land in the same PR)
 
-- `app/legal/privacy.tsx` §2: footage is **not** uploaded unless the user turns on cloud keeping for a shot; then the clips are stored in the owner's private Firebase Storage path (Google, region per project), readable only by that account, deleted with the shot or the account.
+Every promise follows the same build flag as the code that could break it, so the default text is unchanged and stays true:
+
+- `app/legal/privacy.tsx` §2: by default, footage kept as "내 영상" stays on this device and is not uploaded. With the flag on: only for a shot where the user turned on cloud keeping, the clips are stored in the owner's private Firebase Storage path, without file name or EXIF, invisible to other users, deleted with the shot or the account.
 - Capture film review and completion copy; `app/(tabs)/settings.tsx` sentence; `components/private-pose-capture.tsx` is untouched (legacy V1 path has no footage).
-- `docs/release/app-store-privacy-questionnaire.md`: "User content: raw shooting video — optional, user-initiated per shot, linked to UID, app functionality, Firebase Storage"; `docs/release/ios-privacy-release-gate.md`: add the Storage bucket region/evidence item.
+- `docs/release/app-store-privacy-questionnaire.md` carries both cases and tells the submitter to confirm which one the archive is; `docs/release/ios-privacy-release-gate.md` lists what turning the flag on requires (architecture decision, deployed rules, Storage region, policy and store answers, an end-to-end deletion check on the production project).
 
 ## Security and privacy boundaries
 
@@ -87,6 +107,7 @@ The cloud `shotId` **is the device film-shot id** (`film-shot-…`), so a shot t
 
 ## Verification
 
-- Unit: contract validators, write plan, orchestration with fake ports (success, partial failure cleanup, head read-back), source gating, hooks with mocked AsyncStorage, capture switch behaviour, deletion cascade order.
-- Emulator (CI): owner can create objects/clips/head in order; intruder and anonymous cannot read/write/list; oversize or wrong content type objects are refused; head before clips is refused; clip after head is refused; deletion transition and order enforced; wrong `storagePath`, title or clip ids refused.
-- Browser preview QA cannot cover this (no Firebase in the preview build); a production web build QA against a Firebase project is an owner-side step.
+- Unit: contract validators, write plan, orchestration with fake ports that refuse what the rules refuse (order, every failure point, cleanup failure, retry, stale uploads, erase-everything, not-deployed), source gating, capture machine and switch, Profile actions and sheet, deletion cascade order and adapter wiring, promise pins.
+- Emulator (CI only; no local Java): owner-only objects, write-once, bounded size and type; head created only as `uploading`; clip only under an uploading head that names it; completion only over every named clip and only by changing `status`/`updatedAt`; deletion order for kept and unfinished shots; intruder and anonymous refused everywhere.
+- Bundle: the ordinary production export contains none of `firebaseFilmShotCloudSource`, `uploadFilmShotV1`, `WebFilmCaptureSession` (CI guard); a flag-on export contains them (checked locally as the positive control).
+- **Not verified, and not claimed:** the Firebase adapter against a real project (upload, list, download, delete, account deletion). The preview build has no Firebase, this machine has no emulator, and no credentials were used. That end-to-end check is an owner-side step and is part of the release gate for turning the flag on.
